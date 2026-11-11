@@ -396,7 +396,7 @@ tbody td{background:var(--page)}
 
 
 /* Penrose footer: anchored at the lower-left, above the fixed mobile navigation. */
-.footer.banner{position:fixed;left:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:940;width:max-content;max-width:min(340px,calc(100vw - 20px));margin:0;padding:6px 10px;border-radius:9px;box-shadow:0 4px 16px #0004;font-size:10px}
+.footer.banner{position:static;left:auto;bottom:auto;z-index:auto;width:auto;max-width:none;margin:12px clamp(6px,1.5vw,20px) 12px;padding:7px 12px;border-radius:9px;box-shadow:none;font-size:12px}
 .footer.banner>svg{width:17px;height:17px}
 .bn-text{font-size:10px;line-height:1.2}
 .bn-text b{font-size:12px}
@@ -443,3 +443,74 @@ tbody tr.lunch-row td.lunch-cell{height:clamp(22px,3.75vh,70px);padding:0;text-a
 .photo-picker{display:block;margin:8px 0;font-size:13px;color:var(--muted)}
 .photo-picker input{display:block;margin-top:4px;color:var(--text)}
 .weekly-actions{gap:8px;max-width:none;flex-wrap:wrap}
+
+
+/* Penrose footer fixed at bottom-left */
+.footer.banner {
+    position: fixed !important;
+    left: 8px !important;
+    right: auto !important;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
+    z-index: 940 !important;
+    width: max-content !important;
+    max-width: min(340px, calc(100vw - 16px)) !important;
+    margin: 0 !important;
+    padding: 6px 10px !important;
+    box-shadow: 0 4px 16px #0005 !important;
+}
+
+@media (max-width: 720px) {
+    .footer.banner {
+        left: 6px !important;
+        bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+        max-width: min(245px, calc(100vw - 12px)) !important;
+    }
+}
+
+/* FINAL OVERRIDE: Penrose footer fixed at screen bottom-left */
+html body .footer.banner {
+    position: fixed !important;
+    left: 8px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 2000 !important;
+    width: max-content !important;
+    max-width: min(340px, calc(100vw - 16px)) !important;
+    margin: 0 !important;
+    transform: none !important;
+}
+
+@media (max-width: 720px) {
+    html body .footer.banner {
+        left: 6px !important;
+        bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
+
+
+/* Dark Theme - Charcoal and Gold */
+body[data-theme="dark"]{
+ --page:#111318;
+ --panel:#1b2028;
+ --head:#252d38;
+ --line:#46515f;
+ --gold:#c9a65a;
+ --text:#f3f4f6;
+ --muted:#c5ccd5;
+ --field:#202630;
+ --control:#e8eaf0;
+ --controlText:#172033;
+ --accentText:#101820;
+ color-scheme:dark;
+ --grid-line:#46515f;
+ --head-bg:#252d38;
+ --head-text:#f3f4f6;
+ --head-date:#e0c58f;
+ --time-bg:#1b2028;
+ --cell-bg:#111318;
+ --cell-empty:#181e26;
+ --lunch-bg:#393124;
+ --lunch-text:#f0d48a;
+}
