@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
-<title>PhD Maternal and Neonatal Health â€” Weekly Schedule</title>
+<title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
@@ -29,7 +29,7 @@
     <svg class="ic ic-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="#ecbb4c"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><text id="hd-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="#6b4a12"></text></svg>
     <div class="hd-today-text"><span class="t1">Today</span><span class="t2" id="hd-date"></span></div>
    </div>
-   <button type="button" class="hd-bell" id="hd-bell" aria-label="Todayâ€™s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
+   <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ecbb4c" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
    </button>
@@ -80,7 +80,7 @@
 <section class="view vw" id="view-dashboard">
  <h2>Dashboard</h2><p class="lead">MNH academic calendar overview and shared programme information.</p>
  <div id="dashboard-overview" class="cards"></div>
- <div class="cards" style="margin-top:14px"><div class="card"><h3>Upcoming academic activities</h3><div id="dashboard-upcoming" class="muted">Loading shared activitiesâ€¦</div></div><div class="card"><h3>Recent additions</h3><div id="dashboard-recent" class="muted">Loading recent activityâ€¦</div></div></div>
+ <div class="cards" style="margin-top:14px"><div class="card"><h3>Upcoming academic activities</h3><div id="dashboard-upcoming" class="muted">Loading shared activities…</div></div><div class="card"><h3>Recent additions</h3><div id="dashboard-recent" class="muted">Loading recent activity…</div></div></div>
 </section>
 <section class="view" id="view-weekly" hidden>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
@@ -91,11 +91,11 @@
 </div>
 </section>
 <section class="view vw" id="view-my-schedule" hidden>
- <h2>My Schedule</h2><p class="lead">Everything planned for the week of 9â€“13 Nov 2026. Select an item for details.</p>
+ <h2>My Schedule</h2><p class="lead">Everything planned for the week of 9–13 Nov 2026. Select an item for details.</p>
  <div class="cards" id="schedule-body"></div>
 </section>
 <section class="view vw" id="view-modules" hidden>
- <h2>Modules</h2><p class="lead">Your modules and other activities, with this weekâ€™s sessions.</p>
+ <h2>Modules</h2><p class="lead">Your modules and other activities, with this week’s sessions.</p>
  <div class="cards" id="modules-body"></div>
 </section>
 <section class="view vw" id="view-resources" hidden>
@@ -103,7 +103,7 @@
  <div id="res-list"></div><div id="res-form-wrap"></div>
 </section>
 <section class="view vw" id="view-analytics" hidden>
- <h2>Analytics</h2><p class="lead">A summary of this weekâ€™s timetable.</p>
+ <h2>Analytics</h2><p class="lead">A summary of this week’s timetable.</p>
  <div id="analytics-body"></div>
 </section>
 <section class="view vw" id="view-workspace" hidden>
@@ -123,10 +123,10 @@
   <div class="module-field">
    <label for="module-select">Select module</label>
    <select id="module-select">
-    <option value="">Choose a moduleâ€¦</option>
-    <option value="MIPN 8100">MIPN 8100 â€” Medical Imaging in Pregnancy and Neonates</option>
-    <option value="ARMN â€“ 8100">ARMN â€“ 8100 â€” Antimicrobial Resistance in Maternal &amp; Neonatal Health</option>
-    <option value="PNIM-8100">PNIM-8100 â€” Pregnancy and Neonatal Immunology</option>
+    <option value="">Choose a module…</option>
+    <option value="MIPN 8100">MIPN 8100 — Medical Imaging in Pregnancy and Neonates</option>
+    <option value="ARMN – 8100">ARMN – 8100 — Antimicrobial Resistance in Maternal &amp; Neonatal Health</option>
+    <option value="PNIM-8100">PNIM-8100 — Pregnancy and Neonatal Immunology</option>
    </select>
   </div>
   <div class="module-field">
@@ -140,7 +140,7 @@
   </div>
   <div class="module-field">
    <label for="module-colour">Entry colour</label>
-   <select id="module-colour"><option value="">No colour â€” use current theme</option><option value="#2F5D8C">Navy blue</option><option value="#3C7A5A">Green</option><option value="#8A6D2F">Gold</option><option value="#7B3F61">Plum</option><option value="#4B5D7A">Slate</option></select>
+   <select id="module-colour"><option value="">No colour — use current theme</option><option value="#2F5D8C">Navy blue</option><option value="#3C7A5A">Green</option><option value="#8A6D2F">Gold</option><option value="#7B3F61">Plum</option><option value="#4B5D7A">Slate</option></select>
   </div>
   <div class="module-field">
    <label for="module-mode">Delivery mode</label>
@@ -167,7 +167,7 @@
 
 <div class="colour-dialog" id="security-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="security-title">
  <div class="dialog-card">
-  <h2 id="security-title">Settings Â· Security</h2>
+  <h2 id="security-title">Settings · Security</h2>
   <p>Timetable editing is locked by default. Enter an authorised password to edit the timetable.</p>
   <div class="module-field">
    <label for="security-password">Editing password</label>
@@ -175,7 +175,7 @@
   </div>
   <div class="dialog-actions">
    <button id="close-security">Close</button>
-   <button class="primary" id="security-unlock">âœï¸ Edit timetable</button>
+   <button class="primary" id="security-unlock">✏️ Edit timetable</button>
   </div>
   <p class="security-message" id="security-message" role="status"></p>
  </div>
@@ -196,7 +196,7 @@
 
 <div class="colour-dialog" id="alarm-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="alarm-title">
  <div class="dialog-card">
-  <h2 id="alarm-title">ðŸ”” Alarms</h2>
+  <h2 id="alarm-title">🔔 Alarms</h2>
   <p>Rings like an incoming call before each activity. Alarms are personal to this device and only ring while this page is open. Tap the page once after opening it so your browser allows sound.</p>
   <div class="module-field">
    <label for="alarm-lead">Ring</label>
@@ -224,8 +224,8 @@
   <div class="call-name" id="call-name"></div>
   <div class="call-when" id="call-when"></div>
   <div class="call-actions">
-   <div><button class="call-btn decline" id="call-decline" aria-label="Decline and stop the alarm">âœ•</button><span class="call-label">Decline</span></div>
-   <div><button class="call-btn answer" id="call-answer" aria-label="Answer: stop the alarm and open the activity">ðŸ“ž</button><span class="call-label">Answer</span></div>
+   <div><button class="call-btn decline" id="call-decline" aria-label="Decline and stop the alarm">✕</button><span class="call-label">Decline</span></div>
+   <div><button class="call-btn answer" id="call-answer" aria-label="Answer: stop the alarm and open the activity">📞</button><span class="call-label">Answer</span></div>
   </div>
   <button class="call-snooze" id="call-snooze">Snooze 5 min</button>
  </div>
@@ -274,7 +274,7 @@
     }
     document.documentElement.dataset.serverBuild = info.build;
     document.documentElement.dataset.pageBuild = BUILD;
-    if (foot && foot.parentNode) foot.parentNode.title = "Page build " + BUILD + " Â· server build " + info.build;
+    if (foot && foot.parentNode) foot.parentNode.title = "Page build " + BUILD + " · server build " + info.build;
   }).catch(() => { /* offline: nothing to compare */ });
 
   // 2. Service worker: always check for a new worker and switch to it immediately.
