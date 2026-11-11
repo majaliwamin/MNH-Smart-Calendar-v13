@@ -164,13 +164,24 @@ function build(){
   if(clashes.length)td.title="Sessions overlapping the lunch break (kept, shown in their own rows): "+clashes.join("; ");
   td.appendChild(label);tr.appendChild(td);tbody.appendChild(tr);
  };
- const starts=[...new Set([...times.map(t=>parseRange(t)?.startTime).filter(Boolean),...entries.map(x=>x.startTime)])].sort((a,b)=>parseClock(a)-parseClock(b));
- const hr=document.createElement("tr"),corner=document.createElement("th");corner.className="corner";corner.textContent="Start";hr.appendChild(corner);
+ // Left column shows complete intervals: a row with sessions uses their real interval, otherwise the default programme slot.
+ const defaultSlots=times.map(t=>parseRange(t)).filter(Boolean);
+ const intervalFor=start=>{
+  const rowEntries=entries.filter(x=>x.startTime===start);
+  if(rowEntries.length){let end=rowEntries[0].endTime;rowEntries.forEach(x=>{if(parseClock(x.endTime)>parseClock(end))end=x.endTime;});return `${start}–${end}`;}
+  const slot=defaultSlots.find(s=>s.startTime===start);
+  return slot?`${slot.startTime}–${slot.endTime}`:start;
+ };
+ // The merged lunch row already represents the 12:00–13:30 band, so that slot is not repeated as a separate row.
+ const slotStarts=defaultSlots.filter(s=>parseClock(s.startTime)!==LUNCH_START).map(s=>s.startTime);
+ const starts=[...new Set([...slotStarts,...entries.map(x=>x.startTime)])].sort((a,b)=>parseClock(a)-parseClock(b));
+ const hr=document.createElement("tr"),corner=document.createElement("th");corner.className="corner";corner.textContent="Time";hr.appendChild(corner);
  days.forEach((day,c)=>{const th=document.createElement("th");th.className="daycell";th.scope="col";th.innerHTML=`<span class="day"><span class="dfull">${day}</span><span class="dshort">${day.slice(0,3)}</span></span><span class="date">${dates[c]}</span>`;hr.appendChild(th);});thead.appendChild(hr);
  starts.forEach((start,index)=>{
   if(!lunchDone&&parseClock(start)>=LUNCH_START)appendLunchRow();
   const tr=document.createElement("tr");tr.dataset.startTime=start;
-  const th=document.createElement("th");th.className="time"+(selectedTime===index?" highlight":"");th.scope="row";th.textContent=start;th.tabIndex=0;th.setAttribute("role","button");th.setAttribute("aria-label",`Highlight sessions starting ${start}`);
+  const interval=intervalFor(start);
+  const th=document.createElement("th");th.className="time"+(selectedTime===index?" highlight":"");th.scope="row";th.textContent=interval;th.tabIndex=0;th.setAttribute("role","button");th.setAttribute("aria-label",`Highlight the ${interval} row`);
   const toggle=()=>{selectedTime=selectedTime===index?-1:index;tbody.querySelectorAll("th.time:not(.lunch-time)").forEach((node,i)=>node.classList.toggle("highlight",i===selectedTime));};th.addEventListener("click",toggle);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});tr.appendChild(th);
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;
@@ -810,7 +821,7 @@ async function downloadTimetableImage(mime){
 }
 window.downloadTimetableImage=downloadTimetableImage;
 function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme||"midnight";sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
- const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted",editingUnlocked?`Editing unlocked · ${currentRole}`:"Viewing is open; editing requires an authorised password."));const b=el("button","primary",editingUnlocked?"Lock editing":"Unlock editing");b.type="button";b.onclick=()=>document.getElementById(editingUnlocked?"lock":"unlock").click();access.appendChild(b);const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=!editingUnlocked;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
+ const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted",editingUnlocked?`Editing unlocked · ${currentRole}`:"Viewing is open; editing requires an authorised password."));const b=el("button","primary","\u270F "+(editingUnlocked?"Lock editing":"Unlock editing"));b.type="button";b.onclick=()=>document.getElementById(editingUnlocked?"lock":"unlock").click();access.appendChild(b);const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=!editingUnlocked;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
  const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
  const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}
 function itemButton(x){

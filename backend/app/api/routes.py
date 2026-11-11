@@ -333,7 +333,7 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
                 raise HTTPException(400, "Session end time must be later than its start time.")
             day_index = data.get("dayIndex")
             if isinstance(day_index, int):
-                default_ranges = ["08:00-10:00", "10:00-12:00", "12:00-13:30", "13:30-15:30", "15:30-17:30", "17:30-19:00", "19:00-21:00"]
+                default_ranges = DEFAULT_SESSION_RANGES
                 with database() as c:
                     existing_rows = c.execute("SELECT id,data FROM docs WHERE col='cells' AND id<>?", (item_id,)).fetchall()
                     recurring_rows = c.execute("SELECT data FROM docs WHERE col='recurring'").fetchall()

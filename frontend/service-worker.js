@@ -2,7 +2,7 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.10-v13";
+const BUILD = "2026.11.11-v13";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
 const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/api-client.js", "/js/app.js"];
 

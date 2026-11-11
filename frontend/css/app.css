@@ -350,7 +350,8 @@ thead th.corner{width:clamp(56px,10vw,130px);position:static}
 .menu-nav:hover{background:#ffffff0d;border-color:#ffffff18}.menu-nav.active{background:#d9b25a1c;border-color:#c9a65a66;color:#f6d88e}
 .menu-bottom{position:sticky;bottom:-12px;margin-top:auto;padding:10px 0 2px;background:#091a31;border-top:1px solid #ffffff26}
 .menu-nav.settings-nav{font-weight:700}.menu-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 2px 0}
-.menu-quick-actions button{font-size:12px;padding:9px 7px;border-radius:7px}
+.menu-quick-actions button{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;padding:9px 7px;border-radius:7px}
+.menu-quick-actions button>span{font-size:14px;line-height:1;flex:0 0 auto}
 #bottom-nav{display:none!important}
 #view-weekly[hidden]{display:none!important}
 #workspace-body>.card,#workspace-body>.cards{margin-top:10px}
