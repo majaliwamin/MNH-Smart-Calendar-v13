@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
+<title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script>window.MNH_BUILD="2026.11.10-v13";</script>
+<script src="/js/api-client.js?v=2026.11.10-v13"></script>
+
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.10-v13">
+</head>
+<body data-theme="midnight">
+<header class="site-header" id="site-header">
+ <div class="hd-band">
+  <div class="hd-left">
+  <div class="hd-title">
+   <div class="hd-main" id="hd-title">PhD in Maternal and Neonatal Health : 3rd Block</div>
+   <div class="hd-sub" id="hd-sub">Academic Calendar</div>
+  </div>
+  </div>
+  <div class="hd-right">
+   <div class="hd-today">
+    <svg class="ic ic-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="#ecbb4c"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><text id="hd-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="#6b4a12"></text></svg>
+    <div class="hd-today-text"><span class="t1">Today</span><span class="t2" id="hd-date"></span></div>
+   </div>
+   <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ecbb4c" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+    <span class="hd-badge" id="hd-badge" hidden>0</span>
+   </button>
+   <button type="button" class="hd-user" id="menu-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-panel" data-label="Menu"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span></button>
+  </div>
+ </div>
+  <div class="menu-panel" id="menu-panel" role="navigation" aria-label="Calendar navigation" hidden>
+   <div class="menu-heading"><strong>MNH Calendar</strong><span>Navigation</span></div>
+   <div class="menu-links">
+    <button type="button" class="menu-nav" data-view="monthly"><span>▦</span>Monthly Calendar</button>
+    <button type="button" class="menu-nav" data-view="modules"><span>▤</span>Modules</button>
+    <button type="button" class="menu-nav" data-view="facilitators"><span>♙</span>Facilitators</button>
+    <button type="button" class="menu-nav" data-view="examinations"><span>▣</span>Examinations</button>
+    <button type="button" class="menu-nav" data-view="recurring"><span>↻</span>Recurring Activities</button>
+    <button type="button" class="menu-nav" data-view="communications"><span>✉</span>WhatsApp &amp; Communications</button>
+    <button type="button" class="menu-nav" data-view="history"><span>◴</span>Activity History</button>
+    <button type="button" class="menu-nav" data-view="export"><span>⇩</span>Export &amp; Sharing</button>
+   </div>
+   <div class="menu-bottom">
+    <button type="button" id="settings" class="menu-nav settings-nav" data-view="settings"><span>⚙</span>Settings</button>
+    <div class="menu-quick-actions">
+     <button type="button" id="unlock" class="primary">Unlock editing</button>
+     <button type="button" id="lock" disabled>Lock editing</button>
+    </div>
+   </div>
+   <div id="legacy-actions" hidden>
+    <button type="button" id="edit-header" disabled></button><button type="button" id="save" disabled></button>
+    <button type="button" id="backup" disabled></button><button type="button" id="import" disabled></button>
+    <button type="button" id="print"></button><button type="button" id="theme-btn"></button><button type="button" id="alarms"></button>
+   </div>
+   <select id="theme" aria-label="Choose dashboard theme" hidden>
+    <option value="midnight">Midnight navy &amp; gold</option><option value="graphite">Graphite &amp; gold</option><option value="slate">Slate blue</option><option value="light">Light professional</option>
+   </select>
+   <input type="file" id="import-file" accept="application/json,.json" hidden>
+  </div>
+ <div class="bell-panel" id="bell-panel" hidden></div>
+</header>
+
+<nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
+ <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
+ <button type="button" class="view-tab active" data-view="weekly" aria-current="page">Weekly Schedule</button>
+ <button type="button" class="view-tab" data-view="upcoming">Upcoming Academic Activities</button>
+ <button type="button" class="view-tab" data-view="analytics">Analytics</button>
+</nav>
+
+<div class="status" id="status" role="status" aria-live="polite"></div>
+<main>
+<section class="view vw" id="view-dashboard">
+ <h2>Dashboard</h2><p class="lead">MNH academic calendar overview and shared programme information.</p>
+ <div id="dashboard-overview" class="cards"></div>
+ <div class="cards" style="margin-top:14px"><div class="card"><h3>Upcoming academic activities</h3><div id="dashboard-upcoming" class="muted">Loading shared activities…</div></div><div class="card"><h3>Recent additions</h3><div id="dashboard-recent" class="muted">Loading recent activity…</div></div></div>
+</section>
+<section class="view" id="view-weekly" hidden>
+<h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
+<div class="weekly-actions"><button type="button" id="weekly-export-xlsx">Download Excel (.xlsx)</button><button type="button" class="primary" id="weekly-add-session" hidden>Add session</button></div>
+<div class="wrap">
+<table aria-label="Editable Monday to Friday calendar">
+<thead id="calendar-head"></thead><tbody id="calendar-body"></tbody></table>
+</div>
+</section>
+<section class="view vw" id="view-my-schedule" hidden>
+ <h2>My Schedule</h2><p class="lead">Everything planned for the week of 9–13 Nov 2026. Select an item for details.</p>
+ <div class="cards" id="schedule-body"></div>
+</section>
+<section class="view vw" id="view-modules" hidden>
+ <h2>Modules</h2><p class="lead">Your modules and other activities, with this week’s sessions.</p>
+ <div class="cards" id="modules-body"></div>
+</section>
+<section class="view vw" id="view-resources" hidden>
+ <h2>Resources</h2><p class="lead">Links and materials shared with everyone on the programme.</p>
+ <div id="res-list"></div><div id="res-form-wrap"></div>
+</section>
+<section class="view vw" id="view-analytics" hidden>
+ <h2>Analytics</h2><p class="lead">A summary of this week’s timetable.</p>
+ <div id="analytics-body"></div>
+</section>
+<section class="view vw" id="view-workspace" hidden>
+ <h2 id="workspace-title">Workspace</h2><p class="lead" id="workspace-lead"></p>
+ <div id="workspace-body"></div>
+</section>
+</main>
+
+<nav class="bottom-nav" id="bottom-nav" aria-label="Main navigation"><a class="hd-tab active" href="#dashboard" data-view="dashboard" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Home</span></a><a class="hd-tab" href="#my-schedule" data-view="my-schedule"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="17" rx="3.5" fill="currentColor"/><rect x="7" y="2" width="2.4" height="5" rx="1.2" fill="currentColor" stroke="#0a2140" stroke-width="1"/><rect x="14.6" y="2" width="2.4" height="5" rx="1.2" fill="currentColor" stroke="#0a2140" stroke-width="1"/><g fill="#0a2140"><circle cx="8" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="16" cy="12" r="1.3"/><circle cx="8" cy="16.5" r="1.3"/><circle cx="12" cy="16.5" r="1.3"/><circle cx="16" cy="16.5" r="1.3"/></g></svg><span>Schedule</span></a><a class="hd-tab" href="#modules" data-view="modules"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10.3 5.2 8 4.7 3.5 4.7v13.6c4.5 0 6.8.5 8.5 1.8 1.7-1.3 4-1.8 8.5-1.8V4.7C16 4.7 13.7 5.2 12 6.5zM12 6.5v13.6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/></svg><span>Modules</span></a><a class="hd-tab" href="#resources" data-view="resources"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><path d="M12 9v6M9.3 12.9 12 15.6l2.7-2.7" fill="none" stroke="#0a2140" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Resources</span></a><a class="hd-tab" href="#analytics" data-view="analytics"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><rect x="3" y="11" width="5" height="10" rx="1.2"/><rect x="9.5" y="5" width="5" height="16" rx="1.2"/><rect x="16" y="2" width="5" height="19" rx="1.2"/></g></svg><span>Analytics</span></a></nav>
+<div class="footer banner"><svg viewBox="0 0 24 24" fill="none" stroke="#7cc4ff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.2"/></svg><div class="bn-text"><b>Penrose ScholarMw</b><span>Your academic partner for excellence</span></div><span id="sync" role="status" hidden></span></div>
+
+
+<div class="colour-dialog" id="module-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="module-dialog-title">
+ <div class="dialog-card module-card">
+  <h2 id="module-dialog-title">Schedule session</h2>
+  <div class="module-field"><label for="session-day">Weekday</label><select id="session-day"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option></select></div>
+  <div class="module-field time-pair"><div><label for="session-start">Start time</label><input id="session-start" type="time" step="60" value="08:00"></div><div><label for="session-end">End time</label><input id="session-end" type="time" step="60" value="10:00"></div></div>
+  <div class="module-field">
+   <label for="module-select">Select module</label>
+   <select id="module-select">
+    <option value="">Choose a module…</option>
+    <option value="MIPN 8100">MIPN 8100 — Medical Imaging in Pregnancy and Neonates</option>
+    <option value="ARMN – 8100">ARMN – 8100 — Antimicrobial Resistance in Maternal &amp; Neonatal Health</option>
+    <option value="PNIM-8100">PNIM-8100 — Pregnancy and Neonatal Immunology</option>
+   </select>
+  </div>
+  <div class="module-field">
+   <label for="module-label">Activity label</label>
+   <input id="module-label" type="text" maxlength="80" placeholder="e.g. Biostatistics, Seminar in MNH, Library">
+  </div>
+  <div class="module-details" id="module-details" aria-live="polite"></div>
+  <div class="module-field">
+   <label for="session-status">Session outcome</label>
+   <select id="session-status"><option value="scheduled">Scheduled / not yet held</option><option value="completed">Completed</option><option value="missed">Missed</option></select>
+  </div>
+  <div class="module-field">
+   <label for="module-colour">Entry colour</label>
+   <select id="module-colour"><option value="">No colour — use current theme</option><option value="#2F5D8C">Navy blue</option><option value="#3C7A5A">Green</option><option value="#8A6D2F">Gold</option><option value="#7B3F61">Plum</option><option value="#4B5D7A">Slate</option></select>
+  </div>
+  <div class="module-field">
+   <label for="module-mode">Delivery mode</label>
+   <select id="module-mode"><option value="unspecified">Not specified</option><option value="online">Online</option><option value="face_to_face">Face-to-face</option></select>
+  </div>
+  <div class="dialog-actions">
+   <button id="delete-module">Remove entry</button>
+   <button id="cancel-module">Cancel</button>
+   <button class="primary" id="apply-module">Apply</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="details-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="details-title">
+ <div class="dialog-card">
+  <h2 id="details-title">Module details</h2>
+  <div class="module-details" id="details-content"></div>
+  <div class="dialog-actions">
+   <button id="close-details">Close</button>
+   <button class="primary" id="edit-details" style="display:none">Change module / colour</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="security-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="security-title">
+ <div class="dialog-card">
+  <h2 id="security-title">Settings · Security</h2>
+  <p>Timetable editing is locked by default. Enter an authorised password to edit the timetable.</p>
+  <div class="module-field">
+   <label for="security-password">Editing password</label>
+   <input id="security-password" type="password" autocomplete="current-password" placeholder="Enter editing password">
+  </div>
+  <div class="dialog-actions">
+   <button id="close-security">Close</button>
+   <button class="primary" id="security-unlock">✏️ Edit timetable</button>
+  </div>
+  <p class="security-message" id="security-message" role="status"></p>
+ </div>
+</div>
+
+<div class="colour-dialog" id="header-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="header-dlg-title">
+ <div class="dialog-card">
+  <h2 id="header-dlg-title">Edit header</h2>
+  <div class="module-field"><label for="header-title-input">Title</label><input type="text" id="header-title-input" maxlength="80"></div>
+  <div class="module-field"><label for="header-sub-input">Subtitle</label><input type="text" id="header-sub-input" maxlength="60"></div>
+  <div class="dialog-actions">
+   <button id="header-reset">Restore default</button>
+   <button id="header-cancel">Cancel</button>
+   <button class="primary" id="header-save">Save header</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="alarm-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="alarm-title">
+ <div class="dialog-card">
+  <h2 id="alarm-title">🔔 Alarms</h2>
+  <p>Rings like an incoming call before each activity. Alarms are personal to this device and only ring while this page is open. Tap the page once after opening it so your browser allows sound.</p>
+  <div class="module-field">
+   <label for="alarm-lead">Ring</label>
+   <select id="alarm-lead">
+    <option value="0">At the start time</option>
+    <option value="5">5 minutes before</option>
+    <option value="10">10 minutes before</option>
+    <option value="15">15 minutes before</option>
+    <option value="30">30 minutes before</option>
+   </select>
+  </div>
+  <div class="module-details" id="alarm-next" aria-live="polite"></div>
+  <div class="dialog-actions">
+   <button id="alarm-test">Test ring</button>
+   <button id="alarm-close">Close</button>
+   <button class="primary" id="alarm-toggle">Turn on</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="call-dialog" aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="call-name">
+ <div class="call-card">
+  <div class="call-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="58" height="58" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="#ecbb4c"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><text id="call-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="#6b4a12"></text></svg></div>
+  <div class="call-sub">Incoming reminder</div>
+  <div class="call-name" id="call-name"></div>
+  <div class="call-when" id="call-when"></div>
+  <div class="call-actions">
+   <div><button class="call-btn decline" id="call-decline" aria-label="Decline and stop the alarm">✕</button><span class="call-label">Decline</span></div>
+   <div><button class="call-btn answer" id="call-answer" aria-label="Answer: stop the alarm and open the activity">📞</button><span class="call-label">Answer</span></div>
+  </div>
+  <button class="call-snooze" id="call-snooze">Snooze 5 min</button>
+ </div>
+</div>
+
+
+
+
+
+
+
+
+<script src="/js/app.js?v=2026.11.10-v13" defer></script>
+<div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
+  This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
+</div>
+<script>
+(function () {
+  "use strict";
+  const BUILD = window.MNH_BUILD;
+  const reloadKey = "mnh_build_reload_" + BUILD;
+
+  async function purgeCaches() {
+    try {
+      const regs = await (navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : []);
+      await Promise.all(regs.map((r) => r.unregister()));
+      const keys = await (window.caches ? caches.keys() : []);
+      await Promise.all(keys.filter((k) => k.indexOf("mnh-calendar") === 0).map((k) => caches.delete(k)));
+    } catch (e) { /* best effort */ }
+  }
+
+  // 1. Compare this page's build with the server that is actually answering.
+  fetch("/api/build", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then(async (info) => {
+    if (!info || !info.build) return;
+    const foot = document.getElementById("sync");
+    if (info.build !== BUILD) {
+      // Served page and server disagree: purge every cache once, then reload; if it persists, tell the user.
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, "1");
+        await purgeCaches();
+        location.reload();
+        return;
+      }
+      document.getElementById("stale-banner").hidden = false;
+      document.getElementById("stale-reload").onclick = async () => { await purgeCaches(); location.reload(); };
+    }
+    document.documentElement.dataset.serverBuild = info.build;
+    document.documentElement.dataset.pageBuild = BUILD;
+    if (foot && foot.parentNode) foot.parentNode.title = "Page build " + BUILD + " · server build " + info.build;
+  }).catch(() => { /* offline: nothing to compare */ });
+
+  // 2. Service worker: always check for a new worker and switch to it immediately.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" }).then((reg) => {
+        reg.update().catch(() => {});
+        setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+      }).catch((error) => console.error("MNH Calendar offline cache registration failed:", error));
+    });
+    let reloaded = false;
+    const hadController = !!navigator.serviceWorker.controller; // first-ever install must not reload
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloaded || !hadController) return;
+      reloaded = true;
+      location.reload();
+    });
+  }
+})();
+</script>
+</body></html>
