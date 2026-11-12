@@ -377,9 +377,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return hour * 60 + minute;
   }
 
-  String _clockText(int minutes) =>
-      '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
-
   Map<String, dynamic>? _sessionFromRow(dynamic source) {
     final row = Map<String, dynamic>.from(source as Map);
     final data = Map<String, dynamic>.from(row['data'] ?? {});
@@ -411,8 +408,8 @@ class _HomeScreenState extends State<HomeScreen> {
       startTime ??= '08:00';
       endTime ??= '10:00';
     }
-    final start = _clockMinutes(startTime ?? '');
-    final end = _clockMinutes(endTime ?? '');
+    final start = _clockMinutes(startTime);
+    final end = _clockMinutes(endTime);
     if (start == null || end == null || end <= start) {
       return null;
     }

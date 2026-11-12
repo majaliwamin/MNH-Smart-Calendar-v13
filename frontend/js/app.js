@@ -449,7 +449,7 @@ const SEED_STAMP=1794350000001;   // corrected Mondayâ€“Friday programme for 9â€
 const themeKey="phd_mnh_theme";
 const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
-function setSync(t){syncEl.textContent=t;}
+function setSync(t){if(syncEl)syncEl.textContent=t;}
 function cleanCell(v){const o={};["code","title","facilitator","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
 function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<5)||/^session-[A-Za-z0-9-]+$/.test(k);}
 function writeFailed(e){

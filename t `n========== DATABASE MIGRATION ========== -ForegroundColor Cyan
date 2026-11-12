@@ -1,0 +1,564 @@
+warning: in the working copy of 'backend/app/database/connection.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/app/database/connection.py b/backend/app/database/connection.py[m
+[1mindex 0f9050d..86c079d 100644[m
+[1m--- a/backend/app/database/connection.py[m
+[1m+++ b/backend/app/database/connection.py[m
+[36m@@ -1,19 +1,36 @@[m
+[31m-"""SQLite connection and transaction helpers."""[m
+[32m+[m
+[32m+[m[32m"""SQLite and PostgreSQL database connection helpers."""[m
+ import json[m
+[32m+[m[32mimport os[m
+ import sqlite3[m
+ import time[m
+ from contextlib import contextmanager[m
+ from threading import RLock[m
+[32m+[m
+ from app.config import DATABASE_PATH, ensure_directories[m
+ [m
+ DB_LOCK = RLock()[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef is_postgres():[m
+[32m+[m[32m    return bool(os.environ.get("DATABASE_URL", "").strip())[m
+[32m+[m
+[32m+[m
+ SEED_MODULES = {[m
+[31m-    "MIPN 8100": {"title": "Medical Imaging in Pregnancy and Neonates", "facilitator": "Not specified"},[m
+[31m-    "ARMN – 8100": {"title": "Antimicrobial Resistance in Maternal & Neonatal Health", "facilitator": "G Bandawe"},[m
+[31m-    "PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitator": "D Mzinza"},[m
+[32m+[m[32m    "MIPN 8100": {[m
+[32m+[m[32m        "title": "Medical Imaging in Pregnancy and Neonates",[m
+[32m+[m[32m        "facilitator": "Not specified",[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "ARMN – 8100": {[m
+[32m+[m[32m        "title": "Antimicrobial Resistance in Maternal & Neonatal Health",[m
+[32m+[m[32m        "facilitator": "G Bandawe",[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "PNIM-8100": {[m
+[32m+[m[32m        "title": "Pregnancy and Neonatal Immunology",[m
+[32m+[m[32m        "facilitator": "D Mzinza",[m
+[32m+[m[32m    },[m
+ }[m
+[31m-# Programme for the teaching week Monday 9 - Friday 13 November 2026.[m
+[31m-# Keys are "slot_day": seven time slots by five days (0 = Monday ... 4 = Friday).[m
+[32m+[m
+ SEED_PROGRAM_CELLS = {[m
+     "1_0": {"code": "Biostatistics", "title": "Biostatistics", "timeLabel": "11:00–13:30", "colour": "#2F5D8C"},[m
+     "6_0": {"code": "Bioethics", "title": "Bioethics", "timeLabel": "19:00–21:00", "colour": "#7B3F61"},[m
+[36m@@ -28,89 +45,456 @@[m [mSEED_PROGRAM_CELLS = {[m
+ }[m
+ [m
+ [m
+[31m-def connect():[m
+[32m+[m[32mdef _convert_placeholders(sql):[m
+[32m+[m[32m    """Convert ? placeholders to %s without changing quoted text."""[m
+[32m+[m[32m    result = [][m
+[32m+[m[32m    state = "normal"[m
+[32m+[m[32m    i = 0[m
+[32m+[m
+[32m+[m[32m    while i < len(sql):[m
+[32m+[m[32m        char = sql[i][m
+[32m+[m[32m        next_char = sql[i + 1] if i + 1 < len(sql) else ""[m
+[32m+[m
+[32m+[m[32m        if state == "normal":[m
+[32m+[m[32m            if char == "'":[m
+[32m+[m[32m                state = "single"[m
+[32m+[m[32m                result.append(char)[m
+[32m+[m[32m            elif char == '"':[m
+[32m+[m[32m                state = "double"[m
+[32m+[m[32m                result.append(char)[m
+[32m+[m[32m            elif char == "-" and next_char == "-":[m
+[32m+[m[32m                state = "line_comment"[m
+[32m+[m[32m                result.extend([char, next_char])[m
+[32m+[m[32m                i += 1[m
+[32m+[m[32m            elif char == "/" and next_char == "*":[m
+[32m+[m[32m                state = "block_comment"[m
+[32m+[m[32m                result.extend([char, next_char])[m
+[32m+[m[32m                i += 1[m
+[32m+[m[32m            elif char == "?":[m
+[32m+[m[32m                result.append("%s")[m
+[32m+[m[32m            else:[m
+[32m+[m[32m                result.append(char)[m
+[32m+[m
+[32m+[m[32m        elif state == "single":[m
+[32m+[m[32m            result.append(char)[m
+[32m+[m[32m            if char == "'" and next_char == "'":[m
+[32m+[m[32m                result.append(next_char)[m
+[32m+[m[32m                i += 1[m
+[32m+[m[32m            elif char == "'":[m
+[32m+[m[32m                state = "normal"[m
+[32m+[m
+[32m+[m[32m        elif state == "double":[m
+[32m+[m[32m            result.append(char)[m
+[32m+[m[32m            if char == '"' and next_char == '"':[m
+[32m+[m[32m                result.append(next_char)[m
+[32m+[m[32m                i += 1[m
+[32m+[m[32m            elif char == '"':[m
+[32m+[m[32m                state = "normal"[m
+[32m+[m
+[32m+[m[32m        elif state == "line_comment":[m
+[32m+[m[32m            result.append(char)[m
+[32m+[m[32m            if char == "\n":[m
+[32m+[m[32m                state = "normal"[m
+[32m+[m
+[32m+[m[32m        elif state == "block_comment":[m
+[32m+[m[32m            result.append(char)[m
+[32m+[m[32m            if char == "*" and next_char == "/":[m
+[32m+[m[32m                result.append(next_char)[m
+[32m+[m[32m                i += 1[m
+[32m+[m[32m                state = "normal"[m
+[32m+[m
+[32m+[m[32m        i += 1[m
+[32m+[m
+[32m+[m[32m    return "".join(result)[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass HybridRow(dict):[m
+[32m+[m[32m    """Support both row['column'] and row[0] access."""[m
+[32m+[m
+[32m+[m[32m    def __getitem__(self, key):[m
+[32m+[m[32m        if isinstance(key, int):[m
+[32m+[m[32m            return list(self.values())[key][m
+[32m+[m[32m        return super().__getitem__(key)[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass PostgresCursor:[m
+[32m+[m[32m    def __init__(self, cursor):[m
+[32m+[m[32m        self.cursor = cursor[m
+[32m+[m
+[32m+[m[32m    def fetchone(self):[m
+[32m+[m[32m        row = self.cursor.fetchone()[m
+[32m+[m[32m        if row is None:[m
+[32m+[m[32m            return None[m
+[32m+[m[32m        names = [column.name for column in self.cursor.description][m
+[32m+[m[32m        return HybridRow(zip(names, row))[m
+[32m+[m
+[32m+[m[32m    def fetchall(self):[m
+[32m+[m[32m        rows = self.cursor.fetchall()[m
+[32m+[m[32m        names = [column.name for column in self.cursor.description][m
+[32m+[m[32m        return [HybridRow(zip(names, row)) for row in rows][m
+[32m+[m
+[32m+[m[32m    @property[m
+[32m+[m[32m    def rowcount(self):[m
+[32m+[m[32m        return self.cursor.rowcount[m
+[32m+[m
+[32m+[m[32m    @property[m
+[32m+[m[32m    def description(self):[m
+[32m+[m[32m        return self.cursor.description[m
+[32m+[m
+[32m+[m[32m    def close(self):[m
+[32m+[m[32m        self.cursor.close()[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass PostgresConnection:[m
+[32m+[m[32m    """Compatibility wrapper for the application's SQLite-style calls."""[m
+[32m+[m
+[32m+[m[32m    def __init__(self, connection):[m
+[32m+[m[32m        self.connection = connection[m
+[32m+[m
+[32m+[m[32m    def execute(self, sql, parameters=()):[m
+[32m+[m[32m        cursor = self.connection.cursor()[m
+[32m+[m[32m        cursor.execute(_convert_placeholders(sql), parameters)[m
+[32m+[m[32m        return PostgresCursor(cursor)[m
+[32m+[m
+[32m+[m[32m    def executemany(self, sql, parameters):[m
+[32m+[m[32m        cursor = self.connection.cursor()[m
+[32m+[m[32m        cursor.executemany(_convert_placeholders(sql), parameters)[m
+[32m+[m[32m        return PostgresCursor(cursor)[m
+[32m+[m
+[32m+[m[32m    def commit(self):[m
+[32m+[m[32m        self.connection.commit()[m
+[32m+[m
+[32m+[m[32m    def rollback(self):[m
+[32m+[m[32m        self.connection.rollback()[m
+[32m+[m
+[32m+[m[32m    def close(self):[m
+[32m+[m[32m        self.connection.close()[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _insert_doc(connection, collection, item_id, data, updated_at):[m
+[32m+[m[32m    sql = """[m
+[32m+[m[32m        INSERT INTO docs(col,id,data,updated_at)[m
+[32m+[m[32m        VALUES(?,?,?,?)[m
+[32m+[m[32m    """[m
+[32m+[m[32m    if is_postgres():[m
+[32m+[m[32m        sql += " ON CONFLICT(col,id) DO NOTHING"[m
+[32m+[m[32m    else:[m
+[32m+[m[32m        sql = sql.replace("INSERT INTO", "INSERT OR IGNORE INTO", 1)[m
+[32m+[m
+[32m+[m[32m    connection.execute(sql, (collection, item_id, data, updated_at))[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _insert_meta(connection, key, value):[m
+[32m+[m[32m    sql = "INSERT INTO app_meta(key,value) VALUES(?,?)"[m
+[32m+[m[32m    if is_postgres():[m
+[32m+[m[32m        sql += " ON CONFLICT(key) DO NOTHING"[m
+[32m+[m[32m    else:[m
+[32m+[m[32m        sql = sql.replace("INSERT INTO", "INSERT OR IGNORE INTO", 1)[m
+[32m+[m
+[32m+[m[32m    connection.execute(sql, (key, value))[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _replace_meta(connection, key, value):[m
+[32m+[m[32m    if is_postgres():[m
+[32m+[m[32m        sql = """[m
+[32m+[m[32m            INSERT INTO app_meta(key,value) VALUES(?,?)[m
+[32m+[m[32m            ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value[m
+[32m+[m[32m        """[m
+[32m+[m[32m    else:[m
+[32m+[m[32m        sql = "INSERT OR REPLACE INTO app_meta(key,value) VALUES(?,?)"[m
+[32m+[m
+[32m+[m[32m    connection.execute(sql, (key, value))[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _connect_sqlite():[m
+     ensure_directories()[m
+[31m-    connection = sqlite3.connect(str(DATABASE_PATH), timeout=30, check_same_thread=False)[m
+[32m+[m
+[32m+[m[32m    connection = sqlite3.connect([m
+[32m+[m[32m        str(DATABASE_PATH),[m
+[32m+[m[32m        timeout=30,[m
+[32m+[m[32m        check_same_thread=False,[m
+[32m+[m[32m    )[m
+     connection.row_factory = sqlite3.Row[m
+     connection.execute("PRAGMA journal_mode=WAL")[m
+     connection.execute("PRAGMA foreign_keys=ON")[m
+     connection.execute("PRAGMA busy_timeout=30000")[m
+[31m-    connection.execute("""CREATE TABLE IF NOT EXISTS docs([m
+[31m-        col TEXT NOT NULL, id TEXT NOT NULL, data TEXT NOT NULL,[m
+[31m-        updated_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(col,id))""")[m
+[31m-    connection.execute("""CREATE TABLE IF NOT EXISTS audit([m
+[31m-        seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL,[m
+[31m-        role TEXT NOT NULL, action TEXT NOT NULL, collection TEXT,[m
+[31m-        item_id TEXT, summary TEXT NOT NULL)""")[m
+[31m-    connection.execute("CREATE TABLE IF NOT EXISTS app_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")[m
+[31m-    count = connection.execute("SELECT COUNT(*) FROM docs WHERE col='modules'").fetchone()[0][m
+[32m+[m
+[32m+[m[32m    connection.execute("""[m
+[32m+[m[32m        CREATE TABLE IF NOT EXISTS docs([m
+[32m+[m[32m            col TEXT NOT NULL,[m
+[32m+[m[32m            id TEXT NOT NULL,[m
+[32m+[m[32m            data TEXT NOT NULL,[m
+[32m+[m[32m            updated_at INTEGER NOT NULL DEFAULT 0,[m
+[32m+[m[32m            PRIMARY KEY(col,id)[m
+[32m+[m[32m        )[m
+[32m+[m[32m    """)[m
+[32m+[m
+[32m+[m[32m    connection.execute("""[m
+[32m+[m[32m        CREATE TABLE IF NOT EXISTS audit([m
+[32m+[m[32m            seq INTEGER PRIMARY KEY AUTOINCREMENT,[m
+[32m+[m[32m            at INTEGER NOT NULL,[m
+[32m+[m[32m            role TEXT NOT NULL,[m
+[32m+[m[32m            action TEXT NOT NULL,[m
+[32m+[m[32m            collection TEXT,[m
+[32m+[m[32m            item_id TEXT,[m
+[32m+[m[32m            summary TEXT NOT NULL[m
+[32m+[m[32m        )[m
+[32m+[m[32m    """)[m
+[32m+[m
+[32m+[m[32m    connection.execute("""[m
+[32m+[m[32m        CREATE TABLE IF NOT EXISTS app_meta([m
+[32m+[m[32m            key TEXT PRIMARY KEY,[m
+[32m+[m[32m            value TEXT NOT NULL[m
+[32m+[m[32m        )[m
+[32m+[m[32m    """)[m
+[32m+[m
+[32m+[m[32m    return connection[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _connect_postgres():[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        import psycopg[m
+[32m+[m[32m        from psycopg.rows import tuple_row[m
+[32m+[m[32m    except ImportError as exc:[m
+[32m+[m[32m        raise RuntimeError([m
+[32m+[m[32m            "PostgreSQL driver is missing. Install backend requirements."[m
+[32m+[m[32m        ) from exc[m
+[32m+[m
+[32m+[m[32m    raw_connection = psycopg.connect([m
+[32m+[m[32m        os.environ["DATABASE_URL"],[m
+[32m+[m[32m        connect_timeout=15,[m
+[32m+[m[32m        row_factory=tuple_row,[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    connection = PostgresConnection(raw_connection)[m
+[32m+[m
+[32m+[m[32m    connection.execute("""[m
+[32m+[m[32m        CREATE TABLE IF NOT EXISTS docs([m
+[32m+[m[32m            col TEXT NOT NULL,[m
+[32m+[m[32m            id TEXT NOT NULL,[m
+[32m+[m[32m            data TEXT NOT NULL,[m
+[32m+[m[32m            updated_at BIGINT NOT NULL DEFAULT 0,[m
+[32m+[m[32m            PRIMARY KEY(col,id)[m
+[32m+[m[32m        )[m
+[32m+[m[32m    """)[m
+[32m+[m
+[32m+[m[32m    connection.execute("""[m
+[32m+[m[32m        CREATE TABLE IF NOT EXISTS audit([m
+[32m+[m[32m            seq BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,[m
+[32m+[m[32m            at BIGINT NOT NULL,[m
+[32m+[m[32m            role TEXT NOT NULL,[m
+[32m+[m[32m            action TEXT NOT NULL,[m
+[32m+[m[32m            collection TEXT,[m
+[32m+[m[32m            item_id TEXT,[m
+[32m+[m[32m            summary TEXT NOT NULL[m
+[32m+[m[32m        )[m
+[32m+[m[32m    """)[m
+[32m+[m
+[32m+[m[32m    connection.execute("""[m
+[32m+[m[32m        CREATE TABLE IF NOT EXISTS app_meta([m
+[32m+[m[32m            key TEXT PRIMARY KEY,[m
+[32m+[m[32m            value TEXT NOT NULL[m
+[32m+[m[32m        )[m
+[32m+[m[32m    """)[m
+[32m+[m
+[32m+[m[32m    return connection[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _seed_database(connection):[m
+[32m+[m[32m    count = connection.execute([m
+[32m+[m[32m        "SELECT COUNT(*) FROM docs WHERE col='modules'"[m
+[32m+[m[32m    ).fetchone()[0][m
+[32m+[m
+     if count == 0:[m
+         now = int(time.time() * 1000)[m
+         for code, data in SEED_MODULES.items():[m
+[31m-            connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",[m
+[31m-                               ("modules", code, json.dumps(data, ensure_ascii=False), now))[m
+[31m-    seeded = connection.execute("SELECT 1 FROM app_meta WHERE key='academic_activity_seed_v1'").fetchone()[m
+[32m+[m[32m            _insert_doc([m
+[32m+[m[32m                connection,[m
+[32m+[m[32m                "modules",[m
+[32m+[m[32m                code,[m
+[32m+[m[32m                json.dumps(data, ensure_ascii=False),[m
+[32m+[m[32m                now,[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m    seeded = connection.execute([m
+[32m+[m[32m        "SELECT 1 FROM app_meta WHERE key='academic_activity_seed_v1'"[m
+[32m+[m[32m    ).fetchone()[m
+[32m+[m
+     if not seeded:[m
+         now = int(time.time() * 1000)[m
+[31m-        connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",[m
+[31m-            ("examinations", "exam-2026-11-13", json.dumps({"title": "Examination", "date": "2026-11-13", "time": "", "venue": "", "notes": "Time and venue have not been specified."}, ensure_ascii=False), now))[m
+[31m-        connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",[m
+[31m-            ("recurring", "journal-club", json.dumps({"title": "Journal Club", "frequency": "Weekly", "day": "Tuesday", "time": "13:00–14:00", "notes": "Recurring academic discussion."}, ensure_ascii=False), now))[m
+[31m-        connection.execute("INSERT OR IGNORE INTO app_meta(key,value) VALUES('academic_activity_seed_v1','1')")[m
+[31m-    # The academic calendar is Monday–Friday. Records that do not fit (day index >= 5, or a[m
+[31m-    # Saturday recurring activity) are NEVER deleted: they stay in the database untouched,[m
+[31m-    # every reader (web, mobile, exports, analytics) ignores them, and they are listed in[m
+[31m-    # app_meta['flagged_non_weekday_records'] + the audit log so an administrator can review them.[m
+[32m+[m
+[32m+[m[32m        _insert_doc([m
+[32m+[m[32m            connection,[m
+[32m+[m[32m            "examinations",[m
+[32m+[m[32m            "exam-2026-11-13",[m
+[32m+[m[32m            json.dumps({[m
+[32m+[m[32m                "title": "Examination",[m
+[32m+[m[32m                "date": "2026-11-13",[m
+[32m+[m[32m                "time": "",[m
+[32m+[m[32m                "venue": "",[m
+[32m+[m[32m                "notes": "Time and venue have not been specified.",[m
+[32m+[m[32m            }, ensure_ascii=False),[m
+[32m+[m[32m            now,[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        _insert_doc([m
+[32m+[m[32m            connection,[m
+[32m+[m[32m            "recurring",[m
+[32m+[m[32m            "journal-club",[m
+[32m+[m[32m            json.dumps({[m
+[32m+[m[32m                "title": "Journal Club",[m
+[32m+[m[32m                "frequency": "Weekly",[m
+[32m+[m[32m                "day": "Tuesday",[m
+[32m+[m[32m                "time": "13:00–14:00",[m
+[32m+[m[32m                "notes": "Recurring academic discussion.",[m
+[32m+[m[32m            }, ensure_ascii=False),[m
+[32m+[m[32m            now,[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        _insert_meta(connection, "academic_activity_seed_v1", "1")[m
+[32m+[m
+[32m+[m[32m    # Preserve records outside Monday-Friday for administrator review.[m
+     flagged = [][m
+[31m-    for row in connection.execute("SELECT id,data FROM docs WHERE col='cells'").fetchall():[m
+[32m+[m
+[32m+[m[32m    for row in connection.execute([m
+[32m+[m[32m        "SELECT id,data FROM docs WHERE col='cells'"[m
+[32m+[m[32m    ).fetchall():[m
+         item_id = str(row["id"])[m
+         legacy = item_id.rsplit("_", 1)[m
+         day_index = None[m
+[31m-        is_legacy_cell = len(legacy) == 2 and legacy[1].isdigit() and legacy[0].isdigit()[m
+[32m+[m
+[32m+[m[32m        is_legacy_cell = ([m
+[32m+[m[32m            len(legacy) == 2[m
+[32m+[m[32m            and legacy[1].isdigit()[m
+[32m+[m[32m            and legacy[0].isdigit()[m
+[32m+[m[32m        )[m
+[32m+[m
+         if is_legacy_cell:[m
+             day_index = int(legacy[1])[m
+[32m+[m
+         try:[m
+             record = json.loads(row["data"])[m
+         except (TypeError, json.JSONDecodeError):[m
+             record = {}[m
+[32m+[m
+         if not is_legacy_cell:[m
+             raw_day = record.get("dayIndex")[m
+             if type(raw_day) is int:[m
+                 day_index = raw_day[m
+             elif isinstance(raw_day, str) and raw_day.isdigit():[m
+                 day_index = int(raw_day)[m
+[32m+[m
+         if day_index is not None and day_index >= 5:[m
+[31m-            flagged.append({"collection": "cells", "id": item_id, "reason": f"weekday index {day_index} is outside Monday–Friday"})[m
+[31m-    for row in connection.execute("SELECT id,data FROM docs WHERE col='recurring'").fetchall():[m
+[32m+[m[32m            flagged.append({[m
+[32m+[m[32m                "collection": "cells",[m
+[32m+[m[32m                "id": item_id,[m
+[32m+[m[32m                "reason": ([m
+[32m+[m[32m                    f"weekday index {day_index} is outside Monday–Friday"[m
+[32m+[m[32m                ),[m
+[32m+[m[32m            })[m
+[32m+[m
+[32m+[m[32m    for row in connection.execute([m
+[32m+[m[32m        "SELECT id,data FROM docs WHERE col='recurring'"[m
+[32m+[m[32m    ).fetchall():[m
+         try:[m
+             recurring_data = json.loads(row["data"])[m
+         except (TypeError, json.JSONDecodeError):[m
+             recurring_data = {}[m
+[31m-        if str(recurring_data.get("day", "")).strip().lower() in ("sat", "saturday"):[m
+[31m-            flagged.append({"collection": "recurring", "id": str(row["id"]), "reason": "scheduled on Saturday"})[m
+[31m-    previous = connection.execute("SELECT value FROM app_meta WHERE key='flagged_non_weekday_records'").fetchone()[m
+[31m-    flagged_json = json.dumps(flagged, ensure_ascii=False, sort_keys=True)[m
+[31m-    if flagged and (not previous or previous["value"] != flagged_json):[m
+[31m-        connection.execute("INSERT OR REPLACE INTO app_meta(key,value) VALUES('flagged_non_weekday_records',?)", (flagged_json,))[m
+[31m-        connection.execute("INSERT INTO audit(at,role,action,collection,item_id,summary) VALUES(?,?,?,?,?,?)",[m
+[31m-                           (int(time.time() * 1000), "system", "flagged", None, None,[m
+[31m-                            f"{len(flagged)} record(s) fall outside Monday–Friday and are hidden from the timetable; they were kept for review."))[m
+[32m+[m
+[32m+[m[32m        if str(recurring_data.get("day", "")).strip().lower() in ([m
+[32m+[m[32m            "sat",[m
+[32m+[m[32m            "saturday",[m
+[32m+[m[32m        ):[m
+[32m+[m[32m            flagged.append({[m
+[32m+[m[32m                "collection": "recurring",[m
+[32m+[m[32m                "id": str(row["id"]),[m
+[32m+[m[32m                "reason": "scheduled on Saturday",[m
+[32m+[m[32m            })[m
+[32m+[m
+[32m+[m[32m    previous = connection.execute([m
+[32m+[m[32m        "SELECT value FROM app_meta "[m
+[32m+[m[32m        "WHERE key='flagged_non_weekday_records'"[m
+[32m+[m[32m    ).fetchone()[m
+[32m+[m
+[32m+[m[32m    flagged_json = json.dumps([m
+[32m+[m[32m        flagged,[m
+[32m+[m[32m        ensure_ascii=False,[m
+[32m+[m[32m        sort_keys=True,[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    if flagged and ([m
+[32m+[m[32m        not previous or previous["value"] != flagged_json[m
+[32m+[m[32m    ):[m
+[32m+[m[32m        _replace_meta([m
+[32m+[m[32m            connection,[m
+[32m+[m[32m            "flagged_non_weekday_records",[m
+[32m+[m[32m            flagged_json,[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        connection.execute([m
+[32m+[m[32m            """[m
+[32m+[m[32m            INSERT INTO audit([m
+[32m+[m[32m                at,role,action,collection,item_id,summary[m
+[32m+[m[32m            )[m
+[32m+[m[32m            VALUES(?,?,?,?,?,?)[m
+[32m+[m[32m            """,[m
+[32m+[m[32m            ([m
+[32m+[m[32m                int(time.time() * 1000),[m
+[32m+[m[32m                "system",[m
+[32m+[m[32m                "flagged",[m
+[32m+[m[32m                None,[m
+[32m+[m[32m                None,[m
+[32m+[m[32m                f"{len(flagged)} record(s) fall outside Monday–Friday "[m
+[32m+[m[32m                "and are hidden from the timetable; "[m
+[32m+[m[32m                "they were kept for review.",[m
+[32m+[m[32m            ),[m
+[32m+[m[32m        )[m
+[32m+[m
+     elif not flagged and previous:[m
+[31m-        connection.execute("DELETE FROM app_meta WHERE key='flagged_non_weekday_records'")[m
+[31m-    program_seeded = connection.execute("SELECT 1 FROM app_meta WHERE key='weekly_program_seed_v1'").fetchone()[m
+[32m+[m[32m        connection.execute([m
+[32m+[m[32m            "DELETE FROM app_meta "[m
+[32m+[m[32m            "WHERE key='flagged_non_weekday_records'"[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m    program_seeded = connection.execute([m
+[32m+[m[32m        "SELECT 1 FROM app_meta WHERE key='weekly_program_seed_v1'"[m
+[32m+[m[32m    ).fetchone()[m
+[32m+[m
+     if not program_seeded:[m
+         now = int(time.time() * 1000)[m
+[32m+[m
+         for cell_id, data in SEED_PROGRAM_CELLS.items():[m
+[31m-            connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",[m
+[31m-                               ("cells", cell_id, json.dumps(data, ensure_ascii=False), now))[m
+[31m-        connection.execute("INSERT OR IGNORE INTO app_meta(key,value) VALUES('weekly_program_seed_v1','1')")[m
+[31m-    connection.commit()[m
+[31m-    return connection[m
+[32m+[m[32m            _insert_doc([m
+[32m+[m[32m                connection,[m
+[32m+[m[32m                "cells",[m
+[32m+[m[32m                cell_id,[m
+[32m+[m[32m                json.dumps(data, ensure_ascii=False),[m
+[32m+[m[32m                now,[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m        _insert_meta(connection, "weekly_program_seed_v1", "1")[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef connect():[m
+[32m+[m[32m    """Connect to the configured database and initialise its schema."""[m
+[32m+[m[32m    connection = ([m
+[32m+[m[32m        _connect_postgres() if is_postgres() else _connect_sqlite()[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        _seed_database(connection)[m
+[32m+[m[32m        connection.commit()[m
+[32m+[m[32m        return connection[m
+[32m+[m[32m    except Exception:[m
+[32m+[m[32m        connection.rollback()[m
+[32m+[m[32m        connection.close()[m
+[32m+[m[32m        raise[m
+ [m
+ [m
+ @contextmanager[m
+ def database():[m
+[31m-    with DB_LOCK:[m
+[32m+[m[32m    """Provide a committed or rolled-back transaction."""[m
+[32m+[m[32m    if is_postgres():[m
+         connection = connect()[m
+         try:[m
+             yield connection[m
+[36m@@ -120,3 +504,14 @@[m [mdef database():[m
+             raise[m
+         finally:[m
+             connection.close()[m
+[32m+[m[32m    else:[m
+[32m+[m[32m        with DB_LOCK:[m
+[32m+[m[32m            connection = connect()[m
+[32m+[m[32m            try:[m
+[32m+[m[32m                yield connection[m
+[32m+[m[32m                connection.commit()[m
+[32m+[m[32m            except Exception:[m
+[32m+[m[32m                connection.rollback()[m
+[32m+[m[32m                raise[m
+[32m+[m[32m            finally:[m
+[32m+[m[32m                connection.close()[m
