@@ -78,8 +78,7 @@ def test_default_lead_times_are_ten_twenty_and_thirty():
 
 
 def test_sample_send_requires_an_editor_and_reports_missing_credentials(monkeypatch):
-    monkeypatch.delenv("MNH_WHATSAPP_TOKEN", raising=False)
-    monkeypatch.delenv("MNH_WHATSAPP_PHONE_ID", raising=False)
+    monkeypatch.delenv("MNH_WA_BRIDGE_URL", raising=False)
     monkeypatch.delenv("MNH_ENV", raising=False)
     from app.main import app
 
@@ -90,7 +89,7 @@ def test_sample_send_requires_an_editor_and_reports_missing_credentials(monkeypa
         response = client.post("/api/reminders/test", json={"to": "+265881988156"})
     assert response.status_code == 503
     message = response.json()["error"]
-    assert "MNH_WHATSAPP_TOKEN" in message and "MNH_WHATSAPP_PHONE_ID" in message
+    assert "MNH_WA_BRIDGE_URL" in message
 
 
 def test_status_describes_the_sender_without_leaking_credentials_or_numbers():

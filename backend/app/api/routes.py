@@ -251,13 +251,13 @@ def reminders_status(mnh_session: str | None = Cookie(default=None)):
 def reminders_send_test(payload: dict = Body(default={}), mnh_session: str | None = Cookie(default=None)):
     """Send one sample reminder to a single number, using the real message format."""
     require_editor(mnh_session)
-    from app.services import reminders, whatsapp
+    from app.services import reminders, wa_bridge
     to = str(payload.get("to") or "").strip()
     if not to:
         raise HTTPException(400, "Enter the WhatsApp number that should receive the sample.")
     try:
         result = reminders.send_test(to)
-    except whatsapp.WhatsAppError as error:
+    except wa_bridge.BridgeError as error:
         message = str(error)
         raise HTTPException(503 if "not configured" in message.lower() else 502, message) from error
     return {"ok": True, **result}

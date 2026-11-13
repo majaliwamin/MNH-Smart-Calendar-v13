@@ -27,5 +27,27 @@ services:
         sync: false
       - key: MNH_ED_PASSWORD
         sync: false
+      - key: MNH_WA_BRIDGE_URL
+        sync: false
+      - key: MNH_WA_BRIDGE_TOKEN
+        sync: false
+      - key: MNH_WA_BRIDGE_STYLE
+        sync: false
+      - key: MNH_WA_BRIDGE_SESSION
+        sync: false
+      - key: MNH_AI_API_KEY
+        sync: false
+      - key: MNH_AI_MODEL
+        sync: false
+      - key: MNH_AI_TRIGGER_ENABLED
+        value: "0"
+      - key: MNH_ARI_BASE_URL
+        sync: false
+      - key: MNH_ARI_USER
+        sync: false
+      - key: MNH_ARI_PASSWORD
+        sync: false
+      - key: MNH_ARI_ENDPOINT
+        sync: false
       - key: PYTHON_VERSION
         value: 3.12.8

@@ -959,7 +959,400 @@ async function renderReminderCard(root){
  }
  root.appendChild(card);
 }
-async function renderCommunications(){const root=workspace(...WORKSPACE_META.communications);if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Publish an announcement or communication"));const title=fieldInput("Announcement title",160),message=fieldInput("Message / communication details",1000),link=fieldInput("Optional WhatsApp or web link",400,"url");form.append(title,message,link);const add=el("button","primary","Publish communication");add.type="button";add.addEventListener("click",async()=>{if(!title.value.trim()||!message.value.trim()){statusEl.className="status error";statusEl.textContent="Enter an announcement title and message.";return;}try{await saveRow("communications",makeId("com"),{title:title.value.trim(),message:message.value.trim(),url:safeUrl(link.value),createdAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Communication published for all users.";renderCommunications();}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows("communications");if(!rows.length)list.appendChild(el("p","muted","No communications have been published."));rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||"Announcement"),el("p",null,d.message||""));if(d.url){const a=el("a","res-link","Open shared link");a.href=d.url;a.target="_blank";a.rel="noopener noreferrer";c.appendChild(a);}const wa=el("a","res-link","Share via WhatsApp");wa.href="https://wa.me/?text="+encodeURIComponent([d.title,d.message,d.url].filter(Boolean).join("\n"));wa.target="_blank";wa.rel="noopener noreferrer";c.appendChild(wa);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.onclick=async()=>{try{await deleteRow("communications",r.id);renderCommunications();}catch(e){writeFailed(e);}};c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted",e.message));}const resourcesCard=el("div","card");resourcesCard.appendChild(el("h3",null,"Shared resources"));root.appendChild(resourcesCard);renderResources();const existing=document.getElementById("res-list");if(existing)resourcesCard.appendChild(existing);const f=document.getElementById("res-form-wrap");if(f)resourcesCard.appendChild(f);renderReminderCard(root);}
+// ---- Communications Centre: separated cards over /api/comm/* ----
+const COMM_FIELD="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";
+function commCard(root,title,note){const card=el("div","card res-form");card.appendChild(el("h3",null,title));if(note)card.appendChild(el("p","muted",note));root.appendChild(card);return card;}
+function commFail(line,e){if(line){line.className="status error";line.textContent=e.message;}else{statusEl.className="status error";statusEl.textContent=e.message;}}
+function commBusy(line,text){if(line){line.className="status";line.textContent=text;}else{statusEl.className="status";statusEl.textContent=text;}}
+function commOk(line,text){if(line){line.className="status ok";line.textContent=text;}else{statusEl.className="status ok";statusEl.textContent=text;}}
+function commConsent(c,channel){
+ if(!c)return false;
+ const s=c.consent!==undefined?c.consent:c[channel+"Consent"];
+ if(s===true)return true;
+ if(s&&typeof s==="object"){const v=s[channel];return v===true||!!(v&&v.granted);}
+ return c[channel]===true;
+}
+function commList(data,key){if(Array.isArray(data))return data;const x=data&&data[key];return Array.isArray(x)?x:[];}
+async function renderCommStatusCard(root){
+ const card=commCard(root,"System status");
+ const line=el("p","muted","Checking communications status…");card.appendChild(line);
+ let s=null;
+ try{s=await apiRequest("GET","/api/comm/status");}catch(e){commFail(line,e);return;}
+ const stopped=!!(s&&s.emergencyStop);
+ line.className="status "+(stopped?"error":"ok");
+ line.textContent=stopped?"Emergency stop is ON — no messages or calls will be sent.":"Emergency stop is off; normal sending is allowed.";
+ const bridge=(s&&s.aiTrigger&&s.aiTrigger.bridge)||null;
+ [["WhatsApp bridge (Asterisk server)",bridge],
+  ["WhatsApp send bridge — auto trigger",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["MNH_AI_TRIGGER_ENABLED"]}:null],
+  ["AI draft service",s&&s.ai],["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
+  const on=!!(v&&v.configured);
+  let text=(on?"✔ ":"✖ ")+label+": "+(on?"configured":"not configured");
+  if(v&&v.missing)text+=" — missing "+(Array.isArray(v.missing)?v.missing.join(", "):v.missing);
+  else if(v&&v.detail)text+=" — "+v.detail;
+  card.appendChild(el("div","muted",text));
+ });
+ if(editingUnlocked){
+  const toggle=el("button",stopped?"primary":null,stopped?"Turn emergency stop OFF":"Turn emergency stop ON");toggle.type="button";
+  toggle.addEventListener("click",async()=>{
+   commBusy(line,"Saving emergency stop…");
+   try{await apiRequest("POST","/api/comm/emergency-stop",{enabled:!stopped});statusEl.className="status ok";statusEl.textContent=stopped?"Emergency stop lifted.":"Emergency stop enabled — all sending is paused.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.appendChild(toggle);
+ }
+}
+function commContactForm(values,onSave,line,cancelBtn){
+ const wrap=el("div","res-form");
+ const name=fieldInput("Full name",120),phone=fieldInput("Phone (with country code, e.g. +265…)",30,"tel"),notes=fieldInput("Notes (optional)",300);
+ name.value=values.name||"";phone.value=values.phone||"";notes.value=values.notes||"";
+ const cat=document.createElement("select");cat.setAttribute("aria-label","Category");cat.style.cssText=COMM_FIELD;
+ [["","Category…"],["staff","Staff"],["student","Student"],["other","Other"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;if(values.category===v)o.selected=true;cat.appendChild(o);});
+ const consents=el("div","reminder-leads");
+ [["whatsapp","WhatsApp consent"],["voice","Voice-call consent"]].forEach(([ch,label])=>{
+  const l=el("label","reminder-lead"),box=document.createElement("input");box.type="checkbox";box.checked=!!commConsent(values,ch);box.dataset.channel=ch;
+  l.append(box,document.createTextNode(" "+label));consents.appendChild(l);
+ });
+ const save=el("button","primary",values.id?"Save changes":"Add contact");save.type="button";
+ save.addEventListener("click",()=>onSave({
+  name:name.value.trim(),phone:phone.value.trim(),category:cat.value,notes:notes.value.trim(),
+  whatsapp:consents.children[0].querySelector("input").checked,
+  voice:consents.children[1].querySelector("input").checked
+ }));
+ [name,phone,cat,notes,consents,save].forEach(x=>{x.style.cssText=x.style.cssText||COMM_FIELD;if(x===consents)x.style.cssText="margin:6px 0;";wrap.appendChild(x);});
+ if(cancelBtn){const cancel=el("button",null,"Cancel");cancel.type="button";cancel.addEventListener("click",cancelBtn);wrap.appendChild(cancel);}
+ return wrap;
+}
+async function renderCommContactsCard(root){
+ const card=commCard(root,"Contacts","People who may receive WhatsApp messages or voice calls. Consent is required before anyone is contacted, and consent can be withdrawn at any time.");
+ const line=el("p","muted","Loading contacts…");card.appendChild(line);
+ let data=null;
+ try{data=await apiRequest("GET","/api/comm/contacts");}catch(e){commFail(line,e);return;}
+ const contacts=commList(data,"contacts"),dnc=commList(data&&data.dnc,"dnc");
+ line.className="status ok";line.textContent=contacts.length+" contact(s) · "+dnc.length+" on the do-not-contact list.";
+ if(editingUnlocked){
+  card.appendChild(commContactForm({},async d=>{
+   if(!d.name||!d.phone){commFail(line,new Error("Enter a name and phone number."));return;}
+   commBusy(line,"Saving contact…");
+   try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(makeId("c")),{name:d.name,phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact added.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  }));
+ }
+ const list=el("div","cards");card.appendChild(list);
+ if(!contacts.length)list.appendChild(el("p","muted","No contacts yet."));
+ contacts.forEach(c=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,c.name||c.id));
+  row.appendChild(el("div","muted",[c.phone||"no phone",c.category||"other"].join(" · ")));
+  const badges=el("div","reminder-leads");
+  badges.appendChild(el("span","pill",commConsent(c,"whatsapp")?"WhatsApp ✓":"WhatsApp ✗"));
+  badges.appendChild(el("span","pill",commConsent(c,"voice")?"Voice ✓":"Voice ✗"));
+  row.appendChild(badges);
+  if(c.notes)row.appendChild(el("p","muted",c.notes));
+  if(editingUnlocked){
+   const btns=el("div","reminder-test");
+   [["whatsapp","WhatsApp"],["voice","Voice"]].forEach(([ch,label])=>{
+    const granted=commConsent(c,ch),b=el("button",null,(granted?"Revoke ":"Grant ")+label+" consent");b.type="button";
+    b.addEventListener("click",async()=>{
+     commBusy(line,"Updating consent…");
+     try{await apiRequest("POST","/api/comm/contacts/"+encodeURIComponent(c.id)+"/consent",{channel:ch,granted:!granted});statusEl.className="status ok";statusEl.textContent="Consent updated.";renderCommunications();}
+     catch(e){commFail(line,e);}
+    });
+    btns.appendChild(b);
+   });
+   const edit=el("button",null,"Edit");edit.type="button";
+   edit.addEventListener("click",()=>{
+    row.textContent="";
+    row.appendChild(commContactForm(c,async d=>{
+     commBusy(line,"Saving changes…");
+     try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(c.id),{name:d.name,phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact updated.";renderCommunications();}
+     catch(e){commFail(line,e);}
+    },line,()=>renderCommunications()));
+   });
+   btns.appendChild(edit);
+   const del=el("button","res-del","Remove contact");del.type="button";
+   del.addEventListener("click",async()=>{
+    if(!confirm("Remove this contact?"))return;
+    try{await apiRequest("DELETE","/api/comm/contacts/"+encodeURIComponent(c.id));statusEl.className="status ok";statusEl.textContent="Contact removed.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   btns.appendChild(del);
+   row.appendChild(btns);
+  }
+  list.appendChild(row);
+ });
+ // Do-not-contact mini-section
+ card.appendChild(el("h3",null,"Do-not-contact list"));
+ card.appendChild(el("p","muted","Numbers here are never contacted, whatever their consent says."));
+ const dncBox=el("div","cards");card.appendChild(dncBox);
+ if(!dnc.length)dncBox.appendChild(el("p","muted","The do-not-contact list is empty."));
+ dnc.forEach(d=>{
+  const row=el("div","card");
+  row.appendChild(el("div",null,d.phone||d.id));
+  if(d.reason)row.appendChild(el("div","muted",d.reason));
+  if(editingUnlocked){
+   const del=el("button","res-del","Remove from list");del.type="button";
+   del.addEventListener("click",async()=>{
+    try{await apiRequest("DELETE","/api/comm/dnc/"+encodeURIComponent(d.id));statusEl.className="status ok";statusEl.textContent="Removed from the do-not-contact list.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   row.appendChild(del);
+  }
+  dncBox.appendChild(row);
+ });
+ if(editingUnlocked){
+  const dncPhone=fieldInput("Phone to block",30,"tel"),dncReason=fieldInput("Reason (optional)",200);
+  const dncAdd=el("button","primary","Add to do-not-contact list");dncAdd.type="button";
+  dncAdd.addEventListener("click",async()=>{
+   if(!dncPhone.value.trim()){commFail(line,new Error("Enter a phone number to block."));return;}
+   commBusy(line,"Adding to do-not-contact list…");
+   try{await apiRequest("POST","/api/comm/dnc",{phone:dncPhone.value.trim(),reason:dncReason.value.trim()});statusEl.className="status ok";statusEl.textContent="Added to the do-not-contact list.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.append(dncPhone,dncReason,dncAdd);
+ }
+}
+function commDraftRows(container,draft,line){
+ container.textContent="";
+ if(!draft)return;
+ const rows=commList(draft,"recipients").length?commList(draft,"recipients"):commList(draft,"links");
+ if(!rows.length){container.appendChild(el("p","muted","The server returned no per-recipient links."));return;}
+ rows.forEach(r=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,r.name||r.contactName||r.contactId||"Recipient"));
+  row.appendChild(el("div","muted",r.phone||""));
+  const chip=el("span","pill",r.status||"pending");row.appendChild(chip);
+  const link=r.link||r.url||r.whatsappUrl;
+  if(link){const a=el("a","res-link","Open WhatsApp");a.href=link;a.target="_blank";a.rel="noopener noreferrer";row.appendChild(a);}
+  if(editingUnlocked){
+   const mark=(status,label)=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",async()=>{
+    commBusy(line,"Marking…");
+    try{await apiRequest("POST","/api/comm/drafts/"+encodeURIComponent(draft.id||draft.draftId)+"/mark",{contactId:r.contactId||r.id,status});chip.textContent=status;commOk(line,"Marked as "+status+".");}
+    catch(e){commFail(line,e);}
+   });return b;};
+   row.append(mark("opened","Mark opened"),mark("sent-manual","Mark sent"));
+  }
+  container.appendChild(row);
+ });
+}
+async function renderCommComposerCard(root){
+ const card=commCard(root,"Compose WhatsApp messages","Opening WhatsApp does not send the message — press Send in WhatsApp yourself, then mark it as sent. AI drafts are editable; the AI never sends anything.");
+ const line=el("p","muted","Loading recipients…");card.appendChild(line);
+ let contacts=[],templates=[];
+ try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
+ try{const t=await apiRequest("GET","/api/comm/templates");templates=commList(t,"templates");}catch(e){templates=[];}
+ if(!contacts.length){line.className="status error";line.textContent="Add contacts first — there is nobody to message.";return;}
+ line.className="status ok";line.textContent=contacts.length+" contact(s) available.";
+ const pick=el("div","cards");
+ contacts.forEach(c=>{
+  const ok=commConsent(c,"whatsapp"),l=el("label","reminder-lead"+(ok?"":" muted")),box=document.createElement("input");
+  box.type="checkbox";box.value=String(c.id);box.disabled=!ok;
+  l.append(box,document.createTextNode(" "+(c.name||c.id)+(c.phone?" · "+c.phone:"")+(ok?"":" · no WhatsApp consent")));
+  pick.appendChild(l);
+ });
+ card.appendChild(pick);
+ const tpl=el("select");tpl.setAttribute("aria-label","Message template");tpl.style.cssText=COMM_FIELD;
+ {const none=document.createElement("option");none.value="";none.textContent="Start from a template…";tpl.appendChild(none);}
+ templates.forEach(t=>{const o=document.createElement("option");o.value=String(t.id);o.textContent=t.title||t.name||String(t.id);tpl.appendChild(o);});
+ card.appendChild(tpl);
+ const body=document.createElement("textarea");body.rows=5;body.maxLength=1000;body.placeholder="Message body…";body.setAttribute("aria-label","Message body");body.style.cssText=COMM_FIELD;
+ card.appendChild(body);
+ tpl.addEventListener("change",()=>{const t=templates.find(x=>String(x.id)===tpl.value);if(t)body.value=t.body||t.text||"";});
+ let aiAssisted=false;
+ const aiPrompt=fieldInput("Describe the message for the AI (optional)",300);card.appendChild(aiPrompt);
+ const aiBtn=el("button",null,"Draft with AI");aiBtn.type="button";
+ aiBtn.addEventListener("click",async()=>{
+  aiBtn.disabled=true;commBusy(line,"Asking the AI for a draft…");
+  try{const r=await apiRequest("POST","/api/comm/ai/draft",{prompt:aiPrompt.value.trim()});body.value=(r&&(r.draft||r.text||r.body))||body.value;aiAssisted=true;commOk(line,"AI draft inserted — edit it before preparing links. The AI never sends anything.");}
+  catch(e){commFail(line,e);}
+  finally{aiBtn.disabled=false;}
+ });
+ card.appendChild(aiBtn);
+ const draftBox=el("div","cards");
+ const prep=el("button","primary","Prepare WhatsApp links");prep.type="button";
+ prep.addEventListener("click",async()=>{
+  const ids=[...pick.querySelectorAll("input:checked")].map(x=>x.value);
+  if(!ids.length){commFail(line,new Error("Select at least one recipient with WhatsApp consent."));return;}
+  if(!body.value.trim()){commFail(line,new Error("Write a message first."));return;}
+  prep.disabled=true;commBusy(line,"Preparing per-recipient WhatsApp links…");
+  try{
+   const r=await apiRequest("POST","/api/comm/drafts",{contactIds:ids,body:body.value.trim(),title:"",aiAssisted});
+   commDraftRows(draftBox,(r&&(r.draft||r))||null,line);
+   commOk(line,"Links prepared. Open each one, send it in WhatsApp yourself, then mark it as sent.");
+  }
+  catch(e){commFail(line,e);}
+  finally{prep.disabled=false;}
+ });
+ card.append(prep,draftBox);
+}
+async function renderCommTemplatesCard(root){
+ const card=commCard(root,"Message templates","Reusable message bodies for the composer.");
+ const line=el("p","muted","Loading templates…");card.appendChild(line);
+ let templates=[];
+ try{templates=commList(await apiRequest("GET","/api/comm/templates"),"templates");}catch(e){commFail(line,e);return;}
+ line.className="status ok";line.textContent=templates.length+" template(s).";
+ const list=el("div","cards");card.appendChild(list);
+ if(!templates.length)list.appendChild(el("p","muted","No templates yet."));
+ templates.forEach(t=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,t.title||t.name||t.id));
+  row.appendChild(el("p","muted",t.body||t.text||""));
+  if(editingUnlocked){
+   const del=el("button","res-del","Delete template");del.type="button";
+   del.addEventListener("click",async()=>{
+    if(!confirm("Delete this template?"))return;
+    try{await apiRequest("DELETE","/api/comm/templates/"+encodeURIComponent(t.id));statusEl.className="status ok";statusEl.textContent="Template deleted.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   row.appendChild(del);
+  }
+  list.appendChild(row);
+ });
+ if(editingUnlocked){
+  const title=fieldInput("Template title",120);
+  const body=document.createElement("textarea");body.rows=3;body.maxLength=1000;body.placeholder="Template body…";body.setAttribute("aria-label","Template body");body.style.cssText=COMM_FIELD;
+  const add=el("button","primary","Add template");add.type="button";
+  add.addEventListener("click",async()=>{
+   if(!title.value.trim()||!body.value.trim()){commFail(line,new Error("Enter a template title and body."));return;}
+   commBusy(line,"Saving template…");
+   try{await apiRequest("POST","/api/comm/templates",{title:title.value.trim(),body:body.value.trim()});statusEl.className="status ok";statusEl.textContent="Template saved.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.append(title,body,add);
+ }
+}
+async function renderCommScheduledCard(root){
+ const card=commCard(root,"Scheduled communications","Scheduled jobs create drafts for review — they never send automatically.");
+ const line=el("p","muted","Loading scheduled jobs…");card.appendChild(line);
+ let jobs=[];
+ try{jobs=commList(await apiRequest("GET","/api/comm/jobs"),"jobs");}catch(e){commFail(line,e);return;}
+ line.className="status ok";line.textContent=jobs.length+" scheduled job(s).";
+ const list=el("div","cards");card.appendChild(list);
+ if(!jobs.length)list.appendChild(el("p","muted","Nothing is scheduled."));
+ jobs.forEach(j=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,j.title||j.type||j.id));
+  row.appendChild(el("div","muted",[j.type||"",j.runAt?new Date(j.runAt).toLocaleString():""].filter(Boolean).join(" · ")));
+  row.appendChild(el("span","pill",j.status||"pending"));
+  if(j.attempts!=null)row.appendChild(el("div","muted","Attempts: "+j.attempts));
+  if(j.lastError)row.appendChild(el("p","muted","Last error: "+j.lastError));
+  if(editingUnlocked&&(j.status||"pending")==="pending"){
+   const cancel=el("button","res-del","Cancel job");cancel.type="button";
+   cancel.addEventListener("click",async()=>{
+    try{await apiRequest("POST","/api/comm/jobs/"+encodeURIComponent(j.id)+"/cancel",{});statusEl.className="status ok";statusEl.textContent="Job cancelled.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   row.appendChild(cancel);
+  }
+  list.appendChild(row);
+ });
+ if(editingUnlocked){
+  const type=el("select");type.setAttribute("aria-label","Job type");type.style.cssText=COMM_FIELD;
+  [["lecture-reminder","Lecture reminder"],["exam-reminder","Exam reminder"],["deadline","Deadline"],["meeting","Meeting"],["announcement","Announcement"],["custom","Custom"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;type.appendChild(o);});
+  const runAt=document.createElement("input");runAt.type="datetime-local";runAt.setAttribute("aria-label","Run at");runAt.style.cssText=COMM_FIELD;
+  const title=fieldInput("Title",160);
+  const instructions=document.createElement("textarea");instructions.rows=3;instructions.maxLength=1000;instructions.placeholder="Instructions for the message";instructions.setAttribute("aria-label","Instructions");instructions.style.cssText=COMM_FIELD;
+  const recipients=fieldInput("Recipients (contact IDs or phone numbers, comma separated)",600);
+  const add=el("button","primary","Schedule job");add.type="button";
+  add.addEventListener("click",async()=>{
+   if(!runAt.value){commFail(line,new Error("Choose a date and time to run the job."));return;}
+   commBusy(line,"Scheduling job…");
+   try{await apiRequest("POST","/api/comm/jobs",{type:type.value,runAt:runAt.value,title:title.value.trim(),instructions:instructions.value.trim(),recipients:recipients.value.split(/[,;]+/).map(x=>x.trim()).filter(Boolean)});statusEl.className="status ok";statusEl.textContent="Job scheduled — it will create drafts for review, never send automatically.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.append(type,runAt,title,instructions,recipients,add);
+ }
+}
+async function renderCommVoiceCard(root){
+ const card=commCard(root,"Voice calls","Calls are placed through Asterisk. The server enforces consent and calling hours — a call that breaks either rule is refused.");
+ const line=el("p","muted","Loading voice calls…");card.appendChild(line);
+ let contacts=[],calls=[];
+ try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
+ try{calls=commList(await apiRequest("GET","/api/comm/voice/calls"),"calls");}catch(e){calls=[];}
+ const voiceContacts=contacts.filter(c=>commConsent(c,"voice"));
+ line.className="status ok";line.textContent=voiceContacts.length+" contact(s) with voice consent · "+calls.length+" recent call(s).";
+ if(editingUnlocked){
+  const select=el("select");select.setAttribute("aria-label","Contact to call");select.style.cssText=COMM_FIELD;
+  {const none=document.createElement("option");none.value="";none.textContent="Choose a contact…";select.appendChild(none);}
+  voiceContacts.forEach(c=>{const o=document.createElement("option");o.value=String(c.id);o.textContent=(c.name||c.id)+(c.phone?" · "+c.phone:"");select.appendChild(o);});
+  const purpose=fieldInput("Purpose of the call",200);
+  const place=el("button","primary","Place call");place.type="button";
+  place.addEventListener("click",async()=>{
+   if(!select.value){commFail(line,new Error("Choose a contact to call."));return;}
+   place.disabled=true;commBusy(line,"Placing call…");
+   try{await apiRequest("POST","/api/comm/voice/calls",{contactId:select.value,purpose:purpose.value.trim()});statusEl.className="status ok";statusEl.textContent="Call placed.";renderCommunications();}
+   catch(e){commFail(line,e);}
+   finally{place.disabled=false;}
+  });
+  card.append(select,purpose,place);
+ }
+ const list=el("div","cards");card.appendChild(list);
+ if(!calls.length)list.appendChild(el("p","muted","No calls have been placed."));
+ calls.forEach(v=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,v.contactName||v.contactId||v.id));
+  row.appendChild(el("div","muted",[v.purpose||"",v.createdAt?new Date(v.createdAt).toLocaleString():""].filter(Boolean).join(" · ")));
+  row.appendChild(el("span","pill",v.state||v.status||"unknown"));
+  if(editingUnlocked){
+   const btns=el("div","reminder-test");
+   const refresh=el("button",null,"Refresh");refresh.type="button";
+   refresh.addEventListener("click",async()=>{
+    try{await apiRequest("POST","/api/comm/voice/calls/"+encodeURIComponent(v.id)+"/refresh",{});statusEl.className="status ok";statusEl.textContent="Call state refreshed.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   const hangup=el("button","res-del","Hang up");hangup.type="button";
+   hangup.addEventListener("click",async()=>{
+    try{await apiRequest("POST","/api/comm/voice/calls/"+encodeURIComponent(v.id)+"/hangup",{});statusEl.className="status ok";statusEl.textContent="Hang up requested.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   btns.append(refresh,hangup);row.appendChild(btns);
+  }
+  list.appendChild(row);
+ });
+}
+async function renderCommHistoryCard(root){
+ const card=commCard(root,"Communications history","Every message, draft, consent change and call is recorded here.");
+ const line=el("p","muted","Loading history…");card.appendChild(line);
+ let rows=[];
+ try{rows=commList(await apiRequest("GET","/api/comm/history"),"history");}catch(e){commFail(line,e);return;}
+ line.className="status ok";line.textContent=rows.length+" audit entr"+(rows.length===1?"y":"ies")+".";
+ if(!rows.length){card.appendChild(el("p","muted","Nothing has been sent yet."));return;}
+ const table=document.createElement("table");table.className="comm-table";
+ const thead=document.createElement("thead"),hr=document.createElement("tr");
+ ["When","Who","Action","Detail"].forEach(h=>{const th=document.createElement("th");th.textContent=h;hr.appendChild(th);});
+ thead.appendChild(hr);table.appendChild(thead);
+ const tbody=document.createElement("tbody");
+ rows.forEach(r=>{
+  const tr=document.createElement("tr");
+  let cells;
+  if(r&&typeof r==="object"){
+   const when=r.at||r.when||r.timestamp||r.createdAt;
+   cells=[when?new Date(when).toLocaleString():"",r.who||r.actor||r.by||r.role||"",r.action||r.type||r.event||r.channel||"",r.detail||r.summary||r.description||r.message||r.title||""];
+  }else cells=[String(r==null?"":r),"","",""];
+  cells.forEach(v=>{const td=document.createElement("td");td.textContent=String(v==null?"":v);tr.appendChild(td);});
+  tbody.appendChild(tr);
+ });
+ table.appendChild(tbody);card.appendChild(table);
+}
+async function renderAnnouncementsCard(root){
+ if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Publish an announcement or communication"));const title=fieldInput("Announcement title",160),message=fieldInput("Message / communication details",1000),link=fieldInput("Optional WhatsApp or web link",400,"url");form.append(title,message,link);const add=el("button","primary","Publish communication");add.type="button";add.addEventListener("click",async()=>{if(!title.value.trim()||!message.value.trim()){statusEl.className="status error";statusEl.textContent="Enter an announcement title and message.";return;}try{await saveRow("communications",makeId("com"),{title:title.value.trim(),message:message.value.trim(),url:safeUrl(link.value),createdAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Communication published for all users.";renderCommunications();}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows("communications");if(!rows.length)list.appendChild(el("p","muted","No communications have been published."));rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||"Announcement"),el("p",null,d.message||""));if(d.url){const a=el("a","res-link","Open shared link");a.href=d.url;a.target="_blank";a.rel="noopener noreferrer";c.appendChild(a);}const wa=el("a","res-link","Share via WhatsApp");wa.href="https://wa.me/?text="+encodeURIComponent([d.title,d.message,d.url].filter(Boolean).join("\n"));wa.target="_blank";wa.rel="noopener noreferrer";c.appendChild(wa);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.onclick=async()=>{try{await deleteRow("communications",r.id);renderCommunications();}catch(e){writeFailed(e);}};c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted",e.message));}}
+async function renderCommunications(){
+ const root=workspace(...WORKSPACE_META.communications);
+ await renderCommStatusCard(root);
+ await renderAnnouncementsCard(root);
+ if(editingUnlocked){
+  await renderCommContactsCard(root);
+  await renderCommComposerCard(root);
+  await renderCommTemplatesCard(root);
+  await renderCommScheduledCard(root);
+  await renderCommVoiceCard(root);
+ }
+ // workspace() clears its container on every render, which destroys the resource nodes
+ // after the first render moved them in — recreate them so re-renders keep working.
+ if(!document.getElementById("res-list")){const nl=document.createElement("div");nl.id="res-list";const nf=document.createElement("div");nf.id="res-form-wrap";const holder=document.getElementById("view-resources");if(holder)holder.append(nl,nf);}
+ const resourcesCard=el("div","card");resourcesCard.appendChild(el("h3",null,"Shared resources"));root.appendChild(resourcesCard);renderResources();const existing=document.getElementById("res-list");if(existing)resourcesCard.appendChild(existing);const f=document.getElementById("res-form-wrap");if(f)resourcesCard.appendChild(f);
+ await renderReminderCard(root);
+ await renderCommHistoryCard(root);
+}
 async function renderHistoryPage(){const root=workspace(...WORKSPACE_META.history);const card=el("div","card");root.appendChild(card);try{const rows=await apiRequest("GET","/api/history");if(!rows.length)card.appendChild(el("p","muted","No new sessions or activities have been recorded."));rows.forEach(r=>{const when=new Date(r.at).toLocaleString();card.appendChild(el("div","item",`${r.role} · ${r.summary} · ${when}`));});}catch(e){card.appendChild(el("p","muted",e.message));}}
 function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const card=el("div","card res-form");card.appendChild(el("h3",null,"Download and share calendar data"));[["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download timetable PDF",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});const info=el("p","muted","The Excel workbook includes a Monday–Friday weekly view, editable session details, filters and links between the timetable and session register. Photo exports are rendered at 4× scale in PNG, JPEG or WebP. They are image copies and are not editable timetable data.");card.appendChild(info);root.appendChild(card);}
 async function downloadTimetableImage(mime){

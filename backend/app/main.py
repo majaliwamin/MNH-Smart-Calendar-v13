@@ -11,8 +11,10 @@ import os
 from app.config import PROJECT_ROOT, CORS_ORIGINS, BUILD_ID, APP_VERSION, ensure_directories
 from app.database.connection import connect
 from app.api.routes import router
+from app.api.comm_routes import router as comm_router
 from app.services.backup_service import backup_worker, make_backup, list_backups
 from app.services.reminders import reminder_worker
+from app.services import comm_service
 from app.config import REMINDER_INTERVAL_SECONDS
 
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -20,11 +22,13 @@ STOP_BACKUPS = threading.Event()
 BACKUP_THREAD = None
 STOP_REMINDERS = threading.Event()
 REMINDER_THREAD = None
+STOP_COMM = threading.Event()
+COMM_THREAD = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global BACKUP_THREAD, REMINDER_THREAD
+    global BACKUP_THREAD, REMINDER_THREAD, COMM_THREAD
     ensure_directories()
     db = connect(); db.close()
     # Guarantee an initial snapshot on first startup; later snapshots are daily.
@@ -43,6 +47,27 @@ async def lifespan(app: FastAPI):
     REMINDER_THREAD = threading.Thread(target=reminder_worker, args=(STOP_REMINDERS, REMINDER_INTERVAL_SECONDS),
                                        daemon=True, name="mnh-whatsapp-reminders")
     REMINDER_THREAD.start()
+    # Communications Centre worker: runs due scheduled jobs (creates DRAFTS only —
+    # nothing is sent automatically) and syncs live ARI call states. No-op when
+    # nothing is scheduled and Asterisk is not configured.
+    def _comm_worker(stop_event: threading.Event):
+        while not stop_event.wait(30):
+            try:
+                comm_service.run_due_jobs()
+                from app.services import ari_service, ai_trigger
+                if ai_trigger.enabled():
+                    outcome = ai_trigger.auto_check()
+                    if outcome.get("changes") or outcome.get("errors"):
+                        print(f"AI trigger: {outcome}", flush=True)
+                if ari_service.configured():
+                    ari_service.sync_live_calls()
+            except Exception as error:
+                print(f"Communications worker warning: {error}", flush=True)
+
+    STOP_COMM.clear()
+    COMM_THREAD = threading.Thread(target=_comm_worker, args=(STOP_COMM,),
+                                   daemon=True, name="mnh-communications")
+    COMM_THREAD.start()
     yield
     STOP_BACKUPS.set()
     STOP_REMINDERS.set()
@@ -50,6 +75,9 @@ async def lifespan(app: FastAPI):
         BACKUP_THREAD.join(timeout=2)
     if REMINDER_THREAD and REMINDER_THREAD.is_alive():
         REMINDER_THREAD.join(timeout=3)
+    STOP_COMM.set()
+    if COMM_THREAD and COMM_THREAD.is_alive():
+        COMM_THREAD.join(timeout=3)
 
 
 app = FastAPI(title="MNH Calendar API", version=APP_VERSION, lifespan=lifespan,
@@ -78,6 +106,7 @@ async def http_error_handler(request: Request, exc: HTTPException):
 
 
 app.include_router(router)
+app.include_router(comm_router)
 
 
 @app.get("/", include_in_schema=False)

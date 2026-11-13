@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from app.config import TIMEZONE
 from app.database.connection import database
-from app.services import whatsapp
+from app.services import wa_bridge, whatsapp
 from app.services.schedule import WEEK_START, sessions_from_collections
 
 TZ = ZoneInfo(TIMEZONE)
@@ -204,9 +204,9 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
         return {"ok": True, "sent": 0, "checked": 0, "reason": "no recipient numbers saved"}
     ensure_log()
     due = due_reminders(week_sessions(now), now, config["leadMinutes"])
-    if not whatsapp.configured() and not dry_run:
+    if not wa_bridge.configured() and not dry_run:
         return {"ok": False, "sent": 0, "checked": len(due), "configured": False,
-                "error": "WhatsApp credentials are not configured on this server."}
+                "error": "The WhatsApp bridge is not configured on this server (MNH_WA_BRIDGE_URL)."}
     sent, errors, skipped = 0, [], 0
     for session, lead in due:
         text = reminder_text(session, lead)
@@ -219,10 +219,10 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
                 record(key, session, lead, phone, "dry-run")
                 continue
             try:
-                whatsapp.send_text(phone, text)
+                wa_bridge.send_text(phone, text)
                 record(key, session, lead, phone, "sent")
                 sent += 1
-            except whatsapp.WhatsAppError as error:
+            except wa_bridge.BridgeError as error:
                 record(key, session, lead, phone, "error", str(error))
                 errors.append(str(error))
     return {"ok": not errors, "sent": sent, "checked": len(due), "skipped": skipped,
@@ -234,12 +234,12 @@ def send_test(to: str, now: datetime | None = None) -> dict:
     """Send one sample reminder to a single number (used by the interface's test button)."""
     number = whatsapp.normalise_phone(to)
     body = test_message(now)
-    if not whatsapp.configured():
-        raise whatsapp.WhatsAppError(
-            "WhatsApp is not configured on this server yet. Add MNH_WHATSAPP_TOKEN and "
-            "MNH_WHATSAPP_PHONE_ID, then send the test again."
+    if not wa_bridge.configured():
+        raise wa_bridge.BridgeError(
+            "The WhatsApp bridge is not configured on this server yet. Set MNH_WA_BRIDGE_URL, "
+            "then send the test again."
         )
-    result = whatsapp.send_text(number, body)
+    result = wa_bridge.send_text(number, body)
     return {**result, "preview": body}
 
 
