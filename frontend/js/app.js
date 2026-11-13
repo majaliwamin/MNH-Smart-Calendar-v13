@@ -365,15 +365,21 @@ async function downloadPdf(){
   const hex=c=>"#"+c.map(x=>x.toString(16).padStart(2,"0")).join("");
   const cs=(el,p)=>getComputedStyle(el)[p];
   const page=rgb(cs(document.body,"backgroundColor"))||[6,19,38];
-  const line=[43,75,124],cyan=[108,195,255],white=[255,255,255];
+  const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const parse=c=>{const r=rgb(c);if(r)return r;const h=String(c||"").replace("#","").trim();if(h.length>=6){const n=parseInt(h.slice(0,6),16);return[(n>>16)&255,(n>>8)&255,n&255];}return null;};
+  const line=parse(cssVar("--gridline"))||[120,135,150];
+  const ink=rgb(cs(document.body,"color"))||[255,255,255];
+  const cyan=ink,white=ink;
+  // Pick black or white ink from the background actually being drawn, so text never fades.
+  const inkOn=bgc=>((0.299*bgc[0]+0.587*bgc[1]+0.114*bgc[2])>150?[17,24,39]:[255,255,255]);
   const clean=t=>String(t).replace(/[–—]/g,"-");
   const bg=()=>{pdf.setFillColor(...page);pdf.rect(0,0,PW,PH,"F");};
   const txt=(t,x,y,o)=>pdf.text(clean(t),x,y,o);
   bg();
   // title
-  pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...white);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?13:16);pdf.setTextColor(...white);
   txt(document.getElementById("hd-title").textContent,M,M+5);
-  pdf.setFontSize(portrait?8:10);pdf.setTextColor(...cyan);txt("Weekly Schedule · "+WK.label(weekOffset)+" · Monday–Friday, "+WK.range(weekOffset),M,M+10.5);
+  pdf.setFontSize(portrait?9.5:11.5);pdf.setTextColor(...cyan);txt("Dashboard · "+WK.label(weekOffset)+" · Monday–Friday, "+WK.range(weekOffset),M,M+10.5);
   const top=M+14,foot=9,cw0=portrait?22:30,hh=portrait?13:12;
   const rows=[...tbody.querySelectorAll("tr")],nr=rows.length,nc=days.length;
   const cw=(PW-2*M-cw0)/nc,rh=(PH-top-M-foot-hh)/nr;
@@ -381,14 +387,14 @@ async function downloadPdf(){
   const dayPage=c=>2+c;
   // header row
   const hBg=rgb(cs(head[1],"backgroundColor"))||[14,37,71];
-  pdf.setDrawColor(...line);pdf.setLineWidth(.25);
+  pdf.setDrawColor(...line);pdf.setLineWidth(.4);
   head.forEach((th,i)=>{
    const x=i===0?M:M+cw0+(i-1)*cw,w=i===0?cw0:cw;
    pdf.setFillColor(...hBg);pdf.rect(x,top,w,hh,"FD");
-   if(i===0){pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?7:9);pdf.setTextColor(...(rgb(cs(th,"color"))||[201,166,90]));txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});}
+   if(i===0){pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});}
    else{
-    const c=i-1;pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?8:11);pdf.setTextColor(...white);txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
-    pdf.setFont("helvetica","normal");pdf.setFontSize(portrait?7:9);pdf.setTextColor(...cyan);txt(dates[c],x+w/2,top+hh/2+4,{align:"center"});
+    const c=i-1;pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...inkOn(hBg));txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));txt(dates[c],x+w/2,top+hh/2+4,{align:"center"});
     try{pdf.link(x,top,w,hh,{pageNumber:dayPage(c)});}catch(e){}
    }
   });
@@ -408,14 +414,14 @@ async function downloadPdf(){
    pdf.setFillColor(...(hl?(rgb(cs(th,"backgroundColor"))||[201,166,90]):hBg));pdf.rect(M,y,cw0,rh,"FD");
    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?7:9);pdf.setTextColor(...(hl?[6,19,38]:white));
    const timeText=clean(th.textContent||tr.dataset.startTime||"");
-   pdf.setFontSize(portrait?6.5:8);
+   pdf.setFontSize(portrait?8:9.5);
    const timeLines=pdf.splitTextToSize(timeText,cw0-1.6);
    timeLines.forEach((ln,i)=>txt(ln,M+cw0/2,y+rh/2+1-(timeLines.length-1)*1.6+i*3.2,{align:"center"}));
    if(tr.classList.contains("lunch-row")){
     // One merged band across every weekday column, exactly as it appears on screen.
     const base=rgb(cs(cells[1],"backgroundColor"))||hBg,fg=rgb(cs(cells[1],"color"))||white;
     pdf.setFillColor(...base);pdf.setDrawColor(...line);pdf.rect(M+cw0,y,nc*cw,rh,"FD");
-    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?8:10);pdf.setTextColor(...fg);
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?10:12);pdf.setTextColor(...fg);
     txt("Lunch Break",M+cw0+nc*cw/2,y+rh/2+1,{align:"center"});
     return;
    }
@@ -425,21 +431,22 @@ async function downloadPdf(){
     pdf.setFillColor(...base);pdf.rect(x,y,cw,rh,"FD");
     const fill=area?(rgb(cs(area,"backgroundColor"))||base):base,fg=area?(rgb(cs(area,"color"))||white):white;
     const ix=x+.9,iy=y+.9,iw=cw-1.8,ih=rh-1.8;
-    pdf.setFillColor(...fill);pdf.setDrawColor(70,120,180);pdf.roundedRect(ix,iy,iw,ih,1.6,1.6,"FD");pdf.setDrawColor(...line);
+    pdf.setFillColor(...fill);pdf.setDrawColor(...line);pdf.setLineWidth(.4);pdf.roundedRect(ix,iy,iw,ih,1.6,1.6,"FD");
     const value=cellLabel(area);
-    const size=value.length>(portrait?34:46)?(portrait?6:7):(portrait?7:9);
+    const size=value.length>(portrait?30:44)?(portrait?8:9.5):(portrait?9.5:11);
+    const cellInk=inkOn(fill);
     // Always draw the label as real text. jsPDF writes only form-field values, and most mobile
     // readers, printers and PDF renderers do not regenerate field appearances, so a fields-only
     // export showed empty coloured boxes. The editable field is added on top of the drawn text.
     if(value){
-     pdf.setFont("helvetica","bold");pdf.setFontSize(size);pdf.setTextColor(...fg);
+     pdf.setFont("helvetica","normal");pdf.setFontSize(size);pdf.setTextColor(...(fg&&((0.299*fg[0]+0.587*fg[1]+0.114*fg[2])>40||fill[0]+fill[1]+fill[2]>430)?fg:cellInk));
      const ls=pdf.splitTextToSize(value,iw-1.6);txt(ls,x+cw/2,y+rh/2-(ls.length-1)*1.6,{align:"center",baseline:"middle"});
     }
-    if(editable){
+    if(editable&&!value){
      try{
       const f=new J.AcroForm.TextField();
       f.fieldName="cell_"+r+"_"+c;f.Rect=[ix+.4,iy+.4,iw-.8,ih-.8];f.multiline=true;f.value=value;f.defaultValue=value;
-      f.fontSize=size;f.fontName="helvetica";f.color=hex(fg);
+      f.fontSize=size;f.fontName="helvetica";f.color=hex(cellInk);try{f.quadding=1;}catch(e){}
       try{f.textAlign="center";}catch(e){}
       pdf.addField(f);
      }catch(e){editable=false;}
@@ -447,15 +454,15 @@ async function downloadPdf(){
    });
   });
   // footer
-  pdf.setFont("helvetica","normal");pdf.setFontSize(7.5);pdf.setTextColor(...cyan);
+  pdf.setFont("helvetica","normal");pdf.setFontSize(9);pdf.setTextColor(...cyan);
   txt("Penrose ScholarMw · Your academic partner for excellence",M,PH-M+1);
-  txt("Tap a day to open its page · cells are editable form fields",PW-M,PH-M+1,{align:"right"});
+  txt("Tap a day to open its page · empty cells can be filled in",PW-M,PH-M+1,{align:"right"});
   // one page per day (navigable)
   days.forEach((dn,c)=>{
    pdf.addPage();bg();
-   pdf.setFont("helvetica","bold");pdf.setFontSize(15);pdf.setTextColor(...white);txt(dn+" "+dates[c],M,M+7);
-   pdf.setFontSize(9);pdf.setFont("helvetica","normal");pdf.setTextColor(...cyan);
-   pdf.textWithLink("< Weekly schedule",M,M+13,{pageNumber:1});
+   pdf.setFont("helvetica","bold");pdf.setFontSize(17);pdf.setTextColor(...white);txt(dn+" "+dates[c],M,M+7);
+   pdf.setFontSize(10.5);pdf.setFont("helvetica","normal");pdf.setTextColor(...cyan);
+   pdf.textWithLink("< Dashboard",M,M+13,{pageNumber:1});
    if(c>0)pdf.textWithLink("< "+days[c-1],PW/2-20,M+13,{pageNumber:dayPage(c-1)});
    if(c<nc-1)pdf.textWithLink(days[c+1]+" >",PW-M-22,M+13,{pageNumber:dayPage(c+1)});
    let y=M+24;const list=dayEntries(c);
@@ -821,7 +828,17 @@ async function loadRows(collection){return apiRequest("GET","/api/col/"+encodeUR
 async function saveRow(collection,id,data){await apiRequest("PUT","/api/doc/"+encodeURIComponent(collection)+"/"+encodeURIComponent(id),data);}
 async function deleteRow(collection,id){await apiRequest("DELETE","/api/doc/"+encodeURIComponent(collection)+"/"+encodeURIComponent(id));}
 function makeId(prefix){return prefix+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);}
-function renderDashboard(){
+function missedEntries(){return getSessionEntries().filter(x=>(x.data?.status||"")==="missed");}
+function updateMissedTab(){
+ const rows=missedEntries(), n=rows.length;
+ const tab=document.getElementById("tab-missed");
+ if(tab)tab.textContent="Missed Sessions ("+n+")";
+ const badge=document.getElementById("missed-count");
+ if(badge)badge.textContent="("+n+")";
+ const list=document.getElementById("missed-list");
+ if(list){list.textContent="";if(!rows.length)list.appendChild(el("p","muted","No sessions are marked as missed."));rows.forEach(x=>list.appendChild(itemButton(x)));}
+}
+function renderDashboard(){updateMissedTab();
  const box=document.getElementById("dashboard-overview");box.textContent="";
  const stats=[[Object.keys(modules).length,"Modules"],[allEntries().length,"Scheduled sessions"],[resources.length,"Shared resources"]];
  stats.forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));box.appendChild(c);});
@@ -1125,7 +1142,7 @@ function initHeader(){
   hideDialog("header-dialog");saveHeader({title:t,subtitle:document.getElementById("header-sub-input").value});
  });
  // keep views and header fresh when the timetable or editing state changes
- const _build=build;build=function(){_build();refreshHeader();if(currentView==="dashboard")renderDashboard();else if(currentView==="modules")renderModules();};
+ const _build=build;build=function(){_build();refreshHeader();updateMissedTab();if(currentView==="dashboard")renderDashboard();else if(currentView==="modules")renderModules();};
  const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="facilitators"||currentView==="examinations"||currentView==="recurring")renderView(currentView);};
  setInterval(refreshHeader,30000);
  refreshHeader();showView(location.hash.slice(1)||"weekly");

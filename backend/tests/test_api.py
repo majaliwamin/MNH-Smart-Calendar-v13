@@ -281,9 +281,10 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         assert details[3][5].value == "MIPN 8100"
         assert details[3][6].value == "Medical Imaging in Pregnancy and Neonates"
         assert details[3][7].value == "Dr Example"
-        assert weekly.cell(2, 6).hyperlink is not None            # weekly sheet -> Session Details
+        assert weekly["A2"].hyperlink is not None                 # weekly sheet -> Session Details
         assert details.cell(3, 1).hyperlink is not None           # Session Details -> its weekly cell
-        assert any("Lunch" in str(weekly.cell(row, 2).value).replace(" ", "") for row in range(4, weekly.max_row + 1))
+        assert any("Lunch" in str(weekly.cell(row, 1).value).replace(" ", "") for row in range(4, weekly.max_row + 1))
+        assert "A1:F1" in {str(m) for m in weekly.merged_cells.ranges}   # header row merged across the table
         assert details.auto_filter.ref
         details.cell(3, 8).value = "Edited lecturer"
         assert details.cell(3, 8).value == "Edited lecturer"

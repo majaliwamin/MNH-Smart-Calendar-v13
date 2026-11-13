@@ -706,3 +706,42 @@ td{height:clamp(64px,10vh,150px)}
  .view-tabs{overflow-x:hidden}
  .week-now{max-width:100%}
 }
+
+/* =====================================================================
+   Days row, time column and gridlines.
+   The header row and the time column share one distinct shade, and every
+   cell border is drawn from the theme's gridline token so switching theme
+   can never hide the grid.
+   ===================================================================== */
+:root{--head-shade:#1e2a3a;--gridline:#687b92}
+body[data-theme="dark"]{--head-shade:#1e2a3a;--gridline:#687b92}
+body[data-theme="white"]{--head-shade:#e7eef7;--gridline:#8fa0b6}
+body[data-theme="violet"]{--head-shade:#372671;--gridline:#8574c9}
+body[data-theme="green"]{--head-shade:#07552a;--gridline:#c3ead2}
+
+thead th,thead th.daycell,thead th.corner,thead th.time,tbody th.daycell,tbody th.time{background:var(--head-shade)!important}
+table{border:1px solid var(--gridline)!important}
+th,td{border-right:1px solid var(--gridline)!important;border-bottom:1px solid var(--gridline)!important;border-top:0!important;border-left:0!important}
+tbody th.time{border-right:1px solid var(--gridline)!important}
+td{border-right:1px solid var(--gridline)!important}
+
+/* Days row: centred, evenly spaced, never clipped */
+thead th.daycell{padding:10px 8px!important;text-align:center;vertical-align:middle;height:auto!important}
+thead th.daycell .day{display:block;font-size:calc(15px*var(--text-scale))!important;line-height:1.2;letter-spacing:.005em;white-space:nowrap}
+thead th.daycell .date{display:block!important;font-size:calc(12px*var(--text-scale))!important;line-height:1.15;margin-top:3px!important;white-space:nowrap;font-weight:600}
+thead th.corner,thead th:first-child{text-align:center;vertical-align:middle;padding:10px 6px!important}
+tbody th.time{padding:8px 4px!important;vertical-align:middle}
+@media(max-width:820px){
+  thead th.daycell{padding:8px 4px!important}
+  thead th.daycell .day{font-size:calc(14px*var(--text-scale))!important}
+  thead th.daycell .date{font-size:calc(11px*var(--text-scale))!important}
+}
+
+/* Phones: keep the four view tabs on one scrollable row instead of a tall stack */
+@media(max-width:560px){
+ .view-tabs{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;gap:8px;padding:8px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .view-tabs::-webkit-scrollbar{display:none}
+ .view-tab{flex:0 0 auto;white-space:nowrap!important;padding:9px 13px!important;font-size:calc(13px*var(--text-scale))!important}
+ .week-nav{flex:0 0 auto;width:auto;margin-left:0}
+ .week-now{padding:6px 10px}
+}

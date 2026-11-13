@@ -63,8 +63,11 @@ def test_pdf_reads_the_button_cells_that_the_grid_actually_renders():
 def test_pdf_draws_cell_text_and_full_intervals_not_only_form_fields():
     # Regression: fields-only exports render as empty coloured boxes in mobile readers.
     assert "if(!done&&value)" not in APP, "cell labels must always be drawn, not only when the field fails"
-    assert "if(value){\n     pdf.setFont(\"helvetica\",\"bold\");pdf.setFontSize(size)" in APP
+    assert "if(value){\n     pdf.setFont(\"helvetica\",\"normal\");pdf.setFontSize(size)" in APP
     assert "f.fieldName=\"cell_\"+r+\"_\"+c" in APP, "cells stay editable form fields"
+    # Filled cells are printed once as text; only empty cells carry a field, so no label is
+    # drawn twice on top of its own form-field appearance.
+    assert "if(editable&&!value){" in APP
     # The time column shows the real interval (11:00–13:30), matching the on-screen row header.
     assert 'const timeText=clean(th.textContent||tr.dataset.startTime||"")' in APP
     assert "pdf.splitTextToSize(timeText,cw0-1.6)" in APP
