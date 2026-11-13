@@ -65,8 +65,7 @@ function getEntry(r,c){return getSessionEntries().find(x=>x.dayIndex===c&&x.r===
 function setEditing(enabled){
  editingUnlocked=enabled;
  updateRoleNav();
- ["save","backup","import","lock","edit-header"].forEach(id=>document.getElementById(id).disabled=!enabled);
- document.getElementById("unlock").disabled=enabled;
+ ["save","backup","import","edit-header"].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=!enabled;});
  document.getElementById("settings").disabled=false;
  const add=document.getElementById("weekly-add-session");if(add)add.hidden=!enabled;
  statusEl.className="status "+(enabled?"ok":"");
@@ -197,7 +196,7 @@ function build(){
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
    if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}if(entry.sub){const title=document.createElement("span");title.className="activity-module-title";title.textContent=entry.sub;area.appendChild(title);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
-   else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.disabled=!editingUnlocked;area.addEventListener("click",()=>openModuleDialog(dayIndex,start,null));}
+   else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
  });
@@ -264,11 +263,18 @@ function openSecurity(intent){
  document.getElementById("security-unlock").textContent=intent==="analytics"?"View analytics":"✏️ Edit timetable";
  showDialog("security-dialog");
 }
+// Editing is unlocked from wherever it is needed: the action runs straight away
+// when already unlocked, otherwise the security dialog asks for the password first.
+let pendingEditAction=null;
+function requestEditing(action){
+ if(editingUnlocked){if(action)action();return;}
+ pendingEditAction=action||null;
+ openSecurity("edit");
+}
 function requestAnalytics(){
  if(analyticsUnlocked){showView("analytics");return;}
  openSecurity("analytics");
 }
-document.getElementById("unlock").addEventListener("click",()=>openSecurity("edit"));
 document.getElementById("security-unlock").addEventListener("click",()=>{
  (async()=>{
   const message=document.getElementById("security-message");
@@ -287,13 +293,14 @@ document.getElementById("security-unlock").addEventListener("click",()=>{
     setEditing(true);
     try{await window.mnhApi.flushQueue(true);}catch(e){}
     statusEl.className="status ok";statusEl.textContent="Editing enabled for your authorised role.";
+    const next=pendingEditAction;pendingEditAction=null;
+    if(next){try{next();}catch(e){}}
    }
   }catch(err){message.textContent=err.message||"Unable to verify your access.";}
  })();
 });
 document.getElementById("security-password").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("security-unlock").click();});
 document.getElementById("close-security").addEventListener("click",()=>hideDialog("security-dialog"));
-document.getElementById("lock").addEventListener("click",async()=>{try{await fetch("/api/logout",{method:"POST"});}catch(e){}currentRole="student";analyticsUnlocked=false;setEditing(false);hideDialog("module-dialog");if(currentView==="analytics")showView("weekly");statusEl.className="status ok";statusEl.textContent="Timetable locked.";});
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
 document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
 document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
@@ -875,7 +882,7 @@ function photoPicker(label){
 }
 const MANAGED_FIELDS={facilitators:["name","title","department","email","phone"],examinations:["title","date","time","venue","notes"],recurring:["title","frequency","day","time","venue","notes"]};
 const MANAGED_LABELS={facilitators:"Facilitator",examinations:"Examination",recurring:"Recurring activity"};
-async function renderManaged(collection){const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;if(collection==="facilitators"){photoInput=photoPicker();form.appendChild(photoInput.wrap);}const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(!rows.length)list.appendChild(el("p","muted","No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
+async function renderManaged(collection){const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);{const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;if(collection==="facilitators"){photoInput=photoPicker();form.appendChild(photoInput.wrap);}const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}}));form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(!rows.length)list.appendChild(el("p","muted","No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
 async function renderReminderCard(root){
  const card=el("div","card res-form");
  card.appendChild(el("h3",null,"WhatsApp reminders"));
@@ -980,7 +987,7 @@ function renderSchedule(){
 }
 function renderModules(){
  const root=workspace(...WORKSPACE_META.modules);const body=el("div","cards");root.appendChild(body);
- if(editingUnlocked){
+ {
   const form=el("div","card");form.style.marginBottom="12px";form.appendChild(el("h3",null,"Add a module"));
   const code=document.createElement("input");code.placeholder="Module code";code.maxLength=40;code.setAttribute("aria-label","Module code");
   const title=document.createElement("input");title.placeholder="Full module title";title.maxLength=160;title.setAttribute("aria-label","Full module title");
@@ -989,7 +996,7 @@ function renderModules(){
   const fac=document.createElement("select");fac.setAttribute("aria-label","Assign lecturer");const none=document.createElement("option");none.value="";none.textContent="No lecturer assigned";fac.appendChild(none);
   facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.id);option.textContent=String(item.data.name);fac.appendChild(option);});
   [code,title,targetSessions,targetHours,fac].forEach(x=>{x.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text);";form.appendChild(x);});
-  const add=el("button","primary","Add module");add.type="button";add.addEventListener("click",async()=>{await addSharedModule(code.value,title.value,fac.value,{semesterTargetSessions:targetSessions.value===""?null:Number(targetSessions.value),semesterTargetHours:targetHours.value===""?null:Number(targetHours.value)});});form.appendChild(add);root.appendChild(form);
+  const add=el("button","primary","Add module");add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{await addSharedModule(code.value,title.value,fac.value,{semesterTargetSessions:targetSessions.value===""?null:Number(targetSessions.value),semesterTargetHours:targetHours.value===""?null:Number(targetHours.value)});}));form.appendChild(add);root.insertBefore(form,body);
  }
  const all=allEntries();
  const sessionsFor=code=>all.filter(x=>x.label===code);

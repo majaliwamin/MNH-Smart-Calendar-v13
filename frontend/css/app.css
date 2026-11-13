@@ -699,3 +699,10 @@ td{height:clamp(64px,10vh,150px)}
 
 /* Status strip: comfortable spacing under the week bar */
 .status{margin:0!important;padding:7px clamp(12px,2vw,20px)!important;background:var(--head)!important;border-bottom:1px solid var(--line)}
+
+/* Long navigation labels wrap instead of pushing the page sideways on phones */
+@media(max-width:560px){
+ .view-tab{white-space:normal;max-width:100%;text-align:center;line-height:1.15;padding:10px 14px}
+ .view-tabs{overflow-x:hidden}
+ .week-now{max-width:100%}
+}
