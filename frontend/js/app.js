@@ -18,7 +18,7 @@ const key="phd_mnh_weekly_calendar_v3";
 const legacyKey="phd_mnh_weekly_calendar_v2";
 let currentRole="student";
 let moduleUnsubscribe=null;
-let state={theme:"midnight",cells:{}};
+let state={theme:"dark",cells:{}};
 let editingUnlocked=false;
 let analyticsUnlocked=false;
 let securityIntent="edit";
@@ -233,17 +233,21 @@ function load(){
   }
  }catch(e){statusEl.textContent="Saved browser data could not be read. Existing browser data has not been overwritten.";statusEl.className="status error";}
  try{const tp=localStorage.getItem(themeKey);if(tp)state.theme=tp;}catch(e){}
+ state.theme=normaliseTheme(state.theme);
  if(Object.keys(SEED_CELLS).length&&SEED_STAMP>(state.stamp||0)){state.cells={...SEED_CELLS,...state.cells};state.stamp=SEED_STAMP;}
- document.body.dataset.theme=state.theme||"midnight";
- document.getElementById("theme").value=state.theme||"midnight";
+ document.body.dataset.theme=state.theme;
+ document.getElementById("theme").value=state.theme;
  build();setEditing(false);
 }
 function saveState(){
  state.theme=document.getElementById("theme").value;state.version=3;state.stamp=Date.now();
  localStorage.setItem(key,JSON.stringify(state));
 }
+// Four themes only; anything saved before this change maps onto them.
+const THEMES=["dark","white","violet","green"];
+function normaliseTheme(t){if(THEMES.includes(t))return t;return t==="light"?"white":"dark";}
 document.getElementById("theme").addEventListener("change",e=>{
- state.theme=e.target.value;document.body.dataset.theme=state.theme;
+ state.theme=normaliseTheme(e.target.value);e.target.value=state.theme;document.body.dataset.theme=state.theme;
  try{localStorage.setItem(themeKey,state.theme);}catch(err){}
 });
 document.getElementById("settings").addEventListener("click",()=>showView("settings"));
@@ -950,7 +954,7 @@ async function downloadTimetableImage(mime){
  }catch(error){console.error(error);status.className="status error";status.textContent="The timetable image could not be created: "+error.message;}finally{weekly.hidden=wasHidden;}
 }
 window.downloadTimetableImage=downloadTimetableImage;
-function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme||"midnight";sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
+function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme;sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
  const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted",editingUnlocked?`Editing unlocked · ${currentRole}`:"Viewing is open; editing requires an authorised password."));const b=el("button","primary","\u270F "+(editingUnlocked?"Lock editing":"Unlock editing"));b.type="button";b.onclick=()=>document.getElementById(editingUnlocked?"lock":"unlock").click();access.appendChild(b);const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=!editingUnlocked;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
  const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
  const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}

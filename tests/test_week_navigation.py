@@ -74,7 +74,7 @@ def test_week_control_layout_is_kept_out_of_the_printed_sheet():
     assert ".week-nav{" in CSS
     assert ".week-step{" in CSS and ".week-now{" in CSS
     assert "@media print{.week-nav{display:none!important}}" in CSS
-    assert ".week-now .week-range{font:600 11px/1.1 Arial,Helvetica,sans-serif" in CSS
+    assert ".week-now .week-range{font:600 calc(11px * var(--text-scale))/1.1 Arial,Helvetica,sans-serif" in CSS
 
 
 def test_other_views_use_the_selected_week_dates():
