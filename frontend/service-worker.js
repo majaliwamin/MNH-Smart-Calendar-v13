@@ -2,9 +2,9 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.11-v13";
+const BUILD = "2026.11.13-v14.1";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
-const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/api-client.js", "/js/app.js"];
+const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js", "/js/app.js"];
 
 self.addEventListener("install", (event) => {
   // Offline fallback copy only; the network is always tried first (see fetch handler).

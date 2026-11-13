@@ -12,15 +12,19 @@ from app.config import PROJECT_ROOT, CORS_ORIGINS, BUILD_ID, APP_VERSION, ensure
 from app.database.connection import connect
 from app.api.routes import router
 from app.services.backup_service import backup_worker, make_backup, list_backups
+from app.services.reminders import reminder_worker
+from app.config import REMINDER_INTERVAL_SECONDS
 
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 STOP_BACKUPS = threading.Event()
 BACKUP_THREAD = None
+STOP_REMINDERS = threading.Event()
+REMINDER_THREAD = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global BACKUP_THREAD
+    global BACKUP_THREAD, REMINDER_THREAD
     ensure_directories()
     db = connect(); db.close()
     # Guarantee an initial snapshot on first startup; later snapshots are daily.
@@ -33,10 +37,19 @@ async def lifespan(app: FastAPI):
     BACKUP_THREAD = threading.Thread(target=backup_worker, args=(STOP_BACKUPS,),
                                      daemon=True, name="mnh-daily-backup")
     BACKUP_THREAD.start()
+    # WhatsApp reminders: checks every few seconds and messages everyone a set number of
+    # minutes before each session. Silent no-op until credentials and numbers are set.
+    STOP_REMINDERS.clear()
+    REMINDER_THREAD = threading.Thread(target=reminder_worker, args=(STOP_REMINDERS, REMINDER_INTERVAL_SECONDS),
+                                       daemon=True, name="mnh-whatsapp-reminders")
+    REMINDER_THREAD.start()
     yield
     STOP_BACKUPS.set()
+    STOP_REMINDERS.set()
     if BACKUP_THREAD and BACKUP_THREAD.is_alive():
         BACKUP_THREAD.join(timeout=2)
+    if REMINDER_THREAD and REMINDER_THREAD.is_alive():
+        REMINDER_THREAD.join(timeout=3)
 
 
 app = FastAPI(title="MNH Calendar API", version=APP_VERSION, lifespan=lifespan,

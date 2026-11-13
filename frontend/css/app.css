@@ -169,6 +169,18 @@ button:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .view-tab.active{background:linear-gradient(180deg,#f3d07c,#d9a947 55%,#c49641);color:#14213a;border-color:#f2d48a;box-shadow:inset 0 1px 0 #fff7,0 2px 8px #0007}
 @media(max-width:520px){.view-tabs{padding:8px 12px;gap:8px}.view-tab{padding:10px 14px;font-size:13px}}
 @media print{.view-tabs{display:none!important}}
+/* Academic week navigation — one control that sits beside the Analytics tab */
+.week-nav{display:flex;align-items:stretch;gap:6px;margin-left:auto}
+.week-step{min-width:44px;padding:10px;font:700 20px/1 Arial,Helvetica,sans-serif}
+.week-step:hover{background:#12305a}
+.week-step:disabled{opacity:.45;cursor:not-allowed}
+.week-step:disabled:hover{background:#0a2243}
+.week-now{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px 16px;line-height:1.05;background:linear-gradient(180deg,#f3d07c,#d9a947 55%,#c49641);color:#14213a;border-color:#f2d48a}
+.week-now:hover{background:linear-gradient(180deg,#ffe19a,#e2b451 55%,#cda04a)}
+.week-now .week-range{font:600 11px/1.1 Arial,Helvetica,sans-serif;color:#3a2a06;letter-spacing:.02em}
+.week-now[data-default="true"]{box-shadow:inset 0 1px 0 #fff7,0 2px 8px #0007}
+@media(max-width:520px){.week-nav{margin-left:0;width:100%;justify-content:flex-start}.week-now{padding:7px 12px}.week-now .week-range{font-size:10px}}
+@media print{.week-nav{display:none!important}}
 /* ---- Views ---- */
 .vw{max-width:980px;margin:0 auto;padding:18px 20px 28px}
 .view[hidden]{display:none}
@@ -515,3 +527,11 @@ body[data-theme="dark"]{
  --lunch-bg:#393124;
  --lunch-text:#f0d48a;
 }
+/* Activity label / lecturer fields and the WhatsApp reminder card */
+.field-hint{display:block;margin:-2px 0 8px;color:var(--muted);font-size:12px}
+.field-label{display:block;margin:8px 0 0;font-weight:600}
+.reminder-leads{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}
+.reminder-lead{display:flex;align-items:center;gap:6px;font-weight:600}
+.reminder-test{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.reminder-test input{flex:1 1 220px;margin:0}
+.reminder-log{margin-top:10px;font-size:13px;color:var(--muted)}

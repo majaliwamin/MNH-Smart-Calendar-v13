@@ -229,6 +229,48 @@ def session_status(mnh_session: str | None = Cookie(default=None)):
     return {"authenticated": bool(session), "role": session["role"] if session else "student"}
 
 
+@router.get("/reminders")
+def reminders_status(mnh_session: str | None = Cookie(default=None)):
+    """What reminder delivery can do right now (never credentials; numbers only to editors)."""
+    from app.services import reminders, whatsapp
+    reminder_settings = reminders.settings()
+    editor = bool(current_session(mnh_session))
+    return {
+        "ok": True,
+        "whatsapp": whatsapp.status(),
+        "editor": editor,
+        "settings": {"enabled": reminder_settings["enabled"],
+                     "leadMinutes": reminder_settings["leadMinutes"],
+                     "recipientCount": len(reminder_settings["recipients"]),
+                     "recipients": reminder_settings["recipients"] if editor else []},
+        "recent": reminders.recent(10) if editor else [],
+    }
+
+
+@router.post("/reminders/test")
+def reminders_send_test(payload: dict = Body(default={}), mnh_session: str | None = Cookie(default=None)):
+    """Send one sample reminder to a single number, using the real message format."""
+    require_editor(mnh_session)
+    from app.services import reminders, whatsapp
+    to = str(payload.get("to") or "").strip()
+    if not to:
+        raise HTTPException(400, "Enter the WhatsApp number that should receive the sample.")
+    try:
+        result = reminders.send_test(to)
+    except whatsapp.WhatsAppError as error:
+        message = str(error)
+        raise HTTPException(503 if "not configured" in message.lower() else 502, message) from error
+    return {"ok": True, **result}
+
+
+@router.post("/reminders/run")
+def reminders_run_now(mnh_session: str | None = Cookie(default=None)):
+    """Check the timetable immediately instead of waiting for the background worker."""
+    require_editor(mnh_session)
+    from app.services import reminders
+    return reminders.run_once()
+
+
 @router.get("/export")
 def export_all():
     with database() as c:

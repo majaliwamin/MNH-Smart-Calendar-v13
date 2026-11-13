@@ -10,10 +10,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.11-v13";</script>
-<script src="/js/api-client.js?v=2026.11.10-v13"></script>
+<script>window.MNH_BUILD="2026.11.13-v14.1";</script>
+<script src="/js/week-model.js?v=2026.11.13-v14.1"></script>
+<script src="/js/api-client.js?v=2026.11.13-v14.1"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.11-v13">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.13-v14.1">
 </head>
 <body data-theme="midnight">
 <header class="site-header" id="site-header">
@@ -73,6 +74,14 @@
  <button type="button" class="view-tab active" data-view="weekly" aria-current="page">Weekly Schedule</button>
  <button type="button" class="view-tab" data-view="upcoming">Upcoming Academic Activities</button>
  <button type="button" class="view-tab" data-view="analytics">Analytics</button>
+ <div class="week-nav" role="group" aria-label="Academic week navigation">
+  <button type="button" class="view-tab week-step" id="week-prev" aria-label="Previous academic week" title="Previous academic week">&#8249;</button>
+  <button type="button" class="view-tab week-now" id="week-now" title="This week" aria-live="polite">
+   <span id="week-now-label">This week</span>
+   <span class="week-range" id="week-now-range">Nov 9&#8211;13, 2026</span>
+  </button>
+  <button type="button" class="view-tab week-step" id="week-next" aria-label="Next academic week" title="Next academic week">&#8250;</button>
+ </div>
 </nav>
 
 <div class="status" id="status" role="status" aria-live="polite"></div>
@@ -91,7 +100,7 @@
 </div>
 </section>
 <section class="view vw" id="view-my-schedule" hidden>
- <h2>My Schedule</h2><p class="lead">Everything planned for the week of 9–13 Nov 2026. Select an item for details.</p>
+ <h2>My Schedule</h2><p class="lead" id="schedule-lead">Everything planned for the week of 9–13 Nov 2026. Select an item for details.</p>
  <div class="cards" id="schedule-body"></div>
 </section>
 <section class="view vw" id="view-modules" hidden>
@@ -130,8 +139,14 @@
    </select>
   </div>
   <div class="module-field">
-   <label for="module-label">Activity label</label>
-   <input id="module-label" type="text" maxlength="80" placeholder="e.g. Biostatistics, Seminar in MNH, Library">
+   <label for="module-label">Activity label (module code)</label>
+   <input id="module-label" type="text" maxlength="80" placeholder="Select a module" readonly>
+   <small class="field-hint">Taken from the module you select.</small>
+  </div>
+  <div class="module-field">
+   <label for="session-lecturer">Lecturer</label>
+   <input id="session-lecturer" type="text" readonly placeholder="Not assigned">
+   <small class="field-hint">Fetched from the Facilitators directory.</small>
   </div>
   <div class="module-details" id="module-details" aria-live="polite"></div>
   <div class="module-field">
@@ -238,7 +253,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.11-v13" defer></script>
+<script src="/js/app.js?v=2026.11.13-v14.1" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>

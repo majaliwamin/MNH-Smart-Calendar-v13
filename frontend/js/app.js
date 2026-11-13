@@ -1,5 +1,8 @@
 const times=["08:00 – 10:00","10:00 – 12:00","12:00 – 13:30","13:30 – 15:30","15:30 – 17:30","17:30 – 19:00","19:00 – 21:00"];
-const dates=["9 Nov","10 Nov","11 Nov","12 Nov","13 Nov"];
+// ---- Academic week state: the shared week model drives every date shown in this file ----
+const WK=window.MNHWeek;
+let weekOffset=0;
+let dates=WK.dateLabels(0);
 const LEGACY_ROW_MAP={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:6};
 const days=["Monday","Tuesday","Wednesday","Thursday","Friday"];
 let modules={
@@ -113,9 +116,14 @@ async function addSharedModule(code,title,facilitatorId,targets={}){
 }
 function updateModuleDetails(code){
  const box=document.getElementById("module-details");
- if(modules[code]){const m=modules[code];box.textContent="";const strong=document.createElement("strong");strong.textContent=code;box.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(facilitatorFor(code)||"Not assigned")));}
+ const labelField=document.getElementById("module-label"),lecturerField=document.getElementById("session-lecturer");
+ const lecturer=code?facilitatorFor(code):"";
+ // The activity label is the module code; the lecturer below it comes from the Facilitators directory.
+ if(labelField){labelField.value=code||"";labelField.readOnly=!!code;labelField.placeholder=code?"":"Type a custom activity name";}
+ if(lecturerField)lecturerField.value=code?(lecturer||"Not assigned"):"";
+ if(modules[code]){const m=modules[code];box.textContent="";const strong=document.createElement("strong");strong.textContent=code;box.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
  else if(code==="Journal Club")box.textContent="Journal Club · Every Tuesday, 13:00–14:00";
- else box.textContent="Select a module to view its full details.";
+ else box.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
 }
 function openModuleDialog(dayIndex,startTime,entry){
  if(!editingUnlocked){statusEl.className="status";statusEl.textContent="Unlock editing to make changes.";return;}
@@ -128,7 +136,9 @@ function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("session-start").value=existing?.startTime||start;
  document.getElementById("session-end").value=existing?.endTime||end;
  document.getElementById("module-select").value=existing?.data?.moduleCode||existing?.data?.code||"";
- document.getElementById("module-label").value=existing?.title||existing?.label||"";
+ const existingCode=existing?.data?.moduleCode||existing?.data?.code||"";
+ document.getElementById("module-label").value=existingCode||(existing?String(existing.title||existing.label||""):"");
+ document.getElementById("session-lecturer").value=existingCode?(facilitatorFor(existingCode)||"Not assigned"):"";
  document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
@@ -290,6 +300,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const start=parseClock(startTime),end=parseClock(endTime);
  if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a weekday and a valid end time later than the start time.";return;}
  const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
+ const activityLabel=code||label;
  if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
  const oldId=activeCell.id;
  let id=oldId||`session-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
@@ -298,7 +309,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
  const previous=state.cells[oldId||id]||{},module=modules[code]||{};
  const chosenColour=document.getElementById("module-colour").value;
- const record={...previous,dayIndex,startTime,endTime,code:code||label,title:code?module.title:(label),facilitator:code?(facilitatorFor(code)||module.facilitator||""):"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value};
+ const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:code?(facilitatorFor(code)||module.facilitator||""):"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);if(saved&&oldId&&oldId!==id)await pushCell(oldId);
 });
@@ -351,7 +362,7 @@ async function downloadPdf(){
   // title
   pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...white);
   txt(document.getElementById("hd-title").textContent,M,M+5);
-  pdf.setFontSize(portrait?8:10);pdf.setTextColor(...cyan);txt("Weekly Schedule · Monday–Friday, 9–13 Nov 2026",M,M+10.5);
+  pdf.setFontSize(portrait?8:10);pdf.setTextColor(...cyan);txt("Weekly Schedule · "+WK.label(weekOffset)+" · Monday–Friday, "+WK.range(weekOffset),M,M+10.5);
   const top=M+14,foot=9,cw0=portrait?22:30,hh=portrait?13:12;
   const rows=[...tbody.querySelectorAll("tr")],nr=rows.length,nc=days.length;
   const cw=(PW-2*M-cw0)/nc,rh=(PH-top-M-foot-hh)/nr;
@@ -372,33 +383,55 @@ async function downloadPdf(){
   });
   // rows
   let editable=true;
+  // Cells are <button class="activity"> in this build; keep the legacy textarea path for safety.
+  const cellLabel=area=>{
+   if(!area)return "";
+   const name=area.querySelector&&area.querySelector(".activity-name");
+   if(name)return clean(name.textContent||"");
+   if(typeof area.value==="string"&&area.value)return clean(area.value);
+   return clean(area.textContent||"");
+  };
   rows.forEach((tr,r)=>{
    const y=top+hh+r*rh,cells=[...tr.children];
    const th=cells[0],hl=th.classList.contains("highlight");
    pdf.setFillColor(...(hl?(rgb(cs(th,"backgroundColor"))||[201,166,90]):hBg));pdf.rect(M,y,cw0,rh,"FD");
    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?7:9);pdf.setTextColor(...(hl?[6,19,38]:white));
-   txt(tr.dataset.startTime||"",M+cw0/2,y+rh/2+1,{align:"center"});
+   const timeText=clean(th.textContent||tr.dataset.startTime||"");
+   pdf.setFontSize(portrait?6.5:8);
+   const timeLines=pdf.splitTextToSize(timeText,cw0-1.6);
+   timeLines.forEach((ln,i)=>txt(ln,M+cw0/2,y+rh/2+1-(timeLines.length-1)*1.6+i*3.2,{align:"center"}));
+   if(tr.classList.contains("lunch-row")){
+    // One merged band across every weekday column, exactly as it appears on screen.
+    const base=rgb(cs(cells[1],"backgroundColor"))||hBg,fg=rgb(cs(cells[1],"color"))||white;
+    pdf.setFillColor(...base);pdf.setDrawColor(...line);pdf.rect(M+cw0,y,nc*cw,rh,"FD");
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?8:10);pdf.setTextColor(...fg);
+    txt("Lunch Break",M+cw0+nc*cw/2,y+rh/2+1,{align:"center"});
+    return;
+   }
    cells.slice(1).forEach((td,c)=>{
-    const x=M+cw0+c*cw,area=td.querySelector("textarea");
+    const x=M+cw0+c*cw,area=td.querySelector("textarea")||td.querySelector(".activity")||td.firstElementChild;
     const base=rgb(cs(td,"backgroundColor"))||[10,29,56];
     pdf.setFillColor(...base);pdf.rect(x,y,cw,rh,"FD");
-    const fill=rgb(cs(area,"backgroundColor"))||base,fg=rgb(cs(area,"color"))||white;
+    const fill=area?(rgb(cs(area,"backgroundColor"))||base):base,fg=area?(rgb(cs(area,"color"))||white):white;
     const ix=x+.9,iy=y+.9,iw=cw-1.8,ih=rh-1.8;
     pdf.setFillColor(...fill);pdf.setDrawColor(70,120,180);pdf.roundedRect(ix,iy,iw,ih,1.6,1.6,"FD");pdf.setDrawColor(...line);
-    const value=clean(area.textContent||"");
-    let done=false;
+    const value=cellLabel(area);
+    const size=value.length>(portrait?34:46)?(portrait?6:7):(portrait?7:9);
+    // Always draw the label as real text. jsPDF writes only form-field values, and most mobile
+    // readers, printers and PDF renderers do not regenerate field appearances, so a fields-only
+    // export showed empty coloured boxes. The editable field is added on top of the drawn text.
+    if(value){
+     pdf.setFont("helvetica","bold");pdf.setFontSize(size);pdf.setTextColor(...fg);
+     const ls=pdf.splitTextToSize(value,iw-1.6);txt(ls,x+cw/2,y+rh/2-(ls.length-1)*1.6,{align:"center",baseline:"middle"});
+    }
     if(editable){
      try{
       const f=new J.AcroForm.TextField();
       f.fieldName="cell_"+r+"_"+c;f.Rect=[ix+.4,iy+.4,iw-.8,ih-.8];f.multiline=true;f.value=value;f.defaultValue=value;
-      f.fontSize=portrait?7:9;f.fontName="helvetica";f.color=hex(fg);
+      f.fontSize=size;f.fontName="helvetica";f.color=hex(fg);
       try{f.textAlign="center";}catch(e){}
-      pdf.addField(f);done=true;
+      pdf.addField(f);
      }catch(e){editable=false;}
-    }
-    if(!done&&value){
-     pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?7:9);pdf.setTextColor(...fg);
-     const ls=pdf.splitTextToSize(value,iw-1.6);txt(ls,x+cw/2,y+rh/2-(ls.length-1)*1.6,{align:"center",baseline:"middle"});
     }
    });
   });
@@ -426,8 +459,8 @@ async function downloadPdf(){
    });
   });
   try{pdf.outline.add(null,"Weekly Schedule",{pageNumber:1});days.forEach((dn,c)=>pdf.outline.add(null,dn+" "+dates[c],{pageNumber:dayPage(c)}));}catch(e){}
-  pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Block - Weekly Schedule"});
-  const blob=pdf.output("blob"),name="MNH-PhD-Weekly-Calendar.pdf";
+  pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
+  const blob=pdf.output("blob"),name="MNH-PhD-Timetable-"+WK.isoMonday(weekOffset)+"-"+(weekOffset===0?"this-week":"week-"+weekOffset)+".pdf";
   const url=URL.createObjectURL(blob),l=document.createElement("a");l.href=url;l.download=name;l.click();setTimeout(()=>URL.revokeObjectURL(url),4000);statusEl.className="status ok";statusEl.textContent="PDF ready.";
  }catch(e){console.error(e);statusEl.className="status error";statusEl.textContent="The PDF could not be created.";}
 }
@@ -449,7 +482,7 @@ const SEED_STAMP=1794350000001;   // corrected Monday–Friday programme for 9�
 const themeKey="phd_mnh_theme";
 const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
-function setSync(t){syncEl.textContent=t;}
+function setSync(t){const el=syncEl||document.getElementById("status");if(el)el.textContent=t;}
 function cleanCell(v){const o={};["code","title","facilitator","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
 function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<5)||/^session-[A-Za-z0-9-]+$/.test(k);}
 function writeFailed(e){
@@ -537,7 +570,7 @@ window.addEventListener("mnh:offline-synced",()=>{
 });
 // ---- Alarms: ring like an incoming call (per device, only while this page is open) ----
 const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
-const WEEK_START=[2026,10,9];
+let WEEK_START=WK.startParts(0);   // Monday of the academic week currently on screen
 const baseTitle=document.title;
 let alarm={on:false,lead:10},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,titleTimer=null,ringing=null;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
@@ -556,7 +589,7 @@ function ensureAudio(){
   return audioCtx;
  }catch(e){return null;}
 }
-function alarmEvents(){return getSessionEntries().map(x=>{const start=new Date(WEEK_START[0],WEEK_START[1],WEEK_START[2]+x.dayIndex);const [h,m]=x.startTime.split(":").map(Number);start.setHours(h,m,0,0);return {...x,start};});}
+function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries().map(x=>{const start=new Date(ws[0],ws[1],ws[2]+x.dayIndex);const [h,m]=x.startTime.split(":").map(Number);start.setHours(h,m,0,0);return {...x,start};});}
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
@@ -644,13 +677,16 @@ const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov",
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
 function fmtH(m){const h=Math.floor(m/60),mm=m%60;return mm?(h?h+"h "+mm+"m":mm+"m"):h+"h";}
-function todayIndex(){
- const n=new Date();
- for(let c=0;c<days.length;c++){const d=new Date(WEEK_START[0],WEEK_START[1],WEEK_START[2]+c);if(d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate())return c;}
+function todayIndexFor(offset){
+ const n=new Date(),ws=offset==null?WEEK_START:WK.startParts(offset);
+ for(let c=0;c<days.length;c++){const d=new Date(ws[0],ws[1],ws[2]+c);if(d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate())return c;}
  return -1;
 }
-function dayEntries(c){
- return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const start=new Date(WEEK_START[0],WEEK_START[1],WEEK_START[2]+c);const [h,m]=x.startTime.split(":").map(Number);start.setHours(h,m,0,0);const end=new Date(start);const [eh,em]=x.endTime.split(":").map(Number);end.setHours(eh,em,0,0);return {...x,start,end};});
+// The bell and the header always describe the real current week, whatever week is being viewed.
+function todayIndex(){return todayIndexFor(WK.currentOffset());}
+function dayEntries(c,offset){
+ const ws=offset==null?WEEK_START:WK.startParts(offset);
+ return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const start=new Date(ws[0],ws[1],ws[2]+c);const [h,m]=x.startTime.split(":").map(Number);start.setHours(h,m,0,0);const end=new Date(start);const [eh,em]=x.endTime.split(":").map(Number);end.setHours(eh,em,0,0);return {...x,start,end};});
 }
 function allEntries(){return days.flatMap((d,c)=>dayEntries(c));}
 // ---- header ----
@@ -680,7 +716,7 @@ function refreshHeader(){
  document.getElementById("hd-date").textContent=WD[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear();
  {const hd=document.getElementById("hd-day");if(hd)hd.textContent=d.getDate();}
  const c=todayIndex(),now=Date.now();
- const rem=c<0?[]:dayEntries(c).filter(x=>x.end.getTime()>now);
+ const rem=c<0?[]:dayEntries(c,WK.currentOffset()).filter(x=>x.end.getTime()>now);
  const badge=document.getElementById("hd-badge");badge.textContent=rem.length;badge.hidden=!rem.length;
  document.getElementById("hd-bell").setAttribute("aria-label","Today’s activities: "+rem.length+" remaining");
  const panel=document.getElementById("bell-panel");panel.textContent="";
@@ -692,6 +728,41 @@ function refreshHeader(){
   b.addEventListener("click",()=>{closeBell();showSessionDetails(x);});
   panel.appendChild(b);
  });
+}
+// ---- academic week navigation (one control beside Analytics) ----
+function setWeek(offset){
+ weekOffset=Math.max(0,Math.trunc(Number(offset)||0));
+ applyWeekView(false);
+}
+function applyWeekView(keepStatus){
+ WEEK_START=WK.startParts(weekOffset);
+ dates=WK.dateLabels(weekOffset);
+ renderWeekNav();
+ const lead=document.getElementById("schedule-lead");
+ if(lead)lead.textContent="Everything planned for the week of "+WK.range(weekOffset)+" ("+WK.label(weekOffset)+"). Select an item for details.";
+ if(!keepStatus){statusEl.className="status";statusEl.textContent=WK.label(weekOffset)+" · "+WK.range(weekOffset);}
+ renderView(currentView);
+}
+function renderWeekNav(){
+ const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
+ if(!prev||!next||!now)return;
+ const label=WK.label(weekOffset),range=WK.range(weekOffset);
+ const lab=document.getElementById("week-now-label"),rng=document.getElementById("week-now-range");
+ if(lab)lab.textContent=label;if(rng)rng.textContent=range;
+ now.title=label+" · "+range+" — click to return to this week";
+ now.setAttribute("aria-label",label+", "+range+". Show this week");
+ now.dataset.default=String(weekOffset===0);
+ prev.disabled=weekOffset<=0;
+ prev.setAttribute("aria-disabled",String(weekOffset<=0));
+ next.disabled=false;
+}
+function initWeekNav(){
+ const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
+ if(!prev||!next||!now)return;
+ prev.addEventListener("click",()=>setWeek(weekOffset-1));
+ next.addEventListener("click",()=>setWeek(weekOffset+1));
+ now.addEventListener("click",()=>setWeek(0));
+ applyWeekView(false);
 }
 // ---- navigation ----
 function showView(name){
@@ -801,7 +872,66 @@ function photoPicker(label){
 const MANAGED_FIELDS={facilitators:["name","title","department","email","phone"],examinations:["title","date","time","venue","notes"],recurring:["title","frequency","day","time","venue","notes"]};
 const MANAGED_LABELS={facilitators:"Facilitator",examinations:"Examination",recurring:"Recurring activity"};
 async function renderManaged(collection){const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;if(collection==="facilitators"){photoInput=photoPicker();form.appendChild(photoInput.wrap);}const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(!rows.length)list.appendChild(el("p","muted","No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
-async function renderCommunications(){const root=workspace(...WORKSPACE_META.communications);if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Publish an announcement or communication"));const title=fieldInput("Announcement title",160),message=fieldInput("Message / communication details",1000),link=fieldInput("Optional WhatsApp or web link",400,"url");form.append(title,message,link);const add=el("button","primary","Publish communication");add.type="button";add.addEventListener("click",async()=>{if(!title.value.trim()||!message.value.trim()){statusEl.className="status error";statusEl.textContent="Enter an announcement title and message.";return;}try{await saveRow("communications",makeId("com"),{title:title.value.trim(),message:message.value.trim(),url:safeUrl(link.value),createdAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Communication published for all users.";renderCommunications();}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows("communications");if(!rows.length)list.appendChild(el("p","muted","No communications have been published."));rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||"Announcement"),el("p",null,d.message||""));if(d.url){const a=el("a","res-link","Open shared link");a.href=d.url;a.target="_blank";a.rel="noopener noreferrer";c.appendChild(a);}const wa=el("a","res-link","Share via WhatsApp");wa.href="https://wa.me/?text="+encodeURIComponent([d.title,d.message,d.url].filter(Boolean).join("\n"));wa.target="_blank";wa.rel="noopener noreferrer";c.appendChild(wa);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.onclick=async()=>{try{await deleteRow("communications",r.id);renderCommunications();}catch(e){writeFailed(e);}};c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted",e.message));}const resourcesCard=el("div","card");resourcesCard.appendChild(el("h3",null,"Shared resources"));root.appendChild(resourcesCard);renderResources();const existing=document.getElementById("res-list");if(existing)resourcesCard.appendChild(existing);const f=document.getElementById("res-form-wrap");if(f)resourcesCard.appendChild(f);}
+async function renderReminderCard(root){
+ const card=el("div","card res-form");
+ card.appendChild(el("h3",null,"WhatsApp reminders"));
+ card.appendChild(el("p","muted","Everyone on the list gets a WhatsApp message before each session, sent as “Maternal & Neonatal Health Smart Time Table”. Choose 10, 20 or 30 minutes."));
+ const statusLine=el("p","muted","Checking WhatsApp delivery…");
+ card.appendChild(statusLine);
+ let info=null;
+ try{info=await apiRequest("GET","/api/reminders");}catch(e){statusLine.textContent="Reminder status is unavailable: "+e.message;}
+ if(info){
+  const wa=info.whatsapp||{},cfg=info.settings||{};
+  statusLine.textContent=wa.configured
+   ?`Delivery ready · sender "${wa.sender}" · WhatsApp Cloud API ${wa.apiVersion}`
+   :`Not configured yet — add ${(wa.missing||[]).join(" and ")||"WhatsApp credentials"} on the server, then send the sample again.`;
+  const leadRow=el("div","reminder-leads");
+  [10,20,30].forEach(minutes=>{
+   const label=el("label","reminder-lead"),box=document.createElement("input");
+   box.type="checkbox";box.value=String(minutes);box.checked=(cfg.leadMinutes||[10,20,30]).includes(minutes);box.disabled=!editingUnlocked;
+   label.append(box,document.createTextNode(" "+minutes+" min before"));leadRow.appendChild(label);
+  });
+  card.appendChild(leadRow);
+  card.appendChild(el("label","field-label","Recipient WhatsApp numbers (one per line)"));
+  const numbers=document.createElement("textarea");
+  numbers.rows=3;numbers.maxLength=2000;numbers.placeholder="+265881988156";numbers.disabled=!editingUnlocked;
+  numbers.value=(cfg.recipients||[]).join("\n");
+  numbers.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";
+  card.appendChild(numbers);
+  const save=el("button",null,"Save reminder settings");save.type="button";save.disabled=!editingUnlocked;
+  save.addEventListener("click",async()=>{
+   const leadMinutes=[...card.querySelectorAll(".reminder-leads input:checked")].map(b=>Number(b.value)).sort((a,b)=>a-b);
+   const recipients=numbers.value.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean);
+   if(!leadMinutes.length){statusEl.className="status error";statusEl.textContent="Choose at least one reminder time (10, 20 or 30 minutes).";return;}
+   try{await saveRow("settings","reminders",{enabled:true,leadMinutes,recipients,updatedAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Reminder settings saved for everyone.";renderCommunications();}catch(e){writeFailed(e);}
+  });
+  card.appendChild(save);
+  const testRow=el("div","reminder-test");
+  const testNumber=fieldInput("WhatsApp number for the sample","40");
+  testNumber.value="+265881988156";testNumber.disabled=!editingUnlocked;
+  const testBtn=el("button","primary","Send sample reminder");testBtn.type="button";testBtn.disabled=!editingUnlocked;
+  testBtn.addEventListener("click",async()=>{
+   testBtn.disabled=true;statusEl.className="status";statusEl.textContent="Sending the sample WhatsApp reminder…";
+   try{const r=await apiRequest("POST","/api/reminders/test",{to:testNumber.value.trim()});statusEl.className="status ok";statusEl.textContent=`Sample sent to +${r.to} from "${r.sender}".`;}
+   catch(e){statusEl.className="status error";statusEl.textContent=e.message||"The sample could not be sent.";}
+   finally{testBtn.disabled=!editingUnlocked;}
+  });
+  testRow.append(testNumber,testBtn);card.appendChild(testRow);
+  const run=el("button",null,"Check the timetable now");run.type="button";run.disabled=!editingUnlocked;
+  run.addEventListener("click",async()=>{
+   try{const r=await apiRequest("POST","/api/reminders/run",{});statusEl.className="status ok";statusEl.textContent=`Checked ${r.checked||0} due reminder(s); sent ${r.sent||0}.`;}
+   catch(e){statusEl.className="status error";statusEl.textContent=e.message;}
+  });
+  card.appendChild(run);
+  if(info.recent&&info.recent.length){
+   const log=el("div","reminder-log");
+   info.recent.slice(0,6).forEach(r=>log.appendChild(el("div","item",`${r.status} · ${r.code||""} · ${r.lead} min · ${r.sent_at}`)));
+   card.appendChild(log);
+  }
+ }
+ root.appendChild(card);
+}
+async function renderCommunications(){const root=workspace(...WORKSPACE_META.communications);if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Publish an announcement or communication"));const title=fieldInput("Announcement title",160),message=fieldInput("Message / communication details",1000),link=fieldInput("Optional WhatsApp or web link",400,"url");form.append(title,message,link);const add=el("button","primary","Publish communication");add.type="button";add.addEventListener("click",async()=>{if(!title.value.trim()||!message.value.trim()){statusEl.className="status error";statusEl.textContent="Enter an announcement title and message.";return;}try{await saveRow("communications",makeId("com"),{title:title.value.trim(),message:message.value.trim(),url:safeUrl(link.value),createdAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Communication published for all users.";renderCommunications();}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows("communications");if(!rows.length)list.appendChild(el("p","muted","No communications have been published."));rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||"Announcement"),el("p",null,d.message||""));if(d.url){const a=el("a","res-link","Open shared link");a.href=d.url;a.target="_blank";a.rel="noopener noreferrer";c.appendChild(a);}const wa=el("a","res-link","Share via WhatsApp");wa.href="https://wa.me/?text="+encodeURIComponent([d.title,d.message,d.url].filter(Boolean).join("\n"));wa.target="_blank";wa.rel="noopener noreferrer";c.appendChild(wa);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.onclick=async()=>{try{await deleteRow("communications",r.id);renderCommunications();}catch(e){writeFailed(e);}};c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted",e.message));}const resourcesCard=el("div","card");resourcesCard.appendChild(el("h3",null,"Shared resources"));root.appendChild(resourcesCard);renderResources();const existing=document.getElementById("res-list");if(existing)resourcesCard.appendChild(existing);const f=document.getElementById("res-form-wrap");if(f)resourcesCard.appendChild(f);renderReminderCard(root);}
 async function renderHistoryPage(){const root=workspace(...WORKSPACE_META.history);const card=el("div","card");root.appendChild(card);try{const rows=await apiRequest("GET","/api/history");if(!rows.length)card.appendChild(el("p","muted","No new sessions or activities have been recorded."));rows.forEach(r=>{const when=new Date(r.at).toLocaleString();card.appendChild(el("div","item",`${r.role} · ${r.summary} · ${when}`));});}catch(e){card.appendChild(el("p","muted",e.message));}}
 function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const card=el("div","card res-form");card.appendChild(el("h3",null,"Download and share calendar data"));[["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download timetable PDF",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});const info=el("p","muted","The Excel workbook includes a Monday–Friday weekly view, editable session details, filters and links between the timetable and session register. Photo exports are rendered at 4× scale in PNG, JPEG or WebP. They are image copies and are not editable timetable data.");card.appendChild(info);root.appendChild(card);}
 async function downloadTimetableImage(mime){
@@ -833,7 +963,7 @@ function itemButton(x){
 }
 function renderSchedule(){
  const root=document.getElementById("schedule-body");root.textContent="";
- const ti=todayIndex();
+ const ti=todayIndexFor(weekOffset);
  days.forEach((dn,c)=>{
   const card=el("div","card"+(c===ti?" today":""));
   const h=el("h3",null,dn+" "+dates[c]);if(c===ti)h.appendChild(el("span","pill","Today"));
@@ -988,6 +1118,7 @@ function initHeader(){
  const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="facilitators"||currentView==="examinations"||currentView==="recurring")renderView(currentView);};
  setInterval(refreshHeader,30000);
  refreshHeader();showView(location.hash.slice(1)||"weekly");
+ initWeekNav();
 }
 // ---- Hamburger menu ----
 const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
