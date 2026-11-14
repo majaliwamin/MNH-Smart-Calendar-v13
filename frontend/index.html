@@ -90,7 +90,8 @@
 </header>
 
 <nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
- <button type="button" class="view-tab active" data-view="weekly" aria-current="page">Dashboard</button>
+ <button type="button" class="view-tab active" data-view="weekly" aria-current="page">Weekly Timetable</button>
+ <button type="button" class="view-tab" data-view="silver-dashboard">Midnight Silver Dashboard</button>
  <button type="button" class="view-tab" data-view="analytics">Analytics</button>
  <div class="week-nav" role="group" aria-label="Academic week navigation">
   <button type="button" class="view-tab week-step" id="week-prev" aria-label="Previous academic week" title="Previous academic week">&#8249;</button>
@@ -127,6 +128,10 @@
 </section>
 <section class="view vw" id="view-analytics" hidden>
  <div id="analytics-body"></div>
+</section>
+<section class="view vw silver-dashboard-view" id="view-silver-dashboard" hidden>
+ <div class="silver-dashboard-intro"><p class="silver-eyebrow">PROGRAMME OVERVIEW</p><h1>PhD in Maternal &amp; Neonatal Health</h1><p>Midnight Silver · Academic performance and delivery overview</p></div>
+ <div id="silver-analytics-body"></div>
 </section>
 <section class="view vw" id="view-workspace" hidden>
  <h2 id="workspace-title">Workspace</h2><p class="lead" id="workspace-lead"></p>
