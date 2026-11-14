@@ -657,7 +657,7 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["dashboard","weekly","monthly","upcoming","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
+const VIEWS=["dashboard","weekly","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
@@ -763,7 +763,7 @@ function showView(name){
  currentView=name;
  const weekly=document.getElementById("view-weekly"),home=document.getElementById("view-dashboard"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics");
  home.hidden=name!=="dashboard";weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";
- workspace.hidden=!(["modules","monthly","upcoming","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
+ workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
  renderView(name);
@@ -774,7 +774,6 @@ function renderView(name){
  else if(name==="modules")renderModules();
  else if(name==="analytics")renderAnalytics();
  else if(name==="monthly")renderMonthly();
- else if(name==="upcoming")renderUpcoming();
  else if(name==="facilitators")renderManaged("facilitators");
  else if(name==="examinations")renderManaged("examinations");
  else if(name==="recurring")renderManaged("recurring");
@@ -786,7 +785,6 @@ function renderView(name){
 const WORKSPACE_META={
  monthly:["Monthly Calendar","Browse the current academic month and its scheduled sessions."],
  modules:["Modules","Manage programme modules and review their scheduled sessions."],
- upcoming:["Upcoming Academic Activities","Timetable sessions, examinations and recurring activities."],
  facilitators:["Facilitators","Shared facilitator directory."],
  examinations:["Examinations","Examination dates, times, venues and notes."],
  recurring:["Recurring Activities","Regular academic activities and their schedules."],
@@ -816,13 +814,7 @@ function renderDashboard(){updateMissedTab();
  const box=document.getElementById("dashboard-overview");box.textContent="";
  const stats=[[Object.keys(modules).length,"Modules"],[allEntries().length,"Scheduled sessions"],[resources.length,"Shared resources"]];
  stats.forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));box.appendChild(c);});
- const upcoming=document.getElementById("dashboard-upcoming");upcoming.textContent="";
- upcoming.appendChild(el("div","muted","Loading future activities…"));
- getFutureActivities().then(items=>{
-  upcoming.textContent="";
-  if(!items.length)upcoming.appendChild(el("div","muted","No future academic activities are currently recorded."));
-  items.slice(0,5).forEach(item=>upcoming.appendChild(upcomingItemButton(item)));
- }).catch(()=>{upcoming.textContent="";upcoming.appendChild(el("div","muted","Future activities are temporarily unavailable."));});
+ renderAnimatedFutureStrip();
  const recent=document.getElementById("dashboard-recent");recent.textContent="";
  apiRequest("GET","/api/history").then(rows=>{recent.textContent="";if(!rows.length)recent.appendChild(el("div","muted","No recent additions."));rows.slice(0,5).forEach(r=>recent.appendChild(el("div","item",`${r.role} · ${r.summary}`)));}).catch(()=>recent.textContent="Recent activity is unavailable.");
 }
@@ -899,16 +891,26 @@ async function getFutureActivities(){
  });
  return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
 }
-async function renderUpcoming(){
- const root=workspace(...WORKSPACE_META.upcoming),list=el("div","cards");
- root.appendChild(el("p","muted","Only future activities are shown. Dates and times follow Malawi local time; shared timetable, examination and recurring-activity records update from the common database."));
- list.appendChild(el("div","muted","Loading future activities…"));
+async function renderAnimatedFutureStrip(){
+ const host=document.getElementById("dashboard-upcoming");
+ if(!host)return;
+ host.textContent="";
+ const track=el("div","activity-marquee-track");
+ host.appendChild(track);
  try{
-  const items=await getFutureActivities();list.textContent="";
-  if(!items.length)list.appendChild(el("p","muted","No future academic activities are currently recorded."));
-  items.forEach(item=>{const c=el("div","card");c.append(el("h3",null,item.title),el("div","muted",item.when));if(item.detail)c.appendChild(el("p","muted",item.detail));c.appendChild(el("span","muted",item.kind==="session"?"Timetable session":item.kind==="examination"?"Examination":"Recurring activity"));list.appendChild(c);});
- }catch(error){list.textContent="";list.appendChild(el("p","muted","Future activities could not be loaded: "+error.message));}
- root.appendChild(list);
+  const items=(await getFutureActivities()).slice(0,12);
+  if(!items.length){track.appendChild(el("span","activity-marquee-empty","No future events have been recorded."));return;}
+  const makeItem=(item,index)=>{
+   const card=el("div","activity-marquee-item tone-"+(index%6));
+   card.append(el("span","marquee-when",item.when),el("strong","marquee-title",item.title));
+   if(item.detail)card.appendChild(el("span","marquee-detail",item.detail));
+   card.setAttribute("title",[item.title,item.when,item.detail].filter(Boolean).join(" · "));
+   return card;
+  };
+  items.forEach((item,index)=>track.appendChild(makeItem(item,index)));
+  // Duplicate the sequence so the left-to-right animation loops without a blank gap.
+  items.forEach((item,index)=>track.appendChild(makeItem(item,index)));
+ }catch(error){track.appendChild(el("span","activity-marquee-empty","Events are temporarily unavailable."));}
 }
 
 // ---- Facilitator initials (titles ignored: "Dr D Mzinza" -> "DM") and photographs ----
