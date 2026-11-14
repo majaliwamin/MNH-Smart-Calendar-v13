@@ -134,7 +134,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     def footer():
         pdf.setFillColor(GOLD)
         pdf.rect(0, 8 * mm, width, 1.1 * mm, stroke=0, fill=1)
-        pdf.setFillColor(NAVY)
+        pdf.setFillColor(INK)
         pdf.setFont("Helvetica-Bold", 8)
         pdf.drawString(10 * mm, 4.5 * mm, "Advancing academic excellence")
         pdf.setFont("Helvetica", 7)
@@ -170,7 +170,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             cx = x + i * (card_w + gap)
             pdf.setFillColor(PALE)
             pdf.roundRect(cx, y - 14 * mm, card_w, 14 * mm, 2 * mm, stroke=0, fill=1)
-            pdf.setFillColor(NAVY)
+            pdf.setFillColor(PURPLE)
             pdf.setFont("Helvetica-Bold", 7)
             pdf.drawString(cx + 3 * mm, y - 5 * mm, label)
             pdf.setFillColor(INK)
@@ -209,11 +209,11 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             pdf.setFillColor(TIME_BG)
             pdf.roundRect(x + 1.5 * mm, row_y + .5 * mm, time_w, row_h - .8 * mm,
                           1 * mm, stroke=0, fill=1)
-            pdf.setStrokeColor(colors.HexColor("#AAB8C9"))
+            pdf.setStrokeColor(LINE)
             pdf.setLineWidth(.45)
             pdf.line(x + time_w + 1.5 * mm, row_y + .8 * mm,
                      x + time_w + 1.5 * mm, row_y + row_h - .8 * mm)
-            pdf.setFillColor(NAVY)
+            pdf.setFillColor(INK)
             pdf.setFont("Helvetica-Bold", 11)
             pdf.drawCentredString(x + 1.5 * mm + time_w / 2, row_y + 4.1 * mm, _slot_label(start, end))
             if is_lunch:
@@ -271,7 +271,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.drawCentredString(day_x + day_w / 2, header_bottom + 3.5 * mm,
                               day_date.strftime("%d %b %Y"))
         if day_index:
-            pdf.setStrokeColor(colors.HexColor("#71839A"))
+            pdf.setStrokeColor(LINE)
             pdf.setLineWidth(.35)
             pdf.line(day_x, header_bottom + .8 * mm, day_x, table_top - .8 * mm)
 
@@ -351,7 +351,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             bottom = top - card_h
             pdf.setFillColor(PALE)
             pdf.roundRect(10 * mm, bottom, width - 20 * mm, card_h - 2 * mm, 2 * mm, stroke=0, fill=1)
-            pdf.setFillColor(NAVY)
+            pdf.setFillColor(PURPLE)
             pdf.setFont("Helvetica-Bold", 8)
             pdf.drawString(14 * mm, top - 6 * mm, "MODULE CODE")
             pdf.drawString(76 * mm, top - 6 * mm, "SESSIONS")
@@ -396,7 +396,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             bottom = top - card_h
             pdf.setFillColor(PALE)
             pdf.roundRect(10 * mm, bottom, width - 20 * mm, card_h - 2 * mm, 2 * mm, stroke=0, fill=1)
-            pdf.setFillColor(NAVY)
+            pdf.setFillColor(PURPLE)
             pdf.setFont("Helvetica-Bold", 8)
             pdf.drawString(14 * mm, top - 6 * mm, f"SESSION {idx + 1}")
 
