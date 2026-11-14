@@ -1020,9 +1020,9 @@ body[data-theme="silver"] .view-tabs [data-view="silver-dashboard"].active{backg
 
 /* Header theme control: dark moon immediately before the activity bell. */
 .hd-theme{position:relative;display:flex;align-items:center;justify-content:center;flex:none}
-.hd-theme-btn{width:clamp(40px,3.5vw,58px);height:clamp(40px,3.5vw,58px);display:grid;place-items:center;padding:9px;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:#e8edf4;cursor:pointer;box-shadow:0 2px 8px #0003}
+.hd-theme-btn{width:clamp(40px,3.5vw,58px);height:clamp(40px,3.5vw,58px);display:grid;place-items:center;padding:9px;border:0;border-radius:0;background:transparent;color:var(--text,#e5e7eb);cursor:pointer;box-shadow:none;appearance:none;-webkit-appearance:none}
 .hd-theme-btn svg{width:100%;height:100%;display:block}
-.hd-theme-btn:hover,.hd-theme-btn[aria-expanded="true"]{background:#fff;box-shadow:0 0 0 3px rgba(203,213,225,.35)}
+.hd-theme-btn:hover,.hd-theme-btn[aria-expanded="true"]{background:transparent;color:var(--text,#e5e7eb);box-shadow:none;opacity:.78}
 .hd-theme-btn:focus-visible{outline:2px solid #dbeafe;outline-offset:3px}
 .theme-picker{position:absolute;z-index:1300;right:0;top:calc(100% + 10px);width:205px;padding:12px;background:var(--panel,#0b1c36);border:1px solid var(--line,#304363);border-radius:12px;box-shadow:0 14px 36px #0008}
 .theme-picker[hidden]{display:none}
