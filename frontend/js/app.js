@@ -73,7 +73,6 @@ function setEditing(_enabled){
  updateRoleNav();
  ["save","backup","import","edit-header"].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
  document.getElementById("settings").disabled=false;
- const add=document.getElementById("weekly-add-session");if(add)add.hidden=false;
  statusEl.className="status ok";
  statusEl.textContent="Open access enabled. Changes can be made and shared.";
 }
@@ -286,7 +285,6 @@ function requestAnalytics(){
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
 document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
 document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
-document.getElementById("weekly-add-session")?.addEventListener("click",()=>openModuleDialog(0,"08:00",null));
 document.getElementById("apply-module").addEventListener("click",async()=>{
  if(!editingUnlocked||!activeCell)return;
  const dayIndex=Number(document.getElementById("session-day").value),startTime=document.getElementById("session-start").value,endTime=document.getElementById("session-end").value;
