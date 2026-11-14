@@ -895,21 +895,58 @@ async function renderAnimatedFutureStrip(){
  const host=document.getElementById("dashboard-upcoming");
  if(!host)return;
  host.textContent="";
+ host.tabIndex=0;
+ host.setAttribute("aria-label","Upcoming academic sessions. Drag left or right, or use the horizontal mouse wheel, to browse faster.");
  const track=el("div","activity-marquee-track");
  host.appendChild(track);
  try{
   const items=(await getFutureActivities()).slice(0,12);
   if(!items.length){track.appendChild(el("span","activity-marquee-empty","No future events have been recorded."));return;}
-  const makeItem=(item,index)=>{
-   const card=el("div","activity-marquee-item tone-"+(index%6));
-   card.append(el("span","marquee-when",item.when),el("strong","marquee-title",item.title));
-   if(item.detail)card.appendChild(el("span","marquee-detail",item.detail));
-   card.setAttribute("title",[item.title,item.when,item.detail].filter(Boolean).join(" · "));
-   return card;
+  const makeText=(item,index)=>{
+   const line=el("span","activity-marquee-text tone-"+(index%6));
+   const when=el("span","marquee-when",item.when);
+   const title=el("strong","marquee-title",item.title);
+   line.append(when,document.createTextNode("  "),title);
+   if(item.detail)line.append(document.createTextNode(" — "),el("span","marquee-detail",item.detail));
+   line.setAttribute("title",[item.when,item.title,item.detail].filter(Boolean).join(" · "));
+   return line;
   };
-  items.forEach((item,index)=>track.appendChild(makeItem(item,index)));
-  // Duplicate the sequence so the left-to-right animation loops without a blank gap.
-  items.forEach((item,index)=>track.appendChild(makeItem(item,index)));
+  items.forEach((item,index)=>{
+   if(index)track.appendChild(el("span","activity-marquee-separator","  •  "));
+   track.appendChild(makeText(item,index));
+  });
+  track.appendChild(el("span","activity-marquee-separator","     •     "));
+  items.forEach((item,index)=>{
+   if(index)track.appendChild(el("span","activity-marquee-separator","  •  "));
+   const copy=makeText(item,index);
+   copy.setAttribute("aria-hidden","true");
+   track.appendChild(copy);
+  });
+  let dragX=0,dragOffset=0,dragging=false;
+  host.addEventListener("pointerdown",event=>{
+   if(event.pointerType==="mouse"&&event.button!==0)return;
+   dragging=true;dragX=event.clientX;dragOffset=0;
+   track.style.animationPlayState="paused";
+   host.classList.add("is-dragging");
+   host.setPointerCapture(event.pointerId);
+  });
+  host.addEventListener("pointermove",event=>{
+   if(!dragging)return;
+   dragOffset+=event.clientX-dragX;dragX=event.clientX;
+   track.style.setProperty("--drag-offset",dragOffset+"px");
+  });
+  const stopDrag=event=>{
+   if(!dragging)return;
+   dragging=false;host.classList.remove("is-dragging");
+   track.style.animationPlayState="";
+   track.style.setProperty("--drag-offset","0px");
+   if(event&&host.hasPointerCapture(event.pointerId))host.releasePointerCapture(event.pointerId);
+  };
+  host.addEventListener("pointerup",stopDrag);
+  host.addEventListener("pointercancel",stopDrag);
+  host.addEventListener("wheel",event=>{
+   if(Math.abs(event.deltaY)>Math.abs(event.deltaX)){host.scrollLeft+=event.deltaY;event.preventDefault();}
+  },{passive:false});
  }catch(error){track.appendChild(el("span","activity-marquee-empty","Events are temporarily unavailable."));}
 }
 
