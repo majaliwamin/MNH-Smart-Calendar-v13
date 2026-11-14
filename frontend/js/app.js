@@ -54,7 +54,7 @@ function getSessionEntries(){
   const start=parseClock(startTime),end=parseClock(endTime);
   if(start===null||end===null||end<=start)return;
   const label=String(data.code||data.text||data.title||"Scheduled session");
-  if(label==="Journal Club"&&dayIndex===1)return;
+  if((label==="Journal Club"&&dayIndex===1)||(label==="Seminar in MNH"&&dayIndex===3))return;
   result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[data.code]?.title||""),facilitator:facilitatorFor(data.code)||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
  });
  [
@@ -232,7 +232,7 @@ function remapLegacyCells(cells){
   const [r,c]=k.split("_").map(Number);
   if(!(r in LEGACY_ROW_MAP))return;
   const nr=LEGACY_ROW_MAP[r],nk=cellKey(nr,c);
-  if(nk==="2_1"&&r!==3)return;           // Tuesday 12:00–13:30 belongs to the recurring Journal Club
+  if(nk==="2_1"&&r!==3)return;           // Keep the legacy Tuesday lunch slot clear; Journal Club is rendered separately at 13:00.
   if(r===3&&nk in out&&nk!=="2_1")return; // old 12:00–13:00 entry wins over old 13:00–14:00
   out[nk]=v;
  });
