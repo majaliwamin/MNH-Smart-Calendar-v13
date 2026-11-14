@@ -84,8 +84,9 @@ def initials(name: str) -> str:
     return (words[0][0] + words[-1][0]).upper()
 
 
-def sessions_from_collections(collections: dict) -> list:
-    """Resolve every stored weekday session (Mon–Fri only) into display-ready dicts."""
+def sessions_from_collections(collections: dict, week_start: date | None = None) -> list:
+    """Resolve stored weekday sessions for the requested Monday–Friday academic week."""
+    week_start = week_start or WEEK_START
     modules = collections.get("modules", {})
     facilitators = collections.get("facilitators", {})
     out = []
@@ -97,7 +98,7 @@ def sessions_from_collections(collections: dict) -> list:
         code = str(data.get("code", label)).strip()
         module = modules.get(code, {})
         out.append({
-            "id": item_id, "day": day, "date": WEEK_START + timedelta(days=day),
+            "id": item_id, "day": day, "date": week_start + timedelta(days=day),
             "weekday": WEEKDAY_NAMES[day], "start_min": start, "end_min": end,
             "start": clock(start), "end": clock(end), "code": code,
             "module_title": str(module.get("title") or data.get("title") or label),
@@ -114,7 +115,7 @@ def sessions_from_collections(collections: dict) -> list:
         start, end = minutes(item["start"]), minutes(item["end"])
         out.append({
             "id": f"recurring-{item['id']}", "day": item["day"],
-            "date": WEEK_START + timedelta(days=item["day"]),
+            "date": week_start + timedelta(days=item["day"]),
             "weekday": item["weekday"], "start_min": start, "end_min": end,
             "start": item["start"], "end": item["end"], "code": item["title"],
             "module_title": item["title"], "lecturer": "",
