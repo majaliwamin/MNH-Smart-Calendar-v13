@@ -873,13 +873,12 @@ function nextRecurringDate(dayName,timeText,now){
  return date;
 }
 function upcomingItemButton(item){
- const b=el("button","item");b.type="button";
+ const b=el(item.session?"button":"div","item");if(item.session)b.type="button";
  b.appendChild(el("span","it",item.when));
  const n=el("span","in",item.title);
  if(item.detail)n.appendChild(el("span","is",item.detail));
  b.appendChild(n);
  if(item.session)b.addEventListener("click",()=>showSessionDetails(item.session));
- else b.disabled=true;
  return b;
 }
 async function getFutureActivities(){
@@ -887,6 +886,7 @@ async function getFutureActivities(){
  // Weekly timetable entries are dated against the current Malawi-local academic week.
  for(let day=0;day<5;day++){
   dayEntries(day,WK.currentOffset()).forEach(session=>{
+   if(session.id==="journal-club-fixed")return; // Synthetic timetable placeholder is not a user-published activity.
    if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
   });
  }
