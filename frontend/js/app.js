@@ -19,6 +19,10 @@ const legacyKey="phd_mnh_weekly_calendar_v2";
 let currentRole="public";
 let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
+let recurringRecords=[
+ {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
+ {id:"seminar-mnh",data:{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
+];
 let editingUnlocked=true;
 let analyticsUnlocked=true;
 let activeCell=null;
@@ -57,12 +61,13 @@ function getSessionEntries(){
   if((label==="Journal Club"&&dayIndex===1)||(label==="Seminar in MNH"&&dayIndex===3))return;
   result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[data.code]?.title||""),facilitator:facilitatorFor(data.code)||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
  });
- [
-  {id:"recurring-journal-club",dayIndex:1,label:"Journal Club",title:"Journal Club",startTime:"13:00",endTime:"14:00"},
-  {id:"recurring-seminar-mnh",dayIndex:3,label:"Seminar in MNH",title:"Seminar in MNH",startTime:"10:00",endTime:"12:00"}
- ].forEach(item=>{
-  const start=parseClock(item.startTime),end=parseClock(item.endTime);
-  result.push({...item,c:item.dayIndex,r:-1,sub:"Weekly recurring activity",facilitator:"",startMinutes:start,endMinutes:end,mins:end-start,timeLabel:item.startTime+" – "+item.endTime,data:{code:item.label,title:item.title,recurring:true}});
+ recurringRecords.filter(row=>row.data?.enabled!==false).forEach(row=>{
+  const data=row.data||{},range=parseRange(data.time),dayIndex=days.indexOf(String(data.day||""));
+  if(dayIndex<0||!range)return;
+  const start=parseClock(range.startTime),end=parseClock(range.endTime);
+  if(start===null||end===null||end<=start)return;
+  const title=String(data.title||row.id);
+  result.push({id:"recurring-"+row.id,dayIndex,c:dayIndex,r:-1,label:title,title,sub:"",facilitator:String(data.presenter||""),startTime:range.startTime,endTime:range.endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:range.startTime+" – "+range.endTime,data:{code:title,title,recurring:true,recurringId:row.id,presenter:String(data.presenter||"")}});
  });
  return result.sort((a,b)=>a.dayIndex-b.dayIndex||a.startMinutes-b.startMinutes);
 }
@@ -883,9 +888,10 @@ async function getFutureActivities(){
   items.push({kind:"examination",title:data.title||row.id,detail:[data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
  });
  recurring.forEach(row=>{
-  const data=row.data||{},start=nextRecurringDate(data.day,data.time,local);
+  const data=row.data||{};if(data.enabled===false)return;
+  const start=nextRecurringDate(data.day,String(data.time||"").split(/[–-]/)[0]?.trim(),local);
   if(!start||start.getTime()<=now)return;
-  items.push({kind:"recurring",title:data.title||row.id,detail:[data.frequency,data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+  items.push({kind:"recurring",title:data.title||row.id,detail:[data.presenter,data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
  });
  return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
 }
@@ -977,15 +983,37 @@ function photoPicker(label){
  const wrap=document.createElement("label");wrap.className="photo-picker";wrap.textContent=label||"Photograph (optional)";
  const input=document.createElement("input");input.type="file";input.accept=PHOTO_TYPES.join(",");wrap.appendChild(input);return {wrap,input};
 }
-const MANAGED_FIELDS={facilitators:["name","title","department","email","phone"],examinations:["title","date","time","venue","notes"],recurring:["title","frequency","day","time","venue","notes"]};
+const MANAGED_FIELDS={facilitators:["name","title","department","email","phone"],examinations:["title","date","time","venue","notes"],recurring:["title","day","time","presenter","venue","notes"]};
 const MANAGED_LABELS={facilitators:"Facilitator",examinations:"Examination",recurring:"Recurring activity"};
 async function renderManaged(collection){const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);
  if(collection==="recurring"){
   root.appendChild(el("p","muted","Only these two activities repeat every academic week. Other entries must be added as dated timetable sessions."));
+  let rows=await loadRows("recurring");
+  if(!rows.length){
+   const defaults=[
+    ["journal-club",{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}],
+    ["seminar-mnh",{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}]
+   ];
+   for(const [id,data] of defaults)await saveRow("recurring",id,data);
+   rows=await loadRows("recurring");
+  }
+  recurringRecords=rows;
   const list=el("div","cards");
-  [["Journal Club","Tuesday","13:00–14:00"],["Seminar in MNH","Thursday","10:00–12:00"]].forEach(([name,day,time])=>{
-   const card=el("div","card");card.appendChild(el("h3",null,name));card.appendChild(el("p","muted",day+" · "+time+" · Weekly"));list.appendChild(card);
+  rows.filter(row=>row.data?.enabled!==false).forEach(row=>{
+   const data=row.data||{},card=el("div","card");
+   card.appendChild(el("h3",null,data.title||row.id));
+   card.appendChild(el("p","muted",[data.day,data.time].filter(Boolean).join(" · ")));
+   const presenterLabel=el("label","field-label","Presenter");
+   const presenter=fieldInput("Enter presenter name",120);presenter.value=String(data.presenter||"");
+   presenterLabel.appendChild(presenter);card.appendChild(presenterLabel);
+   const actions=el("div","dialog-actions");
+   const save=el("button","primary","Save presenter");save.type="button";
+   save.addEventListener("click",async()=>{try{await saveRow("recurring",row.id,{...data,presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   const remove=el("button","res-del","Remove activity");remove.type="button";
+   remove.addEventListener("click",async()=>{if(!confirm("Remove this recurring activity from the timetable?"))return;try{await saveRow("recurring",row.id,{...data,enabled:false});rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   actions.append(save,remove);card.appendChild(actions);list.appendChild(card);
   });
+  if(!list.children.length)list.appendChild(el("p","muted","No recurring activities are active."));
   root.appendChild(list);return;
  }
  {const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;if(collection==="facilitators"){photoInput=photoPicker();form.appendChild(photoInput.wrap);}const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}}));form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(!rows.length)list.appendChild(el("p","muted","No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
@@ -1899,6 +1927,11 @@ function subscribeExtras(db){
  db.collection("facilitators").onSnapshot(snap=>{
   facilitatorRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}})).filter(x=>x.data.name);
   build();if(currentView==="modules")renderModules();
+ },()=>{});
+ db.collection("recurring").onSnapshot(snap=>{
+  recurringRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}}));
+  build();if(currentView==="recurring")renderManaged("recurring");
+  if(currentView==="weekly"||currentView==="dashboard")renderAnimatedFutureStrip();
  },()=>{});
  db.collection("resources").onSnapshot(snap=>{
   if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
