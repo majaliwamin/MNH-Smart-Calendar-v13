@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from app.config import TIMEZONE
 from app.database.connection import database
-from app.services import wa_bridge, whatsapp
+from app.services import wa_bridge, whatsapp, comm_contacts, comm_service
 from app.services.schedule import WEEK_START, sessions_from_collections
 
 TZ = ZoneInfo(TIMEZONE)
@@ -200,8 +200,28 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
     config = settings()
     if not config["enabled"] and not dry_run:
         return {"ok": True, "sent": 0, "checked": 0, "reason": "reminders are switched off"}
+    if not dry_run and comm_service.emergency_stop():
+        return {"ok": True, "sent": 0, "checked": 0, "reason": "communications emergency stop is enabled"}
     if not config["recipients"]:
         return {"ok": True, "sent": 0, "checked": 0, "reason": "no recipient numbers saved"}
+    # Legacy raw phone lists are not proof of consent. Match each number to a
+    # directory contact and enforce consent, opt-out and DNC on every send cycle.
+    allowed_phones = set()
+    blocked_phones = {}
+    for contact in comm_contacts.list_contacts():
+        phone = str(contact.get("phone") or "")
+        if phone not in config["recipients"]:
+            continue
+        allowed, reason = comm_contacts.contact_allowed(contact, "whatsapp")
+        if allowed:
+            allowed_phones.add(phone)
+        else:
+            blocked_phones[phone] = reason
+    recipients = [phone for phone in config["recipients"] if phone in allowed_phones]
+    if not recipients and not dry_run:
+        return {"ok": True, "sent": 0, "checked": 0,
+                "reason": "no configured reminder recipients have valid WhatsApp consent",
+                "blocked": len(blocked_phones)}
     ensure_log()
     due = due_reminders(week_sessions(now), now, config["leadMinutes"])
     if not wa_bridge.configured() and not dry_run:
@@ -210,7 +230,7 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
     sent, errors, skipped = 0, [], 0
     for session, lead in due:
         text = reminder_text(session, lead)
-        for phone in config["recipients"]:
+        for phone in (config["recipients"] if dry_run else recipients):
             key = _key(session, lead, phone)
             if already_sent(key):
                 skipped += 1
@@ -233,6 +253,15 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
 def send_test(to: str, now: datetime | None = None) -> dict:
     """Send one sample reminder to a single number (used by the interface's test button)."""
     number = whatsapp.normalise_phone(to)
+    contact = next((c for c in comm_contacts.list_contacts()
+                    if str(c.get("phone") or "") == number), None)
+    if not contact:
+        raise wa_bridge.BridgeError("Add this number to the contact directory and record WhatsApp consent before sending a test.")
+    allowed, reason = comm_contacts.contact_allowed(contact, "whatsapp")
+    if not allowed:
+        raise wa_bridge.BridgeError(f"Test message blocked: {reason}.")
+    if comm_service.emergency_stop():
+        raise wa_bridge.BridgeError("Communications are paused by the emergency stop.")
     body = test_message(now)
     if not wa_bridge.configured():
         raise wa_bridge.BridgeError(
