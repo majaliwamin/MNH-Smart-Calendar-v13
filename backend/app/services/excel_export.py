@@ -251,7 +251,8 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
 
     notes = [TITLE + " — " + APP_SUBTITLE + " | " + APP_NAME,
              "Weekly Timetable: Monday to Friday only, one row per time interval. Lunch Break (12:00–13:30) has its own row.",
-             "Programme: " + TITLE + " | Application: " + APP_NAME,\n             "Header rows 1–2 are merged across the full width; every cell below is an ordinary editable cell.",
+             "Programme: " + TITLE + " | Application: " + APP_NAME,
+             "Header rows 1–2 are merged across the full width; every cell below is an ordinary editable cell.",
              "Session Details: use the filter arrows to filter by date, module, lecturer, delivery mode or status; click a Record ID to jump to that cell.",
              "Module Directory: every known module is listed with its assigned lecturer and an Included in this export flag; every cell is editable and blank rows are provided for extra modules.",
              "This workbook is an independent copy. Editing it does not change the live calendar database."]
