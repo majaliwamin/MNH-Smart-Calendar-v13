@@ -282,7 +282,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         row_bg = LUNCH_BG if is_lunch else (PAGE if slot_index % 2 == 0 else PALE)
         pdf.setFillColor(row_bg)
         pdf.rect(table_x, row_y, table_w, row_h, stroke=0, fill=1)
-        pdf.setFillColor(colors.HexColor("#DCE4EE"))
+        pdf.setFillColor(TIME_BG)
         pdf.rect(table_x, row_y, time_w, row_h, stroke=0, fill=1)
         pdf.setStrokeColor(LINE)
         pdf.setLineWidth(.4)
