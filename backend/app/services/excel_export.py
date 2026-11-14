@@ -6,7 +6,7 @@ from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from app.services.schedule import (LUNCH_END, LUNCH_START, WEEK_START, WEEKDAY_NAMES, clock,
-                                   overlaps_lunch, sessions_from_collections)
+                                   overlaps_lunch, resolve_lecturer, sessions_from_collections)
 
 TITLE = "PhD in Maternal and Neonatal Health : 3rd Block"
 NAVY, BLUE, PALE, WHITE = "102B4E", "1F497D", "EAF1F8", "FFFFFF"
@@ -32,7 +32,8 @@ def module_catalogue(collections: dict) -> list:
     for item_id, data in stored.items():
         code = str(data.get("code") or item_id).strip()
         if code:
-            by_code[code] = {"code": code, "title": str(data.get("title") or ""), "facilitator": str(data.get("facilitator") or "")}
+            by_code[code] = {"code": code, "title": str(data.get("title") or ""),
+                             "facilitator": resolve_lecturer(data, collections.get("facilitators", {}))}
     for default in DEFAULT_MODULES:
         by_code.setdefault(default["code"], dict(default))
     return sorted(by_code.values(), key=lambda m: m["code"].lower())
