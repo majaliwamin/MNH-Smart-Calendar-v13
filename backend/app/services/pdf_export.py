@@ -42,8 +42,10 @@ def _slot_label(hours_start, hours_end) -> str:
 
 
 def build_timetable_pdf(collections: dict, selected_modules: list | None = None) -> bytes:
-    sessions = sessions_from_collections(collections)
     selection = normalise_selection(selected_modules, collections)
+    selected_codes = set(selection)
+    sessions = [s for s in sessions_from_collections(collections)
+                if s["code"] in selected_codes or str(s["id"]).startswith("recurring-")]
     catalogue = {m["code"]: m for m in module_catalogue(collections)}
 
     out = BytesIO()
@@ -125,41 +127,56 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
                            fieldFlags='multiline')
     pdf.showPage()
 
-    # ============================ page 2: module directory ============================
-    top = banner("Module Directory · the modules included in this export")
-    top = note("Edit the module details directly in the form fields; use the blank block to add another module.", top)
-    col_x = [10 * mm, 85 * mm, 220 * mm, 320 * mm]
-    col_w = [70 * mm, 130 * mm, 95 * mm, width - 320 * mm - 10 * mm]
-    headers = ["Module code", "Module title", "Facilitator", "Sessions this week"]
-    pdf.setFillColor(BLUE)
-    pdf.rect(10 * mm, top - 9 * mm, width - 20 * mm, 9 * mm, stroke=1, fill=1)
-    pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 10)
-    for x, w, text in zip(col_x, col_w, headers):
-        pdf.drawString(x + 2 * mm, top - 6.5 * mm, text)
-    y = top - 9 * mm
+    # ============================ page 2+: module directory ============================
+    # List every available module, not only the selected ones. The fillable checkbox
+    # records the export selection, and the assigned lecturer is prefilled from the
+    # shared Modules + Facilitators records.
+    module_rows = module_catalogue(collections)
+    module_rows += [{"code": "", "title": "", "facilitator": ""}] * 3
     week_counts = {}
     for s in sessions:
         week_counts[s["code"]] = week_counts.get(s["code"], 0) + 1
-    rows = [catalogue.get(code, {"code": code, "title": "", "facilitator": ""}) for code in selection]
-    rows += [{"code": "", "title": "", "facilitator": ""}] * 3  # blank editable rows
-    for idx, module in enumerate(rows):
-        y -= 16 * mm
-        pdf.setStrokeColor(LINE)
-        for i in range(4):
-            pdf.rect(col_x[i], y, col_w[i], 16 * mm, stroke=1, fill=0)
-        form.textfield(name=f"mod_{idx}_code", tooltip="Module code", x=col_x[0] + 1.5 * mm, y=y + 2 * mm,
-                       width=col_w[0] - 3 * mm, height=12 * mm, fontSize=11, value=_ascii(module.get("code"))[:60],
-                       borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
-        form.textfield(name=f"mod_{idx}_title", tooltip="Module title", x=col_x[1] + 1.5 * mm, y=y + 2 * mm,
-                       width=col_w[1] - 3 * mm, height=12 * mm, fontSize=11, value=_ascii(module.get("title"))[:120],
-                       borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
-        form.textfield(name=f"mod_{idx}_facilitator", tooltip="Facilitator", x=col_x[2] + 1.5 * mm, y=y + 2 * mm,
-                       width=col_w[2] - 3 * mm, height=12 * mm, fontSize=11, value=_ascii(module.get("facilitator"))[:80],
-                       borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
-        pdf.setFillColor(colors.black)
-        pdf.setFont("Helvetica", 10)
-        pdf.drawString(col_x[3] + 2 * mm, y + 4.5 * mm, str(week_counts.get(module.get("code", ""), 0) or 0) if module.get("code") else "")
+    module_headers = ["Module code", "Module title", "Assigned lecturer", "Sessions this week", "Include"]
+    module_x = [10 * mm, 72 * mm, 202 * mm, 300 * mm, 360 * mm]
+    module_w = [57 * mm, 125 * mm, 93 * mm, 57 * mm, 50 * mm]
+    page_capacity = 12
+    for page_start in range(0, len(module_rows), page_capacity):
+        if page_start:
+            pdf.showPage()
+        top = banner("Module Directory · tick the modules included in this export")
+        top = note("Module codes, titles and lecturers are editable. Include checkboxes are fillable; save the completed PDF to keep your choices.", top)
+        header_h = 11 * mm
+        pdf.setFillColor(BLUE)
+        pdf.rect(10 * mm, top - header_h, width - 20 * mm, header_h, stroke=1, fill=1)
+        pdf.setFillColor(colors.white)
+        pdf.setFont("Helvetica-Bold", 11)
+        for x, label in zip(module_x, module_headers):
+            pdf.drawString(x + 1.5 * mm, top - 7.5 * mm, label)
+        y = top - header_h
+        chunk = module_rows[page_start:page_start + page_capacity]
+        for local_idx, module in enumerate(chunk):
+            idx = page_start + local_idx
+            y -= 16 * mm
+            pdf.setStrokeColor(LINE)
+            for col in range(5):
+                pdf.rect(module_x[col], y, module_w[col], 16 * mm, stroke=1, fill=0)
+            for field_name, col, max_chars in (("code", 0, 60), ("title", 1, 120), ("facilitator", 2, 80)):
+                form.textfield(name=f"mod_{idx}_{field_name}", tooltip=module_headers[col],
+                               x=module_x[col] + 1.5 * mm, y=y + 2 * mm,
+                               width=module_w[col] - 3 * mm, height=12 * mm,
+                               fontSize=11, value=_ascii(module.get(field_name))[:max_chars],
+                               borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
+            code = module.get("code", "")
+            pdf.setFillColor(colors.black)
+            pdf.setFont("Helvetica-Bold", 11)
+            if code:
+                pdf.drawCentredString(module_x[3] + module_w[3] / 2, y + 6 * mm,
+                                      str(week_counts.get(code, 0)))
+            form.checkbox(name=f"mod_{idx}_include", tooltip="Include " + (code or "additional module"),
+                           x=module_x[4] + 20 * mm, y=y + 4.5 * mm, size=7 * mm,
+                           checked=bool(code and code in selected_codes), buttonStyle="check",
+                           borderWidth=1, borderColor=LINE, fillColor=colors.white,
+                           textColor=NAVY, forceBorder=True)
     pdf.showPage()
 
     # ============================ page 3+: session register ============================
