@@ -125,7 +125,6 @@ function updateModuleDetails(code){
  else box.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
 }
 function openModuleDialog(dayIndex,startTime,entry){
- if(!editingUnlocked){statusEl.className="status";statusEl.textContent="Unlock editing to make changes.";return;}
  const existing=entry||null;
  const id=existing?.id||null;
  const start=startTime||"08:00";
@@ -287,7 +286,6 @@ document.getElementById("delete-module").addEventListener("click",async()=>{
 });
 document.getElementById("save").addEventListener("click",()=>{if(editingUnlocked)syncAll("Saved for everyone.");});
 document.getElementById("backup").addEventListener("click",async()=>{
- if(!editingUnlocked)return;
  try{const response=await fetch("/api/backup",{cache:"no-store"});if(!response.ok)throw new Error("Backup request failed");const payload=await response.json();
   await downloadFile("MNH-Calendar-shared-backup.json",JSON.stringify(payload,null,2));
  }catch(e){statusEl.className="status error";statusEl.textContent="Shared backup could not be downloaded.";}
@@ -1787,7 +1785,6 @@ function initHeader(){
  window.addEventListener("hashchange",()=>showView(location.hash.slice(1)));
  // header editing
  document.getElementById("edit-header").addEventListener("click",()=>{
-  if(!editingUnlocked)return;
   document.getElementById("header-title-input").value=headerCfg.title;document.getElementById("header-sub-input").value=headerCfg.subtitle;showDialog("header-dialog");
  });
  document.getElementById("header-cancel").addEventListener("click",()=>hideDialog("header-dialog"));
