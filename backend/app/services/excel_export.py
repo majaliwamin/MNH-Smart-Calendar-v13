@@ -53,10 +53,11 @@ def normalise_selection(selected: list | None, collections: dict) -> list:
     return out
 
 
-def build_timetable_workbook(collections: dict, selected_modules: list | None = None) -> bytes:
+def build_timetable_workbook(collections: dict, selected_modules: list | None = None, week_start=None) -> bytes:
+    week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
     selected_codes = set(selection)
-    sessions = [s for s in sessions_from_collections(collections)
+    sessions = [s for s in sessions_from_collections(collections, week_start=week_start)
                 if s["code"] in selected_codes or str(s["id"]).startswith("recurring-")]
     thin = Side(style="thin", color=GRID)
     box = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -85,7 +86,7 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.row_dimensions[2].height = 20
 
     # ---- Day header row: one ordinary cell per day ---------------------------
-    headers = ["Time"] + [f"{name}\n{(WEEK_START + timedelta(days=i)).strftime('%d %b %Y')}"
+    headers = ["Time"] + [f"{name}\n{(week_start + timedelta(days=i)).strftime('%d %b %Y')}"
                           for i, name in enumerate(WEEKDAY_NAMES)]
     for col, text in enumerate(headers, start=1):
         c = ws.cell(3, col, text)
