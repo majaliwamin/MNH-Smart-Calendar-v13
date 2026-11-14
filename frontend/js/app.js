@@ -853,9 +853,9 @@ function renderMonthly(){
  root.appendChild(el("p","muted","The academic timetable displays Monday–Friday only. Its dated week follows the Malawi local calendar and advances automatically each Monday."));
 }
 function localActivityDate(dateText,timeText){
- const match=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(dateText||"").trim());
+ const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText||"").trim());
  if(!match)return null;
- const clock=/^(\\d{1,2}):(\\d{2})$/.exec(String(timeText||"").trim());
+ const clock=/^(\d{1,2}):(\d{2})$/.exec(String(timeText||"").trim());
  const hour=clock?Number(clock[1]):23,minute=clock?Number(clock[2]):59;
  if(hour>23||minute>59)return null;
  return WK.makeZonedDate(Number(match[1]),Number(match[2])-1,Number(match[3]),hour,minute);
@@ -864,7 +864,7 @@ function nextRecurringDate(dayName,timeText,now){
  const names=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
  const target=names.findIndex(name=>name.toLowerCase()===String(dayName||"").trim().toLowerCase());
  if(target<0)return null;
- const clock=/^(\\d{1,2}):(\\d{2})$/.exec(String(timeText||"").trim());
+ const clock=/^(\d{1,2}):(\d{2})$/.exec(String(timeText||"").trim());
  const hour=clock?Number(clock[1]):23,minute=clock?Number(clock[2]):59;
  if(hour>23||minute>59)return null;
  let delta=(target-now.weekday+7)%7;
