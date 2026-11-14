@@ -93,7 +93,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         """Silver vector calendar mark; intentionally not gold."""
         pdf.saveState()
         pdf.setStrokeColor(SILVER)
-        pdf.setFillColor(SILVER)
+        pdf.setFillColor(PURPLE)
         pdf.setLineWidth(1.5)
         pdf.roundRect(x, y, size, size * .82, 1.5 * mm, stroke=1, fill=0)
         pdf.line(x, y + size * .58, x + size, y + size * .58)
@@ -109,6 +109,8 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     def banner(section: str):
         nonlocal page_number
         page_number += 1
+        pdf.setFillColor(PAGE)
+        pdf.rect(0, 0, width, height, stroke=0, fill=1)
         pdf.setFillColor(NAVY)
         pdf.rect(0, height - 37 * mm, width, 37 * mm, stroke=0, fill=1)
         draw_calendar_icon(10 * mm, height - 23 * mm, 12 * mm)
@@ -146,13 +148,13 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.drawString(x + 3 * mm, y - 5.4 * mm, text)
         return y - 12 * mm
 
-    def field(name, tooltip, x, y, w, h, value="", font_size=16, multiline=False, fill=WHITE):
+    def field(name, tooltip, x, y, w, h, value="", font_size=16, multiline=False, fill=None):
         # Explicit non-zero /DA font sizes prevent viewers choosing tiny auto-size text.
         flags = "multiline" if multiline else ""
         form.textfield(
             name=name, tooltip=tooltip, x=x, y=y, width=w, height=h,
             fontName="Helvetica", fontSize=font_size, value=_ascii(value)[:1000],
-            borderWidth=0, fillColor=fill, textColor=INK,
+            borderWidth=0, fillColor=fill or FIELD, textColor=INK,
             forceBorder=False, fieldFlags=flags,
         )
 
@@ -199,12 +201,12 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         for slot_index, (start, end) in enumerate(TIME_SLOTS):
             row_y = row_top - (slot_index + 1) * row_h
             is_lunch = abs(start - 12) < 0.01
-            bg = colors.HexColor("#F8EFD9") if is_lunch else (WHITE if slot_index % 2 == 0 else PALE)
+            bg = LUNCH_BG if is_lunch else (PAGE if slot_index % 2 == 0 else PALE)
             pdf.setFillColor(bg)
             pdf.roundRect(x + 1.5 * mm, row_y + .5 * mm, card_w - 3 * mm, row_h - .8 * mm,
                           1 * mm, stroke=0, fill=1)
             # Dedicated silver time-interval column with strong navy text.
-            pdf.setFillColor(colors.HexColor("#DCE4EE"))
+            pdf.setFillColor(TIME_BG)
             pdf.roundRect(x + 1.5 * mm, row_y + .5 * mm, time_w, row_h - .8 * mm,
                           1 * mm, stroke=0, fill=1)
             pdf.setStrokeColor(colors.HexColor("#AAB8C9"))
@@ -215,7 +217,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             pdf.setFont("Helvetica-Bold", 11)
             pdf.drawCentredString(x + 1.5 * mm + time_w / 2, row_y + 4.1 * mm, _slot_label(start, end))
             if is_lunch:
-                pdf.setFillColor(PURPLE)
+                pdf.setFillColor(LUNCH_TEXT)
                 pdf.setFont("Helvetica-Bold", 11)
                 pdf.drawCentredString(x + time_w + (card_w - time_w) / 2, row_y + 4.1 * mm, "Lunch break")
                 continue
@@ -292,7 +294,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                               _slot_label(start_hour, end_hour))
 
         if is_lunch:
-            pdf.setFillColor(PURPLE)
+            pdf.setFillColor(LUNCH_TEXT)
             pdf.setFont("Helvetica-Bold", 9)
             pdf.drawCentredString(table_x + time_w + (table_w - time_w) / 2,
                                   row_y + 4.5 * mm, "LUNCH BREAK")
@@ -357,7 +359,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             pdf.setFont("Helvetica-Bold", 9)
             pdf.drawString(14 * mm, top - 11 * mm, str(counts.get(module.get("code", ""), 0)))
             field(f"mod_{idx}_code", "Module code", 14 * mm, top - 19 * mm, 55 * mm, 7 * mm,
-                  module.get("code", ""), font_size=16, fill=WHITE)
+                  module.get("code", ""), font_size=16, fill=FIELD)
             field(f"mod_{idx}_title", "Module title", 73 * mm, top - 19 * mm, 112 * mm, 7 * mm,
                   module.get("title", ""), font_size=16, fill=WHITE)
             field(f"mod_{idx}_facilitator", "Assigned lecturer", 14 * mm, top - 32 * mm,
@@ -367,7 +369,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 x=width - 24 * mm, y=top - 10 * mm, size=5 * mm,
                 checked=bool(module.get("code") and module.get("code") in selected_codes),
                 buttonStyle="check", borderWidth=1, borderColor=LINE,
-                fillColor=WHITE, textColor=PURPLE, forceBorder=True,
+                fillColor=FIELD, textColor=PURPLE, forceBorder=True,
             )
             top = bottom - 4 * mm
         footer()
