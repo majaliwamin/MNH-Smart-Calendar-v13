@@ -823,9 +823,13 @@ function renderDashboard(){updateMissedTab();
  const box=document.getElementById("dashboard-overview");box.textContent="";
  const stats=[[Object.keys(modules).length,"Modules"],[allEntries().length,"Scheduled sessions"],[resources.length,"Shared resources"]];
  stats.forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));box.appendChild(c);});
- const upcoming=document.getElementById("dashboard-upcoming");upcoming.textContent="";const entries=allEntries().slice(0,5);
- if(!entries.length)upcoming.appendChild(el("div","muted","No timetable sessions have been published yet."));
- entries.forEach(x=>upcoming.appendChild(itemButton(x)));
+ const upcoming=document.getElementById("dashboard-upcoming");upcoming.textContent="";
+ upcoming.appendChild(el("div","muted","Loading future activities…"));
+ getFutureActivities().then(items=>{
+  upcoming.textContent="";
+  if(!items.length)upcoming.appendChild(el("div","muted","No future academic activities are currently recorded."));
+  items.slice(0,5).forEach(item=>upcoming.appendChild(upcomingItemButton(item)));
+ }).catch(()=>{upcoming.textContent="";upcoming.appendChild(el("div","muted","Future activities are temporarily unavailable."));});
  const recent=document.getElementById("dashboard-recent");recent.textContent="";
  apiRequest("GET","/api/history").then(rows=>{recent.textContent="";if(!rows.length)recent.appendChild(el("div","muted","No recent additions."));rows.slice(0,5).forEach(r=>recent.appendChild(el("div","item",`${r.role} · ${r.summary}`)));}).catch(()=>recent.textContent="Recent activity is unavailable.");
 }
@@ -848,7 +852,71 @@ function renderMonthly(){
  card.appendChild(grid);root.appendChild(card);
  root.appendChild(el("p","muted","The academic timetable displays Monday–Friday only. Its dated week follows the Malawi local calendar and advances automatically each Monday."));
 }
-function renderUpcoming(){const root=workspace(...WORKSPACE_META.upcoming);const list=el("div","cards");const entries=allEntries();entries.forEach(x=>{const c=el("div","card");c.append(el("h3",null,x.label),el("div","muted",`${days[x.c]} ${dates[x.c]} · ${x.startTime}–${x.endTime}`));if(x.sub)c.appendChild(el("p","muted",x.sub));list.appendChild(c);});loadRows("examinations").then(rows=>rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||r.id),el("div","muted",[d.date,d.time,d.venue].filter(Boolean).join(" · ")));list.appendChild(c);})).catch(()=>{});root.appendChild(list);if(!entries.length)root.appendChild(el("p","muted","No upcoming timetable sessions are currently recorded."));}
+function localActivityDate(dateText,timeText){
+ const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText||"").trim());
+ if(!match)return null;
+ const clock=/^(\d{1,2}):(\d{2})$/.exec(String(timeText||"").trim());
+ const hour=clock?Number(clock[1]):23,minute=clock?Number(clock[2]):59;
+ if(hour>23||minute>59)return null;
+ return WK.makeZonedDate(Number(match[1]),Number(match[2])-1,Number(match[3]),hour,minute);
+}
+function nextRecurringDate(dayName,timeText,now){
+ const names=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+ const target=names.findIndex(name=>name.toLowerCase()===String(dayName||"").trim().toLowerCase());
+ if(target<0)return null;
+ const clock=/^(\d{1,2}):(\d{2})$/.exec(String(timeText||"").trim());
+ const hour=clock?Number(clock[1]):23,minute=clock?Number(clock[2]):59;
+ if(hour>23||minute>59)return null;
+ let delta=(target-now.weekday+7)%7;
+ let date=WK.makeZonedDate(now.year,now.month,now.day+delta,hour,minute);
+ if(date.getTime()<=Date.now()){delta+=7;date=WK.makeZonedDate(now.year,now.month,now.day+delta,hour,minute);}
+ return date;
+}
+function upcomingItemButton(item){
+ const b=el(item.session?"button":"div","item");if(item.session)b.type="button";
+ b.appendChild(el("span","it",item.when));
+ const n=el("span","in",item.title);
+ if(item.detail)n.appendChild(el("span","is",item.detail));
+ b.appendChild(n);
+ if(item.session)b.addEventListener("click",()=>showSessionDetails(item.session));
+ return b;
+}
+async function getFutureActivities(){
+ const now=Date.now(),local=WK.localNow(),items=[];
+ // Weekly timetable entries are dated against the current Malawi-local academic week.
+ for(let day=0;day<5;day++){
+  dayEntries(day,WK.currentOffset()).forEach(session=>{
+   if(session.id==="journal-club-fixed")return; // Synthetic timetable placeholder is not a user-published activity.
+   if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
+  });
+ }
+ const [exams,recurring]=await Promise.all([
+  loadRows("examinations").catch(()=>[]),
+  loadRows("recurring").catch(()=>[])
+ ]);
+ exams.forEach(row=>{
+  const data=row.data||{},start=localActivityDate(data.date,data.time);
+  if(!start||start.getTime()<=now)return;
+  items.push({kind:"examination",title:data.title||row.id,detail:[data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+ });
+ recurring.forEach(row=>{
+  const data=row.data||{},start=nextRecurringDate(data.day,data.time,local);
+  if(!start||start.getTime()<=now)return;
+  items.push({kind:"recurring",title:data.title||row.id,detail:[data.frequency,data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+ });
+ return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
+}
+async function renderUpcoming(){
+ const root=workspace(...WORKSPACE_META.upcoming),list=el("div","cards");
+ root.appendChild(el("p","muted","Only future activities are shown. Dates and times follow Malawi local time; shared timetable, examination and recurring-activity records update from the common database."));
+ list.appendChild(el("div","muted","Loading future activities…"));
+ try{
+  const items=await getFutureActivities();list.textContent="";
+  if(!items.length)list.appendChild(el("p","muted","No future academic activities are currently recorded."));
+  items.forEach(item=>{const c=el("div","card");c.append(el("h3",null,item.title),el("div","muted",item.when));if(item.detail)c.appendChild(el("p","muted",item.detail));c.appendChild(el("span","muted",item.kind==="session"?"Timetable session":item.kind==="examination"?"Examination":"Recurring activity"));list.appendChild(c);});
+ }catch(error){list.textContent="";list.appendChild(el("p","muted","Future activities could not be loaded: "+error.message));}
+ root.appendChild(list);
+}
 
 // ---- Facilitator initials (titles ignored: "Dr D Mzinza" -> "DM") and photographs ----
 const NAME_TITLES=/\b(professor|prof|doctor|dr|mr|mrs|ms|miss|mx)\b\.?/gi;

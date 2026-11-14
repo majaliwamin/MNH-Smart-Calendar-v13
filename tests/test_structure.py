@@ -219,3 +219,16 @@ def test_weekly_timetable_tracks_malawi_local_week_and_live_time_without_weekend
     assert "DateTime.now().toUtc().add(const Duration(hours: 2))" in mobile
     assert "_currentWeekMonday" in mobile and "_isCurrentSlot" in mobile
     assert "DateTime(2026, 11, 9 +" not in mobile
+
+
+
+def test_upcoming_activities_are_future_only_and_use_shared_records():
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    assert "async function getFutureActivities()" in app
+    assert "dayEntries(day,WK.currentOffset())" in app
+    assert "session.start.getTime()>now" in app
+    assert 'loadRows("examinations")' in app
+    assert 'loadRows("recurring")' in app
+    assert "start.getTime()<=now" in app
+    assert "function nextRecurringDate(dayName,timeText,now)" in app
+    assert "getFutureActivities().then(items=>" in app
