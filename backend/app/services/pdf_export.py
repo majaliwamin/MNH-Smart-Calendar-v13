@@ -141,7 +141,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         card_w = (width - 20 * mm - gap) / 2
         cards = [
             ("WEEK", f"Week commencing {week_start.strftime('%d %b %Y')}"),
-            ("PROGRAMME", "PhD (MNH)  |  MUST, Blantyre"),
+            ("PROGRAMME / BLOCK", "PhD (MNH)  |  3rd Block  |  MUST"),
         ]
         for i, (label, value) in enumerate(cards):
             cx = x + i * (card_w + gap)
