@@ -137,11 +137,11 @@ def export_module_list():
     """The module catalogue for the export selection UI (defaults + stored modules)."""
     from app.services.excel_export import module_catalogue
     with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs WHERE col='modules'").fetchall()
-    collections = {"modules": {}}
+        rows = connection.execute("SELECT col,id,data FROM docs WHERE col IN ('modules','facilitators')").fetchall()
+    collections = {"modules": {}, "facilitators": {}}
     for row in rows:
         try:
-            collections["modules"][row["id"]] = json.loads(row["data"])
+            collections[row["col"]][row["id"]] = json.loads(row["data"])
         except (TypeError, json.JSONDecodeError):
             continue
     return {"modules": module_catalogue(collections)}
