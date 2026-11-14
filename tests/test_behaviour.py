@@ -116,8 +116,8 @@ def test_database_migration_flags_but_never_deletes_non_weekday_records():
             second.close()
         finally:
             conn_module.DATABASE_PATH, conn_module.ensure_directories = original
-    assert kept == {"old-sat", "sat-club"}
-    assert {f["id"] for f in flagged} == {"old-sat", "sat-club"}
+    assert kept == {"old-sat"}  # non-weekday timetable cells are retained; extra recurring records are removed
+    assert {f["id"] for f in flagged} == {"old-sat"}
 
 
 def _clean_env(*names):
