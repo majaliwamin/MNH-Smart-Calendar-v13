@@ -746,10 +746,10 @@ function renderCurrentDayBadge(){
  const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
  if(!prev||!next||!now)return;
  const label=WK.label(weekOffset),range=WK.range(weekOffset);
- const lab=document.getElementById("week-now-label"),rng=document.getElementById("week-now-range");
- if(lab)lab.textContent=label;if(rng)rng.textContent=range;
- now.title=label+" · "+range+" — click to return to this week";
- now.setAttribute("aria-label",label+", "+range+". Show this week");
+  const rng=document.getElementById("week-now-range");
+  if(rng)rng.textContent=range;
+  now.title=label+" · "+range+" — return to the current week";
+  now.setAttribute("aria-label",label+", "+range+". Return to the current week");
  now.dataset.default=String(weekOffset===WK.currentOffset());
  prev.disabled=weekOffset<=0;
  prev.setAttribute("aria-disabled",String(weekOffset<=0));
@@ -762,6 +762,7 @@ function initWeekNav(){
  next.addEventListener("click",()=>setWeek(weekOffset+1));
  now.addEventListener("click",()=>setWeek(WK.currentOffset()));
  weekOffset=WK.currentOffset();autoWeekOffset=weekOffset;
+  renderCurrentDayBadge();
  applyWeekView(false);
  setInterval(syncCurrentAcademicWeek,15000);
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncCurrentAcademicWeek();});
@@ -769,6 +770,7 @@ function initWeekNav(){
 }
 // ---- navigation ----
 function syncCurrentAcademicWeek(){
+  renderCurrentDayBadge();
  const current=WK.currentOffset();
  if(current!==autoWeekOffset){autoWeekOffset=current;weekOffset=current;applyWeekView(false);}
  else refreshLiveTimetable();
