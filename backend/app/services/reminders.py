@@ -217,7 +217,7 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
             allowed_phones.add(phone)
         else:
             blocked_phones[phone] = reason
-    recipients = [phone for phone in config["recipients"] if phone in allowed_phones]
+    recipients = [phone for phone in config["recipients"] if phone in allowed_phones and phone not in blocked_phones]
     if not recipients and not dry_run:
         return {"ok": True, "sent": 0, "checked": 0,
                 "reason": "no configured reminder recipients have valid WhatsApp consent",
