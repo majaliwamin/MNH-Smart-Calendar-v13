@@ -253,6 +253,35 @@ def test_analytics_reports_module_targets_attendance_and_delivery(monkeypatch, t
         assert module["onlineSessions"] == 1
         assert module["faceToFaceSessions"] == 1
 
+        dashboard = result["dashboard"]
+        assert dashboard["selectedYear"] == "2026"
+        assert "2026" in dashboard["academicYears"]
+        kpis = dashboard["kpis"]
+        assert kpis["modulesOffered"] == len(dashboard["moduleStatus"])
+        assert kpis["onTrack"] + kpis["atRisk"] + kpis["noSessions"] == kpis["modulesOffered"]
+        assert kpis["atRisk"] >= 1
+        assert kpis["missedSessions"] >= 1
+        test_status = next(item for item in dashboard["moduleStatus"] if item["code"] == "TEST-8100")
+        assert test_status["status"] == "at_risk"
+        assert test_status["missedSessions"] == 1
+        assert dashboard["attendance"]["available"] is False
+        assert dashboard["attendance"]["overall"] is None
+        assert dashboard["attendance"]["target"] == 70
+        assert dashboard["mode"]["available"] is True
+        assert dashboard["mode"]["faceToFace"] == 1
+        assert dashboard["mode"]["online"] == 1
+        assert dashboard["mode"]["faceToFacePercent"] == 50
+        assert dashboard["mode"]["onlinePercent"] == 50
+        test_performance = next(
+            item for item in dashboard["modulePerformance"] if item["code"] == "TEST-8100"
+        )
+        assert test_performance == {"code": "TEST-8100", "attendance": None, "completion": None}
+        assert any(action["tone"] == "danger" and "attention" in action["title"]
+                   for action in dashboard["actions"])
+        assert dashboard["insights"]
+        assert client.get("/api/analytics?year=2027").status_code == 400
+        assert client.get("/api/analytics?year=2026").status_code == 200
+
 
 def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path):
     from io import BytesIO

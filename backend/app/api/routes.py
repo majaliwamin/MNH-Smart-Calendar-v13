@@ -17,7 +17,7 @@ ALLOWED_COLLECTIONS = {"cells", "resources", "settings", "modules", "facilitator
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. –-]{0,99}$")
 COOKIE_NAME = "mnh_session"
 
-from app.services.schedule import DEFAULT_SESSION_RANGES, minutes as _minutes_checked, cell_interval as _cell_interval  # noqa: E402
+from app.services.schedule import DEFAULT_SESSION_RANGES, WEEK_START, minutes as _minutes_checked, cell_interval as _cell_interval  # noqa: E402
 
 
 def _minutes(value: str) -> int | None:
@@ -152,7 +152,7 @@ def export_module_list():
 
 
 @router.get("/analytics")
-def analytics(mnh_session: str | None = Cookie(default=None)):
+def analytics(mnh_session: str | None = Cookie(default=None), year: int | None = None):
     session = current_session(mnh_session)
     management_roles = {"hod", "coordinator", "executive_dean"}
     if not session or session.get("role") not in management_roles:
@@ -160,11 +160,12 @@ def analytics(mnh_session: str | None = Cookie(default=None)):
 
     with database() as connection:
         rows = connection.execute(
-            "SELECT col,id,data FROM docs WHERE col IN ('cells','modules','facilitators')"
+            "SELECT col,id,data FROM docs WHERE col IN ('cells','modules','facilitators','examinations')"
         ).fetchall()
 
     modules = {}
     facilitators = {}
+    examinations = []
     sessions = []
     for row in rows:
         data = json.loads(row["data"])
@@ -172,6 +173,8 @@ def analytics(mnh_session: str | None = Cookie(default=None)):
             modules[row["id"]] = data
         elif row["col"] == "facilitators":
             facilitators[row["id"]] = data
+        elif row["col"] == "examinations":
+            examinations.append(data)
         elif row["col"] == "cells":
             item_id = row["id"]
             legacy = re.fullmatch(r"(\d+)_(\d+)", item_id)
@@ -197,14 +200,35 @@ def analytics(mnh_session: str | None = Cookie(default=None)):
             mode = str(data.get("mode", data.get("delivery", "unspecified"))).lower().replace("-", "_").replace(" ", "_")
             sessions.append({"code": code, "day": day, "minutes": end - start, "status": status, "mode": mode})
 
-    def module_for(code):
-        return modules.get(code, {})
+    def code_key(value):
+        text = str(value or "").replace("\ufffd", "–").replace("â€“", "–").replace("â€”", "—")
+        text = re.sub(r"\s*[-\u2013\u2014]\s*", "-", text)
+        return re.sub(r"\s+", " ", text).strip().casefold()
 
-    module_codes = set(modules) | {item["code"] for item in sessions}
+    module_records = {}
+    for code, data in modules.items():
+        display = str(code).replace("\ufffd", "–").replace("â€“", "–").replace("â€”", "—")
+        module_records.setdefault(code_key(code), {"code": display, "data": data})
+
+    def module_for(code):
+        record = module_records.get(code_key(code))
+        return record["data"] if record else {}
+
+    grouped = {}
+    for code in modules:
+        key = code_key(code)
+        grouped.setdefault(key, {"code": module_records[key]["code"], "sessions": []})
+    for item in sessions:
+        key = code_key(item["code"])
+        record = module_records.get(key)
+        display = record["code"] if record else str(item["code"]).replace("\ufffd", "–")
+        grouped.setdefault(key, {"code": display, "sessions": []})
+        grouped[key]["sessions"].append(item)
     module_results = []
-    for code in sorted(module_codes):
+    for key in sorted(grouped, key=lambda value: grouped[value]["code"]):
+        code = grouped[key]["code"]
         module = module_for(code)
-        matching = [item for item in sessions if item["code"] == code]
+        matching = grouped[key]["sessions"]
         weekly = [item for item in matching if 0 <= item["day"] < 5]
         total_minutes = sum(item["minutes"] for item in matching)
         weekly_minutes = sum(item["minutes"] for item in weekly)
@@ -229,6 +253,163 @@ def analytics(mnh_session: str | None = Cookie(default=None)):
     online = sum(1 for item in sessions if item["mode"] in ("online", "virtual", "remote"))
     face = sum(1 for item in sessions if item["mode"] in ("face_to_face", "physical", "in_person", "inperson"))
     unspecified = total - online - face
+
+    # ---- Management dashboard -------------------------------------------------
+    academic_years = {str(WEEK_START.year)}
+    for examination in examinations:
+        exam_year = str(examination.get("date", ""))[:4]
+        if exam_year.isdigit():
+            academic_years.add(exam_year)
+    academic_years = sorted(academic_years)
+    selected_year = str(year) if year is not None else academic_years[-1]
+    if selected_year not in academic_years:
+        raise HTTPException(400, f"Academic year {selected_year} has no recorded data.")
+
+    module_status = []
+    on_track = at_risk = no_sessions = 0
+    dashboard_modules = [item for item in module_results if code_key(item["code"]) in module_records]
+    if not dashboard_modules:
+        dashboard_modules = module_results
+    for item in dashboard_modules:
+        if item["missedSessions"]:
+            status, status_label = "at_risk", "At Risk"
+            at_risk += 1
+        elif item["weeklySessions"] or item["semesterSessions"]:
+            status, status_label = "on_track", "On Track"
+            on_track += 1
+        else:
+            status, status_label = "no_sessions", "No Sessions"
+            no_sessions += 1
+        module_status.append({
+            "code": item["code"],
+            "title": item["title"],
+            "status": status,
+            "statusLabel": status_label,
+            "missedSessions": item["missedSessions"],
+            "weeklySessions": item["weeklySessions"],
+        })
+
+    # Attendance and completion need dated session-occurrence/attendance records, which
+    # are not stored yet. Report them as unavailable instead of inferring values from the
+    # Monday-Friday timetable template (which is a plan, not delivered sessions).
+    attendance_available = False
+    overall_attendance = None
+    attendance_target = 70
+    completion_available = False
+
+    known_modes = online + face
+    mode_available = known_modes > 0
+    face_percent = round(face / known_modes * 100) if known_modes else None
+    online_percent = (100 - face_percent) if face_percent is not None else None
+
+    missed_modules = [item for item in module_status if item["status"] == "at_risk"]
+    actions = []
+    if missed_modules:
+        first = missed_modules[0]
+        noun = "module" if at_risk == 1 else "modules"
+        verb = "needs" if at_risk == 1 else "need"
+        detail = f"{first['code']} – {first['missedSessions']} timetable session"
+        detail += " marked missed" if first["missedSessions"] == 1 else "s marked missed"
+        if len(missed_modules) > 1:
+            detail += f" (+{len(missed_modules) - 1} more)"
+        actions.append({"tone": "danger", "title": f"{at_risk} {noun} {verb} attention", "detail": detail})
+    if not mode_available and total:
+        actions.append({
+            "tone": "info",
+            "title": "Record delivery modes",
+            "detail": f"Delivery mode is unspecified for all {total} timetable entries.",
+        })
+    if not attendance_available:
+        actions.append({
+            "tone": "info",
+            "title": "Start attendance tracking",
+            "detail": "Dated attendance records are required for the attendance charts.",
+        })
+    today_iso = date.today().isoformat()
+    upcoming_exams = sorted(
+        (item for item in examinations
+         if str(item.get("date", ""))[:4] == selected_year and str(item.get("date", "")) >= today_iso),
+        key=lambda item: str(item.get("date", "")),
+    )
+    if upcoming_exams:
+        first_exam = upcoming_exams[0]
+        actions.append({
+            "tone": "info",
+            "title": "Confirm next assessments",
+            "detail": f"{first_exam.get('title') or 'Examination'} on {first_exam.get('date')}.",
+        })
+    actions = actions[:3]
+
+    insights = []
+    if not attendance_available:
+        insights.append("Attendance is not yet tracked. Record dated attendance to calculate the overall rate and weekly trend.")
+    elif overall_attendance is not None:
+        verdict = "meeting" if overall_attendance >= attendance_target else "below"
+        insights.append(f"Overall attendance is {overall_attendance}%, {verdict} the minimum target (≥{attendance_target}%).")
+    if missed_modules:
+        first = missed_modules[0]
+        insights.append(f"{first['code']} requires attention: {first['missedSessions']} timetable session"
+                        + (" is" if first["missedSessions"] == 1 else "s are") + " marked missed.")
+    if not mode_available:
+        insights.append(f"Delivery mode is unrecorded for all {total} timetable entries; set modes to unlock the session-mode distribution.")
+    elif face_percent is not None and face_percent >= online_percent:
+        insights.append(f"Face-to-face sessions remain dominant ({face_percent}%). Maintain quality delivery.")
+    elif online_percent is not None:
+        insights.append(f"Online sessions are the larger share ({online_percent}%). Consider increasing engagement.")
+    if no_sessions:
+        insights.append(f"{no_sessions} module" + (" has" if no_sessions == 1 else "s have")
+                        + " no sessions in the current timetable template.")
+    elif on_track:
+        insights.append(f"{on_track} module" + (" has" if on_track == 1 else "s have")
+                        + " scheduled sessions with no missed markers.")
+    if not completion_available:
+        insights.append("Completion is not yet tracked; record dated session outcomes to calculate module completion.")
+    insights = insights[:4]
+
+    dashboard = {
+        "reportingPeriod": f"Academic Year {selected_year}",
+        "academicYears": academic_years,
+        "selectedYear": selected_year,
+        "kpis": {
+            "modulesOffered": len(dashboard_modules),
+            "onTrack": on_track,
+            "atRisk": at_risk,
+            "noSessions": no_sessions,
+            "missedSessions": missed,
+            "overallAttendance": overall_attendance,
+            "attendanceTarget": attendance_target,
+        },
+        "attendance": {
+            "available": attendance_available,
+            "overall": overall_attendance,
+            "target": attendance_target,
+            "weeks": [],
+            "note": "Dated attendance records are required before an overall rate or weekly trend can be calculated.",
+        },
+        "completion": {
+            "available": completion_available,
+            "note": "Dated session outcomes are required before module completion can be calculated.",
+        },
+        "mode": {
+            "available": mode_available,
+            "known": known_modes,
+            "total": total,
+            "faceToFace": face,
+            "online": online,
+            "unspecified": unspecified,
+            "faceToFacePercent": face_percent,
+            "onlinePercent": online_percent,
+            "note": "Session-mode proportions are calculated only from timetable entries with a recorded delivery mode.",
+        },
+        "moduleStatus": module_status,
+        "modulePerformance": [
+            {"code": item["code"], "attendance": None, "completion": None}
+            for item in dashboard_modules
+        ],
+        "actions": actions,
+        "insights": insights,
+    }
+
     return {
         "summary": {
             "sessions": total,
@@ -244,6 +425,7 @@ def analytics(mnh_session: str | None = Cookie(default=None)):
         "delivery_modes": {"online": online, "face_to_face": face, "unspecified": unspecified},
         "recorded_additions": total,
         "missed_sessions": missed,
+        "dashboard": dashboard,
         "note": "Weekly figures describe the configured Monday–Friday timetable template, not a verified attendance register. Semester-to-date sessions and hours are intentionally not reported until dated session-occurrence and attendance records are recorded; timetable template rows must not be mistaken for sessions already delivered. Delivery-mode and missed markers currently describe the saved timetable entries. Set each module's semester targets in Modules; target progress will appear once dated semester records are available."
     }
 

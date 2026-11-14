@@ -173,3 +173,26 @@ def test_analytics_does_not_present_timetable_templates_as_semester_attendance()
     assert 'Not yet tracked — dated attendance records are required' in app
     assert 'if(m.semesterTracked&&m.targetSessions' in app
     assert 'if(m.semesterTracked&&m.targetHours' in app
+
+
+def test_analytics_management_dashboard_keeps_reference_layout_and_honest_states():
+    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert '"dashboard": dashboard' in routes
+    assert '"attendance": {' in routes
+    assert '"academicYears": academic_years' in routes
+    assert 'Analytics – Management Access' in app
+    assert 'Session Mode Distribution' in app
+    assert 'Weekly Attendance Trend' in app
+    assert 'Module Performance' in app
+    assert 'Upcoming Actions' in app
+    assert 'Insights & Recommendations' in app
+    assert 'View Detailed Report' in app
+    assert 'Academic Year ' in app
+    assert 'No dated attendance records yet' in app
+    assert 'Attendance and completion are not yet tracked' in app
+    assert '#view-analytics.vw' in css
+    assert '.ana-report[hidden]{display:none}' in css
+    assert '<div id="analytics-body"></div>' in html

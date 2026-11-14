@@ -1442,21 +1442,316 @@ function renderModules(){
  const others=[];all.forEach(x=>{if(!modules[x.label]&&!others.includes(x.label))others.push(x.label);});
  others.forEach(l=>addCard(l,"",""));
 }
+// ---- Analytics – Management Access -----------------------------------------
+const ANA_ICONS={
+ analytics:'<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
+ calendar:'<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+ user:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c.9-3.9 3.9-5.9 7.5-5.9s6.6 2 7.5 5.9"/>',
+ book:'<path d="M12 6.5C10.3 5.2 8 4.7 3.5 4.7v13.6c4.5 0 6.8.5 8.5 1.8 1.7-1.3 4-1.8 8.5-1.8V4.7C16 4.7 13.7 5.2 12 6.5zM12 6.5v13.6"/>',
+ checkCircle:'<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.3 9"/>',
+ alertCircle:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.2M12 16.6v.1"/>',
+ users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.8 19.5c.7-3.5 3.2-5.4 6.2-5.4s5.5 1.9 6.2 5.4"/><path d="M16 5.4a3.2 3.2 0 0 1 0 5.9M18.2 14.4c1.7.6 2.8 2.3 3.2 5.1"/>',
+ pie:'<path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/>',
+ trend:'<path d="M3 17l6-6 4 4 8-9"/><path d="M16 6h5v5"/>',
+ warning:'<path d="M12 3l9.5 17H2.5L12 3z"/><path d="M12 9v5M12 17.2v.1"/>',
+ bulb:'<path d="M9 18h6M10 21h4"/><path d="M8.2 14.4a6 6 0 1 1 7.6 0c-.9.7-1.4 1.6-1.4 2.6h-4.8c0-1-.5-1.9-1.4-2.6z"/>',
+ star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+ check:'<path d="M4 12.5l5 5L20 6.5"/>',
+ arrow:'<path d="M5 12h14M14 7l5 5-5 5"/>',
+ report:'<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/>'
+};
+let analyticsYear="";
+function anaIcon(name,cls){
+ const wrap=document.createElement("span");wrap.className="ana-ico"+(cls?" "+cls:"");
+ wrap.setAttribute("aria-hidden","true");
+ wrap.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ANA_ICONS[name]||"")+'</svg>';
+ return wrap;
+}
+function anaPanel(title,icon,cls){
+ const panel=el("section","ana-panel"+(cls?" "+cls:""));
+ const head=el("div","ana-panel-head");
+ head.append(anaIcon(icon),el("h3",null,title));
+ panel.appendChild(head);
+ return panel;
+}
+function anaLegend(rows){
+ const wrap=el("div","ana-legend");
+ rows.forEach(row=>{
+  const item=el("span","ana-legend-item");
+  const swatch=el("span","ana-legend-dot "+(row.tone||"blue"));
+  if(row.dashed)swatch.classList.add("dashed");
+  item.append(swatch,el("span",null,row.label),el("b",null,row.value||""));
+  wrap.appendChild(item);
+ });
+ return wrap;
+}
+function anaEmpty(text){
+ return el("div","ana-empty",text);
+}
+function buildAnalyticsHeader(d){
+ const bar=el("div","ana-titlebar");
+ const left=el("div","ana-title-wrap");
+ left.append(anaIcon("analytics","ana-title-icon"),el("h2","ana-title","Analytics – Management Access"));
+ bar.appendChild(left);
+ const tools=el("div","ana-tools");
+ const role=el("span","ana-role");
+ role.append(anaIcon("user"),el("span",null,"HOD / Coordinator / Executive Dean"));
+ tools.appendChild(role);
+ const year=el("label","ana-year");
+ year.append(anaIcon("calendar"));
+ const select=document.createElement("select");
+ select.setAttribute("aria-label","Academic year");
+ (d.academicYears||[]).forEach(value=>{
+  const option=document.createElement("option");
+  option.value=String(value);option.textContent="Academic Year "+value;
+  select.appendChild(option);
+ });
+ select.value=String(d.selectedYear||"");
+ select.addEventListener("change",()=>{analyticsYear=select.value;renderAnalytics();});
+ year.appendChild(select);
+ tools.appendChild(year);
+ bar.appendChild(tools);
+ return bar;
+}
+function buildAnalyticsKpis(d){
+ const row=el("div","ana-kpis"),k=d.kpis||{};
+ const add=(icon,tone,value,label,sub)=>{
+  const card=el("div","ana-kpi");
+  card.append(anaIcon(icon,"ana-kpi-icon "+tone));
+  const copy=el("div","ana-kpi-copy");
+  copy.append(el("div","ana-kpi-value",String(value)),el("div","ana-kpi-label",label));
+  if(sub)copy.appendChild(el("div","ana-kpi-sub",sub));
+  card.appendChild(copy);row.appendChild(card);
+ };
+ add("book","blue",k.modulesOffered||0,"Modules Offered");
+ add("checkCircle","green",k.onTrack||0,"On Track","No missed markers");
+ add("alertCircle","red",k.atRisk||0,"At Risk / Missed","Marked missed");
+ const attendance=(d.attendance||{}).available?(d.attendance.overall+"%"):"—";
+ add("users","purple",attendance,"Overall Attendance",(d.attendance||{}).available?null:"Not yet tracked");
+ return row;
+}
+function buildAnalyticsMode(d){
+ const panel=anaPanel("Session Mode Distribution","pie");
+ const mode=d.mode||{},available=!!mode.available;
+ const body=el("div","ana-mode");
+ const chart=el("div","ana-donut");
+ const face=available?(mode.faceToFacePercent||0):0;
+ const online=available?(mode.onlinePercent||0):0;
+ const circumference=2*Math.PI*54;
+ const faceLength=circumference*face/100;
+ chart.innerHTML='<svg viewBox="0 0 140 140" role="img" aria-label="Session mode distribution">'
+  +'<circle cx="70" cy="70" r="54" fill="none" stroke="#24375b" stroke-width="20"/>'
+  +(available&&face>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#0e77fd" stroke-width="20" stroke-dasharray="'+faceLength+' '+circumference+'" transform="rotate(-90 70 70)"/>':'')
+  +(available&&online>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#8a65e8" stroke-width="20" stroke-dasharray="'+(circumference-faceLength)+' '+circumference+'" stroke-dashoffset="'+(-faceLength)+'" transform="rotate(-90 70 70)"/>':'')
+  +'</svg>';
+ const center=el("div","ana-donut-center");
+ if(available){
+  const dominant=face>=online?{value:face,label:"Face-to-Face"}:{value:online,label:"Online"};
+  center.append(el("b",null,dominant.value+"%"),el("span",null,dominant.label));
+  body.append(chart);
+  body.append(anaLegend([
+   {tone:"blue",label:"Face-to-Face",value:face+"%"},
+   {tone:"purple",label:"Online",value:online+"%"}
+  ]));
+ }else{
+  center.append(el("b",null,"—"),el("span",null,"Not recorded"));
+  body.append(chart);
+  body.append(anaLegend([
+   {tone:"grey",label:"Unspecified",value:(mode.unspecified||0)+" of "+(mode.total||0)}
+  ]));
+ }
+ chart.appendChild(center);
+ panel.appendChild(body);
+ if(!available)panel.appendChild(anaEmpty((mode.total||0)+" timetable entries have no recorded delivery mode. Set a mode on each session to unlock this chart."));
+ else panel.appendChild(el("div","ana-note","Based on "+(mode.known||0)+" of "+(mode.total||0)+" entries with a recorded delivery mode."));
+ return panel;
+}
+function buildAnalyticsTrend(d){
+ const panel=anaPanel("Weekly Attendance Trend","trend","ana-trend");
+ const weeks=Array.isArray((d.attendance||{}).weeks)?d.attendance.weeks:[];
+ const target=(d.attendance||{}).target||70;
+ panel.appendChild(anaLegend([
+  {tone:"blue",label:"Attendance",value:weeks.length?"":"Not yet tracked"},
+  {tone:"white",label:"Target (≥"+target+"%)",dashed:true}
+ ]));
+ const W=430,H=210,L=38,R=12,T=14,B=30,plotW=W-L-R,plotH=H-T-B;
+ const y=v=>T+plotH-(Number(v)||0)/100*plotH;
+ let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Weekly attendance trend">';
+ for(let v=100;v>=0;v-=25){
+  svg+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#2a3f65" stroke-width="1"/>'
+   +'<text x="'+(L-7)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="#b9c4d4">'+v+'%</text>';
+ }
+ svg+='<line x1="'+L+'" y1="'+y(target)+'" x2="'+(W-R)+'" y2="'+y(target)+'" stroke="#f3f4f6" stroke-dasharray="6 5" stroke-width="1.3"/>';
+ const count=weeks.length||6,xs=[];
+ for(let i=0;i<count;i++){
+  const x=L+(count===1?plotW/2:plotW*i/(count-1));xs.push(x);
+  svg+='<text x="'+x+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#b9c4d4">Wk '+(i+1)+'</text>';
+ }
+ if(weeks.length){
+  const values=weeks.map(item=>{
+   const raw=item&&typeof item==="object"?(item.value!=null?item.value:item.percent!=null?item.percent:item.attendance):item;
+   return raw==null?null:Number(raw);
+  });
+  const points=values.map((value,i)=>[xs[i],y(value)]);
+  svg+='<polyline fill="none" stroke="#0e77fd" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="'+points.map(p=>p[0]+','+p[1]).join(' ')+'"/>';
+  points.forEach((point,i)=>{
+   svg+='<circle cx="'+point[0]+'" cy="'+point[1]+'" r="4" fill="#0e77fd" stroke="#07142b" stroke-width="1.5"/>'
+    +'<text x="'+point[0]+'" y="'+(point[1]-10)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f3f4f6">'+values[i]+'%</text>';
+  });
+ }
+ svg+='</svg>';
+ const chart=el("div","ana-chart");chart.innerHTML=svg;panel.appendChild(chart);
+ if(!weeks.length)panel.appendChild(anaEmpty("No dated attendance records yet. The trend will appear once attendance is recorded."));
+ return panel;
+}
+function buildAnalyticsStatus(d){
+ const panel=anaPanel("Module Status","warning");
+ const list=el("div","ana-status-list");
+ const modules=Array.isArray(d.moduleStatus)?d.moduleStatus:[];
+ if(!modules.length)list.appendChild(anaEmpty("No modules are recorded yet."));
+ modules.forEach(item=>{
+  const row=el("button","ana-status-row");row.type="button";
+  row.title="Open "+item.code+" in Modules";
+  const copy=el("span","ana-status-copy");
+  copy.append(el("b",null,item.code),el("span",null,item.title||""));
+  const pill=el("span","ana-pill "+item.status,item.statusLabel);
+  row.append(copy,pill);
+  row.addEventListener("click",()=>showView("modules"));
+  list.appendChild(row);
+ });
+ panel.appendChild(list);
+ return panel;
+}
+function buildAnalyticsPerformance(d){
+ const panel=anaPanel("Module Performance","analytics","ana-performance-panel");
+ panel.appendChild(anaLegend([
+  {tone:"blue",label:"Attendance (%)",value:""},
+  {tone:"purple",label:"Completion (%)",value:""}
+ ]));
+ const rows=Array.isArray(d.modulePerformance)?d.modulePerformance:[];
+ const W=470,H=240,L=38,R=12,T=20,B=42,plotW=W-L-R,plotH=H-T-B;
+ const y=v=>T+plotH-(Number(v)||0)/100*plotH;
+ let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Module performance">';
+ for(let v=100;v>=0;v-=25){
+  svg+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#2a3f65" stroke-width="1"/>'
+   +'<text x="'+(L-7)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="#b9c4d4">'+v+'%</text>';
+ }
+ let hasValues=false;
+ if(rows.length){
+  const groupW=plotW/rows.length,barW=Math.min(22,groupW*0.28),gap=Math.min(8,groupW*0.08);
+  rows.forEach((row,i)=>{
+   const center=L+groupW*(i+0.5);
+   const attendance=row.attendance==null?null:Number(row.attendance);
+   const completion=row.completion==null?null:Number(row.completion);
+   if(attendance!=null){
+    hasValues=true;
+    svg+='<rect x="'+(center-barW-gap/2)+'" y="'+y(attendance)+'" width="'+barW+'" height="'+(T+plotH-y(attendance))+'" rx="2" fill="#0e77fd"/>'
+     +'<text x="'+(center-barW/2-gap/2)+'" y="'+(y(attendance)-6)+'" text-anchor="middle" font-size="9.5" fill="#f3f4f6">'+attendance+'%</text>';
+   }
+   if(completion!=null){
+    hasValues=true;
+    svg+='<rect x="'+(center+gap/2)+'" y="'+y(completion)+'" width="'+barW+'" height="'+(T+plotH-y(completion))+'" rx="2" fill="#8a65e8"/>'
+     +'<text x="'+(center+barW/2+gap/2)+'" y="'+(y(completion)-6)+'" text-anchor="middle" font-size="9.5" fill="#f3f4f6">'+completion+'%</text>';
+   }
+   svg+='<text x="'+center+'" y="'+(H-20)+'" text-anchor="middle" font-size="10" fill="#b9c4d4">'+row.code+'</text>';
+  });
+ }
+ svg+='</svg>';
+ const chart=el("div","ana-chart");chart.innerHTML=svg;panel.appendChild(chart);
+ if(!hasValues)panel.appendChild(anaEmpty("Attendance and completion are not yet tracked. Record dated attendance and session outcomes to populate this chart."));
+ return panel;
+}
+function buildAnalyticsActions(d,getReport){
+ const panel=anaPanel("Upcoming Actions","bulb");
+ const list=el("div","ana-actions");
+ const actions=Array.isArray(d.actions)?d.actions:[];
+ if(!actions.length)list.appendChild(anaEmpty("No management actions are outstanding."));
+ actions.forEach(action=>{
+  const item=el("div","ana-action");
+  const copy=el("div","ana-action-copy");
+  copy.append(el("b",null,action.title||""),el("div","ana-note",action.detail||""));
+  item.append(el("span","ana-bullet "+(action.tone||"info")),copy);
+  list.appendChild(item);
+ });
+ panel.appendChild(list);
+ const button=el("button","ana-report-btn");button.type="button";
+ button.setAttribute("aria-expanded","false");
+ button.append(anaIcon("report"),el("span",null,"View Detailed Report"),anaIcon("arrow"));
+ button.addEventListener("click",()=>{
+  const report=getReport();if(!report)return;
+  report.hidden=!report.hidden;
+  button.setAttribute("aria-expanded",String(!report.hidden));
+  if(!report.hidden)report.scrollIntoView({behavior:"smooth",block:"start"});
+ });
+ panel.appendChild(button);
+ return panel;
+}
+function buildAnalyticsInsights(d){
+ const panel=anaPanel("Insights & Recommendations","star");
+ const list=el("div","ana-insights");
+ const insights=Array.isArray(d.insights)?d.insights:[];
+ if(!insights.length)list.appendChild(anaEmpty("No recommendations are available until programme data is recorded."));
+ insights.forEach(text=>{
+  const row=el("div","ana-insight");
+  row.append(anaIcon("check"),el("span",null,text));
+  list.appendChild(row);
+ });
+ panel.appendChild(list);
+ return panel;
+}
+function buildAnalyticsReport(data,d){
+ const report=el("section","ana-report");report.hidden=true;
+ report.appendChild(el("h3",null,"Detailed Analytics Report"));
+ report.appendChild(el("p","ana-note","Reporting period: "+d.reportingPeriod+". Timetable figures describe the saved Monday–Friday template unless a dated record is stated."));
+ renderAnalyticsReport(data,report);
+ return report;
+}
+function renderAnalyticsReport(data,root){
+ const summary=data.summary||{},modulesData=data.modules||[];
+ const stats=el("div","cards");
+ [[summary.sessions||0,"Timetable entries"],[fmtH(summary.hours||0),"Scheduled teaching hours"],[summary.missed||0,"Marked missed (timetable)"],[`${summary.missedPercent||0}%`,"Marked-missed share"],[summary.online||0,"Scheduled online"],[summary.faceToFace||0,"Scheduled face-to-face"]].forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));stats.appendChild(c);});root.appendChild(stats);
+ const chart=(title,rows,suffix="")=>{const card=el("div","card");card.style.marginTop="12px";card.appendChild(el("h3",null,title));const max=Math.max(1,...rows.map(r=>Number(r.value)||0));rows.forEach(r=>{const row=el("div","barrow"),bar=el("div","bar"),fill=document.createElement("i");fill.style.width=Math.max(0,Math.min(100,(Number(r.value)||0)/max*100))+"%";bar.appendChild(fill);row.append(el("span",null,r.label),bar,el("span","muted",`${r.value}${suffix}`));card.appendChild(row);});root.appendChild(card);};
+ chart("Delivery mode · timetable entries",[{label:"Online",value:summary.online||0},{label:"Face-to-face",value:summary.faceToFace||0},{label:"Unspecified",value:summary.unspecified||0}]);
+ chart("Weekly teaching hours by module",modulesData.map(m=>({label:m.code,value:m.weeklyHours||0}))," h");
+ const grid=el("div","cards");modulesData.forEach(m=>{const c=el("div","card");c.append(el("h3",null,m.code),el("p","muted",m.title||"Module title not recorded"));c.append(el("div",null,`This week: ${m.weeklySessions} sessions · ${m.weeklyHours} hours`),el("div",null,`Semester to date: ${m.semesterTracked?`${m.semesterSessions} sessions · ${m.semesterHours} hours`:"Not yet tracked — dated attendance records are required"}`),el("div",null,`Semester target: ${m.targetSessions??"Not set"} sessions · ${m.targetHours??"Not set"} hours`),el("div",null,`Marked missed: ${m.missedSessions} · Scheduled online: ${m.onlineSessions} · Scheduled face-to-face: ${m.faceToFaceSessions}`));
+  if(m.semesterTracked&&m.targetSessions!=null&&m.targetSessions>0){const pct=Math.min(100,m.semesterSessions/m.targetSessions*100);const bar=el("div","bar"),fill=document.createElement("i");fill.style.width=pct+"%";bar.appendChild(fill);c.append(el("div","muted",`Session target progress: ${pct.toFixed(1)}%`),bar);}
+  if(m.semesterTracked&&m.targetHours!=null&&m.targetHours>0){const pct=Math.min(100,m.semesterHours/m.targetHours*100);const bar=el("div","bar"),fill=document.createElement("i");fill.style.width=pct+"%";bar.appendChild(fill);c.append(el("div","muted",`Hours target progress: ${pct.toFixed(1)}%`),bar);}
+  grid.appendChild(c);});root.appendChild(grid);
+ root.appendChild(el("p","muted",data.note||"Only sessions with an explicitly recorded status are counted as completed or missed. Semester totals include all dated session records currently stored."));
+}
 async function renderAnalytics(){
  const root=document.getElementById("analytics-body");root.textContent="";
+ root.appendChild(el("div","ana-panel ana-state","Loading analytics…"));
+ let data;
  try{
-  const data=await apiRequest("GET","/api/analytics"),summary=data.summary||{},modulesData=data.modules||[];
-  const stats=el("div","cards");
-  [[summary.sessions||0,"Timetable entries"],[fmtH(summary.hours||0),"Scheduled teaching hours"],[summary.missed||0,"Marked missed (timetable)"],[`${summary.missedPercent||0}%`,"Marked-missed share"],[summary.online||0,"Scheduled online"],[summary.faceToFace||0,"Scheduled face-to-face"]].forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));stats.appendChild(c);});root.appendChild(stats);
-  const chart=(title,rows,suffix="")=>{const card=el("div","card");card.style.marginTop="12px";card.appendChild(el("h3",null,title));const max=Math.max(1,...rows.map(r=>Number(r.value)||0));rows.forEach(r=>{const row=el("div","barrow"),bar=el("div","bar"),fill=document.createElement("i");fill.style.width=Math.max(0,Math.min(100,(Number(r.value)||0)/max*100))+"%";bar.appendChild(fill);row.append(el("span",null,r.label),bar,el("span","muted",`${r.value}${suffix}`));card.appendChild(row);});root.appendChild(card);};
-  chart("Delivery mode · timetable entries",[{label:"Online",value:summary.online||0},{label:"Face-to-face",value:summary.faceToFace||0},{label:"Unspecified",value:summary.unspecified||0}]);
-  chart("Weekly teaching hours by module",modulesData.map(m=>({label:m.code,value:m.weeklyHours||0}))," h");
-  const grid=el("div","cards");modulesData.forEach(m=>{const c=el("div","card");c.append(el("h3",null,m.code),el("p","muted",m.title||"Module title not recorded"));c.append(el("div",null,`This week: ${m.weeklySessions} sessions · ${m.weeklyHours} hours`),el("div",null,`Semester to date: ${m.semesterTracked?`${m.semesterSessions} sessions · ${m.semesterHours} hours`:"Not yet tracked — dated attendance records are required"}`),el("div",null,`Semester target: ${m.targetSessions??"Not set"} sessions · ${m.targetHours??"Not set"} hours`),el("div",null,`Marked missed: ${m.missedSessions} · Scheduled online: ${m.onlineSessions} · Scheduled face-to-face: ${m.faceToFaceSessions}`));
-   if(m.semesterTracked&&m.targetSessions!=null&&m.targetSessions>0){const pct=Math.min(100,m.semesterSessions/m.targetSessions*100);const bar=el("div","bar"),fill=document.createElement("i");fill.style.width=pct+"%";bar.appendChild(fill);c.append(el("div","muted",`Session target progress: ${pct.toFixed(1)}%`),bar);}
-   if(m.semesterTracked&&m.targetHours!=null&&m.targetHours>0){const pct=Math.min(100,m.semesterHours/m.targetHours*100);const bar=el("div","bar"),fill=document.createElement("i");fill.style.width=pct+"%";bar.appendChild(fill);c.append(el("div","muted",`Hours target progress: ${pct.toFixed(1)}%`),bar);}
-   grid.appendChild(c);});root.appendChild(grid);
-  root.appendChild(el("p","muted",data.note||"Only sessions with an explicitly recorded status are counted as completed or missed. Semester totals include all dated session records currently stored."));
- }catch(e){root.appendChild(el("div","card",e.status===403?"Analytics are restricted to HOD, coordinator and executive dean accounts.":"Analytics could not be loaded: "+e.message));}
+  const query=analyticsYear?"?year="+encodeURIComponent(analyticsYear):"";
+  data=await apiRequest("GET","/api/analytics"+query);
+ }catch(e){
+  root.textContent="";
+  const box=el("div","ana-panel ana-state ana-error");
+  box.append(el("h2",null,"Analytics – Management Access"),el("p",null,e.status===403?"Analytics are restricted to HOD, coordinator and executive dean accounts.":"Analytics could not be loaded: "+e.message));
+  root.appendChild(box);return;
+ }
+ const d=data.dashboard;
+ if(!d){
+  root.textContent="";
+  const box=el("div","ana-panel ana-state ana-error");
+  box.append(el("h2",null,"Analytics – Management Access"),el("p",null,"The management dashboard data could not be calculated from the stored records."));
+  root.appendChild(box);return;
+ }
+ analyticsYear=String(d.selectedYear||analyticsYear||"");
+ root.textContent="";
+ root.appendChild(buildAnalyticsHeader(d));
+ root.appendChild(buildAnalyticsKpis(d));
+ const charts=el("div","ana-charts");
+ charts.append(buildAnalyticsMode(d),buildAnalyticsTrend(d),buildAnalyticsStatus(d));
+ root.appendChild(charts);
+ const lower=el("div","ana-lower");
+ let report=null;
+ lower.append(buildAnalyticsPerformance(d),buildAnalyticsActions(d,()=>report),buildAnalyticsInsights(d));
+ root.appendChild(lower);
+ report=buildAnalyticsReport(data,d);
+ root.appendChild(report);
 }
 // ---- resources (shared) ----
 function safeUrl(u){
