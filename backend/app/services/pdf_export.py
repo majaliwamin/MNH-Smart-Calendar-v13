@@ -110,10 +110,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         label = _slot_label(hs, he)
         pdf.drawCentredString(10 * mm + label_w / 2, y + row_h / 2 - 1 * mm, label)
         if abs(hs - 12) < 0.01:  # lunch row
-            pdf.setFillColor(colors.HexColor("#F6E7C1"))
-            for i in range(5):
-                x = 10 * mm + label_w + i * day_w
-                pdf.rect(x, y, day_w, row_h, stroke=1, fill=1)
+            pdf.setFillColor(colors.HexColor("#F3E4BD"))
+            pdf.setStrokeColor(colors.HexColor("#C9A85D"))
+            pdf.rect(10 * mm + label_w, y, 5 * day_w, row_h, stroke=1, fill=1)
             pdf.setFillColor(NAVY)
             pdf.setFont("Helvetica-Bold", 11)
             pdf.drawCentredString(10 * mm + label_w + day_w * 2.5, y + row_h / 2 - 1 * mm, "Lunch Break")
@@ -131,8 +130,8 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             field_h = row_h - 2 * mm
             form.textfield(name=f"wk_{i}_{int(hs*60)}", tooltip=f"{name} {label}",
                            x=x + 1 * mm, y=y + 1 * mm, width=day_w - 2 * mm, height=field_h,
-                           fontSize=10, value=_ascii(preset), borderWidth=0,
-                           fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black,
+                           fontSize=12, value=_ascii(preset), borderWidth=0,
+                           fillColor=colors.white, textColor=colors.black,
                            fieldFlags='multiline')
     pdf.showPage()
 
@@ -173,8 +172,8 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 form.textfield(name=f"mod_{idx}_{field_name}", tooltip=module_headers[col],
                                x=module_x[col] + 1.5 * mm, y=y + 2 * mm,
                                width=module_w[col] - 3 * mm, height=12 * mm,
-                               fontSize=11, value=_ascii(module.get(field_name))[:max_chars],
-                               borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
+                               fontSize=12, value=_ascii(module.get(field_name))[:max_chars],
+                               borderWidth=0, fillColor=colors.white, textColor=colors.black)
             code = module.get("code", "")
             pdf.setFillColor(colors.black)
             pdf.setFont("Helvetica-Bold", 11)
@@ -217,8 +216,8 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             for cidx, value in enumerate(values):
                 form.textfield(name=f"reg_{i + r_idx}_{cidx}", tooltip=reg_cols[cidx][0],
                                x=reg_x[cidx] + 1 * mm, y=y + 1.5 * mm, width=reg_w[cidx] - 2 * mm, height=9 * mm,
-                               fontSize=9, value=_ascii(value)[:150], borderWidth=0,
-                               fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
+                               fontSize=11, value=_ascii(value)[:150], borderWidth=0,
+                               fillColor=colors.white, textColor=colors.black)
         i += len(chunk)
         if not chunk or i >= len(sessions):
             break
