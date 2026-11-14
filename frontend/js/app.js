@@ -271,8 +271,8 @@ function saveState(){
  state.theme=document.getElementById("theme").value;state.version=3;state.stamp=Date.now();
  localStorage.setItem(key,JSON.stringify(state));
 }
-// Four themes only; anything saved before this change maps onto them.
-const THEMES=["dark","white","violet","green"];
+// Five themes; older saved values remain supported.
+const THEMES=["dark","white","violet","green","silver"];
 function normaliseTheme(t){if(THEMES.includes(t))return t;return t==="light"?"white":"dark";}
 document.getElementById("theme").addEventListener("change",e=>{
  state.theme=normaliseTheme(e.target.value);e.target.value=state.theme;document.body.dataset.theme=state.theme;
@@ -660,7 +660,7 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["weekly","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
+const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
@@ -764,8 +764,8 @@ function syncCurrentAcademicWeek(){
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
  currentView=name;
- const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics");
- weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";
+ const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard");
+ weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
@@ -773,6 +773,7 @@ function showView(name){
 }
 function renderView(name){
  if(name==="weekly"){build();renderAnimatedFutureStrip();}
+ else if(name==="silver-dashboard")renderAnalytics("silver-analytics-body");
  else if(name==="modules")renderModules();
  else if(name==="analytics")renderAnalytics();
  else if(name==="monthly")renderMonthly();
@@ -1819,8 +1820,8 @@ function renderAnalyticsReport(data,root){
   grid.appendChild(c);});root.appendChild(grid);
  root.appendChild(el("p","muted",data.note||"Only sessions with an explicitly recorded status are counted as completed or missed. Semester totals include all dated session records currently stored."));
 }
-async function renderAnalytics(){
- const root=document.getElementById("analytics-body");root.textContent="";
+async function renderAnalytics(targetId="analytics-body"){
+ const root=document.getElementById(targetId);root.textContent="";
  root.appendChild(el("div","ana-panel ana-state","Loading analytics…"));
  let data;
  try{
