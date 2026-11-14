@@ -30,7 +30,7 @@ LINE = colors.HexColor("#C5D0DE")
 INK = colors.HexColor("#17283D")
 WHITE = colors.white
 
-TIME_SLOTS = [(8, 10), (10, 12), (12, 13.5), (13.5, 15.5),
+TIME_SLOTS = [(8, 10), (10, 12), (12, 13.5), (13, 14), (13.5, 15.5),
               (15.5, 17.5), (17.5, 19), (19, 21)]
 
 _CHAR_MAP = {
@@ -263,9 +263,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.showPage()
 
     # ============================ session register ============================
-    # Each session is a vertical editable card: no tiny multi-column table on phones.
+    # Vertical editable cards keep every register field readable on phone screens.
     register_rows = sessions
-    register_capacity = 4
+    register_capacity = 3
     if not register_rows:
         register_chunks = [[]]
     else:
@@ -279,35 +279,45 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         top -= 2 * mm
         for local_idx, item in enumerate(chunk):
             idx = page_idx * register_capacity + local_idx
-            card_h = 47 * mm
+            card_h = 58 * mm
             bottom = top - card_h
             pdf.setFillColor(PALE)
             pdf.roundRect(10 * mm, bottom, width - 20 * mm, card_h - 2 * mm, 2 * mm, stroke=0, fill=1)
             pdf.setFillColor(NAVY)
             pdf.setFont("Helvetica-Bold", 8)
             pdf.drawString(14 * mm, top - 6 * mm, f"SESSION {idx + 1}")
-            # Keep field labels outside the editable fields for clarity.
-            labels = [
-                ("Date / time", f"{item['date'].strftime('%a %d %b')}  {item['start']}-{item['end']}", 14, 68),
-                ("Module code", item.get("code", ""), 88, 45),
-                ("Activity / topic", item.get("activity") if item.get("activity") != item.get("code") else "", 14, 68),
-                ("Lecturer", item.get("lecturer", ""), 88, 45),
-                ("Mode / status", f"{item.get('mode', '')} / {item.get('status', '')}", 14, 119),
-            ]
-            row_y = top - 16 * mm
-            for label, value, x_mm, width_mm in labels:
+
+            def register_field(field_key, label, value, x_mm, y_mm, width_mm):
                 pdf.setFillColor(PURPLE)
                 pdf.setFont("Helvetica-Bold", 7)
-                pdf.drawString(x_mm * mm, row_y + 2 * mm, label.upper())
+                pdf.drawString(x_mm * mm, y_mm * mm + 7 * mm, label.upper())
                 field(
-                    f"reg_{idx}_{label.lower().replace(' / ', '_').replace(' ', '_')}",
-                    label, x_mm * mm, row_y - 1 * mm, width_mm * mm, 6 * mm,
-                    value, font_size=12,
+                    f"reg_{idx}_{field_key}", label,
+                    x_mm * mm, y_mm * mm, width_mm * mm, 6 * mm,
+                    value, font_size=13,
                 )
-                if label in ("Date / time", "Activity / topic"):
-                    row_y -= 9 * mm
-                else:
-                    row_y -= 0 * mm
+
+            register_field(
+                "date_time", "Date / time",
+                f"{item['date'].strftime('%a %d %b')}  {item['start']}-{item['end']}",
+                14, (top / mm) - 19, 88,
+            )
+            register_field("module_code", "Module code", item.get("code", ""),
+                           110, (top / mm) - 19, 75)
+            register_field(
+                "activity", "Activity / topic",
+                item.get("activity") if item.get("activity") != item.get("code") else "",
+                14, (top / mm) - 31, 171,
+            )
+            register_field("lecturer", "Lecturer", item.get("lecturer", ""),
+                           14, (top / mm) - 43, 88)
+            register_field(
+                "mode_status", "Delivery mode / status",
+                f"{item.get('mode', '')} / {item.get('status', '')}",
+                110, (top / mm) - 43, 75,
+            )
+            register_field("notes", "Notes", item.get("notes", ""),
+                           14, (top / mm) - 55, 171)
             top = bottom - 4 * mm
         if not chunk:
             pdf.setFillColor(INK)
