@@ -88,7 +88,7 @@ def health():
 
 
 @router.get("/export/timetable.xlsx")
-def export_timetable_xlsx(modules: str | None = None):
+def export_timetable_xlsx(modules: str | None = None, week_start: date | None = None):
     """Download an independent, editable Excel copy of the Monday–Friday timetable.
 
     `modules` is an optional comma-separated list of module codes to include
@@ -107,14 +107,16 @@ def export_timetable_xlsx(modules: str | None = None):
         except (TypeError, json.JSONDecodeError):
             continue
     selected = [code for code in (modules or "").split(",") if code.strip()]
-    payload = build_timetable_workbook(collections, selected or None)
+    if week_start is not None and week_start.weekday() != 0:
+        raise HTTPException(400, "The export week must start on a Monday.")
+    payload = build_timetable_workbook(collections, selected or None, week_start)
     filename = "MNH-Smart-Calendar-Editable-Timetable.xlsx"
     return StreamingResponse(BytesIO(payload), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
 
 
 @router.get("/export/timetable.pdf")
-def export_timetable_pdf(modules: str | None = None):
+def export_timetable_pdf(modules: str | None = None, week_start: date | None = None):
     """Download a fillable-PDF (AcroForm) timetable the user can type into and save.
 
     `modules` is an optional comma-separated list of module codes to include.
@@ -132,7 +134,9 @@ def export_timetable_pdf(modules: str | None = None):
         except (TypeError, json.JSONDecodeError):
             continue
     selected = [code for code in (modules or "").split(",") if code.strip()]
-    payload = build_timetable_pdf(collections, selected or None)
+    if week_start is not None and week_start.weekday() != 0:
+        raise HTTPException(400, "The export week must start on a Monday.")
+    payload = build_timetable_pdf(collections, selected or None, week_start)
     filename = "MNH-Smart-Calendar-Editable-Timetable.pdf"
     return StreamingResponse(BytesIO(payload), media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
