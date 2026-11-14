@@ -166,7 +166,7 @@ def test_comm_endpoints_are_public_without_bypassing_service_safeguards(client):
     assert client.get("/api/comm/contacts").status_code == 200
     created = client.post("/api/comm/contacts", json={"name": "Public API contact", "phone": "0881988156"})
     assert created.status_code == 200
-    assert created.json()["name"] == "Public API contact
+    assert created.json()["name"] == "Public API contact"
 
 
 def test_contacts_flow_through_the_api(client, editor_session):
