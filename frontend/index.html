@@ -7,15 +7,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.14-v14.22">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.14-v14.23">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.14-v14.22";</script>
-<script src="/js/week-model.js?v=2026.11.14-v14.22"></script>
-<script src="/js/api-client.js?v=2026.11.14-v14.22"></script>
+<script>window.MNH_BUILD="2026.11.14-v14.23";</script>
+<script src="/js/week-model.js?v=2026.11.14-v14.23"></script>
+<script src="/js/api-client.js?v=2026.11.14-v14.23"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.22">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.23">
 </head>
 <body data-theme="dark">
 <script>
@@ -44,6 +44,17 @@
    <div class="hd-today">
     <svg class="ic ic-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="var(--gold)"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><text id="hd-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="var(--on-accent)"></text></svg>
     <div class="hd-today-text"><span class="t1">Today</span><span class="t2" id="hd-date"></span></div>
+   </div>
+   <div class="hd-theme" id="hd-theme">
+    <button type="button" class="hd-theme-btn" id="theme-picker-btn" aria-label="Choose colour theme" title="Choose colour theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-picker">
+     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.8 8.8 0 0 1 8.6 3.8 9.2 9.2 0 1 0 20.2 15.4Z" fill="#101a2b" stroke="#101a2b" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="theme-picker" id="theme-picker" hidden>
+     <label for="theme">Appearance</label>
+     <select id="theme" aria-label="Choose dashboard theme">
+      <option value="dark">Dark</option><option value="white">White</option><option value="violet">Violet blue</option><option value="green">Green</option><option value="silver">Midnight Silver</option>
+     </select>
+    </div>
    </div>
    <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
@@ -81,9 +92,6 @@
     <button type="button" id="backup" disabled></button><button type="button" id="import" disabled></button>
     <button type="button" id="print"></button><button type="button" id="theme-btn"></button><button type="button" id="alarms"></button>
    </div>
-   <label for="theme" class="theme-label">Theme</label><select id="theme" aria-label="Choose dashboard theme">
-    <option value="dark">Dark &mdash; white on black</option><option value="white">White &mdash; black on white</option><option value="violet">Deep violet-blue &mdash; white on violet</option><option value="green">Sparkling green &mdash; white on green</option><option value="silver">Midnight Silver &mdash; navy, silver &amp; cool blue</option>
-   </select>
    <input type="file" id="import-file" accept="application/json,.json" hidden>
   </div>
  <div class="bell-panel" id="bell-panel" hidden></div>
@@ -255,7 +263,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.14-v14.22" defer></script>
+<script src="/js/app.js?v=2026.11.14-v14.23" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
