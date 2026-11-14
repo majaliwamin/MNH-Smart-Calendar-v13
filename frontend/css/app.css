@@ -35,6 +35,27 @@ body[data-theme="green"]{
  --nav:#075f2a;--nav-line:#ffffff;--tab:#076b30;--tab-line:#a9dcc0;
  --tab-active:#ffffff;--on-tab-active:#06612c;--cell:#075f2a;--shadow:#00331a66;
 }
+body[data-theme="silver"]{
+ --page:#071321;--panel:#102238;--head:#0b1b30;--line:#405a75;
+ --gold:#cbd5e1;--accent:#8eb8e8;--on-accent:#071321;--accentText:#071321;
+ --text:#f3f6fb;--muted:#c2cedd;--field:#132a43;--control:#e9eef5;--controlText:#0a1728;
+ --nav:#08182b;--nav-line:#8798ad;--tab:#11243a;--tab-line:#425a73;
+ --tab-active:#9dbce0;--on-tab-active:#08182b;--cell:#12263d;--shadow:#00000070;
+ --head-shade:#172e49;--gridline:#536b86;
+}
+body[data-theme="silver"] .site-header,
+body[data-theme="silver"] .site-header .hd-band{
+ background:linear-gradient(112deg,#061326 0%,#0b2038 58%,#142d49 100%)!important;
+ color:#f3f6fb!important;
+}
+body[data-theme="silver"] .activity-marquee-text.tone-0{color:#cbd5e1}
+body[data-theme="silver"] .activity-marquee-text.tone-1{color:#9fc5ee}
+body[data-theme="silver"] .activity-marquee-text.tone-2{color:#b8c8dc}
+body[data-theme="silver"] .activity-marquee-text.tone-3{color:#c5b9e8}
+body[data-theme="silver"] .activity-marquee-text.tone-4{color:#a9d4dc}
+body[data-theme="silver"] .activity-marquee-text.tone-5{color:#d0d9e5}
+body[data-theme="silver"] .ana-pill.at_risk{color:#b9d2ef;background:#8eb8e81c;border-color:#8eb8e866}
+
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--text);font-family:Arial,Helvetica,sans-serif}
 .header-image{display:block;width:100%;height:auto;border-bottom:2px solid var(--gold)}
@@ -718,6 +739,7 @@ body[data-theme="dark"]{--head-shade:#1e2a3a;--gridline:#687b92}
 body[data-theme="white"]{--head-shade:#e7eef7;--gridline:#8fa0b6}
 body[data-theme="violet"]{--head-shade:#372671;--gridline:#8574c9}
 body[data-theme="green"]{--head-shade:#07552a;--gridline:#c3ead2}
+body[data-theme="silver"]{--head-shade:#172e49;--gridline:#536b86}
 
 thead th,thead th.daycell,thead th.corner,thead th.time,tbody th.daycell,tbody th.time{background:var(--head-shade)!important}
 table{border:1px solid var(--gridline)!important}
@@ -961,7 +983,7 @@ body[data-theme="green"] .activity-marquee-text.tone-5{color:#ffd0c8}
   color:#f7f9fc!important;
 }
 .site-header{
-  border-bottom:3px solid #c9a45b!important;
+  border-bottom:3px solid var(--accent)!important;
   box-shadow:0 5px 18px rgba(0,0,0,.22);
 }
 .site-header .hd-main{color:#fff!important}
