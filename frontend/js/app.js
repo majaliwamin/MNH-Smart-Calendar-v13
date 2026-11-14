@@ -368,6 +368,22 @@ async function downloadPdf(){
   const rows=[...tbody.querySelectorAll("tr")],nr=rows.length,nc=days.length;
   const cw=(PW-2*M-cw0)/nc,rh=(PH-top-M-foot-hh)/nr;
   const head=[...thead.querySelectorAll("th")];
+  const hBg=rgb(cs(head[1],"backgroundColor"))||[14,37,71];
+  pdf.setDrawColor(...line);pdf.setLineWidth(.4);
+  head.forEach((th,i)=>{
+   const x=i===0?M:M+cw0+(i-1)*cw,w=i===0?cw0:cw;
+   pdf.setFillColor(...hBg);pdf.rect(x,top,w,hh,"FD");
+   if(i===0){
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));
+    txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});
+   }else{
+    const c=i-1;
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...inkOn(hBg));
+    txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));
+    txt(dates[c],x+w/2,top+hh/2+4,{align:"center"});
+   }
+  });
   // Keep Monday–Friday together in one timetable header row on the first page.
   // The weekday columns are already drawn above; do not split them into separate pages.
   // Rows are allocated the full printable page height for taller, more readable export cells.
