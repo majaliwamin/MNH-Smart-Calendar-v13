@@ -251,3 +251,12 @@ def test_excel_module_selection_filters_sessions_and_keeps_lecturer_options():
     assert directory.cell(rows["PNIM-8100"], 3).value == "Dr D Mzinza"
     assert directory.cell(rows["PNIM-8100"], 4).value == "Yes"
     assert directory.cell(rows["MIPN 8100"], 4).value == "No"
+
+
+def test_selected_week_start_is_applied_to_all_recurring_and_saved_sessions():
+    requested_monday = date(2026, 11, 16)
+    sessions = schedule.sessions_from_collections(COLLECTIONS, week_start=requested_monday)
+    dates = {s["code"]: s["date"] for s in sessions}
+    assert dates["Journal Club"] == date(2026, 11, 17)
+    assert dates["Seminar in MNH"] == date(2026, 11, 19)
+    assert dates["PNIM-8100"] == date(2026, 11, 16)
