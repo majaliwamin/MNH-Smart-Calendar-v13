@@ -116,7 +116,7 @@ def export_timetable_xlsx(modules: str | None = None, week_start: date | None = 
 
 
 @router.get("/export/timetable.pdf")
-def export_timetable_pdf(modules: str | None = None, week_start: date | None = None):
+def export_timetable_pdf(modules: str | None = None, week_start: date | None = None, theme: str = "dark"):
     """Download a fillable-PDF (AcroForm) timetable the user can type into and save.
 
     `modules` is an optional comma-separated list of module codes to include.
@@ -136,7 +136,7 @@ def export_timetable_pdf(modules: str | None = None, week_start: date | None = N
     selected = [code for code in (modules or "").split(",") if code.strip()]
     if week_start is not None and week_start.weekday() != 0:
         raise HTTPException(400, "The export week must start on a Monday.")
-    payload = build_timetable_pdf(collections, selected or None, week_start)
+    payload = build_timetable_pdf(collections, selected or None, week_start, theme)
     filename = "MNH-Smart-Calendar-Editable-Timetable.pdf"
     return StreamingResponse(BytesIO(payload), media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
