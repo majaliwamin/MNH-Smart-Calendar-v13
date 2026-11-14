@@ -5,6 +5,7 @@ from openpyxl import Workbook
 from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from app.services.schedule import (LUNCH_END, LUNCH_START, WEEK_START, WEEKDAY_NAMES, clock,
                                    overlaps_lunch, resolve_lecturer, sessions_from_collections)
 
@@ -228,6 +229,14 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     for row_num in range(len(all_modules) + 3, len(all_modules) + 6):
         for col in range(1, len(dir_headers) + 1):
             directory.cell(row_num, col).border = box
+    include_validation = DataValidation(type="list", formula1='"Yes,No"', allow_blank=False)
+    include_validation.error = "Choose Yes or No."
+    include_validation.errorTitle = "Invalid inclusion value"
+    include_validation.prompt = "Choose whether this module is included in the export copy."
+    include_validation.promptTitle = "Module inclusion"
+    directory.add_data_validation(include_validation)
+    if all_modules:
+        include_validation.add(f"D3:D{len(all_modules) + 2}")
     for col, width in enumerate([18, 46, 22, 22, 16], start=1):
         directory.column_dimensions[get_column_letter(col)].width = width
     directory.sheet_view.showGridLines = True
