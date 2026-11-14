@@ -1,15 +1,14 @@
-"""Mobile-first, fillable MNH Smart Timetable PDF (ReportLab AcroForm).
+"""Fillable MNH Smart Timetable PDF (ReportLab AcroForm).
 
-A4 portrait pages are deliberately used so the document opens at a readable
-scale on phones. Weekly sessions are grouped into full-width weekday cards:
-two days per page (and Friday on its own page). Module and register entries
-remain real AcroForm fields and can be edited and saved in a PDF reader.
+The weekly timetable is a single landscape page with Monday-Friday as column
+headers and time slots down the left. Module and register pages remain portrait.
+All editable entries are real AcroForm fields.
 """
 from datetime import timedelta
 from io import BytesIO
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
@@ -58,8 +57,8 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     module_rows = module_catalogue(collections)
 
     out = BytesIO()
-    width, height = A4
-    pdf = canvas.Canvas(out, pagesize=A4)
+    width, height = landscape(A4)
+    pdf = canvas.Canvas(out, pagesize=landscape(A4))
     pdf.setTitle(f"{APP_NAME} - {TITLE} - Editable Academic Calendar")
     pdf.setAuthor(APP_NAME)
     pdf.setSubject(f"{TITLE} | {APP_SUBTITLE}")
@@ -90,7 +89,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         page_number += 1
         pdf.setFillColor(NAVY)
         pdf.rect(0, height - 37 * mm, width, 37 * mm, stroke=0, fill=1)
-        draw_calendar_icon(10 * mm, height - 25 * mm, 12 * mm)
+        draw_calendar_icon(10 * mm, height - 23 * mm, 12 * mm)
         pdf.setFillColor(WHITE)
         pdf.setFont("Helvetica-Bold", 16)
         pdf.drawString(27 * mm, height - 12 * mm, APP_NAME)
@@ -219,16 +218,97 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         return bottom - 5 * mm
 
     # ============================ weekly timetable ============================
-    days = list(range(5))
-    for offset in range(len(days)):
-        top = banner("WEEKLY TIMETABLE")
-        top = metadata_card(top)
-        section_heading("Weekly timetable", 10 * mm, top, width - 20 * mm)
-        top -= 15 * mm
-        for day_index in days[offset:offset + 1]:
-            top = draw_day_card(day_index, top)
-        footer()
-        pdf.showPage()
+    # One landscape weekly grid: weekdays across the top, time slots down the side.
+    top = banner("WEEKLY TIMETABLE")
+    top = metadata_card(top)
+    top = section_heading("Weekly timetable", 10 * mm, top, width - 20 * mm)
+    table_x = 10 * mm
+    table_w = width - 20 * mm
+    time_w = 24 * mm
+    day_w = (table_w - time_w) / 5
+    header_h = 13 * mm
+    row_h = 11.7 * mm
+    table_top = top - 3 * mm
+    header_bottom = table_top - header_h
+
+    pdf.setFillColor(NAVY)
+    pdf.roundRect(table_x, header_bottom, table_w, header_h, 1.5 * mm, stroke=0, fill=1)
+    pdf.setFillColor(WHITE)
+    pdf.setFont("Helvetica-Bold", 7.5)
+    pdf.drawCentredString(table_x + time_w / 2, header_bottom + 5 * mm, "TIME")
+    for day_index in range(5):
+        day_x = table_x + time_w + day_index * day_w
+        day_date = week_start + timedelta(days=day_index)
+        pdf.setFillColor(WHITE)
+        pdf.setFont("Helvetica-Bold", 8)
+        pdf.drawCentredString(day_x + day_w / 2, header_bottom + 7.5 * mm,
+                              WEEKDAY_NAMES[day_index].upper())
+        pdf.setFont("Helvetica", 7)
+        pdf.drawCentredString(day_x + day_w / 2, header_bottom + 3.5 * mm,
+                              day_date.strftime("%d %b %Y"))
+        if day_index:
+            pdf.setStrokeColor(colors.HexColor("#71839A"))
+            pdf.setLineWidth(.35)
+            pdf.line(day_x, header_bottom + .8 * mm, day_x, table_top - .8 * mm)
+
+    for slot_index, (start_hour, end_hour) in enumerate(TIME_SLOTS):
+        row_top = header_bottom - slot_index * row_h
+        row_y = row_top - row_h
+        is_lunch = abs(start_hour - 12) < .01
+        row_bg = colors.HexColor("#F8EFD9") if is_lunch else (WHITE if slot_index % 2 == 0 else PALE)
+        pdf.setFillColor(row_bg)
+        pdf.rect(table_x, row_y, table_w, row_h, stroke=0, fill=1)
+        pdf.setFillColor(colors.HexColor("#DCE4EE"))
+        pdf.rect(table_x, row_y, time_w, row_h, stroke=0, fill=1)
+        pdf.setStrokeColor(LINE)
+        pdf.setLineWidth(.4)
+        pdf.rect(table_x, row_y, table_w, row_h, stroke=1, fill=0)
+        pdf.line(table_x + time_w, row_y, table_x + time_w, row_top)
+        pdf.setFillColor(NAVY)
+        pdf.setFont("Helvetica-Bold", 7.2)
+        pdf.drawCentredString(table_x + time_w / 2, row_y + 4.5 * mm,
+                              _slot_label(start_hour, end_hour))
+
+        if is_lunch:
+            pdf.setFillColor(PURPLE)
+            pdf.setFont("Helvetica-Bold", 9)
+            pdf.drawCentredString(table_x + time_w + (table_w - time_w) / 2,
+                                  row_y + 4.5 * mm, "LUNCH BREAK")
+            continue
+
+        for day_index in range(5):
+            cell_x = table_x + time_w + day_index * day_w
+            if day_index:
+                pdf.setStrokeColor(LINE)
+                pdf.line(cell_x, row_y, cell_x, row_top)
+            day_name = WEEKDAY_NAMES[day_index]
+            matches = [
+                item for item in sessions
+                if item["weekday"] == day_name
+                and item["start_min"] == int(start_hour * 60)
+                and item["end_min"] == int(end_hour * 60)
+            ]
+            preset = ""
+            if matches:
+                item = matches[0]
+                preset = " | ".join(filter(None, [
+                    item.get("code"), item.get("lecturer"),
+                    item.get("activity") if item.get("activity") != item.get("code") else "",
+                ]))
+            field(
+                f"wk_{day_index}_{int(start_hour * 60)}",
+                f"{day_name} {_slot_label(start_hour, end_hour)}",
+                cell_x + 1 * mm, row_y + 1.5 * mm,
+                day_w - 2 * mm, row_h - 3 * mm,
+                preset, font_size=10,
+            )
+
+    footer()
+    pdf.showPage()
+
+    # The supporting module and register pages retain their portrait layout.
+    pdf.setPageSize(A4)
+    width, height = A4
 
     # ============================ module directory ============================
     counts = {}
