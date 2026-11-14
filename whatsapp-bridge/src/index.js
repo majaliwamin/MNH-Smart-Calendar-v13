@@ -128,7 +128,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (!authorised(req)) return json(res, 401, { ok: false, error: 'Unauthorized.' });
   if (req.method === 'GET' && url.pathname === '/status') {
-    return json(res, 200, { ok: true, connected, provider: 'Baileys', authDirConfigured: Boolean(AUTH_DIR) });
+    return json(res, 200, { ok: true, connected, provider: 'Baileys' });
   }
   if (req.method === 'POST' && url.pathname === '/send') {
     if (!String(req.headers['content-type'] || '').includes('application/json')) {
