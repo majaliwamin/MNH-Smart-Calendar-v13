@@ -72,6 +72,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         """Silver vector calendar mark; intentionally not gold."""
         pdf.saveState()
         pdf.setStrokeColor(SILVER)
+        pdf.setFillColor(SILVER)
         pdf.setLineWidth(1.5)
         pdf.roundRect(x, y, size, size * .82, 1.5 * mm, stroke=1, fill=0)
         pdf.line(x, y + size * .58, x + size, y + size * .58)
