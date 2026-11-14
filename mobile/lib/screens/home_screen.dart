@@ -420,13 +420,20 @@ class _HomeScreenState extends State<HomeScreen> {
         entries.add(entry);
       }
     }
-    if (!entries.any((item) => item['title'] == 'Journal Club' && item['dayIndex'] == 1)) {
-      entries.add({
-        'id': 'journal-club-fixed', 'dayIndex': 1, 'startTime': '13:00',
+    entries.removeWhere((item) =>
+        item['title'] == 'Journal Club' || item['title'] == 'Seminar in MNH');
+    entries.addAll([
+      {
+        'id': 'recurring-journal-club', 'dayIndex': 1, 'startTime': '13:00',
         'endTime': '14:00', 'startMinutes': 780, 'endMinutes': 840,
         'title': 'Journal Club', 'lecturer': '', 'fixed': true,
-      });
-    }
+      },
+      {
+        'id': 'recurring-seminar-mnh', 'dayIndex': 3, 'startTime': '10:00',
+        'endTime': '12:00', 'startMinutes': 600, 'endMinutes': 720,
+        'title': 'Seminar in MNH', 'lecturer': '', 'fixed': true,
+      },
+    ]);
     entries.sort((a, b) => (a['dayIndex'] as int).compareTo(b['dayIndex'] as int) != 0
         ? (a['dayIndex'] as int).compareTo(b['dayIndex'] as int)
         : (a['startMinutes'] as int).compareTo(b['startMinutes'] as int));
@@ -806,6 +813,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ])));
 
   List<Widget> _managed(String collection) {
+    if (collection == 'recurring') {
+      return [
+        const Text('Only these two activities repeat every academic week. Other activities must be entered as dated timetable sessions.'),
+        const SizedBox(height: 12),
+        const Card(child: ListTile(
+          title: Text('Journal Club'),
+          subtitle: Text('Tuesday · 13:00–14:00 · Weekly'),
+        )),
+        const Card(child: ListTile(
+          title: Text('Seminar in MNH'),
+          subtitle: Text('Thursday · 10:00–12:00 · Weekly'),
+        )),
+      ];
+    }
     final rows = records[collection] ?? [];
     final widgets = <Widget>[];
     if (editing && collection != 'modules') {
@@ -1008,8 +1029,8 @@ class _HomeScreenState extends State<HomeScreen> {
           (d['day'] ?? '').toString().trim().toLowerCase() == 'sat') {
         continue;
       }
-      if (recurringTitle == 'Journal Club' &&
-          _sessionEntries().any((entry) => entry['title'] == 'Journal Club')) {
+      if ((recurringTitle == 'Journal Club' || recurringTitle == 'Seminar in MNH') &&
+          _sessionEntries().any((entry) => entry['title'] == recurringTitle)) {
         continue;
       }
       rows.add(ListTile(leading: const Icon(Icons.repeat), title: Text(recurringTitle), subtitle: Text([d['frequency'], d['day'], d['time']].where((x) => x != null && x.toString().isNotEmpty).join(' · '))));
