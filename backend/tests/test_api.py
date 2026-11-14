@@ -43,39 +43,29 @@ def test_web_assets_and_service_worker_are_served(monkeypatch, tmp_path):
         assert "no-cache" in service_worker.headers.get("cache-control", "")
 
 
-def test_api_requires_authentication_for_shared_writes(monkeypatch, tmp_path):
+def test_shared_writes_and_analytics_are_public(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
 
     with TestClient(app) as client:
-        denied = client.put("/api/doc/cells/0_0", json={"title": "Should be blocked"})
-        assert denied.status_code == 401
-
-        login = client.post("/api/auth", json={"password": "rep"})
-        assert login.status_code == 200
-        assert login.json()["role"] == "administrator"
+        session = client.get("/api/session").json()
+        assert session == {"authenticated": True, "role": "public"}
 
         saved = client.put("/api/doc/cells/0_0", json={"title": "API test"})
         assert saved.status_code == 200
         rows = client.get("/api/col/cells").json()
         assert any(row["id"] == "0_0" and row["data"]["title"] == "API test" for row in rows)
 
-        assert client.post("/api/logout").status_code == 200
-        assert client.put("/api/doc/cells/0_1", json={"title": "Blocked after logout"}).status_code == 401
+        login = client.post("/api/auth", json={"password": "any-value"})
+        assert login.status_code == 200
+        assert login.json()["role"] == "public"
+        assert "set-cookie" not in login.headers
 
-
-def test_analytics_requires_a_management_role(monkeypatch, tmp_path):
-    configure_test_storage(monkeypatch, tmp_path)
-
-    with TestClient(app) as client:
-        assert client.post("/api/auth", json={"password": "rep"}).status_code == 200
-        assert client.get("/api/analytics").status_code == 403
-        client.post("/api/logout")
-
-        monkeypatch.setenv("MNH_HOD_PASSWORD", "hod-audit-secret")
-        assert client.post("/api/auth", json={"password": "hod-audit-secret"}).status_code == 200
         response = client.get("/api/analytics")
         assert response.status_code == 200
         assert "delivery_modes" in response.json()
+
+        assert client.post("/api/logout").status_code == 200
+        assert client.put("/api/doc/cells/0_1", json={"title": "Still public"}).status_code == 200
 
 
 def test_restore_rejects_duplicate_records_without_deleting_existing_data(monkeypatch, tmp_path):

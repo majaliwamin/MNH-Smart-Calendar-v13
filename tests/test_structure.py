@@ -96,10 +96,17 @@ def test_recent_activity_panel_is_removed_from_every_view():
     assert "window.downloadSharedBackup" in app
 
 
-def test_backend_has_shared_collections_and_manager_analytics():
+def test_backend_has_shared_collections_and_public_analytics():
     routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert '"facilitators", "examinations", "recurring", "communications"' in routes
-    assert '"hod", "coordinator", "executive_dean"' in routes
+    assert 'return {"role": "public"}' in routes
+    assert 'management_roles' not in routes
+    assert 'let editingUnlocked=true;' in app
+    assert 'let analyticsUnlocked=true;' in app
+    assert 'security-dialog' not in html
+    assert 'type="password"' not in html
 
 
 def test_cells_show_activity_and_lecturer_without_time_ranges_and_dialogs_can_close():

@@ -1,6 +1,6 @@
 import time
 
-VISIBLE_ROLES = {"administrator": "Rep", "lecturer": "Staff", "hod": "HOD", "coordinator": "Coordinator", "executive_dean": "Executive Dean"}
+VISIBLE_ROLES = {"administrator": "Rep", "lecturer": "Staff", "hod": "HOD", "coordinator": "Coordinator", "executive_dean": "Executive Dean", "public": "Public user"}
 
 
 def write_activity(connection, role, action, collection=None, item_id=None, summary=""):

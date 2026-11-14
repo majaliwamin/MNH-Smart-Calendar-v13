@@ -1,39 +1,27 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
   ApiService._();
   static final ApiService instance = ApiService._();
-  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000');
-  static const _storage = FlutterSecureStorage();
-  String? _cookie;
+  static const String baseUrl = String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'http://10.0.2.2:8000');
 
-  Future<Map<String, String>> _headers() async {
-    _cookie ??= await _storage.read(key: 'mnh_session_cookie');
-    return {'Accept': 'application/json', 'Content-Type': 'application/json',
-      if (_cookie != null && _cookie!.isNotEmpty) 'Cookie': _cookie!};
-  }
+  Map<String, String> _headers() => {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
 
   Future<dynamic> _request(String method, String path, {Object? body}) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = await _headers();
+    final headers = _headers();
     late http.Response response;
     switch (method) {
       case 'POST': response = await http.post(uri, headers: headers, body: jsonEncode(body ?? {})); break;
       case 'PUT': response = await http.put(uri, headers: headers, body: jsonEncode(body ?? {})); break;
       case 'DELETE': response = await http.delete(uri, headers: headers); break;
       default: response = await http.get(uri, headers: headers);
-    }
-    final setCookie = response.headers['set-cookie'];
-    if (setCookie != null && path == '/api/auth') {
-      final pair = setCookie.split(';').first;
-      _cookie = pair;
-      await _storage.write(key: 'mnh_session_cookie', value: pair);
-    }
-    if (path == '/api/logout') {
-      _cookie = null;
-      await _storage.delete(key: 'mnh_session_cookie');
     }
     final data = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -50,6 +38,5 @@ class ApiService {
   Future<Map<String, dynamic>> backup() async => Map<String, dynamic>.from(await _request('GET', '/api/backup'));
   Future<void> save(String collection, String id, Map<String, dynamic> data) async { await _request('PUT', '/api/doc/${Uri.encodeComponent(collection)}/${Uri.encodeComponent(id)}', body: data); }
   Future<void> remove(String collection, String id) async { await _request('DELETE', '/api/doc/${Uri.encodeComponent(collection)}/${Uri.encodeComponent(id)}'); }
-  Future<Map<String, dynamic>> login(String password) async => Map<String, dynamic>.from(await _request('POST', '/api/auth', body: {'password': password}));
-  Future<void> logout() async { await _request('POST', '/api/logout'); }
+
 }

@@ -16,12 +16,11 @@ const thead=document.getElementById("calendar-head");
 const statusEl=document.getElementById("status");
 const key="phd_mnh_weekly_calendar_v3";
 const legacyKey="phd_mnh_weekly_calendar_v2";
-let currentRole="student";
+let currentRole="public";
 let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
-let editingUnlocked=false;
-let analyticsUnlocked=false;
-let securityIntent="edit";
+let editingUnlocked=true;
+let analyticsUnlocked=true;
 let activeCell=null;
 let selectedTime=-1;
 
@@ -62,14 +61,15 @@ function getSessionEntries(){
  return result.sort((a,b)=>a.dayIndex-b.dayIndex||a.startMinutes-b.startMinutes);
 }
 function getEntry(r,c){return getSessionEntries().find(x=>x.dayIndex===c&&x.r===r)?.data||{};}
-function setEditing(enabled){
- editingUnlocked=enabled;
+function setEditing(_enabled){
+ const enabled=true;
+ editingUnlocked=true;
  updateRoleNav();
- ["save","backup","import","edit-header"].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=!enabled;});
+ ["save","backup","import","edit-header"].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
  document.getElementById("settings").disabled=false;
- const add=document.getElementById("weekly-add-session");if(add)add.hidden=!enabled;
- statusEl.className="status "+(enabled?"ok":"");
- statusEl.textContent=enabled?"Editing enabled. Changes can now be made.":"";
+ const add=document.getElementById("weekly-add-session");if(add)add.hidden=false;
+ statusEl.className="status ok";
+ statusEl.textContent="Open access enabled. Changes can be made and shared.";
 }
 function showDialog(id){
  const el=document.getElementById(id),card=el.querySelector(".dialog-card")||el.querySelector(".call-card");
@@ -236,7 +236,7 @@ function load(){
  if(Object.keys(SEED_CELLS).length&&SEED_STAMP>(state.stamp||0)){state.cells={...SEED_CELLS,...state.cells};state.stamp=SEED_STAMP;}
  document.body.dataset.theme=state.theme;
  document.getElementById("theme").value=state.theme;
- build();setEditing(false);
+ build();setEditing(true);
 }
 function saveState(){
  state.theme=document.getElementById("theme").value;state.version=3;state.stamp=Date.now();
@@ -250,57 +250,14 @@ document.getElementById("theme").addEventListener("change",e=>{
  try{localStorage.setItem(themeKey,state.theme);}catch(err){}
 });
 document.getElementById("settings").addEventListener("click",()=>showView("settings"));
-function openSecurity(intent){
- securityIntent=intent;
- document.getElementById("security-password").value="";
- document.getElementById("security-message").textContent=intent==="analytics"
-  ?"Analytics are restricted to HOD, coordinator and executive dean accounts."
-  :"";
- document.getElementById("security-title").textContent=intent==="analytics"?"Analytics · Management access":"Settings · Security";
- document.querySelector("#security-dialog p").textContent=intent==="analytics"
-  ?"Programme analytics are restricted to HOD, coordinator and executive dean accounts."
-  :"Timetable editing is locked by default. Enter an authorised password to edit the timetable.";
- document.getElementById("security-unlock").textContent=intent==="analytics"?"View analytics":"✏️ Edit timetable";
- showDialog("security-dialog");
-}
-// Editing is unlocked from wherever it is needed: the action runs straight away
-// when already unlocked, otherwise the security dialog asks for the password first.
-let pendingEditAction=null;
 function requestEditing(action){
- if(editingUnlocked){if(action)action();return;}
- pendingEditAction=action||null;
- openSecurity("edit");
+ if(typeof action==="function")action();
 }
 function requestAnalytics(){
- if(analyticsUnlocked){showView("analytics");return;}
- openSecurity("analytics");
+ analyticsUnlocked=true;
+ updateRoleNav();
+ showView("analytics");
 }
-document.getElementById("security-unlock").addEventListener("click",()=>{
- (async()=>{
-  const message=document.getElementById("security-message");
-  try{
-   const result=await fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:document.getElementById("security-password").value.trim()})});
-   const data=await result.json();
-   if(!result.ok)throw new Error(data.error||"Incorrect password.");
-   const intent=securityIntent;
-   currentRole=data.role||"lecturer";
-   hideDialog("security-dialog");document.getElementById("security-password").value="";
-   if(intent==="analytics"){
-    if(!["hod","coordinator","executive_dean"].includes(currentRole))throw new Error("Analytics are restricted to HOD, coordinator and executive dean accounts.");
-    analyticsUnlocked=true;updateRoleNav();showView("analytics");
-    statusEl.className="status ok";statusEl.textContent="Management analytics unlocked.";
-   }else{
-    setEditing(true);
-    try{await window.mnhApi.flushQueue(true);}catch(e){}
-    statusEl.className="status ok";statusEl.textContent="Editing enabled for your authorised role.";
-    const next=pendingEditAction;pendingEditAction=null;
-    if(next){try{next();}catch(e){}}
-   }
-  }catch(err){message.textContent=err.message||"Unable to verify your access.";}
- })();
-});
-document.getElementById("security-password").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("security-unlock").click();});
-document.getElementById("close-security").addEventListener("click",()=>hideDialog("security-dialog"));
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
 document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
 document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
@@ -482,7 +439,7 @@ async function downloadPdf(){
   const url=URL.createObjectURL(blob),l=document.createElement("a");l.href=url;l.download=name;l.click();setTimeout(()=>URL.revokeObjectURL(url),4000);statusEl.className="status ok";statusEl.textContent="PDF ready.";
  }catch(e){console.error(e);statusEl.className="status error";statusEl.textContent="The PDF could not be created.";}
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){hideDialog("module-dialog");hideDialog("security-dialog");hideDialog("details-dialog");}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){hideDialog("module-dialog");hideDialog("details-dialog");}});
 // ---- Shared cloud storage (published link) with local copy as fallback ----
 const SEED_CELLS={
  "1_0":{code:"Biostatistics",title:"Biostatistics",timeLabel:"11:00–13:30",colour:"#2F5D8C"},
@@ -690,7 +647,7 @@ function initAlarms(){
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
 const VIEWS=["dashboard","weekly","monthly","upcoming","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
-function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title=analyticsUnlocked?"Analytics unlocked":"HOD, coordinator and executive dean access";});}
+function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
@@ -785,7 +742,6 @@ function initWeekNav(){
 // ---- navigation ----
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
- if(name==="analytics"&&!analyticsUnlocked){requestAnalytics();return;}
  currentView=name;
  const weekly=document.getElementById("view-weekly"),home=document.getElementById("view-dashboard"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics");
  home.hidden=name!=="dashboard";weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";
@@ -1384,7 +1340,7 @@ async function downloadTimetableImage(mime){
 }
 window.downloadTimetableImage=downloadTimetableImage;
 function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme;sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
- const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted",editingUnlocked?`Editing unlocked · ${currentRole}`:"Viewing is open; editing requires an authorised password."));const b=el("button","primary","\u270F "+(editingUnlocked?"Lock editing":"Unlock editing"));b.type="button";b.onclick=()=>document.getElementById(editingUnlocked?"lock":"unlock").click();access.appendChild(b);const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=!editingUnlocked;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
+ const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted","Open access is enabled. Anyone with the website link can view, edit, replace and restore shared programme records, and view Analytics."));const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=false;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
  const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
  const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}
 function itemButton(x){
@@ -1491,11 +1447,11 @@ function anaEmpty(text){
 function buildAnalyticsHeader(d){
  const bar=el("div","ana-titlebar");
  const left=el("div","ana-title-wrap");
- left.append(anaIcon("analytics","ana-title-icon"),el("h2","ana-title","Analytics – Management Access"));
+ left.append(anaIcon("analytics","ana-title-icon"),el("h2","ana-title","Programme Analytics"));
  bar.appendChild(left);
  const tools=el("div","ana-tools");
  const role=el("span","ana-role");
- role.append(anaIcon("user"),el("span",null,"HOD / Coordinator / Executive Dean"));
+ role.append(anaIcon("user"),el("span",null,"Public access"));
  tools.appendChild(role);
  const year=el("label","ana-year");
  year.append(anaIcon("calendar"));
@@ -1827,7 +1783,7 @@ function initHeader(){
  document.addEventListener("click",()=>{if(!panel.hidden)closeBell();});
  document.getElementById("menu-btn").addEventListener("click",closeBell);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!panel.hidden){closeBell();bell.focus();}hideDialog("header-dialog");}});
- document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();if(t.dataset.view==="analytics"&&!analyticsUnlocked){requestAnalytics();return;}try{location.hash=t.dataset.view;}catch(x){}showView(t.dataset.view);}));
+ document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();try{location.hash=t.dataset.view;}catch(x){}showView(t.dataset.view);}));
  window.addEventListener("hashchange",()=>showView(location.hash.slice(1)));
  // header editing
  document.getElementById("edit-header").addEventListener("click",()=>{
@@ -1908,7 +1864,6 @@ load();initCloud();initAlarms();initHeader();
  };
  document.getElementById("weekly-export-xlsx")?.addEventListener("click",()=>window.downloadTimetableExcel());
  window.downloadSharedBackup=async()=>{
-  if(!editingUnlocked){say("Unlock editing first to download the shared backup.","error");return;}
   say("Creating a consistent database backup…");
   try{const r=await fetch("/api/backup",{cache:"no-store"});if(!r.ok)throw Error("Backup export failed");
    const data=await r.json(),blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});

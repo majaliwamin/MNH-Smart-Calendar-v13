@@ -1,29 +1,20 @@
 """Communications Centre endpoints: contacts, drafts, templates, jobs, voice calls.
 
-All write endpoints require an authorised editing session (the existing
-require_editor pattern). Safeguards (consent, do-not-contact, calling hours,
-emergency stop) are enforced server-side here, never in the browser.
+The shared communications workspace is open without password authentication.
+Safeguards (consent, do-not-contact, calling hours and emergency stop) remain
+enforced by the communications services.
 """
 from fastapi import APIRouter, Body, Cookie, HTTPException
 
 from app.services import ari_service, ai_assistant, ai_trigger, comm_contacts, comm_service, wa_bridge
-from app.services.authentication import get_session
-from app.config import SESSION_SECONDS
 
 router = APIRouter(prefix="/api/comm")
-COOKIE_NAME = "mnh_session"
+def _actor(mnh_session: str | None = None) -> str:
+    return "public"
 
 
-def _actor(mnh_session: str | None) -> str:
-    session = get_session(mnh_session)
-    if not session:
-        raise HTTPException(status_code=401, detail="Please sign in with an authorised editing password.")
-    return str(session.get("role") or "editor")
-
-
-def _editor(mnh_session: str | None) -> str:
-    # Communications management uses the same editing authorisation as the calendar.
-    return _actor(mnh_session)
+def _editor(mnh_session: str | None = None) -> str:
+    return "public"
 
 
 # ---- overview -----------------------------------------------------------------
