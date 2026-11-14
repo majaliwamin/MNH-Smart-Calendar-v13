@@ -878,10 +878,11 @@ async function getFutureActivities(){
    if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
   });
  }
- const [exams,recurring]=await Promise.all([
+ const [exams,storedRecurring]=await Promise.all([
   loadRows("examinations").catch(()=>[]),
   loadRows("recurring").catch(()=>[])
  ]);
+ const recurring=storedRecurring.length?storedRecurring:recurringRecords;
  exams.forEach(row=>{
   const data=row.data||{},start=localActivityDate(data.date,data.time);
   if(!start||start.getTime()<=now)return;
@@ -1929,7 +1930,10 @@ function subscribeExtras(db){
   build();if(currentView==="modules")renderModules();
  },()=>{});
  db.collection("recurring").onSnapshot(snap=>{
-  recurringRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}}));
+  recurringRecords=snap.docs.length?snap.docs.map(d=>({id:d.id,data:d.data()||{}})):[
+   {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
+   {id:"seminar-mnh",data:{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
+  ];
   build();if(currentView==="recurring")renderManaged("recurring");
   if(currentView==="weekly"||currentView==="dashboard")renderAnimatedFutureStrip();
  },()=>{});
