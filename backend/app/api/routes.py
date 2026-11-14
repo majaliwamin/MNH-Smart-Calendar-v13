@@ -13,6 +13,10 @@ from app.services.backup_service import list_backups
 router = APIRouter(prefix="/api")
 ALLOWED_COLLECTIONS = {"cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"}
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. –-]{0,99}$")
+CANONICAL_RECURRING = {
+    "journal-club": ("Journal Club", "Tuesday", "13:00–14:00"),
+    "seminar-mnh": ("Seminar in MNH", "Thursday", "10:00–12:00"),
+}
 
 from app.services.schedule import DEFAULT_SESSION_RANGES, WEEK_START, minutes as _minutes_checked, cell_interval as _cell_interval  # noqa: E402
 
@@ -38,8 +42,10 @@ def _validate_restore_intervals(cleaned):
             if start < other_end and end > other_start:
                 raise HTTPException(400, f"Backup contains overlapping sessions: {label} and {other_label}.")
         by_day[day].append((start, end, label))
+    weekday_index = {name.lower(): index for index, name in enumerate(("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"))}
     for recurring_item in recurring:
-        if str(recurring_item.get("day", "")).strip().lower() != "tuesday":
+        recurring_day = weekday_index.get(str(recurring_item.get("day", "")).strip().lower())
+        if recurring_day is None:
             continue
         match = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_item.get("time", "")))
         if not match:
@@ -48,11 +54,11 @@ def _validate_restore_intervals(cleaned):
         if start is None or end is None or end <= start:
             continue
         recurring_title = str(recurring_item.get("title", "")).strip().lower()
-        for other_start, other_end, other_title in by_day.get(1, []):
+        for other_start, other_end, other_title in by_day.get(recurring_day, []):
             if other_title.strip().lower() == recurring_title:
                 continue
             if other_start < end and other_end > start:
-                raise HTTPException(400, "Backup contains a Tuesday session overlapping a recurring activity.")
+                raise HTTPException(400, f"Backup contains a {recurring_item.get('day')} session overlapping a recurring activity.")
 
 
 def current_session(mnh_session: str | None = None):
@@ -82,7 +88,7 @@ def health():
 
 
 @router.get("/export/timetable.xlsx")
-def export_timetable_xlsx(modules: str | None = None):
+def export_timetable_xlsx(modules: str | None = None, week_start: date | None = None):
     """Download an independent, editable Excel copy of the Monday–Friday timetable.
 
     `modules` is an optional comma-separated list of module codes to include
@@ -101,14 +107,16 @@ def export_timetable_xlsx(modules: str | None = None):
         except (TypeError, json.JSONDecodeError):
             continue
     selected = [code for code in (modules or "").split(",") if code.strip()]
-    payload = build_timetable_workbook(collections, selected or None)
+    if week_start is not None and week_start.weekday() != 0:
+        raise HTTPException(400, "The export week must start on a Monday.")
+    payload = build_timetable_workbook(collections, selected or None, week_start)
     filename = "MNH-Smart-Calendar-Editable-Timetable.xlsx"
     return StreamingResponse(BytesIO(payload), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
 
 
 @router.get("/export/timetable.pdf")
-def export_timetable_pdf(modules: str | None = None):
+def export_timetable_pdf(modules: str | None = None, week_start: date | None = None):
     """Download a fillable-PDF (AcroForm) timetable the user can type into and save.
 
     `modules` is an optional comma-separated list of module codes to include.
@@ -126,7 +134,9 @@ def export_timetable_pdf(modules: str | None = None):
         except (TypeError, json.JSONDecodeError):
             continue
     selected = [code for code in (modules or "").split(",") if code.strip()]
-    payload = build_timetable_pdf(collections, selected or None)
+    if week_start is not None and week_start.weekday() != 0:
+        raise HTTPException(400, "The export week must start on a Monday.")
+    payload = build_timetable_pdf(collections, selected or None, week_start)
     filename = "MNH-Smart-Calendar-Editable-Timetable.pdf"
     return StreamingResponse(BytesIO(payload), media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
@@ -137,11 +147,11 @@ def export_module_list():
     """The module catalogue for the export selection UI (defaults + stored modules)."""
     from app.services.excel_export import module_catalogue
     with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs WHERE col='modules'").fetchall()
-    collections = {"modules": {}}
+        rows = connection.execute("SELECT col,id,data FROM docs WHERE col IN ('modules','facilitators')").fetchall()
+    collections = {"modules": {}, "facilitators": {}}
     for row in rows:
         try:
-            collections["modules"][row["id"]] = json.loads(row["data"])
+            collections[row["col"]][row["id"]] = json.loads(row["data"])
         except (TypeError, json.JSONDecodeError):
             continue
     return {"modules": module_catalogue(collections)}
@@ -532,8 +542,12 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
         col, item_id, data = item.get("col"), str(item.get("id", "")), item.get("data")
         if col not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id) or not isinstance(data, dict):
             raise HTTPException(400, "Backup contains an invalid record.")
-        if col == "recurring" and str(data.get("day", "")).strip().lower() in ("sat", "saturday"):
-            raise HTTPException(400, "Recurring academic activities must be scheduled Monday to Friday.")
+        if col == "recurring":
+            expected = CANONICAL_RECURRING.get(item_id)
+            actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
+                      str(data.get("time", "")).strip())
+            if expected is None or actual != expected:
+                raise HTTPException(400, "Only Journal Club (Tuesday 13:00–14:00) and Seminar in MNH (Thursday 10:00–12:00) may recur.")
         if col == "cells":
             legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
             day_index = data.get("dayIndex")
@@ -564,8 +578,12 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
         raise HTTPException(404, "not found")
     if collection == "modules" and (not str(data.get("title", "")).strip() or len(str(data.get("title", ""))) > 160):
         raise HTTPException(400, "A valid module title is required.")
-    if collection == "recurring" and str(data.get("day", "")).strip().lower() in ("sat", "saturday"):
-        raise HTTPException(400, "Recurring academic activities must be scheduled Monday to Friday.")
+    if collection == "recurring":
+        expected = CANONICAL_RECURRING.get(item_id)
+        actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
+                  str(data.get("time", "")).strip())
+        if expected is None or actual != expected:
+            raise HTTPException(400, "Only Journal Club (Tuesday 13:00–14:00) and Seminar in MNH (Thursday 10:00–12:00) may recur.")
     if collection == "cells":
         legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
         day_index = data.get("dayIndex")
@@ -613,19 +631,21 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
                     old_end = int(parts[1][:2]) * 60 + int(parts[1][3:])
                     if new_start < old_end and new_end > old_start:
                         raise HTTPException(409, f"Session overlaps existing timetable entry {existing_id}.")
-                if day_index == 1:
-                    for recurring_row in recurring_rows:
-                        recurring_data = json.loads(recurring_row["data"])
-                        if str(recurring_data.get("title", "")).strip().lower() != "journal club" or str(recurring_data.get("day", "")).strip().lower() != "tuesday":
-                            continue
-                        if str(data.get("code", data.get("title", ""))).strip().lower() == "journal club":
-                            continue
-                        recurring_range = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_data.get("time", "")))
-                        if recurring_range:
-                            rs = int(recurring_range.group(1)[:2]) * 60 + int(recurring_range.group(1)[3:])
-                            re_ = int(recurring_range.group(2)[:2]) * 60 + int(recurring_range.group(2)[3:])
-                            if new_start < re_ and new_end > rs:
-                                raise HTTPException(409, "Session overlaps the recurring Tuesday Journal Club.")
+                for recurring_row in recurring_rows:
+                    recurring_data = json.loads(recurring_row["data"])
+                    recurring_day = str(recurring_data.get("day", "")).strip().lower()
+                    recurring_index = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4}.get(recurring_day)
+                    if recurring_index != day_index:
+                        continue
+                    recurring_title = str(recurring_data.get("title", "")).strip().lower()
+                    if str(data.get("code", data.get("title", ""))).strip().lower() == recurring_title:
+                        continue
+                    recurring_range = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_data.get("time", "")))
+                    if recurring_range:
+                        rs = int(recurring_range.group(1)[:2]) * 60 + int(recurring_range.group(1)[3:])
+                        re_ = int(recurring_range.group(2)[:2]) * 60 + int(recurring_range.group(2)[3:])
+                        if new_start < re_ and new_end > rs:
+                            raise HTTPException(409, f"Session overlaps the recurring {recurring_data.get('title')}.")
     with database() as c:
         exists = c.execute("SELECT 1 FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
         c.execute("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
@@ -645,6 +665,8 @@ def delete_document(collection: str, item_id: str, mnh_session: str | None = Coo
     require_editor(mnh_session)
     if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
         raise HTTPException(404, "not found")
+    if collection == "recurring":
+        raise HTTPException(400, "The two programme-wide recurring activities cannot be deleted.")
     with database() as c:
         c.execute("DELETE FROM docs WHERE col=? AND id=?", (collection, item_id))
     return {"ok": True}

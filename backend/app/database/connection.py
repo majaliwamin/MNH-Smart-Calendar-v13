@@ -12,20 +12,6 @@ SEED_MODULES = {
     "ARMN – 8100": {"title": "Antimicrobial Resistance in Maternal & Neonatal Health", "facilitator": "G Bandawe"},
     "PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitator": "D Mzinza"},
 }
-# Programme for the teaching week Monday 9 - Friday 13 November 2026.
-# Keys are "slot_day": seven time slots by five days (0 = Monday ... 4 = Friday).
-SEED_PROGRAM_CELLS = {
-    "1_0": {"code": "Biostatistics", "title": "Biostatistics", "timeLabel": "11:00–13:30", "colour": "#2F5D8C"},
-    "6_0": {"code": "Bioethics", "title": "Bioethics", "timeLabel": "19:00–21:00", "colour": "#7B3F61"},
-    "6_1": {"code": "Bioethics", "title": "Bioethics", "timeLabel": "19:00–21:00", "colour": "#7B3F61"},
-    "0_2": {"code": "Immunology", "title": "Immunology", "timeLabel": "08:00–10:00", "colour": "#3C7A5A"},
-    "3_2": {"code": "Imaging", "title": "Imaging", "timeLabel": "Afternoon–evening", "colour": "#8A6D2F"},
-    "1_3": {"code": "Seminar in MNH", "title": "Seminar in Maternal and Neonatal Health", "timeLabel": "10:00–12:00", "colour": "#2F5D8C"},
-    "2_3": {"code": "Biostatistics", "title": "Biostatistics", "timeLabel": "AM–afternoon", "colour": "#2F5D8C"},
-    "6_3": {"code": "Immunology", "title": "Immunology", "timeLabel": "19:00–21:00", "colour": "#3C7A5A"},
-    "0_4": {"code": "Immunology", "title": "Immunology", "timeLabel": "08:00–10:00", "colour": "#3C7A5A"},
-    "3_4": {"code": "Library", "title": "Library session", "timeLabel": "Afternoon", "colour": "#4B5D7A"},
-}
 
 
 def connect():
@@ -54,13 +40,33 @@ def connect():
         now = int(time.time() * 1000)
         connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("examinations", "exam-2026-11-13", json.dumps({"title": "Examination", "date": "2026-11-13", "time": "", "venue": "", "notes": "Time and venue have not been specified."}, ensure_ascii=False), now))
-        connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
-            ("recurring", "journal-club", json.dumps({"title": "Journal Club", "frequency": "Weekly", "day": "Tuesday", "time": "13:00–14:00", "notes": "Recurring academic discussion."}, ensure_ascii=False), now))
         connection.execute("INSERT OR IGNORE INTO app_meta(key,value) VALUES('academic_activity_seed_v1','1')")
-    # The academic calendar is Monday–Friday. Records that do not fit (day index >= 5, or a
-    # Saturday recurring activity) are NEVER deleted: they stay in the database untouched,
-    # every reader (web, mobile, exports, analytics) ignores them, and they are listed in
-    # app_meta['flagged_non_weekday_records'] + the audit log so an administrator can review them.
+    # Exactly two weekly recurring academic activities are part of the programme.
+    recurring_schedule = {
+        "journal-club": {"title": "Journal Club", "frequency": "Weekly", "day": "Tuesday", "time": "13:00–14:00", "notes": ""},
+        "seminar-mnh": {"title": "Seminar in MNH", "frequency": "Weekly", "day": "Thursday", "time": "10:00–12:00", "notes": ""},
+    }
+    for row in connection.execute("SELECT id FROM docs WHERE col='recurring'").fetchall():
+        if row["id"] not in recurring_schedule:
+            connection.execute("DELETE FROM docs WHERE col='recurring' AND id=?", (row["id"],))
+    now = int(time.time() * 1000)
+    for recurring_id, data in recurring_schedule.items():
+        connection.execute(
+            "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
+            "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
+            ("recurring", recurring_id, json.dumps(data, ensure_ascii=False), now),
+        )
+    # Remove the known hardcoded timetable seed cells, while preserving all other
+    # user-created timetable records.
+    obsolete_seed_ids = ("1_0", "6_0", "6_1", "0_2", "3_2", "1_3", "2_3", "6_3", "0_4", "3_4")
+    placeholders = ",".join("?" for _ in obsolete_seed_ids)
+    connection.execute(
+        f"DELETE FROM docs WHERE col='cells' AND id IN ({placeholders})",
+        obsolete_seed_ids,
+    )
+    # The academic calendar is Monday–Friday. Out-of-range timetable cells are retained
+    # and flagged for review. The recurring collection is separately restricted to the
+    # two canonical weekly events above.
     flagged = []
     for row in connection.execute("SELECT id,data FROM docs WHERE col='cells'").fetchall():
         item_id = str(row["id"])
@@ -97,13 +103,6 @@ def connect():
                             f"{len(flagged)} record(s) fall outside Monday–Friday and are hidden from the timetable; they were kept for review."))
     elif not flagged and previous:
         connection.execute("DELETE FROM app_meta WHERE key='flagged_non_weekday_records'")
-    program_seeded = connection.execute("SELECT 1 FROM app_meta WHERE key='weekly_program_seed_v1'").fetchone()
-    if not program_seeded:
-        now = int(time.time() * 1000)
-        for cell_id, data in SEED_PROGRAM_CELLS.items():
-            connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
-                               ("cells", cell_id, json.dumps(data, ensure_ascii=False), now))
-        connection.execute("INSERT OR IGNORE INTO app_meta(key,value) VALUES('weekly_program_seed_v1','1')")
     connection.commit()
     return connection
 

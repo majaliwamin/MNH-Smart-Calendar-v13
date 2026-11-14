@@ -5,6 +5,10 @@ from datetime import date, timedelta
 WEEK_START = date(2026, 11, 9)          # Monday
 WEEKDAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 LUNCH_START, LUNCH_END = 12 * 60, 13 * 60 + 30   # 12:00–13:30
+RECURRING_ACTIVITIES = (
+    {"id": "journal-club", "title": "Journal Club", "day": 1, "weekday": "Tuesday", "start": "13:00", "end": "14:00"},
+    {"id": "seminar-mnh", "title": "Seminar in MNH", "day": 3, "weekday": "Thursday", "start": "10:00", "end": "12:00"},
+)
 DEFAULT_SESSION_RANGES = (
     "08:00-10:00", "10:00-12:00", "12:00-13:30", "13:30-15:30",
     "15:30-17:30", "17:30-19:00", "19:00-21:00",
@@ -36,8 +40,6 @@ def cell_interval(item_id: str, data: dict):
         return None
     if data.get("startTime") and data.get("endTime"):
         start_text, end_text = str(data["startTime"]), str(data["endTime"])
-    elif str(data.get("code", data.get("title", ""))).strip().lower() == "journal club":
-        start_text, end_text = "13:00", "14:00"
     elif legacy:
         match = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(data.get("timeLabel", "")))
         start_text, end_text = (match.group(1), match.group(2)) if match else tuple(fallback.split("-")) if fallback else ("", "")
@@ -82,8 +84,9 @@ def initials(name: str) -> str:
     return (words[0][0] + words[-1][0]).upper()
 
 
-def sessions_from_collections(collections: dict) -> list:
-    """Resolve every stored weekday session (Mon–Fri only) into display-ready dicts."""
+def sessions_from_collections(collections: dict, week_start: date | None = None) -> list:
+    """Resolve stored weekday sessions for the requested Monday–Friday academic week."""
+    week_start = week_start or WEEK_START
     modules = collections.get("modules", {})
     facilitators = collections.get("facilitators", {})
     out = []
@@ -95,7 +98,7 @@ def sessions_from_collections(collections: dict) -> list:
         code = str(data.get("code", label)).strip()
         module = modules.get(code, {})
         out.append({
-            "id": item_id, "day": day, "date": WEEK_START + timedelta(days=day),
+            "id": item_id, "day": day, "date": week_start + timedelta(days=day),
             "weekday": WEEKDAY_NAMES[day], "start_min": start, "end_min": end,
             "start": clock(start), "end": clock(end), "code": code,
             "module_title": str(module.get("title") or data.get("title") or label),
@@ -105,15 +108,20 @@ def sessions_from_collections(collections: dict) -> list:
             "status": str(data.get("status") or data.get("outcome") or "scheduled"),
             "notes": str(data.get("notes") or ""),
         })
-    # Fixed recurring Tuesday Journal Club (13:00–14:00) when it is not already a stored cell.
-    if not any(s["code"].lower() == "journal club" for s in out):
-        for rid, rec in collections.get("recurring", {}).items():
-            if str(rec.get("title", "")).strip().lower() == "journal club" and str(rec.get("day", "")).strip().lower() == "tuesday":
-                out.append({"id": f"recurring-{rid}", "day": 1, "date": WEEK_START + timedelta(days=1),
-                            "weekday": "Tuesday", "start_min": 780, "end_min": 840, "start": "13:00", "end": "14:00",
-                            "code": "Journal Club", "module_title": "Journal Club", "lecturer": "",
-                            "activity": "Journal Club", "mode": "unspecified", "status": "scheduled",
-                            "notes": str(rec.get("notes") or "")})
+    # The only recurring activities in the programme are these two fixed weekly events.
+    recurring_codes = {item["title"].casefold() for item in RECURRING_ACTIVITIES}
+    out = [session for session in out if session["code"].casefold() not in recurring_codes]
+    for item in RECURRING_ACTIVITIES:
+        start, end = minutes(item["start"]), minutes(item["end"])
+        out.append({
+            "id": f"recurring-{item['id']}", "day": item["day"],
+            "date": week_start + timedelta(days=item["day"]),
+            "weekday": item["weekday"], "start_min": start, "end_min": end,
+            "start": item["start"], "end": item["end"], "code": item["title"],
+            "module_title": item["title"], "lecturer": "",
+            "activity": item["title"], "mode": "unspecified", "status": "scheduled",
+            "notes": "",
+        })
     out.sort(key=lambda s: (s["day"], s["start_min"], s["end_min"], s["code"]))
     return out
 

@@ -5,8 +5,9 @@ from openpyxl import Workbook
 from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from app.services.schedule import (LUNCH_END, LUNCH_START, WEEK_START, WEEKDAY_NAMES, clock,
-                                   overlaps_lunch, sessions_from_collections)
+                                   overlaps_lunch, resolve_lecturer, sessions_from_collections)
 
 TITLE = "PhD in Maternal and Neonatal Health : 3rd Block"
 NAVY, BLUE, PALE, WHITE = "102B4E", "1F497D", "EAF1F8", "FFFFFF"
@@ -32,7 +33,8 @@ def module_catalogue(collections: dict) -> list:
     for item_id, data in stored.items():
         code = str(data.get("code") or item_id).strip()
         if code:
-            by_code[code] = {"code": code, "title": str(data.get("title") or ""), "facilitator": str(data.get("facilitator") or "")}
+            by_code[code] = {"code": code, "title": str(data.get("title") or ""),
+                             "facilitator": resolve_lecturer(data, collections.get("facilitators", {}))}
     for default in DEFAULT_MODULES:
         by_code.setdefault(default["code"], dict(default))
     return sorted(by_code.values(), key=lambda m: m["code"].lower())
@@ -51,9 +53,12 @@ def normalise_selection(selected: list | None, collections: dict) -> list:
     return out
 
 
-def build_timetable_workbook(collections: dict, selected_modules: list | None = None) -> bytes:
-    sessions = sessions_from_collections(collections)
+def build_timetable_workbook(collections: dict, selected_modules: list | None = None, week_start=None) -> bytes:
+    week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
+    selected_codes = set(selection)
+    sessions = [s for s in sessions_from_collections(collections, week_start=week_start)
+                if s["code"] in selected_codes or str(s["id"]).startswith("recurring-")]
     thin = Side(style="thin", color=GRID)
     box = Border(left=thin, right=thin, top=thin, bottom=thin)
 
@@ -74,14 +79,14 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.row_dimensions[1].height = 30
 
     ws.merge_cells(f"A2:{last_col}2")
-    ws["A2"] = "Week commencing Monday, 9 November 2026 · Monday to Friday"
+    ws["A2"] = f"Week commencing Monday, {week_start.strftime('%d %B %Y')} · Monday to Friday"
     ws["A2"].font = Font(italic=True, size=11, color="33475B")
     ws["A2"].fill = PatternFill("solid", fgColor=PALE)
     ws["A2"].alignment = Alignment(vertical="center", horizontal="left", indent=1)
     ws.row_dimensions[2].height = 20
 
     # ---- Day header row: one ordinary cell per day ---------------------------
-    headers = ["Time"] + [f"{name}\n{(WEEK_START + timedelta(days=i)).strftime('%d %b %Y')}"
+    headers = ["Time"] + [f"{name}\n{(week_start + timedelta(days=i)).strftime('%d %b %Y')}"
                           for i, name in enumerate(WEEKDAY_NAMES)]
     for col, text in enumerate(headers, start=1):
         c = ws.cell(3, col, text)
@@ -194,8 +199,8 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
 
-    # ---- Module Directory: the selected modules, editable ----------------------
-    dir_headers = ["Module code", "Module title", "Facilitator", "Included in this export", "Sessions this week"]
+    # ---- Module Directory: every available module with an editable inclusion flag ----
+    dir_headers = ["Module code", "Module title", "Assigned lecturer", "Included in this export", "Sessions this week"]
     directory.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(dir_headers))
     directory["A1"] = "MODULE DIRECTORY — edit freely; add rows for extra modules"
     directory["A1"].font = Font(size=15, bold=True, color=WHITE)
@@ -212,17 +217,27 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     week_counts = {}
     for s in sessions:
         week_counts[s["code"]] = week_counts.get(s["code"], 0) + 1
-    for row_num, code in enumerate(selection, start=3):
-        module = catalogue.get(code, {"code": code, "title": "", "facilitator": ""})
-        values = [module["code"], module["title"], module["facilitator"], "Yes", week_counts.get(code, 0)]
+    all_modules = module_catalogue(collections)
+    for row_num, module in enumerate(all_modules, start=3):
+        code = module["code"]
+        values = [code, module["title"], module["facilitator"],
+                  "Yes" if code in selected_codes else "No", week_counts.get(code, 0)]
         for col, value in enumerate(values, start=1):
             c = directory.cell(row_num, col, value)
             c.alignment = Alignment(vertical="top", wrap_text=True)
             c.border = box
     # three blank editable rows so users can add modules directly in the file
-    for row_num in range(len(selection) + 3, len(selection) + 6):
+    for row_num in range(len(all_modules) + 3, len(all_modules) + 6):
         for col in range(1, len(dir_headers) + 1):
             directory.cell(row_num, col).border = box
+    include_validation = DataValidation(type="list", formula1='"Yes,No"', allow_blank=False)
+    include_validation.error = "Choose Yes or No."
+    include_validation.errorTitle = "Invalid inclusion value"
+    include_validation.prompt = "Choose whether this module is included in the export copy."
+    include_validation.promptTitle = "Module inclusion"
+    directory.add_data_validation(include_validation)
+    if all_modules:
+        include_validation.add(f"D3:D{len(all_modules) + 2}")
     for col, width in enumerate([18, 46, 22, 22, 16], start=1):
         directory.column_dimensions[get_column_letter(col)].width = width
     directory.sheet_view.showGridLines = True
@@ -231,7 +246,7 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
              "Weekly Timetable: Monday to Friday only, one row per time interval. Lunch Break (12:00–13:30) has its own row.",
              "Header rows 1–2 are merged across the full width; every cell below is an ordinary editable cell.",
              "Session Details: use the filter arrows to filter by date, module, lecturer, delivery mode or status; click a Record ID to jump to that cell.",
-             "Module Directory: the modules chosen at export time; every cell is editable and blank rows are provided for extra modules.",
+             "Module Directory: every known module is listed with its assigned lecturer and an Included in this export flag; every cell is editable and blank rows are provided for extra modules.",
              "This workbook is an independent copy. Editing it does not change the live calendar database."]
     for i, text in enumerate(notes, start=1):
         c = readme.cell(i, 1, text)

@@ -13,7 +13,7 @@ from datetime import timedelta
 from io import BytesIO
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A3, landscape
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
@@ -26,7 +26,7 @@ BLUE = colors.HexColor("#1F497D")
 PALE = colors.HexColor("#EAF1F8")
 LINE = colors.HexColor("#9DB2C8")
 
-TIME_SLOTS = [(8, 10), (10, 12), (12, 13.5), (13.5, 15.5), (15.5, 17.5), (17.5, 19), (19, 21)]
+TIME_SLOTS = [(8, 10), (10, 12), (12, 13.5), (13, 14), (13.5, 15.5), (15.5, 17.5), (17.5, 19), (19, 21)]
 
 _CHAR_MAP = {0x2013: "-", 0x2014: "-", 0x2018: "'", 0x2019: "'", 0x201C: '"', 0x201D: '"', 0x00A0: " ", 0x2026: "..."}
 
@@ -41,13 +41,16 @@ def _slot_label(hours_start, hours_end) -> str:
     return f"{clock(int(hours_start * 60))}–{clock(int(hours_end * 60))}"
 
 
-def build_timetable_pdf(collections: dict, selected_modules: list | None = None) -> bytes:
-    sessions = sessions_from_collections(collections)
+def build_timetable_pdf(collections: dict, selected_modules: list | None = None, week_start=None) -> bytes:
+    week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
+    selected_codes = set(selection)
+    sessions = [s for s in sessions_from_collections(collections, week_start=week_start)
+                if s["code"] in selected_codes or str(s["id"]).startswith("recurring-")]
     catalogue = {m["code"]: m for m in module_catalogue(collections)}
 
     out = BytesIO()
-    page = landscape(A4)
+    page = landscape(A3)
     width, height = page
     pdf = canvas.Canvas(out, pagesize=page)
     pdf.setTitle(f"{TITLE} — Editable Timetable")
@@ -57,26 +60,26 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
         pdf.setFillColor(NAVY)
         pdf.rect(0, height - 16 * mm, width, 16 * mm, stroke=0, fill=1)
         pdf.setFillColor(colors.white)
-        pdf.setFont("Helvetica-Bold", 14)
+        pdf.setFont("Helvetica-Bold", 18)
         pdf.drawString(10 * mm, height - 11 * mm, f"{TITLE} — Editable Timetable")
-        pdf.setFont("Helvetica", 9)
+        pdf.setFont("Helvetica-Bold", 11)
         pdf.drawRightString(width - 10 * mm, height - 11 * mm, subtitle)
         return height - 16 * mm
 
     def note(text: str, y: float) -> float:
         pdf.setFillColor(colors.HexColor("#33475B"))
-        pdf.setFont("Helvetica-Oblique", 8)
+        pdf.setFont("Helvetica-Oblique", 10)
         pdf.drawString(10 * mm, y, text)
-        return y - 5 * mm
+        return y - 7 * mm
 
     # ============================ page 1: weekly grid ============================
-    top = banner("Weekly Timetable · week commencing " + WEEK_START.strftime("%d %b %Y") + " · type in any cell")
+    top = banner("Weekly Timetable · week commencing " + week_start.strftime("%d %b %Y") + " · type in any cell")
     top = note("This PDF is a fillable form: click a white cell and type. Save the file to keep your edits.", top)
-    grid_top = top - 4 * mm
-    label_w = 30 * mm
+    grid_top = top - 5 * mm
+    label_w = 36 * mm
     day_w = (width - 20 * mm - label_w) / 5
-    header_h = 9 * mm
-    row_h = min((grid_top - header_h - 15 * mm) / len(TIME_SLOTS), 26 * mm)
+    header_h = 12 * mm
+    row_h = min((grid_top - header_h - 20 * mm) / len(TIME_SLOTS), 28 * mm)
 
     # day headers
     for i, name in enumerate(WEEKDAY_NAMES):
@@ -84,9 +87,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
         pdf.setFillColor(BLUE)
         pdf.rect(x, grid_top - header_h, day_w, header_h, stroke=1, fill=1)
         pdf.setFillColor(colors.white)
-        pdf.setFont("Helvetica-Bold", 9)
+        pdf.setFont("Helvetica-Bold", 12)
         pdf.drawCentredString(x + day_w / 2, grid_top - header_h + 3 * mm,
-                              f"{name}  {(WEEK_START + timedelta(days=i)).strftime('%d %b')}")
+                              f"{name}  {(week_start + timedelta(days=i)).strftime('%d %b')}")
     # time rows + editable session fields
     form = pdf.acroForm
     y = grid_top - header_h
@@ -95,7 +98,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
         pdf.setFillColor(PALE)
         pdf.rect(10 * mm, y, label_w, row_h, stroke=1, fill=1)
         pdf.setFillColor(NAVY)
-        pdf.setFont("Helvetica-Bold", 8)
+        pdf.setFont("Helvetica-Bold", 12)
         label = _slot_label(hs, he)
         pdf.drawCentredString(10 * mm + label_w / 2, y + row_h / 2 - 1 * mm, label)
         if abs(hs - 12) < 0.01:  # lunch row
@@ -104,7 +107,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
                 x = 10 * mm + label_w + i * day_w
                 pdf.rect(x, y, day_w, row_h, stroke=1, fill=1)
             pdf.setFillColor(NAVY)
-            pdf.setFont("Helvetica-Bold", 9)
+            pdf.setFont("Helvetica-Bold", 11)
             pdf.drawCentredString(10 * mm + label_w + day_w * 2.5, y + row_h / 2 - 1 * mm, "Lunch Break")
             continue
         for i, name in enumerate(WEEKDAY_NAMES):
@@ -120,51 +123,66 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
             field_h = row_h - 2 * mm
             form.textfield(name=f"wk_{i}_{int(hs*60)}", tooltip=f"{name} {label}",
                            x=x + 1 * mm, y=y + 1 * mm, width=day_w - 2 * mm, height=field_h,
-                           fontSize=7, value=_ascii(preset), borderWidth=0,
+                           fontSize=10, value=_ascii(preset), borderWidth=0,
                            fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black,
                            fieldFlags='multiline')
     pdf.showPage()
 
-    # ============================ page 2: module directory ============================
-    top = banner("Module Directory · the modules included in this export")
-    top = note("Edit the module details directly in the form fields; use the blank block to add another module.", top)
-    col_x = [10 * mm, 60 * mm, 145 * mm, 215 * mm]
-    col_w = [48 * mm, 83 * mm, 68 * mm, width - 215 * mm - 10 * mm]
-    headers = ["Module code", "Module title", "Facilitator", "Sessions this week"]
-    pdf.setFillColor(BLUE)
-    pdf.rect(10 * mm, top - 9 * mm, width - 20 * mm, 9 * mm, stroke=1, fill=1)
-    pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 10)
-    for x, w, text in zip(col_x, col_w, headers):
-        pdf.drawString(x + 2 * mm, top - 6.5 * mm, text)
-    y = top - 9 * mm
+    # ============================ page 2+: module directory ============================
+    # List every available module, not only the selected ones. The fillable checkbox
+    # records the export selection, and the assigned lecturer is prefilled from the
+    # shared Modules + Facilitators records.
+    module_rows = module_catalogue(collections)
+    module_rows += [{"code": "", "title": "", "facilitator": ""}] * 3
     week_counts = {}
     for s in sessions:
         week_counts[s["code"]] = week_counts.get(s["code"], 0) + 1
-    rows = [catalogue.get(code, {"code": code, "title": "", "facilitator": ""}) for code in selection]
-    rows += [{"code": "", "title": "", "facilitator": ""}] * 3  # blank editable rows
-    for idx, module in enumerate(rows):
-        y -= 12 * mm
-        pdf.setStrokeColor(LINE)
-        for i in range(4):
-            pdf.rect(col_x[i], y, col_w[i], 12 * mm, stroke=1, fill=0)
-        form.textfield(name=f"mod_{idx}_code", tooltip="Module code", x=col_x[0] + 1.5 * mm, y=y + 2 * mm,
-                       width=col_w[0] - 3 * mm, height=8 * mm, fontSize=9, value=_ascii(module.get("code"))[:60],
-                       borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
-        form.textfield(name=f"mod_{idx}_title", tooltip="Module title", x=col_x[1] + 1.5 * mm, y=y + 2 * mm,
-                       width=col_w[1] - 3 * mm, height=8 * mm, fontSize=9, value=_ascii(module.get("title"))[:120],
-                       borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
-        form.textfield(name=f"mod_{idx}_facilitator", tooltip="Facilitator", x=col_x[2] + 1.5 * mm, y=y + 2 * mm,
-                       width=col_w[2] - 3 * mm, height=8 * mm, fontSize=9, value=_ascii(module.get("facilitator"))[:80],
-                       borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
-        pdf.setFillColor(colors.black)
-        pdf.setFont("Helvetica", 10)
-        pdf.drawString(col_x[3] + 2 * mm, y + 4.5 * mm, str(week_counts.get(module.get("code", ""), 0) or 0) if module.get("code") else "")
+    module_headers = ["Module code", "Module title", "Assigned lecturer", "Sessions this week", "Include"]
+    module_x = [10 * mm, 72 * mm, 202 * mm, 300 * mm, 360 * mm]
+    module_w = [57 * mm, 125 * mm, 93 * mm, 57 * mm, 50 * mm]
+    page_capacity = 12
+    for page_start in range(0, len(module_rows), page_capacity):
+        if page_start:
+            pdf.showPage()
+        top = banner("Module Directory · tick the modules included in this export")
+        top = note("Module codes, titles and lecturers are editable. Include checkboxes are fillable; save the completed PDF to keep your choices.", top)
+        header_h = 11 * mm
+        pdf.setFillColor(BLUE)
+        pdf.rect(10 * mm, top - header_h, width - 20 * mm, header_h, stroke=1, fill=1)
+        pdf.setFillColor(colors.white)
+        pdf.setFont("Helvetica-Bold", 11)
+        for x, label in zip(module_x, module_headers):
+            pdf.drawString(x + 1.5 * mm, top - 7.5 * mm, label)
+        y = top - header_h
+        chunk = module_rows[page_start:page_start + page_capacity]
+        for local_idx, module in enumerate(chunk):
+            idx = page_start + local_idx
+            y -= 16 * mm
+            pdf.setStrokeColor(LINE)
+            for col in range(5):
+                pdf.rect(module_x[col], y, module_w[col], 16 * mm, stroke=1, fill=0)
+            for field_name, col, max_chars in (("code", 0, 60), ("title", 1, 120), ("facilitator", 2, 80)):
+                form.textfield(name=f"mod_{idx}_{field_name}", tooltip=module_headers[col],
+                               x=module_x[col] + 1.5 * mm, y=y + 2 * mm,
+                               width=module_w[col] - 3 * mm, height=12 * mm,
+                               fontSize=11, value=_ascii(module.get(field_name))[:max_chars],
+                               borderWidth=0, fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
+            code = module.get("code", "")
+            pdf.setFillColor(colors.black)
+            pdf.setFont("Helvetica-Bold", 11)
+            if code:
+                pdf.drawCentredString(module_x[3] + module_w[3] / 2, y + 6 * mm,
+                                      str(week_counts.get(code, 0)))
+            form.checkbox(name=f"mod_{idx}_include", tooltip="Include " + (code or "additional module"),
+                           x=module_x[4] + 20 * mm, y=y + 4.5 * mm, size=7 * mm,
+                           checked=bool(code and code in selected_codes), buttonStyle="check",
+                           borderWidth=1, borderColor=LINE, fillColor=colors.white,
+                           textColor=NAVY, forceBorder=True)
     pdf.showPage()
 
     # ============================ page 3+: session register ============================
-    reg_cols = [("Date", 26 * mm), ("Time", 24 * mm), ("Module code", 30 * mm), ("Lecturer", 34 * mm),
-                ("Activity / topic", 70 * mm), ("Delivery mode", 26 * mm), ("Status", 24 * mm), ("Notes", 96 * mm)]
+    reg_cols = [("Date", 32 * mm), ("Time", 30 * mm), ("Module code", 38 * mm), ("Lecturer", 48 * mm),
+                ("Activity / topic", 90 * mm), ("Delivery mode", 34 * mm), ("Status", 30 * mm), ("Notes", 100 * mm)]
     reg_x, reg_w, i = [], [], 0
     x = 10 * mm
     for _, w in reg_cols:
@@ -175,23 +193,23 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
         pdf.setFillColor(BLUE)
         pdf.rect(10 * mm, top - 8 * mm, width - 20 * mm, 8 * mm, stroke=1, fill=1)
         pdf.setFillColor(colors.white)
-        pdf.setFont("Helvetica-Bold", 9)
+        pdf.setFont("Helvetica-Bold", 11)
         for cx, cw, (name, _) in zip(reg_x, reg_w, reg_cols):
             pdf.drawString(cx + 1.5 * mm, top - 5.5 * mm, name)
         y = top - 8 * mm
-        page_rows = int((y - 15 * mm) // (10 * mm))
+        page_rows = int((y - 18 * mm) // (12 * mm))
         chunk = sessions[i:i + page_rows]
         for r_idx, s in enumerate(chunk):
-            y -= 10 * mm
+            y -= 12 * mm
             pdf.setStrokeColor(LINE)
             for cidx in range(len(reg_cols)):
-                pdf.rect(reg_x[cidx], y, reg_w[cidx], 10 * mm, stroke=1, fill=0)
+                pdf.rect(reg_x[cidx], y, reg_w[cidx], 12 * mm, stroke=1, fill=0)
             values = [s["date"].strftime("%a %d %b"), f"{s['start']}–{s['end']}", s["code"], s["lecturer"],
                       s["activity"] if s["activity"] != s["code"] else "", s["mode"], s["status"], s["notes"]]
             for cidx, value in enumerate(values):
                 form.textfield(name=f"reg_{i + r_idx}_{cidx}", tooltip=reg_cols[cidx][0],
-                               x=reg_x[cidx] + 1 * mm, y=y + 1.5 * mm, width=reg_w[cidx] - 2 * mm, height=7 * mm,
-                               fontSize=7, value=_ascii(value)[:150], borderWidth=0,
+                               x=reg_x[cidx] + 1 * mm, y=y + 1.5 * mm, width=reg_w[cidx] - 2 * mm, height=9 * mm,
+                               fontSize=9, value=_ascii(value)[:150], borderWidth=0,
                                fillColor=colors.HexColor("#FDFDFD"), textColor=colors.black)
         i += len(chunk)
         if not chunk or i >= len(sessions):

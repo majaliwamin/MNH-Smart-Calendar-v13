@@ -116,8 +116,8 @@ def test_database_migration_flags_but_never_deletes_non_weekday_records():
             second.close()
         finally:
             conn_module.DATABASE_PATH, conn_module.ensure_directories = original
-    assert kept == {"old-sat", "sat-club"}
-    assert {f["id"] for f in flagged} == {"old-sat", "sat-club"}
+    assert kept == {"old-sat"}  # non-weekday timetable cells are retained; extra recurring records are removed
+    assert {f["id"] for f in flagged} == {"old-sat"}
 
 
 def _clean_env(*names):
@@ -172,3 +172,91 @@ def test_service_worker_is_network_first_and_versions_match_everywhere():
     assert f"/js/app.js?v={build}" in html and f"/css/app.css?v={build}" in html
     assert "return cached || update" not in sw          # the old cache-first behaviour must be gone
     assert 'fetch(request, { cache: "no-store" })' in sw
+
+
+def test_only_journal_club_and_seminar_are_recurring_each_week():
+    sessions = schedule.sessions_from_collections(COLLECTIONS)
+    recurring = [s for s in sessions if s["id"].startswith("recurring-")]
+    assert {(s["code"], s["weekday"], s["start"], s["end"]) for s in recurring} == {
+        ("Journal Club", "Tuesday", "13:00", "14:00"),
+        ("Seminar in MNH", "Thursday", "10:00", "12:00"),
+    }
+
+
+def test_export_module_catalogue_resolves_assigned_lecturer():
+    from app.services.excel_export import module_catalogue
+    collections = {
+        "modules": {"PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitatorId": "fac-1"}},
+        "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
+    }
+    module = next(item for item in module_catalogue(collections) if item["code"] == "PNIM-8100")
+    assert module["facilitator"] == "Dr D Mzinza"
+
+
+def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
+    from app.services.pdf_export import build_timetable_pdf
+    collections = {
+        "modules": {"PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitatorId": "fac-1"}},
+        "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
+        "cells": {},
+        "recurring": {},
+    }
+    payload = build_timetable_pdf(collections, ["PNIM-8100"])
+    assert payload.startswith(b"%PDF")
+    assert b"/AcroForm" in payload
+    assert b"mod_0_facilitator" in payload
+    assert b"mod_0_include" in payload and b"mod_2_include" in payload
+    assert b"Dr D Mzinza" in payload
+    assert b"Seminar in MNH" in payload and b"Journal Club" in payload
+    assert b"1190.551" in payload and b"841.889" in payload
+
+
+def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_legacy_seed_cells():
+    from app.database import connection as conn_module
+    original = (conn_module.DATABASE_PATH, conn_module.ensure_directories)
+    with tempfile.TemporaryDirectory() as tmp:
+        conn_module.DATABASE_PATH = Path(tmp) / "calendar.db"
+        conn_module.ensure_directories = lambda: None
+        try:
+            first = conn_module.connect()
+            first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('recurring','extra-club',?,0)",
+                          (json.dumps({"title": "Extra Club", "day": "Wednesday", "time": "12:00–13:00"}),))
+            first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('cells','1_0',?,0)",
+                          (json.dumps({"code": "Biostatistics", "title": "Biostatistics", "timeLabel": "11:00–13:30"}),))
+            first.commit()
+            first.close()
+            second = conn_module.connect()
+            recurring_ids = {row["id"] for row in second.execute("SELECT id FROM docs WHERE col='recurring'")}
+            obsolete_cell = second.execute("SELECT 1 FROM docs WHERE col='cells' AND id='1_0'").fetchone()
+            second.close()
+        finally:
+            conn_module.DATABASE_PATH, conn_module.ensure_directories = original
+    assert recurring_ids == {"journal-club", "seminar-mnh"}
+    assert obsolete_cell is None
+
+
+def test_excel_module_selection_filters_sessions_and_keeps_lecturer_options():
+    import openpyxl
+    payload = build_timetable_workbook(COLLECTIONS, ["PNIM-8100"])
+    workbook = openpyxl.load_workbook(io.BytesIO(payload))
+    details = workbook["Session Details"]
+    detail_text = " ".join(str(cell.value) for row in details.iter_rows() for cell in row if cell.value)
+    assert "PNIM-8100" in detail_text
+    assert "Imaging lab" not in detail_text
+    assert "Journal Club" in detail_text and "Seminar in MNH" in detail_text
+    directory = workbook["Module Directory"]
+    rows = {str(directory.cell(row, 1).value): row for row in range(3, directory.max_row + 1)
+            if directory.cell(row, 1).value}
+    assert "PNIM-8100" in rows and "MIPN 8100" in rows
+    assert directory.cell(rows["PNIM-8100"], 3).value == "Dr D Mzinza"
+    assert directory.cell(rows["PNIM-8100"], 4).value == "Yes"
+    assert directory.cell(rows["MIPN 8100"], 4).value == "No"
+
+
+def test_selected_week_start_is_applied_to_all_recurring_and_saved_sessions():
+    requested_monday = date(2026, 11, 16)
+    sessions = schedule.sessions_from_collections(COLLECTIONS, week_start=requested_monday)
+    dates = {s["code"]: s["date"] for s in sessions}
+    assert dates["Journal Club"] == date(2026, 11, 17)
+    assert dates["Seminar in MNH"] == date(2026, 11, 19)
+    assert dates["PNIM-8100"] == date(2026, 11, 16)
