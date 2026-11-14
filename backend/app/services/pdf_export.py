@@ -41,10 +41,11 @@ def _slot_label(hours_start, hours_end) -> str:
     return f"{clock(int(hours_start * 60))}–{clock(int(hours_end * 60))}"
 
 
-def build_timetable_pdf(collections: dict, selected_modules: list | None = None) -> bytes:
+def build_timetable_pdf(collections: dict, selected_modules: list | None = None, week_start=None) -> bytes:
+    week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
     selected_codes = set(selection)
-    sessions = [s for s in sessions_from_collections(collections)
+    sessions = [s for s in sessions_from_collections(collections, week_start=week_start)
                 if s["code"] in selected_codes or str(s["id"]).startswith("recurring-")]
     catalogue = {m["code"]: m for m in module_catalogue(collections)}
 
@@ -72,7 +73,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
         return y - 7 * mm
 
     # ============================ page 1: weekly grid ============================
-    top = banner("Weekly Timetable · week commencing " + WEEK_START.strftime("%d %b %Y") + " · type in any cell")
+    top = banner("Weekly Timetable · week commencing " + week_start.strftime("%d %b %Y") + " · type in any cell")
     top = note("This PDF is a fillable form: click a white cell and type. Save the file to keep your edits.", top)
     grid_top = top - 5 * mm
     label_w = 36 * mm
@@ -88,7 +89,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None)
         pdf.setFillColor(colors.white)
         pdf.setFont("Helvetica-Bold", 12)
         pdf.drawCentredString(x + day_w / 2, grid_top - header_h + 3 * mm,
-                              f"{name}  {(WEEK_START + timedelta(days=i)).strftime('%d %b')}")
+                              f"{name}  {(week_start + timedelta(days=i)).strftime('%d %b')}")
     # time rows + editable session fields
     form = pdf.acroForm
     y = grid_top - header_h
