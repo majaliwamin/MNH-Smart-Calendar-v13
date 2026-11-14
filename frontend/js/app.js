@@ -772,8 +772,7 @@ function showView(name){
  renderView(name);
 }
 function renderView(name){
- if(name==="dashboard")renderDashboard();
- else if(name==="weekly"){build();renderAnimatedFutureStrip();}
+ if(name==="weekly"){build();renderAnimatedFutureStrip();}
  else if(name==="modules")renderModules();
  else if(name==="analytics")renderAnalytics();
  else if(name==="monthly")renderMonthly();
