@@ -17,7 +17,7 @@ COOKIE_SECURE = os.getenv("MNH_COOKIE_SECURE", "auto").lower()
 # Local development: 127.0.0.1:8000 (set MNH_LAN=1 to expose on the LAN).
 # Hosting platforms (Render etc.) provide PORT and need 0.0.0.0.
 # MNH_HOST / MNH_PORT override everything; PORT is honoured when MNH_PORT is unset.
-BUILD_ID = "2026.11.14-v14.9"
+BUILD_ID = "2026.11.14-v14.10"
 APP_VERSION = "2.1.0"
 
 # ---- WhatsApp reminders ---------------------------------------------------

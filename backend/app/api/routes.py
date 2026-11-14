@@ -4,18 +4,15 @@ import re
 import time
 from datetime import date, timedelta
 from io import BytesIO
-from fastapi import APIRouter, Body, Cookie, HTTPException, Request, Response
+from fastapi import APIRouter, Body, Cookie, HTTPException
 from fastapi.responses import StreamingResponse
-from app.config import COOKIE_SECURE, SESSION_SECONDS
 from app.database.connection import database
-from app.services.authentication import role_for_password, create_session, get_session, delete_session
 from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups
 
 router = APIRouter(prefix="/api")
 ALLOWED_COLLECTIONS = {"cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"}
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. –-]{0,99}$")
-COOKIE_NAME = "mnh_session"
 
 from app.services.schedule import DEFAULT_SESSION_RANGES, WEEK_START, minutes as _minutes_checked, cell_interval as _cell_interval  # noqa: E402
 
@@ -58,15 +55,14 @@ def _validate_restore_intervals(cleaned):
                 raise HTTPException(400, "Backup contains a Tuesday session overlapping a recurring activity.")
 
 
-def current_session(mnh_session: str | None):
-    return get_session(mnh_session)
+def current_session(mnh_session: str | None = None):
+    """Compatibility helper for the password-free shared workspace."""
+    return {"role": "public"}
 
 
-def require_editor(mnh_session: str | None):
-    session = current_session(mnh_session)
-    if not session:
-        raise HTTPException(status_code=401, detail="Please sign in with an authorised editing password.")
-    return session
+def require_editor(mnh_session: str | None = None):
+    """Legacy write guard; shared workspace writes are open."""
+    return {"role": "public"}
 
 
 @router.get("/ping")
@@ -152,12 +148,7 @@ def export_module_list():
 
 
 @router.get("/analytics")
-def analytics(mnh_session: str | None = Cookie(default=None), year: int | None = None):
-    session = current_session(mnh_session)
-    management_roles = {"hod", "coordinator", "executive_dean"}
-    if not session or session.get("role") not in management_roles:
-        raise HTTPException(403, "Analytics are restricted to HOD, coordinator and executive dean accounts.")
-
+def analytics(year: int | None = None):
     with database() as connection:
         rows = connection.execute(
             "SELECT col,id,data FROM docs WHERE col IN ('cells','modules','facilitators','examinations')"
@@ -451,9 +442,8 @@ def backup_json():
 
 
 @router.get("/session")
-def session_status(mnh_session: str | None = Cookie(default=None)):
-    session = current_session(mnh_session)
-    return {"authenticated": bool(session), "role": session["role"] if session else "student"}
+def session_status():
+    return {"authenticated": True, "role": "public"}
 
 
 @router.get("/reminders")
@@ -515,25 +505,14 @@ def get_collection(collection: str):
 
 
 @router.post("/auth")
-def authenticate(request: Request, response: Response, payload: dict = Body(...)):
-    password = str(payload.get("password", ""))[:256]
-    role = role_for_password(password)
-    if not role:
-        time.sleep(0.25)
-        raise HTTPException(401, "Incorrect password. Editing remains locked.")
-    token = create_session(role)
-    forwarded = request.headers.get("x-forwarded-proto", "").lower() if request else ""
-    is_https = request.url.scheme == "https" or forwarded == "https"
-    secure = COOKIE_SECURE == "true" or (COOKIE_SECURE == "auto" and is_https)
-    response.set_cookie(COOKIE_NAME, token, max_age=SESSION_SECONDS, httponly=True,
-                        secure=secure, samesite="none" if secure else "lax", path="/")
-    return {"ok": True, "role": role}
+def authenticate(payload: dict = Body(default={})):
+    """Backward-compatible endpoint; no password session is created."""
+    return {"ok": True, "role": "public"}
 
 
 @router.post("/logout")
-def logout(response: Response, mnh_session: str | None = Cookie(default=None)):
-    delete_session(mnh_session)
-    response.delete_cookie(COOKIE_NAME, path="/", httponly=True, samesite="lax")
+def logout():
+    """Backward-compatible no-op; public access has no session to revoke."""
     return {"ok": True}
 
 

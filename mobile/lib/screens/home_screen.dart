@@ -12,10 +12,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final api = ApiService.instance;
-  bool loading = true, editing = false;
-  bool analyticsUnlocked = false;
+  bool loading = true, editing = true;
+  bool analyticsUnlocked = true;
   String? error;
-  String role = 'student';
+  String role = 'public';
   int selected = 1;
   Map<String, dynamic> health = {}, analytics = {};
   final Map<String, List<dynamic>> records = {
@@ -91,9 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       setState(() {
         health = Map<String, dynamic>.from(results[0] as Map);
-        final session = results[1] as Map<String, dynamic>;
-        editing = session['authenticated'] == true;
-        role = session['role']?.toString() ?? 'student';
+        editing = true;
+        role = 'public';
         history = results[2] as List<dynamic>;
         for (var i = 0; i < names.length; i++) {
           records[names[i]] = results[i + 3] as List<dynamic>;
@@ -126,74 +125,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<bool> signIn(
-      {String title = 'Unlock editing', String action = 'Continue'}) async {
-    final controller = TextEditingController();
-    final password = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-                title: Text(title),
-                content: TextField(
-                    controller: controller,
-                    obscureText: true,
-                    autofocus: true,
-                    decoration:
-                        const InputDecoration(labelText: 'Editing password')),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(context, controller.text),
-                      child: Text(action))
-                ]));
-    if (password == null || password.isEmpty) {
-      return false;
-    }
-    try {
-      await api.login(password);
-      await refresh();
-      return true;
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-      return false;
-    }
-  }
-
   Future<void> openAnalytics() async {
-    if (!['hod', 'coordinator', 'executive_dean'].contains(role)) {
-      if (!await signIn(
-          title: 'Management analytics access', action: 'View analytics')) {
-        return;
-      }
-      if (!['hod', 'coordinator', 'executive_dean'].contains(role)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Analytics are restricted to HOD, coordinator and executive dean accounts.')));
-        }
-        return;
-      }
-    }
-    if (!mounted) {
-      return;
-    }
-    setState(() => analyticsUnlocked = true);
-    setState(() => selected = 9);
+    if (!mounted) return;
+    setState(() {
+      analyticsUnlocked = true;
+      selected = 9;
+    });
     await loadAnalytics();
-  }
-
-  Future<void> signOut() async {
-    await api.logout();
-    if (mounted) {
-      setState(() {
-        analyticsUnlocked = false;
-        selected = 1;
-      });
-    }
-    await refresh();
   }
 
   Future<void> _pickDate(
@@ -642,8 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canAnalytics = analyticsUnlocked &&
-        ['hod', 'coordinator', 'executive_dean'].contains(role);
+    const canAnalytics = true;
     return Scaffold(
       appBar: AppBar(
           titleSpacing: 18,
@@ -727,16 +664,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       .textTheme
                                       .titleLarge
                                       ?.copyWith(fontWeight: FontWeight.w700))),
-                          if (editing)
-                            Chip(
-                                label: Text(_roleLabel(role)),
-                                avatar: const Icon(Icons.verified_user_outlined,
-                                    size: 16))
-                          else
-                            TextButton.icon(
-                                onPressed: signIn,
-                                icon: const Icon(Icons.lock_open, size: 16),
-                                label: const Text('Edit access'))
+                          const Chip(
+                              label: Text('Open access'),
+                              avatar: Icon(Icons.public, size: 16))
                         ]),
                         const SizedBox(height: 8),
                         Wrap(spacing: 8, runSpacing: 8, children: [
@@ -794,12 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 8:
         return _managed('communications');
       case 9:
-        return canAnalytics
-            ? _analytics()
-            : [
-                const Text(
-                    'Analytics are restricted to HOD, Coordinator and Executive Dean accounts.')
-              ];
+        return _analytics();
       case 10:
         return _history();
       case 11:
@@ -1099,20 +1024,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _settings() => [
         _panel('Access and security', [
-          Text(editing
-              ? 'Editing unlocked · ${_roleLabel(role)}'
-              : 'Viewing is open. Editing requires an authorised password.'),
-          const SizedBox(height: 8),
-          if (editing)
-            OutlinedButton.icon(
-                onPressed: signOut,
-                icon: const Icon(Icons.lock_outline),
-                label: const Text('Lock editing'))
-          else
-            FilledButton.icon(
-                onPressed: signIn,
-                icon: const Icon(Icons.lock_open),
-                label: const Text('Unlock editing')),
+          const Text('Open access is enabled. Anyone with the app or website link can view and change shared programme records and view Analytics.'),
         ]),
         _panel('Server and backups', [
           Text('Shared records: ${health['documents'] ?? '—'}'),
@@ -1143,7 +1055,8 @@ class _HomeScreenState extends State<HomeScreen> {
         'lecturer': 'Staff',
         'hod': 'HOD',
         'coordinator': 'Coordinator',
-        'executive_dean': 'Executive Dean'
+        'executive_dean': 'Executive Dean',
+        'public': 'Open access'
       }[value] ??
       value;
   Widget _errorView() => Center(

@@ -162,9 +162,11 @@ def test_ai_disabled_without_key():
 
 
 # ---- API surface -----------------------------------------------------------------------
-def test_comm_endpoints_require_sign_in(client):
-    assert client.get("/api/comm/contacts").status_code == 401
-    assert client.post("/api/comm/drafts", json={"contactIds": [], "body": "x"}).status_code == 401
+def test_comm_endpoints_are_public_without_bypassing_service_safeguards(client):
+    assert client.get("/api/comm/contacts").status_code == 200
+    created = client.post("/api/comm/contacts", json={"name": "Public API contact", "phone": "0881988156"})
+    assert created.status_code == 200
+    assert created.json()["name"] == "Public API contact"
 
 
 def test_contacts_flow_through_the_api(client, editor_session):
