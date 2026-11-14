@@ -53,8 +53,10 @@ def normalise_selection(selected: list | None, collections: dict) -> list:
 
 
 def build_timetable_workbook(collections: dict, selected_modules: list | None = None) -> bytes:
-    sessions = sessions_from_collections(collections)
     selection = normalise_selection(selected_modules, collections)
+    selected_codes = set(selection)
+    sessions = [s for s in sessions_from_collections(collections)
+                if s["code"] in selected_codes or str(s["id"]).startswith("recurring-")]
     thin = Side(style="thin", color=GRID)
     box = Border(left=thin, right=thin, top=thin, bottom=thin)
 
@@ -195,8 +197,8 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
 
-    # ---- Module Directory: the selected modules, editable ----------------------
-    dir_headers = ["Module code", "Module title", "Facilitator", "Included in this export", "Sessions this week"]
+    # ---- Module Directory: every available module with an editable inclusion flag ----
+    dir_headers = ["Module code", "Module title", "Assigned lecturer", "Included in this export", "Sessions this week"]
     directory.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(dir_headers))
     directory["A1"] = "MODULE DIRECTORY — edit freely; add rows for extra modules"
     directory["A1"].font = Font(size=15, bold=True, color=WHITE)
@@ -213,15 +215,17 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     week_counts = {}
     for s in sessions:
         week_counts[s["code"]] = week_counts.get(s["code"], 0) + 1
-    for row_num, code in enumerate(selection, start=3):
-        module = catalogue.get(code, {"code": code, "title": "", "facilitator": ""})
-        values = [module["code"], module["title"], module["facilitator"], "Yes", week_counts.get(code, 0)]
+    all_modules = module_catalogue(collections)
+    for row_num, module in enumerate(all_modules, start=3):
+        code = module["code"]
+        values = [code, module["title"], module["facilitator"],
+                  "Yes" if code in selected_codes else "No", week_counts.get(code, 0)]
         for col, value in enumerate(values, start=1):
             c = directory.cell(row_num, col, value)
             c.alignment = Alignment(vertical="top", wrap_text=True)
             c.border = box
     # three blank editable rows so users can add modules directly in the file
-    for row_num in range(len(selection) + 3, len(selection) + 6):
+    for row_num in range(len(all_modules) + 3, len(all_modules) + 6):
         for col in range(1, len(dir_headers) + 1):
             directory.cell(row_num, col).border = box
     for col, width in enumerate([18, 46, 22, 22, 16], start=1):
@@ -232,7 +236,7 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
              "Weekly Timetable: Monday to Friday only, one row per time interval. Lunch Break (12:00–13:30) has its own row.",
              "Header rows 1–2 are merged across the full width; every cell below is an ordinary editable cell.",
              "Session Details: use the filter arrows to filter by date, module, lecturer, delivery mode or status; click a Record ID to jump to that cell.",
-             "Module Directory: the modules chosen at export time; every cell is editable and blank rows are provided for extra modules.",
+             "Module Directory: every known module is listed with its assigned lecturer and an Included in this export flag; every cell is editable and blank rows are provided for extra modules.",
              "This workbook is an independent copy. Editing it does not change the live calendar database."]
     for i, text in enumerate(notes, start=1):
         c = readme.cell(i, 1, text)
