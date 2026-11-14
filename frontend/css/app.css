@@ -952,3 +952,19 @@ body[data-theme="green"] .activity-marquee-text.tone-2{color:#ffe49b}
 body[data-theme="green"] .activity-marquee-text.tone-3{color:#f4c8f0}
 body[data-theme="green"] .activity-marquee-text.tone-4{color:#d6e0ff}
 body[data-theme="green"] .activity-marquee-text.tone-5{color:#ffd0c8}
+
+
+/* Distinct dashboard masthead: separate the programme title band from the timetable/workspace. */
+.site-header,
+.site-header .hd-band{
+  background:linear-gradient(112deg,#06152b 0%,#0a2343 58%,#102d50 100%)!important;
+  color:#f7f9fc!important;
+}
+.site-header{
+  border-bottom:3px solid #c9a45b!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.22);
+}
+.site-header .hd-main{color:#fff!important}
+.site-header .hd-sub,
+.site-header .hd-today .t2{color:#e3bd70!important}
+.site-header .hd-today{border-left-color:rgba(227,189,112,.65)!important;border-right-color:rgba(227,189,112,.65)!important}
