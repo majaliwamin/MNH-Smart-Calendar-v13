@@ -1010,3 +1010,9 @@ body[data-theme="silver"] #silver-analytics-body .bar{background:#263e58}
 body[data-theme="silver"] #silver-analytics-body .bar i{background:linear-gradient(90deg,#7c9dbb,#62b8e8)}
 body[data-theme="silver"] #silver-analytics-body h2,body[data-theme="silver"] #silver-analytics-body h3{color:#dbeafe}
 body[data-theme="silver"] .view-tabs [data-view="silver-dashboard"].active{background:#cbd5e1;color:#0b1728;border-color:#cbd5e1}
+
+
+/* Compact on-screen timetable rows; PDF export uses its own page-based cell sizing. */
+#view-weekly .time,#view-weekly td{height:56px}
+#view-weekly .cell{min-height:48px;gap:2px}
+#view-weekly .activity{height:46px;min-height:42px;padding:3px 5px}
