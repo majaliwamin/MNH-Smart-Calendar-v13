@@ -85,23 +85,16 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws["A1"].alignment = Alignment(vertical="center", horizontal="left", indent=1)
     ws.row_dimensions[1].height = 30
 
-    ws.merge_cells(f"A2:{last_col}2")
-    ws["A2"] = f"Week commencing Monday, {week_start.strftime('%d %B %Y')} · Monday to Friday"
-    ws["A2"].font = Font(italic=True, size=11, color="33475B")
-    ws["A2"].fill = PatternFill("solid", fgColor=PALE)
-    ws["A2"].alignment = Alignment(vertical="center", horizontal="left", indent=1)
-    ws.row_dimensions[2].height = 20
-
     # ---- Day header row: one ordinary cell per day ---------------------------
     headers = ["Time"] + [f"{name}\n{(week_start + timedelta(days=i)).strftime('%d %b %Y')}"
                           for i, name in enumerate(WEEKDAY_NAMES)]
     for col, text in enumerate(headers, start=1):
-        c = ws.cell(3, col, text)
+        c = ws.cell(2, col, text)
         c.font = Font(bold=True, size=12, color=WHITE)
         c.fill = PatternFill("solid", fgColor=BLUE)
         c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         c.border = box
-    ws.row_dimensions[3].height = 40
+    ws.row_dimensions[2].height = 40
 
     # ---- Session Details (the editable register) ------------------------------
     detail_headers = ["Record ID", "Date", "Weekday", "Start time", "End time", "Module code", "Module title",
@@ -127,7 +120,7 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     plan.insert(index, ("lunch", (LUNCH_START, LUNCH_END)))
 
     weekly_cell_for = {}
-    row = 4
+    row = 3
     for kind, (start, end) in plan:
         time_cell = ws.cell(row, 1)
         time_cell.border = box
@@ -182,12 +175,6 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
             details.cell(number, 1).font = Font(color="0563C1", underline="single")
             details.cell(number, 1).alignment = Alignment(vertical="top", wrap_text=True)
 
-    link = ws.cell(2, 1)
-    link.value = f"{ws['A2'].value}          →  Session Details"
-    link.hyperlink = "#'Session Details'!A3"
-    link.font = Font(italic=True, size=11, color="0563C1", underline="single")
-    link.alignment = Alignment(vertical="center", horizontal="left", indent=1)
-
     details.auto_filter.ref = f"A2:L{max(3, len(sessions) + 2)}"
     for col, width in enumerate([24, 17, 13, 11, 11, 18, 40, 24, 32, 16, 16, 38], start=1):
         details.column_dimensions[get_column_letter(col)].width = width
@@ -195,12 +182,12 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.column_dimensions["A"].width = 18
     for col in range(2, COLUMNS + 1):
         ws.column_dimensions[get_column_letter(col)].width = 28
-    ws.freeze_panes = "B4"
+    ws.freeze_panes = "B3"
 
     # A normal spreadsheet: gridlines on, print titles repeat the header band.
     ws.sheet_view.showGridLines = True
     details.sheet_view.showGridLines = True
-    ws.print_title_rows = "1:3"
+    ws.print_title_rows = "1:2"
     ws.page_setup.orientation = "landscape"
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth = 1
