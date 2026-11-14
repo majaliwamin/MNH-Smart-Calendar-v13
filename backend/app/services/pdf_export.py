@@ -257,9 +257,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             field(f"mod_{idx}_code", "Module code", 14 * mm, top - 19 * mm, 55 * mm, 7 * mm,
                   module.get("code", ""), font_size=16, fill=WHITE)
             field(f"mod_{idx}_title", "Module title", 73 * mm, top - 19 * mm, 112 * mm, 7 * mm,
-                  module.get("title", ""), font_size=13, fill=WHITE)
+                  module.get("title", ""), font_size=16, fill=WHITE)
             field(f"mod_{idx}_facilitator", "Assigned lecturer", 14 * mm, top - 32 * mm,
-                  171 * mm, 8 * mm, module.get("facilitator", ""), font_size=13, fill=WHITE)
+                  171 * mm, 8 * mm, module.get("facilitator", ""), font_size=16, fill=WHITE)
             form.checkbox(
                 name=f"mod_{idx}_include", tooltip="Include " + (module.get("code") or "additional module"),
                 x=width - 24 * mm, y=top - 10 * mm, size=5 * mm,
@@ -303,7 +303,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 field(
                     f"reg_{idx}_{field_key}", label,
                     x_mm * mm, y_mm * mm, width_mm * mm, 7.5 * mm,
-                    value, font_size=13,
+                    value, font_size=16,
                 )
 
             register_field(
