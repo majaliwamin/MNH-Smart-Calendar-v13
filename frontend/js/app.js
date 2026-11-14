@@ -733,7 +733,16 @@ function applyWeekView(keepStatus){
  renderView(currentView);
  refreshLiveTimetable();
 }
-function renderWeekNav(){
+function renderCurrentDayBadge(){
+  const target=document.getElementById("current-day-date");
+  if(!target)return;
+  const today=new Date();
+  target.textContent=new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",timeZone:"Africa/Blantyre"}).format(today);
+  const fullDate=new Intl.DateTimeFormat("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"Africa/Blantyre"}).format(today);
+  const tab=document.querySelector(".weekly-date-tab");
+  if(tab){tab.setAttribute("aria-label","Weekly timetable — "+fullDate);tab.title="Weekly timetable · "+fullDate;}
+ }
+ function renderWeekNav(){
  const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
  if(!prev||!next||!now)return;
  const label=WK.label(weekOffset),range=WK.range(weekOffset);
