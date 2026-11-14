@@ -1032,3 +1032,80 @@ body[data-theme="silver"] .view-tabs [data-view="silver-dashboard"].active{backg
 .theme-picker label{display:block;margin:0 0 7px;color:var(--text,#f3f4f6);font:700 12px Arial,Helvetica,sans-serif}
 .theme-picker select{width:100%;min-height:38px;padding:8px 30px 8px 10px;border:1px solid var(--line,#304363);border-radius:8px;background:var(--field,#071426);color:var(--text,#f3f4f6);font:600 13px Arial,Helvetica,sans-serif}
 @media(max-width:620px){.hd-right{gap:clamp(7px,2vw,12px)}.hd-theme-btn{width:36px;height:36px;padding:8px}}
+
+
+/* Header hierarchy: programme title, today's date, then selected academic week */
+.hd-band{position:relative;z-index:2}
+.hd-title{display:block;min-width:0}
+.hd-main{display:block;max-width:100%;overflow-wrap:anywhere}
+.hd-today{display:none!important}
+.view-tabs{
+ display:flex;
+ flex-direction:column;
+ align-items:flex-start;
+ justify-content:flex-start;
+ gap:3px;
+ padding:8px clamp(14px,2vw,34px) 10px;
+ position:relative;
+ z-index:1;
+}
+.weekly-date-tab{
+ display:inline-flex;
+ align-items:center;
+ justify-content:flex-start;
+ gap:8px;
+ min-height:30px;
+ height:auto;
+ padding:2px 0;
+ margin:0;
+ border:0!important;
+ border-radius:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ color:var(--text);
+ font:700 calc(14px * var(--text-scale))/1.2 Arial,Helvetica,sans-serif;
+}
+.weekly-date-tab:hover,.weekly-date-tab.active{
+ background:transparent!important;
+ border:0!important;
+ box-shadow:none!important;
+ color:var(--text);
+}
+.weekly-date-icon{
+ display:block;
+ position:static;
+ width:20px;
+ height:20px;
+ flex:0 0 20px;
+ margin:0;
+}
+.weekly-date-tab #current-day-date{display:inline-block;line-height:1.2}
+.week-nav{
+ display:flex;
+ align-items:center;
+ justify-content:flex-start;
+ gap:4px;
+ width:auto;
+ max-width:100%;
+ margin:0;
+}
+.week-nav .view-tab{
+ min-height:30px;
+ height:auto;
+ padding:3px 8px;
+ border-radius:5px;
+}
+.week-nav .week-step{min-width:28px;width:28px;padding:3px;font-size:20px}
+.week-nav .week-now{justify-content:flex-start;min-width:0;padding:4px 8px}
+.week-nav .week-now .week-range{
+ display:block;
+ font:600 calc(13px * var(--text-scale))/1.2 Arial,Helvetica,sans-serif;
+ white-space:nowrap;
+}
+@media(max-width:520px){
+ .view-tabs{padding:7px 12px 9px;gap:2px}
+ .weekly-date-tab{font-size:calc(13px * var(--text-scale))}
+ .week-nav{width:auto;max-width:100%;margin:0;gap:3px}
+ .week-nav .week-now{padding:4px 7px}
+ .week-nav .week-now .week-range{font-size:calc(12px * var(--text-scale))}
+}
