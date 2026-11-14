@@ -2034,7 +2034,7 @@ load();initCloud();initAlarms();initHeader();
   actions.append(cancel,go);overlay.hidden=false;
   const rows=await loadModules();body.textContent="";
   rows.forEach(([code,title])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=title?code+" — "+title:code;label.append(box,copy);body.append(label);});
-  go.disabled=!selected.size;body.addEventListener("change",()=>{go.disabled=!selected.size;},{once:false});
+  go.disabled=!selected.size;body.onchange=()=>{go.disabled=!selected.size;};
   go.onclick=async()=>{if(!selected.size)return;overlay.hidden=true;try{await action([...selected]);}catch(error){status(error.message||"The download could not be created.","error");}};
  }
  async function saveServerExport(path,extension,modules){
@@ -2048,7 +2048,7 @@ load();initCloud();initAlarms();initHeader();
  }
  function chooseImageFormat(){
   if(!formatSheet)formatSheet=sheet("Image format","Choose the image file type for your high-resolution timetable.",[]);
-  const {overlay,body,actions}=formatSheet;body.textContent="";
+  const {overlay,body,actions}=formatSheet;body.textContent="";actions.textContent="";
   [["PNG","image/png"],["JPEG","image/jpeg"]].forEach(([label,mime])=>{const b=document.createElement("button");b.type="button";b.textContent="Download "+label;b.onclick=()=>{overlay.hidden=true;window.downloadTimetableImage(mime);};actions.appendChild(b);});
   const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";cancel.onclick=()=>overlay.hidden=true;actions.appendChild(cancel);overlay.hidden=false;
  }
