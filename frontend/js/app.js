@@ -925,7 +925,7 @@ async function renderAnimatedFutureStrip(){
   let dragX=0,dragOffset=0,dragging=false;
   host.addEventListener("pointerdown",event=>{
    if(event.pointerType==="mouse"&&event.button!==0)return;
-   dragging=true;dragX=event.clientX;dragOffset=0;
+   dragging=true;dragX=event.clientX;dragOffset=Number(track.style.getPropertyValue("--drag-offset").replace("px",""))||0;
    track.style.animationPlayState="paused";
    host.classList.add("is-dragging");
    host.setPointerCapture(event.pointerId);
@@ -939,7 +939,6 @@ async function renderAnimatedFutureStrip(){
    if(!dragging)return;
    dragging=false;host.classList.remove("is-dragging");
    track.style.animationPlayState="";
-   track.style.setProperty("--drag-offset","0px");
    if(event&&host.hasPointerCapture(event.pointerId))host.releasePointerCapture(event.pointerId);
   };
   host.addEventListener("pointerup",stopDrag);
