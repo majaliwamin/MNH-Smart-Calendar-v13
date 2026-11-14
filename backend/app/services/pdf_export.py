@@ -21,6 +21,8 @@ from app.services.schedule import WEEK_START, WEEKDAY_NAMES, clock, overlaps_lun
 from app.services.excel_export import module_catalogue, normalise_selection
 
 TITLE = "PhD in Maternal and Neonatal Health : 3rd Block"
+APP_NAME = "MNH Smart Calendar"
+APP_SUBTITLE = "Academic Calendar"
 NAVY = colors.HexColor("#102B4E")
 BLUE = colors.HexColor("#1F497D")
 PALE = colors.HexColor("#EAF1F8")
@@ -53,18 +55,24 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     page = landscape(A3)
     width, height = page
     pdf = canvas.Canvas(out, pagesize=page)
-    pdf.setTitle(f"{TITLE} — Editable Timetable")
-    pdf.setAuthor("MNH Smart Calendar")
+    pdf.setTitle(f"{TITLE} — {APP_SUBTITLE} — Editable Timetable")
+    pdf.setAuthor(APP_NAME)
+    pdf.setSubject(f"{TITLE} | {APP_SUBTITLE}")
+    pdf.setKeywords("Maternal and Neonatal Health, PhD, academic calendar, timetable, MNH Smart Calendar")
 
     def banner(subtitle: str) -> float:
+        # Repeat the complete programme title and app identity on every exported page.
         pdf.setFillColor(NAVY)
-        pdf.rect(0, height - 16 * mm, width, 16 * mm, stroke=0, fill=1)
+        pdf.rect(0, height - 22 * mm, width, 22 * mm, stroke=0, fill=1)
         pdf.setFillColor(colors.white)
-        pdf.setFont("Helvetica-Bold", 18)
-        pdf.drawString(10 * mm, height - 11 * mm, f"{TITLE} — Editable Timetable")
-        pdf.setFont("Helvetica-Bold", 11)
-        pdf.drawRightString(width - 10 * mm, height - 11 * mm, subtitle)
-        return height - 16 * mm
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(10 * mm, height - 8 * mm, TITLE)
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawRightString(width - 10 * mm, height - 8 * mm, APP_NAME)
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(10 * mm, height - 16 * mm, APP_SUBTITLE)
+        pdf.drawRightString(width - 10 * mm, height - 16 * mm, subtitle)
+        return height - 22 * mm
 
     def note(text: str, y: float) -> float:
         pdf.setFillColor(colors.HexColor("#33475B"))
