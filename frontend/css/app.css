@@ -896,3 +896,23 @@ tbody tr.current-time-row td.current-slot .activity{border-color:var(--gold)!imp
 .dl-actions button{padding:10px 15px;border:1px solid var(--line,#304363);border-radius:9px;background:transparent;color:var(--text,#f3f4f6);font:600 13px Arial,sans-serif;cursor:pointer}
 .dl-actions button.primary{background:var(--gold,#ecbb4c);color:#07172b;border-color:var(--gold,#ecbb4c)}
 @media(max-width:620px){.hd-dlbtn{width:34px;height:36px;padding:6px}.dl-menu{right:-42px;min-width:205px}}
+
+
+/* Dashboard future-event ticker: continuously travels from left to right. */
+.activity-marquee-shell{margin:14px 0 0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:0 5px 18px #0003}
+.activity-marquee{width:100%;overflow:hidden;position:relative;padding:10px 0}
+.activity-marquee-track{display:flex;align-items:stretch;gap:12px;width:max-content;min-width:100%;animation:activity-flow-right 42s linear infinite;will-change:transform}
+.activity-marquee:hover .activity-marquee-track,.activity-marquee:focus-within .activity-marquee-track{animation-play-state:paused}
+.activity-marquee-item{display:flex;flex:0 0 260px;min-height:76px;flex-direction:column;justify-content:center;gap:4px;padding:10px 14px;border:1px solid currentColor;border-left-width:4px;border-radius:9px;color:#f7f8fa;box-shadow:0 3px 10px #0002}
+.activity-marquee-item .marquee-when{font:600 10px/1.2 Arial,sans-serif;opacity:.9;letter-spacing:.035em}
+.activity-marquee-item .marquee-title{font:700 14px/1.2 Arial,sans-serif}
+.activity-marquee-item .marquee-detail{font:400 11px/1.25 Arial,sans-serif;opacity:.9}
+.activity-marquee-item.tone-0{background:#244d70;color:#fff;border-color:#5b91bd}
+.activity-marquee-item.tone-1{background:#315d4c;color:#fff;border-color:#73ad8b}
+.activity-marquee-item.tone-2{background:#715629;color:#fff;border-color:#d3b36c}
+.activity-marquee-item.tone-3{background:#62415f;color:#fff;border-color:#b58bb1}
+.activity-marquee-item.tone-4{background:#3e526c;color:#fff;border-color:#91a8c7}
+.activity-marquee-item.tone-5{background:#684747;color:#fff;border-color:#c48a8a}
+.activity-marquee-empty{display:block;padding:8px 16px;color:var(--muted);font:600 13px Arial,sans-serif}
+@keyframes activity-flow-right{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.activity-marquee-track{animation:none;transform:none;flex-wrap:wrap;width:100%}.activity-marquee-item{flex-basis:min(260px,100%)}}
