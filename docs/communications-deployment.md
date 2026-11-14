@@ -184,3 +184,23 @@ override consent — the code has no path for that.
 - Contacts and call metadata stay in the same SQLite database and backups as
   the rest of the app; the do-not-contact list is checked on every send and
   every call regardless of consent flags.
+
+
+---
+
+## 8. Baileys bridge on a Linux VPS (unofficial)
+
+The repository now includes `whatsapp-bridge/`, a standalone Node.js service that uses the open-source Baileys WhatsApp Web client. It can run on the existing Asterisk VPS or a separate Linux VPS. It does not replace the FastAPI communications logic.
+
+1. Follow `whatsapp-bridge/README.md` to install the service under systemd and pair a dedicated WhatsApp number by scanning the QR code shown in the VPS journal.
+2. Keep the Node service bound to `127.0.0.1:3000`. Do not open port 3000 to the public internet.
+3. If FastAPI remains on Render, expose the bridge through an authenticated HTTPS reverse proxy or Cloudflare Tunnel hostname routed to `http://localhost:3000`. Do not rely on a private VPS address unless the Render service actually has a private route to it.
+4. Set on the FastAPI host:
+   - `MNH_WA_BRIDGE_URL=https://bridge.your-domain.example`
+   - `MNH_WA_BRIDGE_STYLE=generic`
+   - `MNH_WA_BRIDGE_TOKEN` to the same strong secret used by the bridge.
+5. Verify `GET /status` with the bearer token and send a test only to the dedicated account owner's number.
+
+Baileys is **not** an official WhatsApp API and does not make automated messaging authorised. Account restrictions and protocol changes remain possible. The service serializes sends with a conservative delay; that is not a guarantee against restrictions. Obtain explicit consent, honour opt-outs and the do-not-contact list, avoid bulk messaging, and stop immediately if WhatsApp shows an account warning.
+
+The reminder worker now matches configured reminder numbers against the contact directory and checks WhatsApp consent, opt-out, do-not-contact and the communications emergency stop before sending. A test message is also blocked unless its destination is a consented directory contact.
