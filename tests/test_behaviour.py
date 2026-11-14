@@ -205,7 +205,9 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
     assert payload.startswith(b"%PDF")
     assert b"/AcroForm" in payload
     assert b"mod_0_facilitator" in payload
+    assert b"mod_0_include" in payload and b"mod_2_include" in payload
     assert b"Dr D Mzinza" in payload
+    assert b"Seminar in MNH" in payload and b"Journal Club" in payload
     assert b"1190.551" in payload and b"841.889" in payload
 
 
@@ -231,3 +233,21 @@ def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_leg
             conn_module.DATABASE_PATH, conn_module.ensure_directories = original
     assert recurring_ids == {"journal-club", "seminar-mnh"}
     assert obsolete_cell is None
+
+
+def test_excel_module_selection_filters_sessions_and_keeps_lecturer_options():
+    import openpyxl
+    payload = build_timetable_workbook(COLLECTIONS, ["PNIM-8100"])
+    workbook = openpyxl.load_workbook(io.BytesIO(payload))
+    details = workbook["Session Details"]
+    detail_text = " ".join(str(cell.value) for row in details.iter_rows() for cell in row if cell.value)
+    assert "PNIM-8100" in detail_text
+    assert "Imaging lab" not in detail_text
+    assert "Journal Club" in detail_text and "Seminar in MNH" in detail_text
+    directory = workbook["Module Directory"]
+    rows = {str(directory.cell(row, 1).value): row for row in range(3, directory.max_row + 1)
+            if directory.cell(row, 1).value}
+    assert "PNIM-8100" in rows and "MIPN 8100" in rows
+    assert directory.cell(rows["PNIM-8100"], 3).value == "Dr D Mzinza"
+    assert directory.cell(rows["PNIM-8100"], 4).value == "Yes"
+    assert directory.cell(rows["MIPN 8100"], 4).value == "No"
