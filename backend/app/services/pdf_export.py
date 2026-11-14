@@ -279,7 +279,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         row_top = header_bottom - slot_index * row_h
         row_y = row_top - row_h
         is_lunch = abs(start_hour - 12) < .01
-        row_bg = colors.HexColor("#F8EFD9") if is_lunch else (WHITE if slot_index % 2 == 0 else PALE)
+        row_bg = LUNCH_BG if is_lunch else (PAGE if slot_index % 2 == 0 else PALE)
         pdf.setFillColor(row_bg)
         pdf.rect(table_x, row_y, table_w, row_h, stroke=0, fill=1)
         pdf.setFillColor(colors.HexColor("#DCE4EE"))
@@ -361,9 +361,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             field(f"mod_{idx}_code", "Module code", 14 * mm, top - 19 * mm, 55 * mm, 7 * mm,
                   module.get("code", ""), font_size=16, fill=FIELD)
             field(f"mod_{idx}_title", "Module title", 73 * mm, top - 19 * mm, 112 * mm, 7 * mm,
-                  module.get("title", ""), font_size=16, fill=WHITE)
+                  module.get("title", ""), font_size=16, fill=FIELD)
             field(f"mod_{idx}_facilitator", "Assigned lecturer", 14 * mm, top - 32 * mm,
-                  171 * mm, 8 * mm, module.get("facilitator", ""), font_size=16, fill=WHITE)
+                  171 * mm, 8 * mm, module.get("facilitator", ""), font_size=16, fill=FIELD)
             form.checkbox(
                 name=f"mod_{idx}_include", tooltip="Include " + (module.get("code") or "additional module"),
                 x=width - 24 * mm, y=top - 10 * mm, size=5 * mm,
