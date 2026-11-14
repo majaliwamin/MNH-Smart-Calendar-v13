@@ -147,8 +147,9 @@ function openModuleDialog(dayIndex,startTime,entry){
 }
 function showSessionDetails(entry){
  if(!entry)return;
- const detailDate=WK.dateList(weekOffset)[entry.dayIndex];
- const dateText=`${days[entry.dayIndex]} ${dates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
+ const detailWeekOffset=Number.isInteger(entry.weekOffset)?entry.weekOffset:weekOffset;
+ const detailDates=WK.dateLabels(detailWeekOffset),detailDate=WK.dateList(detailWeekOffset)[entry.dayIndex];
+ const dateText=`${days[entry.dayIndex]} ${detailDates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
@@ -581,7 +582,7 @@ function ensureAudio(){
   return audioCtx;
  }catch(e){return null;}
 }
-function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries().map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start};});}
+function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries().map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
@@ -674,7 +675,7 @@ function todayIndexFor(offset){return WK.currentDayIndex(offset==null?weekOffset
 function todayIndex(){return todayIndexFor(WK.currentOffset());}
 function dayEntries(c,offset){
  const ws=offset==null?WEEK_START:WK.startParts(offset);
- return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const [eh,em]=x.endTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,h,m);const end=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,eh,em);return {...x,start,end};});
+ return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const [eh,em]=x.endTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,h,m);const end=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,eh,em);return {...x,start,end,weekOffset:offset==null?weekOffset:offset};});
 }
 function allEntries(){return days.flatMap((d,c)=>dayEntries(c));}
 // ---- header ----
