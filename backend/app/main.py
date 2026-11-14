@@ -114,6 +114,13 @@ app.include_router(comm_router)
 async def index():
     return FileResponse(FRONTEND_DIR / "index.html")
 
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.svg", include_in_schema=False)
+async def favicon():
+    # Serve the same vector icon for the conventional browser request and explicit SVG link.
+    return FileResponse(FRONTEND_DIR / "favicon.svg", media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=86400"})
+
+
 app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
 
