@@ -79,7 +79,7 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.row_dimensions[1].height = 30
 
     ws.merge_cells(f"A2:{last_col}2")
-    ws["A2"] = "Week commencing Monday, 9 November 2026 · Monday to Friday"
+    ws["A2"] = f"Week commencing Monday, {week_start.strftime('%d %B %Y')} · Monday to Friday"
     ws["A2"].font = Font(italic=True, size=11, color="33475B")
     ws["A2"].fill = PatternFill("solid", fgColor=PALE)
     ws["A2"].alignment = Alignment(vertical="center", horizontal="left", indent=1)
