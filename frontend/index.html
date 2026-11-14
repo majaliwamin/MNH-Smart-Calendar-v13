@@ -25,7 +25,7 @@
       var savedState = JSON.parse(localStorage.getItem("phd_mnh_weekly_calendar_v3") || "null");
       savedTheme = savedState && savedState.theme;
     }
-    if (["dark", "white", "violet", "green"].indexOf(savedTheme) !== -1) {
+    if (["dark", "white", "violet", "green", "silver"].indexOf(savedTheme) !== -1) {
       document.body.dataset.theme = savedTheme;
     }
   } catch (error) { /* use the default theme if browser storage is unavailable */ }
@@ -41,11 +41,11 @@
   </div>
   <div class="hd-right">
    <div class="hd-today">
-    <svg class="ic ic-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="#ecbb4c"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><text id="hd-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="#6b4a12"></text></svg>
+    <svg class="ic ic-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="var(--gold)"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><text id="hd-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="var(--on-accent)"></text></svg>
     <div class="hd-today-text"><span class="t1">Today</span><span class="t2" id="hd-date"></span></div>
    </div>
    <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
-    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ecbb4c" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
    </button>
    <div class="hd-dl" id="hd-dl">
@@ -82,7 +82,7 @@
     <button type="button" id="print"></button><button type="button" id="theme-btn"></button><button type="button" id="alarms"></button>
    </div>
    <label for="theme" class="theme-label">Theme</label><select id="theme" aria-label="Choose dashboard theme">
-    <option value="dark">Dark &mdash; white on black</option><option value="white">White &mdash; black on white</option><option value="violet">Deep violet-blue &mdash; white on violet</option><option value="green">Sparkling green &mdash; white on green</option>
+    <option value="dark">Dark &mdash; white on black</option><option value="white">White &mdash; black on white</option><option value="violet">Deep violet-blue &mdash; white on violet</option><option value="green">Sparkling green &mdash; white on green</option><option value="silver">Midnight Silver &mdash; navy, silver &amp; cool blue</option>
    </select>
    <input type="file" id="import-file" accept="application/json,.json" hidden>
   </div>
@@ -231,7 +231,7 @@
 
 <div class="colour-dialog" id="call-dialog" aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="call-name">
  <div class="call-card">
-  <div class="call-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="58" height="58" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="#ecbb4c"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="#ecbb4c" stroke="#031124" stroke-width="1"/><text id="call-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="#6b4a12"></text></svg></div>
+  <div class="call-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="58" height="58" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="var(--gold)"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><text id="call-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="var(--on-accent)"></text></svg></div>
   <div class="call-sub">Incoming reminder</div>
   <div class="call-name" id="call-name"></div>
   <div class="call-when" id="call-when"></div>
