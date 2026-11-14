@@ -720,7 +720,7 @@ function refreshHeader(){
 }
 // ---- academic week navigation (one control beside Analytics) ----
 function setWeek(offset){
- weekOffset=Math.max(0,Math.trunc(Number(offset)||0));
+ weekOffset=Math.min(14,Math.max(-1,Math.trunc(Number(offset)||0)));
  applyWeekView(false);
 }
 function applyWeekView(keepStatus){
@@ -751,9 +751,9 @@ function renderCurrentDayBadge(){
   now.title=label+" · "+range+" — return to the current week";
   now.setAttribute("aria-label",label+", "+range+". Return to the current week");
  now.dataset.default=String(weekOffset===WK.currentOffset());
- prev.disabled=weekOffset<=0;
- prev.setAttribute("aria-disabled",String(weekOffset<=0));
- next.disabled=false;
+ prev.disabled=weekOffset<=-1;
+ prev.setAttribute("aria-disabled",String(weekOffset<=-1));
+ next.disabled=weekOffset>=14;
 }
 function initWeekNav(){
  const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");

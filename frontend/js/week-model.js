@@ -1,6 +1,6 @@
 /*!
  * MNH academic week model — Malawi-local date and time is the single source of truth.
- * Teaching weeks remain Monday–Friday only, starting Monday 9 November 2026.
+ * Orientation is 31 August–4 September; numbered teaching weeks run Monday–Friday from 7 September through 18 December 2026.
  * The displayed academic week follows the real current week and advances each Monday in Malawi.
  */
 (function (root, factory) {
@@ -11,7 +11,7 @@
   "use strict";
   const TIME_ZONE = "Africa/Blantyre";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const FIRST_MONDAY = new Date(Date.UTC(2026, 10, 9));
+  const FIRST_MONDAY = new Date(Date.UTC(2026, 8, 7));
   const DAY_MS = 24 * 60 * 60 * 1000;
   const WEEKDAYS = 5;
   const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -67,7 +67,7 @@
   }
   function label(offset) {
     const value = normalise(offset);
-    return value === currentOffset() ? "This week" : "Week " + value;
+    return value === -1 ? "Orientation Week" : "Week " + (value + 1);
   }
   function range(offset) {
     const days = dateList(offset), a = days[0], b = days[days.length - 1];
