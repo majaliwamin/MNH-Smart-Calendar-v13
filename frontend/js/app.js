@@ -368,21 +368,9 @@ async function downloadPdf(){
   const rows=[...tbody.querySelectorAll("tr")],nr=rows.length,nc=days.length;
   const cw=(PW-2*M-cw0)/nc,rh=(PH-top-M-foot-hh)/nr;
   const head=[...thead.querySelectorAll("th")];
-  const dayPage=c=>2+c;
-  // header row
-  const hBg=rgb(cs(head[1],"backgroundColor"))||[14,37,71];
-  pdf.setDrawColor(...line);pdf.setLineWidth(.4);
-  head.forEach((th,i)=>{
-   const x=i===0?M:M+cw0+(i-1)*cw,w=i===0?cw0:cw;
-   pdf.setFillColor(...hBg);pdf.rect(x,top,w,hh,"FD");
-   if(i===0){pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});}
-   else{
-    const c=i-1;pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...inkOn(hBg));txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
-    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));txt(dates[c],x+w/2,top+hh/2+4,{align:"center"});
-    try{pdf.link(x,top,w,hh,{pageNumber:dayPage(c)});}catch(e){}
-   }
-  });
-  // rows
+  // Keep Monday–Friday together in one timetable header row on the first page.
+  // The weekday columns are already drawn above; do not split them into separate pages.
+  // Rows are allocated the full printable page height for taller, more readable export cells.
   let editable=true;
   // Cells are <button class="activity"> in this build; keep the legacy textarea path for safety.
   const cellLabel=area=>{
@@ -402,7 +390,6 @@ async function downloadPdf(){
    const timeLines=pdf.splitTextToSize(timeText,cw0-1.6);
    timeLines.forEach((ln,i)=>txt(ln,M+cw0/2,y+rh/2+1-(timeLines.length-1)*1.6+i*3.2,{align:"center"}));
    if(tr.classList.contains("lunch-row")){
-    // One merged band across every weekday column, exactly as it appears on screen.
     const base=rgb(cs(cells[1],"backgroundColor"))||hBg,fg=rgb(cs(cells[1],"color"))||white;
     pdf.setFillColor(...base);pdf.setDrawColor(...line);pdf.rect(M+cw0,y,nc*cw,rh,"FD");
     pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?10:12);pdf.setTextColor(...fg);
@@ -419,11 +406,8 @@ async function downloadPdf(){
     const value=cellLabel(area);
     const size=value.length>(portrait?30:44)?(portrait?8:9.5):(portrait?9.5:11);
     const cellInk=inkOn(fill);
-    // Always draw the label as real text. jsPDF writes only form-field values, and most mobile
-    // readers, printers and PDF renderers do not regenerate field appearances, so a fields-only
-    // export showed empty coloured boxes. The editable field is added on top of the drawn text.
     if(value){
-     pdf.setFont("helvetica","normal");pdf.setFontSize(size);pdf.setTextColor(...(fg&&((0.299*fg[0]+0.587*fg[1]+0.114*fg[2])>40||fill[0]+fill[1]+fill[2]>430)?fg:cellInk));
+     pdf.setFont("helvetica","bold");pdf.setFontSize(size);pdf.setTextColor(...(fg&&((0.299*fg[0]+0.587*fg[1]+0.114*fg[2])>40||fill[0]+fill[1]+fill[2]>430)?fg:cellInk));
      const ls=pdf.splitTextToSize(value,iw-1.6);txt(ls,x+cw/2,y+rh/2-(ls.length-1)*1.6,{align:"center",baseline:"middle"});
     }
     if(editable&&!value){
@@ -437,30 +421,9 @@ async function downloadPdf(){
     }
    });
   });
-  // footer
   pdf.setFont("helvetica","normal");pdf.setFontSize(9);pdf.setTextColor(...cyan);
   txt("Penrose ScholarMw · Your academic partner for excellence",M,PH-M+1);
-  txt("Tap a day to open its page · empty cells can be filled in",PW-M,PH-M+1,{align:"right"});
-  // one page per day (navigable)
-  days.forEach((dn,c)=>{
-   pdf.addPage();bg();
-   pdf.setFont("helvetica","bold");pdf.setFontSize(17);pdf.setTextColor(...white);txt(dn+" "+dates[c],M,M+7);
-   pdf.setFontSize(10.5);pdf.setFont("helvetica","normal");pdf.setTextColor(...cyan);
-   pdf.textWithLink("< Dashboard",M,M+13,{pageNumber:1});
-   if(c>0)pdf.textWithLink("< "+days[c-1],PW/2-20,M+13,{pageNumber:dayPage(c-1)});
-   if(c<nc-1)pdf.textWithLink(days[c+1]+" >",PW-M-22,M+13,{pageNumber:dayPage(c+1)});
-   let y=M+24;const list=dayEntries(c);
-   if(!list.length){pdf.setTextColor(...white);txt("Nothing scheduled.",M,y);}
-   list.forEach(x=>{
-    const fac=(modules[x.label]&&modules[x.label].facilitator)||"";
-    pdf.setFillColor(14,37,71);pdf.setDrawColor(...line);pdf.roundedRect(M,y-5,PW-2*M,16,2,2,"FD");
-    pdf.setFont("helvetica","bold");pdf.setFontSize(10.5);pdf.setTextColor(...white);txt(x.timeLabel+"   "+x.label,M+3,y+.5);
-    pdf.setFont("helvetica","normal");pdf.setFontSize(8.5);pdf.setTextColor(...cyan);
-    txt([x.sub,fac&&fac!=="Not specified"?"Facilitator: "+fac:""].filter(Boolean).join(" · "),M+3,y+6);
-    y+=19;
-   });
-  });
-  try{pdf.outline.add(null,"Weekly Schedule",{pageNumber:1});days.forEach((dn,c)=>pdf.outline.add(null,dn+" "+dates[c],{pageNumber:dayPage(c)}));}catch(e){}
+  txt("Monday–Friday timetable · Fill empty cells to complete the schedule",PW-M,PH-M+1,{align:"right"});
   pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
   const blob=pdf.output("blob"),name="MNH-PhD-Timetable-"+WK.isoMonday(weekOffset)+"-"+(weekOffset===0?"this-week":"week-"+weekOffset)+".pdf";
   const url=URL.createObjectURL(blob),l=document.createElement("a");l.href=url;l.download=name;l.click();setTimeout(()=>URL.revokeObjectURL(url),4000);statusEl.className="status ok";statusEl.textContent="PDF ready.";
