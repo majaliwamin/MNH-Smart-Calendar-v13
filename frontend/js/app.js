@@ -660,7 +660,7 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["dashboard","weekly","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
+const VIEWS=["weekly","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
@@ -764,8 +764,8 @@ function syncCurrentAcademicWeek(){
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
  currentView=name;
- const weekly=document.getElementById("view-weekly"),home=document.getElementById("view-dashboard"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics");
- home.hidden=name!=="dashboard";weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";
+ const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics");
+ weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
@@ -804,22 +804,13 @@ async function saveRow(collection,id,data){await apiRequest("PUT","/api/doc/"+en
 async function deleteRow(collection,id){await apiRequest("DELETE","/api/doc/"+encodeURIComponent(collection)+"/"+encodeURIComponent(id));}
 function makeId(prefix){return prefix+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);}
 function missedEntries(){return getSessionEntries().filter(x=>(x.data?.status||"")==="missed");}
-function updateMissedTab(){
- const rows=missedEntries(), n=rows.length;
- const tab=document.getElementById("tab-missed");
- if(tab)tab.textContent="Missed Sessions ("+n+")";
- const badge=document.getElementById("missed-count");
- if(badge)badge.textContent="("+n+")";
- const list=document.getElementById("missed-list");
- if(list){list.textContent="";if(!rows.length)list.appendChild(el("p","muted","No sessions are marked as missed."));rows.forEach(x=>list.appendChild(itemButton(x)));}
-}
-function renderDashboard(){updateMissedTab();
- const box=document.getElementById("dashboard-overview");box.textContent="";
- const stats=[[Object.keys(modules).length,"Modules"],[allEntries().length,"Scheduled sessions"],[resources.length,"Shared resources"]];
- stats.forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));box.appendChild(c);});
- renderAnimatedFutureStrip();
- const recent=document.getElementById("dashboard-recent");recent.textContent="";
- apiRequest("GET","/api/history").then(rows=>{recent.textContent="";if(!rows.length)recent.appendChild(el("div","muted","No recent additions."));rows.slice(0,5).forEach(r=>recent.appendChild(el("div","item",`${r.role} · ${r.summary}`)));}).catch(()=>recent.textContent="Recent activity is unavailable.");
+function buildMissedSessionsPanel(){
+ const rows=missedEntries(),panel=el("section","ana-panel");
+ panel.appendChild(el("h3",null,`Missed sessions (${rows.length})`));
+ panel.appendChild(el("p","ana-note","Sessions explicitly recorded as missed. Update a session status from the timetable to keep this list current."));
+ if(!rows.length)panel.appendChild(el("p","muted","No sessions are currently marked as missed."));
+ else{const list=el("div","cards");rows.forEach(entry=>list.appendChild(itemButton(entry)));panel.appendChild(list);}
+ return panel;
 }
 function renderMonthly(){
  const root=workspace(...WORKSPACE_META.monthly),card=el("div","card"),grid=el("div","month-grid");
@@ -1871,6 +1862,7 @@ async function renderAnalytics(){
  root.appendChild(lower);
  report=buildAnalyticsReport(data,d);
  root.appendChild(report);
+ root.appendChild(buildMissedSessionsPanel());
 }
 // ---- resources (shared) ----
 function safeUrl(u){
@@ -1935,7 +1927,7 @@ function subscribeExtras(db){
    {id:"seminar-mnh",data:{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
   ];
   build();if(currentView==="recurring")renderManaged("recurring");
-  if(currentView==="weekly"||currentView==="dashboard")renderAnimatedFutureStrip();
+  if(currentView==="weekly")renderAnimatedFutureStrip();
  },()=>{});
  db.collection("resources").onSnapshot(snap=>{
   if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
@@ -1968,7 +1960,7 @@ function initHeader(){
   hideDialog("header-dialog");saveHeader({title:t,subtitle:document.getElementById("header-sub-input").value});
  });
  // keep views and header fresh when the timetable or editing state changes
- const _build=build;build=function(){_build();refreshHeader();updateMissedTab();if(currentView==="dashboard")renderDashboard();else if(currentView==="modules")renderModules();};
+ const _build=build;build=function(){_build();refreshHeader();if(currentView==="analytics")renderAnalytics();else if(currentView==="modules")renderModules();};
  const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="facilitators"||currentView==="examinations"||currentView==="recurring")renderView(currentView);};
  setInterval(refreshHeader,30000);
  refreshHeader();showView(location.hash.slice(1)||"weekly");
