@@ -31,7 +31,7 @@ node --version
 npm --version
 
 sudo useradd --system --home /opt/mnh-baileys --shell /usr/sbin/nologin mnhwa || true
-sudo mkdir -p /opt/mnh-baileys /var/lib/mnh-bailey s/auth
+sudo mkdir -p /opt/mnh-baileys /var/lib/mnh-baileys/auth
 sudo chown -R mnhwa:mnhwa /opt/mnh-baileys /var/lib/mnh-baileys
 ```
 
@@ -39,7 +39,7 @@ Copy this directory to `/opt/mnh-baileys`, then:
 
 ```bash
 cd /opt/mnh-baileys
-npm ci --omit=dev
+npm install --omit=dev
 sudo install -d -o mnhwa -g mnhwa -m 0700 /var/lib/mnh-baileys/auth
 sudo install -o root -g mnhwa -m 0640 .env.example /etc/mnh-baileys.env
 sudo nano /etc/mnh-baileys.env
