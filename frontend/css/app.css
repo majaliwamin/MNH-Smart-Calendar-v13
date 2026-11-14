@@ -863,3 +863,12 @@ tbody th.time{padding:8px 4px!important;vertical-align:middle}
 @media print{
  .ana-report{display:block!important}
 }
+
+/* Live Malawi-local weekday and time shading; only Monday–Friday are rendered. */
+thead th.daycell.today-day{background:var(--accent)!important;color:var(--page)!important;border-bottom:3px solid var(--gold)}
+thead th.daycell.today-day .date{color:var(--page)!important;font-weight:800}
+tbody td.today-column{background:rgba(203,166,88,.10)!important}
+tbody tr.current-time-row th.time,thead th.time.current-time-label{background:var(--gold)!important;color:var(--page)!important;box-shadow:inset 0 0 0 2px #fff4}
+tbody tr.current-time-row td.current-slot{background:rgba(203,166,88,.24)!important;box-shadow:inset 0 0 0 2px var(--gold)}
+tbody tr.current-time-row td.current-slot .activity{border-color:var(--gold)!important;box-shadow:0 0 0 1px var(--gold)}
+.month-day.today{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);background:rgba(203,166,88,.13)}

@@ -1,16 +1,7 @@
 /*!
- * MNH academic week model — the single source of truth for week numbering and dates.
- *
- * "This week" is the teaching week that starts on Monday 9 November 2026.
- * Week numbers are relative to that teaching block, never the ISO calendar week:
- *
- *   offset 0  ->  "This week"  ·  Nov 9–13, 2026
- *   offset 1  ->  "Week 1"     ·  Nov 16–20, 2026
- *   offset 2  ->  "Week 2"     ·  Nov 23–27, 2026   …
- *
- * Teaching weeks are Monday–Friday only: Saturdays and Sundays are never generated.
- * The same file is loaded by the browser (window.MNHWeek) and by the Node checks
- * (module.exports), so the app and its tests can never drift apart.
+ * MNH academic week model — Malawi-local date and time is the single source of truth.
+ * Teaching weeks remain Monday–Friday only, starting Monday 9 November 2026.
+ * The displayed academic week follows the real current week and advances each Monday in Malawi.
  */
 (function (root, factory) {
   const api = factory();
@@ -18,79 +9,97 @@
   if (root) root.MNHWeek = api;
 })(typeof window !== "undefined" ? window : null, function () {
   "use strict";
-
+  const TIME_ZONE = "Africa/Blantyre";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const FIRST_MONDAY = new Date(2026, 10, 9); // Monday 9 November 2026 — "This week"
+  const FIRST_MONDAY = new Date(Date.UTC(2026, 10, 9));
   const DAY_MS = 24 * 60 * 60 * 1000;
   const WEEKDAYS = 5;
-
+  const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const zoneFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE, calendar: "gregory", numberingSystem: "latn",
+    year: "numeric", month: "2-digit", day: "2-digit", weekday: "short",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+  });
   function normalise(offset) {
     const value = Math.trunc(Number(offset));
     return Number.isFinite(value) ? value : 0;
   }
-
-  /** Monday that begins the academic week `offset` weeks after "This week". */
-  function monday(offset) {
-    return new Date(FIRST_MONDAY.getFullYear(), FIRST_MONDAY.getMonth(), FIRST_MONDAY.getDate() + normalise(offset) * 7);
+  function zonedParts(value) {
+    const parts = Object.fromEntries(zoneFormatter.formatToParts(value || new Date()).map((item) => [item.type, item.value]));
+    return {
+      year: Number(parts.year), month: Number(parts.month) - 1, day: Number(parts.day),
+      weekday: WEEKDAY_NAMES.indexOf(parts.weekday),
+      hour: Number(parts.hour), minute: Number(parts.minute), second: Number(parts.second)
+    };
   }
-
-  /** Monday–Friday dates for one academic week (5 entries by default). */
+  function localNow() { return zonedParts(new Date()); }
+  function makeZonedDate(year, month, day, hour, minute) {
+    const desired = Date.UTC(year, month, day, hour || 0, minute || 0, 0);
+    let instant = desired;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const actual = zonedParts(new Date(instant));
+      const represented = Date.UTC(actual.year, actual.month, actual.day, actual.hour, actual.minute, actual.second);
+      instant += desired - represented;
+    }
+    return new Date(instant);
+  }
+  function timeText(value) {
+    const parts = zonedParts(value);
+    return String(parts.hour).padStart(2, "0") + ":" + String(parts.minute).padStart(2, "0");
+  }
+  function monday(offset) {
+    return new Date(Date.UTC(FIRST_MONDAY.getUTCFullYear(), FIRST_MONDAY.getUTCMonth(),
+      FIRST_MONDAY.getUTCDate() + normalise(offset) * 7));
+  }
   function dateList(offset, count) {
-    const start = monday(offset);
-    const total = count || WEEKDAYS;
-    const out = [];
-    for (let i = 0; i < total; i += 1) out.push(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+    const start = monday(offset), total = count || WEEKDAYS, out = [];
+    for (let i = 0; i < total; i += 1) {
+      out.push(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + i)));
+    }
     return out;
   }
-
-  /** Short labels such as ["9 Nov", "10 Nov", …] for one academic week. */
   function dateLabels(offset, count) {
-    return dateList(offset, count).map((d) => d.getDate() + " " + MONTHS[d.getMonth()]);
+    return dateList(offset, count).map((d) => d.getUTCDate() + " " + MONTHS[d.getUTCMonth()]);
   }
-
-  /** [year, monthIndex, day] of the Monday — the shape the app stores in WEEK_START. */
   function startParts(offset) {
     const m = monday(offset);
-    return [m.getFullYear(), m.getMonth(), m.getDate()];
+    return [m.getUTCFullYear(), m.getUTCMonth(), m.getUTCDate()];
   }
-
-  /** "This week" for the default week, then "Week 1", "Week 2", … */
   function label(offset) {
     const value = normalise(offset);
-    return value > 0 ? "Week " + value : "This week";
+    return value === currentOffset() ? "This week" : "Week " + value;
   }
-
-  /** Human date range of one academic week: "Nov 9–13, 2026", "Nov 30 – Dec 4, 2026". */
   function range(offset) {
-    const days = dateList(offset);
-    const a = days[0];
-    const b = days[days.length - 1];
-    if (a.getFullYear() !== b.getFullYear()) {
-      return (
-        MONTHS[a.getMonth()] + " " + a.getDate() + ", " + a.getFullYear() +
-        " – " +
-        MONTHS[b.getMonth()] + " " + b.getDate() + ", " + b.getFullYear()
-      );
+    const days = dateList(offset), a = days[0], b = days[days.length - 1];
+    if (a.getUTCFullYear() !== b.getUTCFullYear()) {
+      return MONTHS[a.getUTCMonth()] + " " + a.getUTCDate() + ", " + a.getUTCFullYear() +
+        " – " + MONTHS[b.getUTCMonth()] + " " + b.getUTCDate() + ", " + b.getUTCFullYear();
     }
-    if (a.getMonth() !== b.getMonth()) {
-      return MONTHS[a.getMonth()] + " " + a.getDate() + " – " + MONTHS[b.getMonth()] + " " + b.getDate() + ", " + b.getFullYear();
+    if (a.getUTCMonth() !== b.getUTCMonth()) {
+      return MONTHS[a.getUTCMonth()] + " " + a.getUTCDate() + " – " +
+        MONTHS[b.getUTCMonth()] + " " + b.getUTCDate() + ", " + b.getUTCFullYear();
     }
-    return MONTHS[a.getMonth()] + " " + a.getDate() + "–" + b.getDate() + ", " + b.getFullYear();
+    return MONTHS[a.getUTCMonth()] + " " + a.getUTCDate() + "–" + b.getUTCDate() + ", " + b.getUTCFullYear();
   }
-
-  /** "2026-11-16" — used in PDF file names. */
   function isoMonday(offset) {
     const m = monday(offset);
-    return m.getFullYear() + "-" + String(m.getMonth() + 1).padStart(2, "0") + "-" + String(m.getDate()).padStart(2, "0");
+    return m.getUTCFullYear() + "-" + String(m.getUTCMonth() + 1).padStart(2, "0") +
+      "-" + String(m.getUTCDate()).padStart(2, "0");
   }
-
-  /** Academic offset of the week that contains today (independent of what the user is viewing). */
   function currentOffset() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const mondayOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
-    return Math.round((mondayOfToday.getTime() - FIRST_MONDAY.getTime()) / DAY_MS / 7);
+    const now = localNow(), today = Date.UTC(now.year, now.month, now.day);
+    const mondayOfToday = today - ((now.weekday + 6) % 7) * DAY_MS;
+    const first = Date.UTC(FIRST_MONDAY.getUTCFullYear(), FIRST_MONDAY.getUTCMonth(), FIRST_MONDAY.getUTCDate());
+    return Math.floor((mondayOfToday - first) / (DAY_MS * 7));
   }
-
-  return { MONTHS, FIRST_MONDAY, WEEKDAYS, monday, dateList, dateLabels, startParts, label, range, isoMonday, currentOffset };
+  function currentDayIndex(offset) {
+    if (normalise(offset) !== currentOffset()) return -1;
+    const weekday = (localNow().weekday + 6) % 7;
+    return weekday < WEEKDAYS ? weekday : -1;
+  }
+  return {
+    TIME_ZONE, MONTHS, FIRST_MONDAY, WEEKDAYS, monday, dateList, dateLabels,
+    startParts, label, range, isoMonday, localNow, makeZonedDate, timeText,
+    currentOffset, currentDayIndex
+  };
 });

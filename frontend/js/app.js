@@ -1,8 +1,9 @@
 const times=["08:00 – 10:00","10:00 – 12:00","12:00 – 13:30","13:30 – 15:30","15:30 – 17:30","17:30 – 19:00","19:00 – 21:00"];
 // ---- Academic week state: the shared week model drives every date shown in this file ----
 const WK=window.MNHWeek;
-let weekOffset=0;
-let dates=WK.dateLabels(0);
+let weekOffset=WK.currentOffset();
+let autoWeekOffset=weekOffset;
+let dates=WK.dateLabels(weekOffset);
 const LEGACY_ROW_MAP={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:6};
 const days=["Monday","Tuesday","Wednesday","Thursday","Friday"];
 let modules={
@@ -146,8 +147,9 @@ function openModuleDialog(dayIndex,startTime,entry){
 }
 function showSessionDetails(entry){
  if(!entry)return;
- const d=new Date(WEEK_START[0],WEEK_START[1],WEEK_START[2]+entry.dayIndex);
- const dateText=`${days[entry.dayIndex]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+ const detailWeekOffset=Number.isInteger(entry.weekOffset)?entry.weekOffset:weekOffset;
+ const detailDates=WK.dateLabels(detailWeekOffset),detailDate=WK.dateList(detailWeekOffset)[entry.dayIndex];
+ const dateText=`${days[entry.dayIndex]} ${detailDates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
@@ -163,7 +165,7 @@ function build(){
  let lunchDone=false;
  const appendLunchRow=()=>{
   lunchDone=true;
-  const tr=document.createElement("tr");tr.className="lunch-row";tr.dataset.startTime=clockText(LUNCH_START);
+  const tr=document.createElement("tr");tr.className="lunch-row";tr.dataset.startTime=clockText(LUNCH_START);tr.dataset.endTime=clockText(LUNCH_END);
   const th=document.createElement("th");th.className="time lunch-time";th.scope="row";th.textContent=clockText(LUNCH_START)+"–"+clockText(LUNCH_END);tr.appendChild(th);
   const td=document.createElement("td");td.colSpan=days.length;td.className="lunch-cell";
   const clashes=entries.filter(x=>x.startMinutes<LUNCH_END&&x.endMinutes>LUNCH_START).map(x=>`${days[x.dayIndex]} ${x.label} ${x.startTime}–${x.endTime}`);
@@ -184,15 +186,15 @@ function build(){
  const slotStarts=defaultSlots.filter(s=>parseClock(s.startTime)!==LUNCH_START).map(s=>s.startTime);
  const starts=[...new Set([...slotStarts,...entries.map(x=>x.startTime)])].sort((a,b)=>parseClock(a)-parseClock(b));
  const hr=document.createElement("tr"),corner=document.createElement("th");corner.className="corner";corner.textContent="Time";hr.appendChild(corner);
- days.forEach((day,c)=>{const th=document.createElement("th");th.className="daycell";th.scope="col";th.innerHTML=`<span class="day"><span class="dfull">${day}</span><span class="dshort">${day.slice(0,3)}</span></span><span class="date">${dates[c]}</span>`;hr.appendChild(th);});thead.appendChild(hr);
+ days.forEach((day,c)=>{const th=document.createElement("th");th.className="daycell";th.dataset.dayIndex=String(c);th.scope="col";th.innerHTML=`<span class="day"><span class="dfull">${day}</span><span class="dshort">${day.slice(0,3)}</span></span><span class="date">${dates[c]}</span>`;hr.appendChild(th);});thead.appendChild(hr);
  starts.forEach((start,index)=>{
   if(!lunchDone&&parseClock(start)>=LUNCH_START)appendLunchRow();
   const tr=document.createElement("tr");tr.dataset.startTime=start;
-  const interval=intervalFor(start);
+  const interval=intervalFor(start);const intervalParts=parseRange(interval);if(intervalParts)tr.dataset.endTime=intervalParts.endTime;
   const th=document.createElement("th");th.className="time"+(selectedTime===index?" highlight":"");th.scope="row";th.textContent=interval;th.tabIndex=0;th.setAttribute("role","button");th.setAttribute("aria-label",`Highlight the ${interval} row`);
   const toggle=()=>{selectedTime=selectedTime===index?-1:index;tbody.querySelectorAll("th.time:not(.lunch-time)").forEach((node,i)=>node.classList.toggle("highlight",i===selectedTime));};th.addEventListener("click",toggle);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});tr.appendChild(th);
   days.forEach((day,dayIndex)=>{
-   const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;
+   const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
    if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}if(entry.sub){const title=document.createElement("span");title.className="activity-module-title";title.textContent=entry.sub;area.appendChild(title);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
@@ -200,6 +202,24 @@ function build(){
   });tbody.appendChild(tr);
  });
  if(!lunchDone)appendLunchRow();
+ refreshLiveTimetable();
+}
+function refreshLiveTimetable(){
+ const currentOffset=WK.currentOffset(),currentDay=WK.currentDayIndex(weekOffset);
+ const now=WK.localNow(),minute=now.hour*60+now.minute;
+ thead.querySelectorAll("th.daycell").forEach(th=>th.classList.toggle("today-day",weekOffset===currentOffset&&Number(th.dataset.dayIndex)===currentDay&&currentDay>=0));
+ tbody.querySelectorAll("tr[data-start-time]").forEach(tr=>{
+  const start=parseClock(tr.dataset.startTime),end=parseClock(tr.dataset.endTime);
+  const active=weekOffset===currentOffset&&currentDay>=0&&start!==null&&end!==null&&minute>=start&&minute<end;
+  tr.classList.toggle("current-time-row",active);
+  const label=tr.querySelector("th.time");if(label)label.classList.toggle("current-time-label",active);
+  tr.querySelectorAll("td[data-day-index]").forEach(td=>{
+   const today=weekOffset===currentOffset&&Number(td.dataset.dayIndex)===currentDay&&currentDay>=0;
+   td.classList.toggle("today-column",today);
+   td.classList.toggle("current-slot",active&&today);
+  });
+  const lunch=tr.querySelector("td.lunch-cell");if(lunch)lunch.classList.toggle("current-slot",active);
+ });
 }
 function remapLegacyCells(cells){
  const out={};
@@ -543,12 +563,12 @@ window.addEventListener("mnh:offline-synced",()=>{
 });
 // ---- Alarms: ring like an incoming call (per device, only while this page is open) ----
 const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
-let WEEK_START=WK.startParts(0);   // Monday of the academic week currently on screen
+let WEEK_START=WK.startParts(weekOffset);   // Monday of the academic week currently on screen
 const baseTitle=document.title;
 let alarm={on:false,lead:10},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,titleTimer=null,ringing=null;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 function pad2(n){return String(n).padStart(2,"0");}
-function hhmm(d){return pad2(d.getHours())+":"+pad2(d.getMinutes());}
+function hhmm(d){return WK.timeText(d);}
 function loadAlarm(){
  try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10};}catch(e){}
  try{fired=JSON.parse(localStorage.getItem(firedKey)||"[]");if(!Array.isArray(fired))fired=[];}catch(e){fired=[];}
@@ -562,7 +582,7 @@ function ensureAudio(){
   return audioCtx;
  }catch(e){return null;}
 }
-function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries().map(x=>{const start=new Date(ws[0],ws[1],ws[2]+x.dayIndex);const [h,m]=x.startTime.split(":").map(Number);start.setHours(h,m,0,0);return {...x,start};});}
+function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries().map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
@@ -582,7 +602,7 @@ function playCycle(){
 }
 function startRing(ev){
  if(ringing)return;
- ringing=ev;ensureAudio();{const cd=document.getElementById("call-day");if(cd)cd.textContent=new Date().getDate();}
+ ringing=ev;ensureAudio();{const cd=document.getElementById("call-day");if(cd)cd.textContent=WK.localNow().day;}
  document.getElementById("call-name").textContent=ev.label;
  const mins=Math.round((ev.start.getTime()-Date.now())/60000);
  const when=ev.test?"This is a test of the alarm sound":(mins>0?`Starts at ${hhmm(ev.start)} · in ${mins} min`:`Starting now · ${hhmm(ev.start)}`);
@@ -650,16 +670,12 @@ const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov",
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
 function fmtH(m){const h=Math.floor(m/60),mm=m%60;return mm?(h?h+"h "+mm+"m":mm+"m"):h+"h";}
-function todayIndexFor(offset){
- const n=new Date(),ws=offset==null?WEEK_START:WK.startParts(offset);
- for(let c=0;c<days.length;c++){const d=new Date(ws[0],ws[1],ws[2]+c);if(d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate())return c;}
- return -1;
-}
+function todayIndexFor(offset){return WK.currentDayIndex(offset==null?weekOffset:offset);}
 // The bell and the header always describe the real current week, whatever week is being viewed.
 function todayIndex(){return todayIndexFor(WK.currentOffset());}
 function dayEntries(c,offset){
  const ws=offset==null?WEEK_START:WK.startParts(offset);
- return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const start=new Date(ws[0],ws[1],ws[2]+c);const [h,m]=x.startTime.split(":").map(Number);start.setHours(h,m,0,0);const end=new Date(start);const [eh,em]=x.endTime.split(":").map(Number);end.setHours(eh,em,0,0);return {...x,start,end};});
+ return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const [eh,em]=x.endTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,h,m);const end=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,eh,em);return {...x,start,end,weekOffset:offset==null?weekOffset:offset};});
 }
 function allEntries(){return days.flatMap((d,c)=>dayEntries(c));}
 // ---- header ----
@@ -685,9 +701,9 @@ async function saveHeader(h){
 }
 function closeBell(){const p=document.getElementById("bell-panel");p.hidden=true;document.getElementById("hd-bell").setAttribute("aria-expanded","false");}
 function refreshHeader(){
- const d=new Date();
- document.getElementById("hd-date").textContent=WD[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear();
- {const hd=document.getElementById("hd-day");if(hd)hd.textContent=d.getDate();}
+ const d=WK.localNow();
+ document.getElementById("hd-date").textContent=WD[d.weekday]+", "+d.day+" "+MONTHS[d.month]+" "+d.year;
+ {const hd=document.getElementById("hd-day");if(hd)hd.textContent=d.day;}
  const c=todayIndex(),now=Date.now();
  const rem=c<0?[]:dayEntries(c,WK.currentOffset()).filter(x=>x.end.getTime()>now);
  const badge=document.getElementById("hd-badge");badge.textContent=rem.length;badge.hidden=!rem.length;
@@ -715,6 +731,7 @@ function applyWeekView(keepStatus){
  if(lead)lead.textContent="Everything planned for the week of "+WK.range(weekOffset)+" ("+WK.label(weekOffset)+"). Select an item for details.";
  if(!keepStatus){statusEl.className="status";statusEl.textContent=WK.label(weekOffset)+" · "+WK.range(weekOffset);}
  renderView(currentView);
+ refreshLiveTimetable();
 }
 function renderWeekNav(){
  const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
@@ -724,7 +741,7 @@ function renderWeekNav(){
  if(lab)lab.textContent=label;if(rng)rng.textContent=range;
  now.title=label+" · "+range+" — click to return to this week";
  now.setAttribute("aria-label",label+", "+range+". Show this week");
- now.dataset.default=String(weekOffset===0);
+ now.dataset.default=String(weekOffset===WK.currentOffset());
  prev.disabled=weekOffset<=0;
  prev.setAttribute("aria-disabled",String(weekOffset<=0));
  next.disabled=false;
@@ -734,10 +751,20 @@ function initWeekNav(){
  if(!prev||!next||!now)return;
  prev.addEventListener("click",()=>setWeek(weekOffset-1));
  next.addEventListener("click",()=>setWeek(weekOffset+1));
- now.addEventListener("click",()=>setWeek(0));
+ now.addEventListener("click",()=>setWeek(WK.currentOffset()));
+ weekOffset=WK.currentOffset();autoWeekOffset=weekOffset;
  applyWeekView(false);
+ setInterval(syncCurrentAcademicWeek,15000);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncCurrentAcademicWeek();});
+ window.addEventListener("focus",syncCurrentAcademicWeek);
 }
 // ---- navigation ----
+function syncCurrentAcademicWeek(){
+ const current=WK.currentOffset();
+ if(current!==autoWeekOffset){autoWeekOffset=current;weekOffset=current;applyWeekView(false);}
+ else refreshLiveTimetable();
+ refreshHeader();
+}
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
  currentView=name;
@@ -804,20 +831,22 @@ function renderDashboard(){updateMissedTab();
 }
 function renderMonthly(){
  const root=workspace(...WORKSPACE_META.monthly),card=el("div","card"),grid=el("div","month-grid");
- const year=2026,month=10,daysInMonth=new Date(year,month+1,0).getDate();
- card.appendChild(el("h3",null,"November 2026 · Weekdays"));
+ const now=WK.localNow(),year=now.year,month=now.month,daysInMonth=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+ card.appendChild(el("h3",null,MONTHS[month]+" "+year+" · Weekdays"));
  ["Mon","Tue","Wed","Thu","Fri"].forEach(d=>grid.appendChild(el("div","month-dow",d)));
  const events=allEntries();
  for(let day=1;day<=daysInMonth;day++){
-  const date=new Date(year,month,day);if(date.getDay()===0||date.getDay()===6)continue;
-  if(!grid.dataset.padded){grid.dataset.padded="1";for(let i=1;i<date.getDay();i++)grid.appendChild(el("div","month-empty"));}
+  const date=new Date(Date.UTC(year,month,day)),weekday=date.getUTCDay();if(weekday===0||weekday===6)continue;
+  if(!grid.dataset.padded){grid.dataset.padded="1";for(let i=1;i<weekday;i++)grid.appendChild(el("div","month-empty"));}
   const cell=el("div","month-day"),num=el("strong",null,String(day));cell.appendChild(num);
-  const col=day>=9&&day<=13?day-9:-1;
+  if(day===now.day)cell.classList.add("today");
+  const ws=WK.startParts(weekOffset),dateOffset=Math.round((Date.UTC(year,month,day)-Date.UTC(ws[0],ws[1],ws[2]))/(24*60*60*1000));
+  const col=dateOffset>=0&&dateOffset<5?dateOffset:-1;
   if(col>=0){const list=events.filter(x=>x.c===col);list.forEach(x=>cell.appendChild(el("span","month-event",x.label)));}
   grid.appendChild(cell);
  }
  card.appendChild(grid);root.appendChild(card);
- root.appendChild(el("p","muted","The month view displays the dated teaching week currently configured in the shared timetable. Additional dates appear as dated calendar records are added."));
+ root.appendChild(el("p","muted","The academic timetable displays Monday–Friday only. Its dated week follows the Malawi local calendar and advances automatically each Monday."));
 }
 function renderUpcoming(){const root=workspace(...WORKSPACE_META.upcoming);const list=el("div","cards");const entries=allEntries();entries.forEach(x=>{const c=el("div","card");c.append(el("h3",null,x.label),el("div","muted",`${days[x.c]} ${dates[x.c]} · ${x.startTime}–${x.endTime}`));if(x.sub)c.appendChild(el("p","muted",x.sub));list.appendChild(c);});loadRows("examinations").then(rows=>rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||r.id),el("div","muted",[d.date,d.time,d.venue].filter(Boolean).join(" · ")));list.appendChild(c);})).catch(()=>{});root.appendChild(list);if(!entries.length)root.appendChild(el("p","muted","No upcoming timetable sessions are currently recorded."));}
 
@@ -1827,7 +1856,7 @@ document.getElementById("theme-btn").addEventListener("click",e=>{
  const sel=document.getElementById("theme"),i=(sel.selectedIndex+1)%sel.options.length;
  sel.selectedIndex=i;sel.dispatchEvent(new Event("change"));showTip(e.currentTarget,"Theme: "+sel.options[i].textContent);
 });
-{const cd=document.getElementById("call-day");if(cd)cd.textContent=new Date().getDate();}
+{const cd=document.getElementById("call-day");if(cd)cd.textContent=WK.localNow().day;}
 load();initCloud();initAlarms();initHeader();
 
 // ---- Calendar quality layer: clash checks, CSV export and shared backup ----

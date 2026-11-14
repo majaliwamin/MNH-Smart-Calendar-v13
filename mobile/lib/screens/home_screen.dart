@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,24 @@ class _HomeScreenState extends State<HomeScreen> {
     'communications': [],
   };
   List<dynamic> history = [];
+  Timer? _clockTimer;
+
+  // Malawi civil time is UTC+2 year-round, even if the handset timezone differs.
+  DateTime get _malawiNow => DateTime.now().toUtc().add(const Duration(hours: 2));
+  DateTime get _currentWeekMonday {
+    final now = _malawiNow;
+    return DateTime.utc(now.year, now.month, now.day - (now.weekday - 1));
+  }
+  int get _todayIndex {
+    final weekday = _malawiNow.weekday;
+    return weekday >= 1 && weekday <= 5 ? weekday - 1 : -1;
+  }
+  bool _isCurrentSlot(int day, Map<String, dynamic> entry) {
+    if (day != _todayIndex) return false;
+    final now = _malawiNow;
+    final minute = now.hour * 60 + now.minute;
+    return minute >= (entry['startMinutes'] as int) && minute < (entry['endMinutes'] as int);
+  }
 
   static const _labels = [
     'Dashboard',
@@ -70,7 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _clockTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) setState(() {});
+    });
     refresh();
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> refresh() async {
@@ -844,53 +872,115 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final entry in entries) {
       grouped.putIfAbsent(entry['dayIndex'] as int, () => []).add(entry);
     }
+    final monday = _currentWeekMonday;
+    final friday = monday.add(const Duration(days: 4));
     return [
-      Text('Week beginning Monday, 9 November 2026',
+      Text(
+          'Academic week · ${DateFormat('d MMM yyyy').format(monday)}–${DateFormat('d MMM yyyy').format(friday)}',
           style: TextStyle(color: Colors.white.withValues(alpha: .65))),
       const SizedBox(height: 8),
       if (editing)
         Align(alignment: Alignment.centerRight,
             child: FilledButton.icon(onPressed: () => addSession(), icon: const Icon(Icons.add), label: const Text('Add session'))),
       for (var day = 0; day < days.length; day++)
-        Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${days[day]} ${DateFormat('d MMM yyyy').format(DateTime(2026, 11, 9 + day))}',
-                style: const TextStyle(color: Color(0xFFC7A45B), fontWeight: FontWeight.bold)),
-            for (final item in (grouped[day] ?? [])..sort((a, b) => (a['startMinutes'] as int).compareTo(b['startMinutes'] as int)))
-              ListTile(
-                dense: true, contentPadding: EdgeInsets.zero,
-                title: Text(item['title'].toString()),
-                subtitle: Text('${item['startTime']}–${item['endTime']}${(item['lecturer'] as String).isNotEmpty ? ' · ${item['lecturer']}' : ''}'),
-                onTap: editing && item['row'] != null ? () => addSession(existingRow: Map<String, dynamic>.from(item['row'] as Map)) : null,
-                trailing: editing && item['id'] != 'journal-club-fixed'
-                    ? IconButton(tooltip: 'Remove session', icon: const Icon(Icons.delete_outline), onPressed: () => removeRecord('cells', item['id'].toString()))
-                    : null,
-              ),
-            if ((grouped[day] ?? []).isEmpty) const Text('No sessions scheduled', style: TextStyle(color: Colors.white54, fontSize: 12)),
-          ],
-        ))),
+        Card(
+          color: day == _todayIndex ? const Color(0xFF173A52) : null,
+          shape: day == _todayIndex
+              ? RoundedRectangleBorder(
+                  side: const BorderSide(color: Color(0xFFC7A45B), width: 1.2),
+                  borderRadius: BorderRadius.circular(12))
+              : null,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                      '${days[day]} ${DateFormat('d MMM yyyy').format(monday.add(Duration(days: day)))}',
+                      style: const TextStyle(color: Color(0xFFC7A45B), fontWeight: FontWeight.bold)),
+                  ),
+                  if (day == _todayIndex)
+                    const Text('TODAY', style: TextStyle(color: Color(0xFFC7A45B), fontSize: 10, fontWeight: FontWeight.w900))
+                ]),
+                for (final item in (grouped[day] ?? [])..sort((a, b) => (a['startMinutes'] as int).compareTo(b['startMinutes'] as int)))
+                  Container(
+                    decoration: _isCurrentSlot(day, item)
+                        ? BoxDecoration(
+                            color: const Color(0x3348A7D8),
+                            border: Border.all(color: const Color(0xFFC7A45B), width: 1.3),
+                            borderRadius: BorderRadius.circular(8))
+                        : null,
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item['title'].toString()),
+                      subtitle: Text('${item['startTime']}–${item['endTime']}${(item['lecturer'] as String).isNotEmpty ? ' · ${item['lecturer']}' : ''}'),
+                      onTap: editing && item['row'] != null ? () => addSession(existingRow: Map<String, dynamic>.from(item['row'] as Map)) : null,
+                      trailing: editing && item['id'] != 'journal-club-fixed'
+                          ? IconButton(tooltip: 'Remove session', icon: const Icon(Icons.delete_outline), onPressed: () => removeRecord('cells', item['id'].toString()))
+                          : null,
+                    ),
+                  ),
+                if ((grouped[day] ?? []).isEmpty)
+                  const Text('No sessions scheduled', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              ],
+            ),
+          ),
+        ),
     ];
   }
 
   List<Widget> _monthly() {
+    final now = _malawiNow;
+    final monday = _currentWeekMonday;
+    final daysInMonth = DateTime.utc(now.year, now.month + 1, 0).day;
     final entriesByDay = <int, int>{};
     for (final entry in _sessionEntries()) {
-      final date = DateTime(2026, 11, 9 + (entry['dayIndex'] as int)).day;
-      entriesByDay[date] = (entriesByDay[date] ?? 0) + 1;
+      final date = monday.add(Duration(days: entry['dayIndex'] as int));
+      if (date.year == now.year && date.month == now.month) {
+        entriesByDay[date.day] = (entriesByDay[date.day] ?? 0) + 1;
+      }
     }
+    final weekdays = List<int>.generate(daysInMonth, (i) => i + 1)
+        .where((day) => DateTime.utc(now.year, now.month, day).weekday <= 5)
+        .toList();
     return [
-      const Text('November 2026 · Weekdays', style: TextStyle(color: Color(0xFFC7A45B), fontWeight: FontWeight.bold)),
+      Text(DateFormat('MMMM yyyy').format(now),
+          style: const TextStyle(color: Color(0xFFC7A45B), fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
       Row(children: [for (final label in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) Expanded(child: Center(child: Text(label, style: const TextStyle(color: Color(0xFFC7A45B), fontSize: 11, fontWeight: FontWeight.bold))))]),
       const SizedBox(height: 4),
-      GridView.count(crossAxisCount: 5, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), childAspectRatio: .9,
-        children: [for (final day in List<int>.generate(30, (i) => i + 1).where((day) => DateTime(2026, 11, day).weekday <= 5)) Card(child: Padding(padding: const EdgeInsets.all(5), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$day', style: const TextStyle(fontWeight: FontWeight.bold)),
-          if (entriesByDay.containsKey(day)) Text('${entriesByDay[day]} session(s)', style: const TextStyle(color: Color(0xFFC7A45B), fontSize: 9)),
-        ])))]),
+      GridView.count(
+        crossAxisCount: 5,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: .9,
+        children: [
+          for (final day in weekdays)
+            Card(
+              color: day == now.day ? const Color(0xFF173A52) : null,
+              shape: day == now.day
+                  ? RoundedRectangleBorder(
+                      side: const BorderSide(color: Color(0xFFC7A45B), width: 1.2),
+                      borderRadius: BorderRadius.circular(8))
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.all(5),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('$day', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  if (entriesByDay.containsKey(day))
+                    Text('${entriesByDay[day]} session(s)', style: const TextStyle(color: Color(0xFFC7A45B), fontSize: 9)),
+                  if (day == now.day)
+                    const Text('TODAY', style: TextStyle(color: Color(0xFFC7A45B), fontSize: 8, fontWeight: FontWeight.bold)),
+                ]),
+              ),
+            )
+        ],
+      ),
       const SizedBox(height: 8),
-      const Text('The teaching week is Monday 9 to Friday 13 November 2026. Other dates populate when dated records are added.'),
+      const Text('The academic calendar displays weekdays only: Monday to Friday. The weekly schedule updates automatically each Monday using Malawi local time.'),
     ];
   }
 
@@ -899,7 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final rows = <Widget>[];
     for (final entry in _sessionEntries()) {
       final day = entry['dayIndex'] as int;
-      final date = DateTime(2026, 11, 9 + day);
+      final date = _currentWeekMonday.add(Duration(days: day));
       rows.add(ListTile(
         dense: true,
         leading: const Icon(Icons.event_outlined, color: Color(0xFFC7A45B)),

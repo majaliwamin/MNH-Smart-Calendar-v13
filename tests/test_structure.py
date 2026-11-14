@@ -203,3 +203,19 @@ def test_analytics_management_dashboard_keeps_reference_layout_and_honest_states
     assert '#view-analytics.vw' in css
     assert '.ana-report[hidden]{display:none}' in css
     assert '<div id="analytics-body"></div>' in html
+
+
+def test_weekly_timetable_tracks_malawi_local_week_and_live_time_without_weekends():
+    week = (ROOT / "frontend" / "js" / "week-model.js").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    mobile = (ROOT / "mobile" / "lib" / "screens" / "home_screen.dart").read_text(encoding="utf-8")
+    assert 'const TIME_ZONE = "Africa/Blantyre"' in week
+    assert "function currentOffset()" in week and "function currentDayIndex(offset)" in week
+    assert "let weekOffset=WK.currentOffset()" in app
+    assert "setInterval(syncCurrentAcademicWeek,15000)" in app
+    assert "function refreshLiveTimetable()" in app
+    assert "today-day" in css and "current-time-row" in css and "current-slot" in css
+    assert "DateTime.now().toUtc().add(const Duration(hours: 2))" in mobile
+    assert "_currentWeekMonday" in mobile and "_isCurrentSlot" in mobile
+    assert "DateTime(2026, 11, 9 +" not in mobile
