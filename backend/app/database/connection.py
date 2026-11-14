@@ -64,10 +64,9 @@ def connect():
         f"DELETE FROM docs WHERE col='cells' AND id IN ({placeholders})",
         obsolete_seed_ids,
     )
-    # The academic calendar is Monday–Friday. Records that do not fit (day index >= 5, or a
-    # Saturday recurring activity) are NEVER deleted: they stay in the database untouched,
-    # every reader (web, mobile, exports, analytics) ignores them, and they are listed in
-    # app_meta['flagged_non_weekday_records'] + the audit log so an administrator can review them.
+    # The academic calendar is Monday–Friday. Out-of-range timetable cells are retained
+    # and flagged for review. The recurring collection is separately restricted to the
+    # two canonical weekly events above.
     flagged = []
     for row in connection.execute("SELECT id,data FROM docs WHERE col='cells'").fetchall():
         item_id = str(row["id"])
