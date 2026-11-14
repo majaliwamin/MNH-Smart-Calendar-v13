@@ -968,3 +968,7 @@ body[data-theme="green"] .activity-marquee-text.tone-5{color:#ffd0c8}
 .site-header .hd-sub,
 .site-header .hd-today .t2{color:#e3bd70!important}
 .site-header .hd-today{border-left-color:rgba(227,189,112,.65)!important;border-right-color:rgba(227,189,112,.65)!important}
+
+
+/* Keep the dashboard status strip out of the layout until it has a real message. */
+.status:empty{display:none!important}
