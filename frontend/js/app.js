@@ -11,7 +11,6 @@ let modules={
  "ARMN – 8100":{title:"Antimicrobial Resistance in Maternal & Neonatal Health",facilitator:"G Bandawe"},
  "PNIM-8100":{title:"Pregnancy and Neonatal Immunology",facilitator:"D Mzinza"}
 };
-const JOURNAL={code:"Journal Club",title:"Journal Club",facilitator:"",colour:"#263D5C",recurring:true};
 const tbody=document.getElementById("calendar-body");
 const thead=document.getElementById("calendar-head");
 const statusEl=document.getElementById("status");
@@ -58,7 +57,13 @@ function getSessionEntries(){
   if(label==="Journal Club"&&dayIndex===1)return;
   result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[data.code]?.title||""),facilitator:facilitatorFor(data.code)||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
  });
- result.push({id:"journal-club-fixed",dayIndex:1,c:1,r:2,label:"Journal Club",title:"Journal Club",sub:"Recurring academic discussion",facilitator:"",startTime:"13:00",endTime:"14:00",startMinutes:780,endMinutes:840,mins:60,timeLabel:"13:00 – 14:00",data:{code:"Journal Club",title:"Journal Club",recurring:true}});
+ [
+  {id:"recurring-journal-club",dayIndex:1,label:"Journal Club",title:"Journal Club",startTime:"13:00",endTime:"14:00"},
+  {id:"recurring-seminar-mnh",dayIndex:3,label:"Seminar in MNH",title:"Seminar in MNH",startTime:"10:00",endTime:"12:00"}
+ ].forEach(item=>{
+  const start=parseClock(item.startTime),end=parseClock(item.endTime);
+  result.push({...item,c:item.dayIndex,r:-1,sub:"Weekly recurring activity",facilitator:"",startMinutes:start,endMinutes:end,mins:end-start,timeLabel:item.startTime+" – "+item.endTime,data:{code:item.label,title:item.title,recurring:true}});
+ });
  return result.sort((a,b)=>a.dayIndex-b.dayIndex||a.startMinutes-b.startMinutes);
 }
 function getEntry(r,c){return getSessionEntries().find(x=>x.dayIndex===c&&x.r===r)?.data||{};}
@@ -153,7 +158,7 @@ function showSessionDetails(entry){
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
- document.getElementById("edit-details").style.display=(editingUnlocked&&entry.id!=="journal-club-fixed")?"inline-block":"none";
+ document.getElementById("edit-details").style.display=(editingUnlocked&&!entry.data?.recurring)?"inline-block":"none";
  document.getElementById("edit-details").onclick=()=>{hideDialog("details-dialog");openModuleDialog(entry.dayIndex,entry.startTime,entry);};
  showDialog("details-dialog");
 }
@@ -241,6 +246,8 @@ function load(){
    const parsed=JSON.parse(raw);
    if(legacy)parsed.cells=remapLegacyCells(parsed.cells||{});
    state={...state,...parsed,cells:{...(parsed.cells||{})}};
+   // Discard only the exact legacy hardcoded programme slots; keep genuine user-created sessions.
+   ["1_0","6_0","6_1","0_2","3_2","1_3","2_3","6_3","0_4","3_4"].forEach(id=>delete state.cells[id]);
    Object.entries(state.cells).forEach(([id,v])=>{if((/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=5)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=5))delete state.cells[id];});
    // Migrate known legacy free-text module labels into structured entries.
    Object.entries(state.cells).forEach(([k,v])=>{
@@ -252,7 +259,6 @@ function load(){
  }catch(e){statusEl.textContent="Saved browser data could not be read. Existing browser data has not been overwritten.";statusEl.className="status error";}
  try{const tp=localStorage.getItem(themeKey);if(tp)state.theme=tp;}catch(e){}
  state.theme=normaliseTheme(state.theme);
- if(Object.keys(SEED_CELLS).length&&SEED_STAMP>(state.stamp||0)){state.cells={...SEED_CELLS,...state.cells};state.stamp=SEED_STAMP;}
  document.body.dataset.theme=state.theme;
  document.getElementById("theme").value=state.theme;
  build();setEditing(true);
@@ -459,19 +465,6 @@ async function downloadPdf(){
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){hideDialog("module-dialog");hideDialog("details-dialog");}});
 // ---- Shared cloud storage (published link) with local copy as fallback ----
-const SEED_CELLS={
- "1_0":{code:"Biostatistics",title:"Biostatistics",timeLabel:"11:00–13:30",colour:"#2F5D8C"},
- "6_0":{code:"Bioethics",title:"Bioethics",timeLabel:"19:00–21:00",colour:"#7B3F61"},
- "6_1":{code:"Bioethics",title:"Bioethics",timeLabel:"19:00–21:00",colour:"#7B3F61"},
- "0_2":{code:"Immunology",title:"Immunology",timeLabel:"08:00–10:00",colour:"#3C7A5A"},
- "3_2":{code:"Imaging",title:"Imaging",timeLabel:"Afternoon–evening",colour:"#8A6D2F"},
- "1_3":{code:"Seminar in MNH",title:"Seminar in Maternal and Neonatal Health",timeLabel:"10:00–12:00",colour:"#2F5D8C"},
- "2_3":{code:"Biostatistics",title:"Biostatistics",timeLabel:"AM–afternoon",colour:"#2F5D8C"},
- "6_3":{code:"Immunology",title:"Immunology",timeLabel:"19:00–21:00",colour:"#3C7A5A"},
- "0_4":{code:"Immunology",title:"Immunology",timeLabel:"08:00–10:00",colour:"#3C7A5A"},
- "3_4":{code:"Library",title:"Library session",timeLabel:"Afternoon",colour:"#4B5D7A"},
-};
-const SEED_STAMP=1794350000001;   // corrected Monday–Friday programme for 9–13 November 2026
 const themeKey="phd_mnh_theme";
 const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
@@ -886,7 +879,7 @@ async function getFutureActivities(){
  // Weekly timetable entries are dated against the current Malawi-local academic week.
  for(let day=0;day<5;day++){
   dayEntries(day,WK.currentOffset()).forEach(session=>{
-   if(session.id==="journal-club-fixed")return; // Synthetic timetable placeholder is not a user-published activity.
+   if(session.data?.recurring)return; // Recurring activities are sourced once from the shared recurring collection.
    if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
   });
  }
@@ -950,7 +943,16 @@ function photoPicker(label){
 }
 const MANAGED_FIELDS={facilitators:["name","title","department","email","phone"],examinations:["title","date","time","venue","notes"],recurring:["title","frequency","day","time","venue","notes"]};
 const MANAGED_LABELS={facilitators:"Facilitator",examinations:"Examination",recurring:"Recurring activity"};
-async function renderManaged(collection){const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);{const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;if(collection==="facilitators"){photoInput=photoPicker();form.appendChild(photoInput.wrap);}const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}}));form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(!rows.length)list.appendChild(el("p","muted","No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
+async function renderManaged(collection){const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);
+ if(collection==="recurring"){
+  root.appendChild(el("p","muted","Only these two activities repeat every academic week. Other entries must be added as dated timetable sessions."));
+  const list=el("div","cards");
+  [["Journal Club","Tuesday","13:00–14:00"],["Seminar in MNH","Thursday","10:00–12:00"]].forEach(([name,day,time])=>{
+   const card=el("div","card");card.appendChild(el("h3",null,name));card.appendChild(el("p","muted",day+" · "+time+" · Weekly"));list.appendChild(card);
+  });
+  root.appendChild(list);return;
+ }
+ {const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;if(collection==="facilitators"){photoInput=photoPicker();form.appendChild(photoInput.wrap);}const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}}));form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(!rows.length)list.appendChild(el("p","muted","No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
 async function renderReminderCard(root){
  const card=el("div","card res-form");
  card.appendChild(el("h3",null,"WhatsApp reminders"));
@@ -2023,8 +2025,8 @@ load();initCloud();initAlarms();initHeader();
  }
  function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
  async function loadModules(){
-  try{const response=await fetch("/api/export/modules",{cache:"no-store"});if(!response.ok)throw Error("Module list unavailable");const data=await response.json();return (data.modules||[]).map(item=>[item.code,item.title||""]);}
-  catch(error){return DEFAULTS.map(code=>[code,""]);}
+  try{const response=await fetch("/api/export/modules",{cache:"no-store"});if(!response.ok)throw Error("Module list unavailable");const data=await response.json();return (data.modules||[]).map(item=>[item.code,item.title||"",item.facilitator||""]);}
+  catch(error){return DEFAULTS.map(code=>[code,"",""]);}
  }
  async function chooseModules(kind,action){
   if(!moduleSheet)moduleSheet=sheet("Modules to include","Select the modules to include in this export. You can tick or untick any module.",[]);
@@ -2033,7 +2035,7 @@ load();initCloud();initAlarms();initHeader();
   const go=document.createElement("button");go.type="button";go.className="primary";go.textContent="Download";
   actions.append(cancel,go);overlay.hidden=false;
   const rows=await loadModules();body.textContent="";
-  rows.forEach(([code,title])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=title?code+" — "+title:code;label.append(box,copy);body.append(label);});
+  rows.forEach(([code,title,lecturer])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=(title?code+" — "+title:code)+" · Lecturer: "+(lecturer||"Not assigned");label.append(box,copy);body.append(label);});
   go.disabled=!selected.size;body.onchange=()=>{go.disabled=!selected.size;};
   go.onclick=async()=>{if(!selected.size)return;overlay.hidden=true;try{await action([...selected]);}catch(error){status(error.message||"The download could not be created.","error");}};
  }
