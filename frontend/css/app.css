@@ -922,8 +922,8 @@ tbody tr.current-time-row td.current-slot .activity{border-color:var(--gold)!imp
 
 
 /* Accessibility refinements: quieter empty-cell add marks and stronger ticker contrast. */
-.activity.empty-activity{color:var(--gold)!important;opacity:.32!important}
-.activity.empty-activity:hover,.activity.empty-activity:focus-visible{opacity:.62!important}
+.activity.empty-activity{color:var(--gold)!important;opacity:.14!important}
+.activity.empty-activity:hover,.activity.empty-activity:focus-visible{opacity:.38!important}
 .activity-marquee-text,.activity-marquee-text .marquee-when,.activity-marquee-text .marquee-title,.activity-marquee-text .marquee-detail{opacity:1!important;text-shadow:0 1px 1px rgba(0,0,0,.28)}
 .activity-marquee-text{font-weight:700!important}
 .activity-marquee-text .marquee-when{font-weight:800!important}
