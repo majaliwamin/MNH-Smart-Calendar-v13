@@ -172,3 +172,62 @@ def test_service_worker_is_network_first_and_versions_match_everywhere():
     assert f"/js/app.js?v={build}" in html and f"/css/app.css?v={build}" in html
     assert "return cached || update" not in sw          # the old cache-first behaviour must be gone
     assert 'fetch(request, { cache: "no-store" })' in sw
+
+
+def test_only_journal_club_and_seminar_are_recurring_each_week():
+    sessions = schedule.sessions_from_collections(COLLECTIONS)
+    recurring = [s for s in sessions if s["id"].startswith("recurring-")]
+    assert {(s["code"], s["weekday"], s["start"], s["end"]) for s in recurring} == {
+        ("Journal Club", "Tuesday", "13:00", "14:00"),
+        ("Seminar in MNH", "Thursday", "10:00", "12:00"),
+    }
+
+
+def test_export_module_catalogue_resolves_assigned_lecturer():
+    from app.services.excel_export import module_catalogue
+    collections = {
+        "modules": {"PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitatorId": "fac-1"}},
+        "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
+    }
+    module = next(item for item in module_catalogue(collections) if item["code"] == "PNIM-8100")
+    assert module["facilitator"] == "Dr D Mzinza"
+
+
+def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
+    from app.services.pdf_export import build_timetable_pdf
+    collections = {
+        "modules": {"PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitatorId": "fac-1"}},
+        "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
+        "cells": {},
+        "recurring": {},
+    }
+    payload = build_timetable_pdf(collections, ["PNIM-8100"])
+    assert payload.startswith(b"%PDF")
+    assert b"/AcroForm" in payload
+    assert b"mod_0_facilitator" in payload
+    assert b"Dr D Mzinza" in payload
+    assert b"1190.551" in payload and b"841.889" in payload
+
+
+def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_legacy_seed_cells():
+    from app.database import connection as conn_module
+    original = (conn_module.DATABASE_PATH, conn_module.ensure_directories)
+    with tempfile.TemporaryDirectory() as tmp:
+        conn_module.DATABASE_PATH = Path(tmp) / "calendar.db"
+        conn_module.ensure_directories = lambda: None
+        try:
+            first = conn_module.connect()
+            first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('recurring','extra-club',?,0)",
+                          (json.dumps({"title": "Extra Club", "day": "Wednesday", "time": "12:00–13:00"}),))
+            first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('cells','1_0',?,0)",
+                          (json.dumps({"code": "Biostatistics", "title": "Biostatistics", "timeLabel": "11:00–13:30"}),))
+            first.commit()
+            first.close()
+            second = conn_module.connect()
+            recurring_ids = {row["id"] for row in second.execute("SELECT id FROM docs WHERE col='recurring'")}
+            obsolete_cell = second.execute("SELECT 1 FROM docs WHERE col='cells' AND id='1_0'").fetchone()
+            second.close()
+        finally:
+            conn_module.DATABASE_PATH, conn_module.ensure_directories = original
+    assert recurring_ids == {"journal-club", "seminar-mnh"}
+    assert obsolete_cell is None
