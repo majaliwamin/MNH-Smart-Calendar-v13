@@ -15,9 +15,45 @@ LUNCH_FILL = "F6E7C1"
 
 COLUMNS = 6  # Time + Monday to Friday
 
+# The three programme modules every export must be able to include (the web app
+# defines the same defaults in the browser; they are repeated here so exports
+# work even before the module list has been saved to the shared database).
+DEFAULT_MODULES = [
+    {"code": "ARMN – 8100", "title": "Antimicrobial Resistance in Maternal & Neonatal Health", "facilitator": "G Bandawe"},
+    {"code": "MIPN 8100", "title": "Medical Imaging in Pregnancy and Neonates", "facilitator": "Not specified"},
+    {"code": "PNIM-8100", "title": "Pregnancy and Neonatal Immunology", "facilitator": "D Mzinza"},
+]
 
-def build_timetable_workbook(collections: dict) -> bytes:
+
+def module_catalogue(collections: dict) -> list:
+    """All known modules (defaults first), each {code,title,facilitator} — the selection list."""
+    stored = collections.get("modules", {}) or {}
+    by_code = {}
+    for item_id, data in stored.items():
+        code = str(data.get("code") or item_id).strip()
+        if code:
+            by_code[code] = {"code": code, "title": str(data.get("title") or ""), "facilitator": str(data.get("facilitator") or "")}
+    for default in DEFAULT_MODULES:
+        by_code.setdefault(default["code"], dict(default))
+    return sorted(by_code.values(), key=lambda m: m["code"].lower())
+
+
+def normalise_selection(selected: list | None, collections: dict) -> list:
+    """Chosen module codes, defaulting to the three programme modules; unknown codes dropped."""
+    catalogue = {m["code"]: m for m in module_catalogue(collections)}
+    if not selected:
+        return [m["code"] for m in DEFAULT_MODULES]
+    out = []
+    for code in selected:
+        code = str(code).strip()
+        if code in catalogue and code not in out:
+            out.append(code)
+    return out
+
+
+def build_timetable_workbook(collections: dict, selected_modules: list | None = None) -> bytes:
     sessions = sessions_from_collections(collections)
+    selection = normalise_selection(selected_modules, collections)
     thin = Side(style="thin", color=GRID)
     box = Border(left=thin, right=thin, top=thin, bottom=thin)
 
@@ -25,6 +61,7 @@ def build_timetable_workbook(collections: dict) -> bytes:
     ws = wb.active
     ws.title = "Weekly Timetable"
     details = wb.create_sheet("Session Details")
+    directory = wb.create_sheet("Module Directory")
     readme = wb.create_sheet("Read Me")
 
     # ---- Header band: merged across the full width of the table ---------------
@@ -157,10 +194,44 @@ def build_timetable_workbook(collections: dict) -> bytes:
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
 
+    # ---- Module Directory: the selected modules, editable ----------------------
+    dir_headers = ["Module code", "Module title", "Facilitator", "Included in this export", "Sessions this week"]
+    directory.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(dir_headers))
+    directory["A1"] = "MODULE DIRECTORY — edit freely; add rows for extra modules"
+    directory["A1"].font = Font(size=15, bold=True, color=WHITE)
+    directory["A1"].fill = PatternFill("solid", fgColor=NAVY)
+    directory.row_dimensions[1].height = 28
+    for col, text in enumerate(dir_headers, start=1):
+        c = directory.cell(2, col, text)
+        c.font = Font(bold=True, color=WHITE)
+        c.fill = PatternFill("solid", fgColor=BLUE)
+        c.alignment = Alignment(wrap_text=True, vertical="center")
+        c.border = box
+    directory.row_dimensions[2].height = 26
+    catalogue = {m["code"]: m for m in module_catalogue(collections)}
+    week_counts = {}
+    for s in sessions:
+        week_counts[s["code"]] = week_counts.get(s["code"], 0) + 1
+    for row_num, code in enumerate(selection, start=3):
+        module = catalogue.get(code, {"code": code, "title": "", "facilitator": ""})
+        values = [module["code"], module["title"], module["facilitator"], "Yes", week_counts.get(code, 0)]
+        for col, value in enumerate(values, start=1):
+            c = directory.cell(row_num, col, value)
+            c.alignment = Alignment(vertical="top", wrap_text=True)
+            c.border = box
+    # three blank editable rows so users can add modules directly in the file
+    for row_num in range(len(selection) + 3, len(selection) + 6):
+        for col in range(1, len(dir_headers) + 1):
+            directory.cell(row_num, col).border = box
+    for col, width in enumerate([18, 46, 22, 22, 16], start=1):
+        directory.column_dimensions[get_column_letter(col)].width = width
+    directory.sheet_view.showGridLines = True
+
     notes = [TITLE + " — Excel timetable",
              "Weekly Timetable: Monday to Friday only, one row per time interval. Lunch Break (12:00–13:30) has its own row.",
              "Header rows 1–2 are merged across the full width; every cell below is an ordinary editable cell.",
              "Session Details: use the filter arrows to filter by date, module, lecturer, delivery mode or status; click a Record ID to jump to that cell.",
+             "Module Directory: the modules chosen at export time; every cell is editable and blank rows are provided for extra modules.",
              "This workbook is an independent copy. Editing it does not change the live calendar database."]
     for i, text in enumerate(notes, start=1):
         c = readme.cell(i, 1, text)
@@ -176,4 +247,4 @@ def build_timetable_workbook(collections: dict) -> bytes:
     return out.getvalue()
 
 
-__all__ = ["build_timetable_workbook", "overlaps_lunch"]
+__all__ = ["build_timetable_workbook", "module_catalogue", "normalise_selection", "overlaps_lunch"]

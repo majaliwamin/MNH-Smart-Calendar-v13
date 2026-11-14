@@ -274,7 +274,7 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         workbook = load_workbook(BytesIO(response.content))
-        assert workbook.sheetnames == ["Weekly Timetable", "Session Details", "Read Me"]
+        assert workbook.sheetnames == ["Weekly Timetable", "Session Details", "Module Directory", "Read Me"]
         weekly = workbook["Weekly Timetable"]
         details = workbook["Session Details"]
         assert all("Saturday" not in str(weekly.cell(3, col).value) for col in range(1, 7))

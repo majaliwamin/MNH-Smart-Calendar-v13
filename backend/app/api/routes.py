@@ -86,8 +86,12 @@ def health():
 
 
 @router.get("/export/timetable.xlsx")
-def export_timetable_xlsx():
-    """Download an independent, editable Excel copy of the Monday–Friday timetable."""
+def export_timetable_xlsx(modules: str | None = None):
+    """Download an independent, editable Excel copy of the Monday–Friday timetable.
+
+    `modules` is an optional comma-separated list of module codes to include
+    (defaults to the three programme modules).
+    """
     try:
         from app.services.excel_export import build_timetable_workbook
     except ImportError as exc:
@@ -100,10 +104,51 @@ def export_timetable_xlsx():
             collections.setdefault(row["col"], {})[row["id"]] = json.loads(row["data"])
         except (TypeError, json.JSONDecodeError):
             continue
-    payload = build_timetable_workbook(collections)
+    selected = [code for code in (modules or "").split(",") if code.strip()]
+    payload = build_timetable_workbook(collections, selected or None)
     filename = "MNH-Smart-Calendar-Editable-Timetable.xlsx"
     return StreamingResponse(BytesIO(payload), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
+
+
+@router.get("/export/timetable.pdf")
+def export_timetable_pdf(modules: str | None = None):
+    """Download a fillable-PDF (AcroForm) timetable the user can type into and save.
+
+    `modules` is an optional comma-separated list of module codes to include.
+    """
+    try:
+        from app.services.pdf_export import build_timetable_pdf
+    except ImportError as exc:
+        raise HTTPException(503, "PDF export is unavailable: install backend requirements (reportlab).") from exc
+    with database() as connection:
+        rows = connection.execute("SELECT col,id,data FROM docs ORDER BY col,id").fetchall()
+    collections = {}
+    for row in rows:
+        try:
+            collections.setdefault(row["col"], {})[row["id"]] = json.loads(row["data"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+    selected = [code for code in (modules or "").split(",") if code.strip()]
+    payload = build_timetable_pdf(collections, selected or None)
+    filename = "MNH-Smart-Calendar-Editable-Timetable.pdf"
+    return StreamingResponse(BytesIO(payload), media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
+
+
+@router.get("/export/modules")
+def export_module_list():
+    """The module catalogue for the export selection UI (defaults + stored modules)."""
+    from app.services.excel_export import module_catalogue
+    with database() as connection:
+        rows = connection.execute("SELECT col,id,data FROM docs WHERE col='modules'").fetchall()
+    collections = {"modules": {}}
+    for row in rows:
+        try:
+            collections["modules"][row["id"]] = json.loads(row["data"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+    return {"modules": module_catalogue(collections)}
 
 
 @router.get("/analytics")
