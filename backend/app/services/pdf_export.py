@@ -159,7 +159,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         day_date = week_start + timedelta(days=day_index)
         x = 10 * mm
         card_w = width - 20 * mm
-        row_h = 10.1 * mm
+        row_h = 9.1 * mm
         header_h = 9 * mm
         card_h = header_h + row_h * len(TIME_SLOTS) + 3 * mm
         bottom = top_y - card_h
