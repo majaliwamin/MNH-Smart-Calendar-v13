@@ -108,19 +108,39 @@ def sessions_from_collections(collections: dict, week_start: date | None = None)
             "status": str(data.get("status") or data.get("outcome") or "scheduled"),
             "notes": str(data.get("notes") or ""),
         })
-    # The only recurring activities in the programme are these two fixed weekly events.
-    recurring_codes = {item["title"].casefold() for item in RECURRING_ACTIVITIES}
+    # Recurring records are editable shared documents. Keep the two programme defaults
+    # only for a brand-new database; once records exist, enabled flags control visibility.
+    stored_recurring = collections.get("recurring")
+    recurring_items = []
+    if stored_recurring is None:
+        recurring_items = [dict(item, presenter="", enabled=True) for item in RECURRING_ACTIVITIES]
+    else:
+        for item_id, data in stored_recurring.items():
+            if data.get("enabled") is False:
+                continue
+            title = str(data.get("title") or item_id).strip()
+            weekday = str(data.get("day") or "").strip()
+            day = next((i for i, name in enumerate(WEEKDAY_NAMES) if name.casefold() == weekday.casefold()), None)
+            match = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(data.get("time") or ""))
+            if day is None or not match:
+                continue
+            recurring_items.append({"id": item_id, "title": title, "day": day, "weekday": WEEKDAY_NAMES[day],
+                                    "start": match.group(1), "end": match.group(2),
+                                    "presenter": str(data.get("presenter") or ""), "notes": str(data.get("notes") or "")})
+    recurring_codes = {str(item["title"]).casefold() for item in recurring_items}
     out = [session for session in out if session["code"].casefold() not in recurring_codes]
-    for item in RECURRING_ACTIVITIES:
+    for item in recurring_items:
         start, end = minutes(item["start"]), minutes(item["end"])
+        if start is None or end is None or end <= start:
+            continue
         out.append({
             "id": f"recurring-{item['id']}", "day": item["day"],
             "date": week_start + timedelta(days=item["day"]),
             "weekday": item["weekday"], "start_min": start, "end_min": end,
             "start": item["start"], "end": item["end"], "code": item["title"],
-            "module_title": item["title"], "lecturer": "",
+            "module_title": item["title"], "lecturer": item["presenter"],
             "activity": item["title"], "mode": "unspecified", "status": "scheduled",
-            "notes": "",
+            "notes": item["notes"],
         })
     out.sort(key=lambda s: (s["day"], s["start_min"], s["end_min"], s["code"]))
     return out
