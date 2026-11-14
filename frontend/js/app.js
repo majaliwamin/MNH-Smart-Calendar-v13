@@ -147,7 +147,8 @@ function openModuleDialog(dayIndex,startTime,entry){
 }
 function showSessionDetails(entry){
  if(!entry)return;
- const dateText=`${days[entry.dayIndex]} ${dates[entry.dayIndex]} ${WEEK_START[0]}`;
+ const detailDate=WK.dateList(weekOffset)[entry.dayIndex];
+ const dateText=`${days[entry.dayIndex]} ${dates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
