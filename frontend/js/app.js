@@ -1992,3 +1992,71 @@ load();initCloud();initAlarms();initHeader();
  if(body){new MutationObserver(()=>{checkClashes();}).observe(body,{childList:true,subtree:true});}
  checkClashes();
 })();
+
+
+// ---- One header download icon: PDF / JPEG-PNG / Excel ----
+(function(){
+ "use strict";
+ const btn=document.getElementById("dl-btn"),menu=document.getElementById("dl-menu");
+ if(!btn||!menu)return;
+ const DEFAULTS=["ARMN – 8100","MIPN 8100","PNIM-8100"];
+ const selected=new Set(DEFAULTS);
+ let moduleSheet=null,formatSheet=null,complete=null;
+ const status=(message,kind="")=>{const node=document.getElementById("status");if(node){node.textContent=message;node.className="status "+kind;}};
+ const closeMenu=()=>{menu.hidden=true;btn.setAttribute("aria-expanded","false");};
+ const toggleMenu=()=>{menu.hidden=!menu.hidden;btn.setAttribute("aria-expanded",String(!menu.hidden));};
+ btn.addEventListener("click",event=>{event.stopPropagation();toggleMenu();});
+ menu.addEventListener("click",event=>event.stopPropagation());
+ document.addEventListener("click",closeMenu);
+ document.getElementById("menu-btn")?.addEventListener("click",closeMenu);
+ document.addEventListener("keydown",event=>{if(event.key==="Escape"){closeMenu();if(moduleSheet)moduleSheet.hidden=true;if(formatSheet)formatSheet.hidden=true;}});
+ function sheet(title,description,buttons){
+  const overlay=document.createElement("div");overlay.className="dl-sheet";overlay.hidden=true;
+  const card=document.createElement("section");card.className="dl-card";card.setAttribute("role","dialog");card.setAttribute("aria-modal","true");
+  const heading=document.createElement("h3");heading.textContent=title;
+  const note=document.createElement("p");note.textContent=description;
+  const body=document.createElement("div");body.className="dl-list";
+  const actions=document.createElement("div");actions.className="dl-actions";
+  card.append(heading,note,body,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+  overlay.addEventListener("click",event=>{if(event.target===overlay)overlay.hidden=true;});
+  return {overlay,body,actions};
+ }
+ function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+ async function loadModules(){
+  try{const response=await fetch("/api/export/modules",{cache:"no-store"});if(!response.ok)throw Error("Module list unavailable");const data=await response.json();return (data.modules||[]).map(item=>[item.code,item.title||""]);}
+  catch(error){return DEFAULTS.map(code=>[code,""]);}
+ }
+ async function chooseModules(kind,action){
+  if(!moduleSheet)moduleSheet=sheet("Modules to include","Select the modules to include in this export. You can tick or untick any module.",[]);
+  const {overlay,body,actions}=moduleSheet;body.textContent="Loading modules…";actions.textContent="";
+  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";cancel.onclick=()=>overlay.hidden=true;
+  const go=document.createElement("button");go.type="button";go.className="primary";go.textContent="Download";
+  actions.append(cancel,go);overlay.hidden=false;
+  const rows=await loadModules();body.textContent="";
+  rows.forEach(([code,title])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=title?code+" — "+title:code;label.append(box,copy);body.append(label);});
+  go.disabled=!selected.size;body.onchange=()=>{go.disabled=!selected.size;};
+  go.onclick=async()=>{if(!selected.size)return;overlay.hidden=true;try{await action([...selected]);}catch(error){status(error.message||"The download could not be created.","error");}};
+ }
+ async function saveServerExport(path,extension,modules){
+  status("Preparing "+extension.toUpperCase()+" timetable…");
+  const response=await fetch(path+"?modules="+encodeURIComponent(modules.join(",")),{cache:"no-store"});
+  if(!response.ok)throw new Error(extension.toUpperCase()+" export failed (HTTP "+response.status+").");
+  const blob=await response.blob();
+  if(extension==="xlsx"){const signature=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(signature[0]!==0x50||signature[1]!==0x4B)throw new Error("The server did not return a valid Excel workbook.");}
+  download(blob,"MNH-Smart-Calendar-"+(extension==="pdf"?"Editable-Fillable-Timetable.pdf":"Editable-Timetable.xlsx"));
+  status(extension==="pdf"?"Fillable PDF downloaded. Open it in a PDF reader, complete the fields and save.":"Editable Excel timetable downloaded.","ok");
+ }
+ function chooseImageFormat(){
+  if(!formatSheet)formatSheet=sheet("Image format","Choose the image file type for your high-resolution timetable.",[]);
+  const {overlay,body,actions}=formatSheet;body.textContent="";actions.textContent="";
+  [["PNG","image/png"],["JPEG","image/jpeg"]].forEach(([label,mime])=>{const b=document.createElement("button");b.type="button";b.textContent="Download "+label;b.onclick=()=>{overlay.hidden=true;window.downloadTimetableImage(mime);};actions.appendChild(b);});
+  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";cancel.onclick=()=>overlay.hidden=true;actions.appendChild(cancel);overlay.hidden=false;
+ }
+ menu.addEventListener("click",event=>{
+  const item=event.target.closest("button[data-fmt]");if(!item)return;
+  closeMenu();
+  if(item.dataset.fmt==="pdf")chooseModules("pdf",modules=>saveServerExport("/api/export/timetable.pdf","pdf",modules));
+  else if(item.dataset.fmt==="xlsx")chooseModules("xlsx",modules=>saveServerExport("/api/export/timetable.xlsx","xlsx",modules));
+  else if(item.dataset.fmt==="image")chooseImageFormat();
+ });
+})();
