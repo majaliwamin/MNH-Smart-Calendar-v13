@@ -10,11 +10,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.14-v14.16";</script>
-<script src="/js/week-model.js?v=2026.11.14-v14.16"></script>
-<script src="/js/api-client.js?v=2026.11.14-v14.16"></script>
+<script>window.MNH_BUILD="2026.11.14-v14.17";</script>
+<script src="/js/week-model.js?v=2026.11.14-v14.17"></script>
+<script src="/js/api-client.js?v=2026.11.14-v14.17"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.16">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.17">
 </head>
 <body data-theme="dark">
 <header class="site-header" id="site-header">
@@ -78,7 +78,6 @@
 <nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
  <button type="button" class="view-tab active" data-view="weekly" aria-current="page">Dashboard</button>
  <button type="button" class="view-tab" data-view="analytics">Analytics</button>
- <button type="button" class="view-tab" data-view="dashboard" id="tab-missed">Missed Sessions (0)</button>
  <div class="week-nav" role="group" aria-label="Academic week navigation">
   <button type="button" class="view-tab week-step" id="week-prev" aria-label="Previous academic week" title="Previous academic week">&#8249;</button>
   <button type="button" class="view-tab week-now" id="week-now" title="This week" aria-live="polite">
@@ -91,12 +90,6 @@
 
 <div class="status" id="status" role="status" aria-live="polite"></div>
 <main>
-<section class="view vw" id="view-dashboard">
- <h2>Missed Sessions <span id="missed-count">(0)</span></h2><p class="lead">Sessions recorded as missed, with the programme overview below.</p>
- <div id="dashboard-overview" class="cards"></div>
- <div class="card" style="margin-top:14px"><h3>Missed sessions</h3><div id="missed-list"></div></div>
- <div class="card" style="margin-top:14px"><h3>Recent additions</h3><div id="dashboard-recent" class="muted">Loading recent activity…</div></div>
-</section>
 <section class="view" id="view-weekly" hidden>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
 
@@ -243,7 +236,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.14-v14.16" defer></script>
+<script src="/js/app.js?v=2026.11.14-v14.17" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
