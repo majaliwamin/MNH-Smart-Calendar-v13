@@ -10,11 +10,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.14-v14.14";</script>
-<script src="/js/week-model.js?v=2026.11.14-v14.14"></script>
-<script src="/js/api-client.js?v=2026.11.14-v14.14"></script>
+<script>window.MNH_BUILD="2026.11.14-v14.15";</script>
+<script src="/js/week-model.js?v=2026.11.14-v14.15"></script>
+<script src="/js/api-client.js?v=2026.11.14-v14.15"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.14">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.15">
 </head>
 <body data-theme="dark">
 <header class="site-header" id="site-header">
@@ -77,7 +77,6 @@
 
 <nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
  <button type="button" class="view-tab active" data-view="weekly" aria-current="page">Dashboard</button>
- <button type="button" class="view-tab" data-view="upcoming">Upcoming Activities</button>
  <button type="button" class="view-tab" data-view="analytics">Analytics</button>
  <button type="button" class="view-tab" data-view="dashboard" id="tab-missed">Missed Sessions (0)</button>
  <div class="week-nav" role="group" aria-label="Academic week navigation">
@@ -96,11 +95,12 @@
  <h2>Missed Sessions <span id="missed-count">(0)</span></h2><p class="lead">Sessions recorded as missed, with the programme overview below.</p>
  <div id="dashboard-overview" class="cards"></div>
  <div class="card" style="margin-top:14px"><h3>Missed sessions</h3><div id="missed-list"></div></div>
- <div class="cards" style="margin-top:14px"><div class="card"><h3>Upcoming academic activities</h3><div id="dashboard-upcoming" class="muted">Loading shared activities…</div></div><div class="card"><h3>Recent additions</h3><div id="dashboard-recent" class="muted">Loading recent activity…</div></div></div>
+ <div class="card" style="margin-top:14px"><h3>Recent additions</h3><div id="dashboard-recent" class="muted">Loading recent activity…</div></div>
 </section>
 <section class="view" id="view-weekly" hidden>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
 <div class="weekly-actions"><button type="button" class="primary" id="weekly-add-session" hidden>Add session</button></div>
+ <div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
 <div class="wrap">
 <table aria-label="Editable Monday to Friday calendar">
 <thead id="calendar-head"></thead><tbody id="calendar-body"></tbody></table>
@@ -243,7 +243,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.14-v14.14" defer></script>
+<script src="/js/app.js?v=2026.11.14-v14.15" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
