@@ -271,8 +271,8 @@ function saveState(){
  state.theme=document.getElementById("theme").value;state.version=3;state.stamp=Date.now();
  localStorage.setItem(key,JSON.stringify(state));
 }
-// Four themes only; anything saved before this change maps onto them.
-const THEMES=["dark","white","violet","green"];
+// Five themes; older saved values remain supported.
+const THEMES=["dark","white","violet","green","silver"];
 function normaliseTheme(t){if(THEMES.includes(t))return t;return t==="light"?"white":"dark";}
 document.getElementById("theme").addEventListener("change",e=>{
  state.theme=normaliseTheme(e.target.value);e.target.value=state.theme;document.body.dataset.theme=state.theme;
