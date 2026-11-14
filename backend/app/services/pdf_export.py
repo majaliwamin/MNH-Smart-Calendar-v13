@@ -46,7 +46,29 @@ def _slot_label(start, end) -> str:
     return f"{clock(int(start * 60))} - {clock(int(end * 60))}"
 
 
-def build_timetable_pdf(collections: dict, selected_modules: list | None = None, week_start=None) -> bytes:
+def build_timetable_pdf(collections: dict, selected_modules: list | None = None, week_start=None, theme: str = "dark") -> bytes:
+    theme = theme if theme in {"dark", "white", "violet", "green", "silver"} else "dark"
+    palettes = {
+        "dark": ("#111318", "#252d38", "#f2c14e", "#cbd5e1", "#1b2028", "#252d38", "#4a5868", "#f8fafc", "#151d27", "#263342", "#3a3425", "#f7d98d"),
+        "white": ("#ffffff", "#17427a", "#17427a", "#c6cfda", "#f1f4f8", "#e8eef7", "#c6cfda", "#0a1018", "#ffffff", "#dce6f2", "#e8edf5", "#17427a"),
+        "violet": ("#1c1140", "#241548", "#c7b3ff", "#c7b3ff", "#2a1a5c", "#312070", "#5a4a94", "#ffffff", "#312070", "#3a2c70", "#42315e", "#f0e8ff"),
+        "green": ("#0a7d3c", "#075f2a", "#ffffff", "#ffffff", "#06612c", "#075f2a", "#a9dcc0", "#ffffff", "#075f2a", "#0a6b34", "#155b35", "#ffffff"),
+        "silver": ("#071321", "#0b1b30", "#9dbce0", "#cbd5e1", "#102238", "#132a43", "#405a75", "#f3f6fb", "#132a43", "#1a3450", "#26394f", "#e0eaf7"),
+    }
+    page_hex, navy_hex, accent_hex, silver_hex, pale_hex, pale_purple_hex, line_hex, ink_hex, field_hex, time_hex, lunch_hex, lunch_text_hex = palettes[theme]
+    PAGE = colors.HexColor(page_hex)
+    NAVY = colors.HexColor(navy_hex)
+    PURPLE = colors.HexColor(accent_hex)
+    SILVER = colors.HexColor(silver_hex)
+    GOLD = colors.HexColor(accent_hex)
+    PALE = colors.HexColor(pale_hex)
+    PALE_PURPLE = colors.HexColor(pale_purple_hex)
+    LINE = colors.HexColor(line_hex)
+    INK = colors.HexColor(ink_hex)
+    FIELD = colors.HexColor(field_hex)
+    TIME_BG = colors.HexColor(time_hex)
+    LUNCH_BG = colors.HexColor(lunch_hex)
+    LUNCH_TEXT = colors.HexColor(lunch_text_hex)
     week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
     selected_codes = set(selection)
