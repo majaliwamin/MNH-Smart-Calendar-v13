@@ -10,11 +10,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.14-v14.12";</script>
-<script src="/js/week-model.js?v=2026.11.14-v14.12"></script>
-<script src="/js/api-client.js?v=2026.11.14-v14.12"></script>
+<script>window.MNH_BUILD="2026.11.14-v14.13";</script>
+<script src="/js/week-model.js?v=2026.11.14-v14.13"></script>
+<script src="/js/api-client.js?v=2026.11.14-v14.13"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.12">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.14-v14.13">
 </head>
 <body data-theme="dark">
 <header class="site-header" id="site-header">
@@ -34,6 +34,16 @@
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ecbb4c" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
    </button>
+   <div class="hd-dl" id="hd-dl">
+    <button type="button" class="hd-dlbtn" id="dl-btn" aria-label="Download" title="Download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-menu">
+     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10.5l5 5 5-5"/><path d="M4 20h16"/></svg>
+    </button>
+    <div class="dl-menu" id="dl-menu" role="menu" aria-label="Download format" hidden>
+     <button type="button" role="menuitem" data-fmt="pdf">PDF — editable &amp; fillable</button>
+     <button type="button" role="menuitem" data-fmt="image">JPEG / PNG</button>
+     <button type="button" role="menuitem" data-fmt="xlsx">Excel</button>
+    </div>
+   </div>
    <button type="button" class="hd-user" id="menu-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-panel" data-label="Menu"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span></button>
   </div>
  </div>
@@ -233,7 +243,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.14-v14.12" defer></script>
+<script src="/js/app.js?v=2026.11.14-v14.13" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
