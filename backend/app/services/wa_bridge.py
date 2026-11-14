@@ -54,7 +54,7 @@ def configured() -> bool:
 
 def status() -> dict:
     return {
-        "provider": "WhatsApp bridge on the Asterisk server",
+        "provider": "WhatsApp HTTP bridge",
         "configured": configured(),
         "style": style(),
         "missing": ["MNH_WA_BRIDGE_URL"] if not configured() else [],
