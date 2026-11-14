@@ -38,8 +38,10 @@ def _validate_restore_intervals(cleaned):
             if start < other_end and end > other_start:
                 raise HTTPException(400, f"Backup contains overlapping sessions: {label} and {other_label}.")
         by_day[day].append((start, end, label))
+    weekday_index = {name.lower(): index for index, name in enumerate(("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"))}
     for recurring_item in recurring:
-        if str(recurring_item.get("day", "")).strip().lower() != "tuesday":
+        recurring_day = weekday_index.get(str(recurring_item.get("day", "")).strip().lower())
+        if recurring_day is None:
             continue
         match = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_item.get("time", "")))
         if not match:
@@ -48,11 +50,11 @@ def _validate_restore_intervals(cleaned):
         if start is None or end is None or end <= start:
             continue
         recurring_title = str(recurring_item.get("title", "")).strip().lower()
-        for other_start, other_end, other_title in by_day.get(1, []):
+        for other_start, other_end, other_title in by_day.get(recurring_day, []):
             if other_title.strip().lower() == recurring_title:
                 continue
             if other_start < end and other_end > start:
-                raise HTTPException(400, "Backup contains a Tuesday session overlapping a recurring activity.")
+                raise HTTPException(400, f"Backup contains a {recurring_item.get('day')} session overlapping a recurring activity.")
 
 
 def current_session(mnh_session: str | None = None):
@@ -613,19 +615,21 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
                     old_end = int(parts[1][:2]) * 60 + int(parts[1][3:])
                     if new_start < old_end and new_end > old_start:
                         raise HTTPException(409, f"Session overlaps existing timetable entry {existing_id}.")
-                if day_index == 1:
-                    for recurring_row in recurring_rows:
-                        recurring_data = json.loads(recurring_row["data"])
-                        if str(recurring_data.get("title", "")).strip().lower() != "journal club" or str(recurring_data.get("day", "")).strip().lower() != "tuesday":
-                            continue
-                        if str(data.get("code", data.get("title", ""))).strip().lower() == "journal club":
-                            continue
-                        recurring_range = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_data.get("time", "")))
-                        if recurring_range:
-                            rs = int(recurring_range.group(1)[:2]) * 60 + int(recurring_range.group(1)[3:])
-                            re_ = int(recurring_range.group(2)[:2]) * 60 + int(recurring_range.group(2)[3:])
-                            if new_start < re_ and new_end > rs:
-                                raise HTTPException(409, "Session overlaps the recurring Tuesday Journal Club.")
+                for recurring_row in recurring_rows:
+                    recurring_data = json.loads(recurring_row["data"])
+                    recurring_day = str(recurring_data.get("day", "")).strip().lower()
+                    recurring_index = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4}.get(recurring_day)
+                    if recurring_index != day_index:
+                        continue
+                    recurring_title = str(recurring_data.get("title", "")).strip().lower()
+                    if str(data.get("code", data.get("title", ""))).strip().lower() == recurring_title:
+                        continue
+                    recurring_range = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_data.get("time", "")))
+                    if recurring_range:
+                        rs = int(recurring_range.group(1)[:2]) * 60 + int(recurring_range.group(1)[3:])
+                        re_ = int(recurring_range.group(2)[:2]) * 60 + int(recurring_range.group(2)[3:])
+                        if new_start < re_ and new_end > rs:
+                            raise HTTPException(409, f"Session overlaps the recurring {recurring_data.get('title')}.")
     with database() as c:
         exists = c.execute("SELECT 1 FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
         c.execute("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
