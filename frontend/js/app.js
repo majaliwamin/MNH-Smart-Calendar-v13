@@ -2094,10 +2094,12 @@ load();initCloud();initAlarms();initHeader();
   go.disabled=!selected.size;body.onchange=()=>{go.disabled=!selected.size;};
   go.onclick=async()=>{if(!selected.size)return;overlay.hidden=true;try{await action([...selected]);}catch(error){status(error.message||"The download could not be created.","error");}};
  }
- async function saveServerExport(path,extension,modules){
+ async function saveServerExport(path,extension,modules=[]){
   status("Preparing "+extension.toUpperCase()+" timetable…");
   const weekStart=WK.isoMonday(weekOffset);
-  const response=await fetch(path+"?modules="+encodeURIComponent(modules.join(","))+"&week_start="+encodeURIComponent(weekStart),{cache:"no-store"});
+  const params=new URLSearchParams({week_start:weekStart});
+  if(modules.length)params.set("modules",modules.join(","));
+  const response=await fetch(path+"?"+params.toString(),{cache:"no-store"});
   if(!response.ok)throw new Error(extension.toUpperCase()+" export failed (HTTP "+response.status+").");
   const blob=await response.blob();
   if(extension==="xlsx"){const signature=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(signature[0]!==0x50||signature[1]!==0x4B)throw new Error("The server did not return a valid Excel workbook.");}
@@ -2113,7 +2115,7 @@ load();initCloud();initAlarms();initHeader();
  menu.addEventListener("click",event=>{
   const item=event.target.closest("button[data-fmt]");if(!item)return;
   closeMenu();
-  if(item.dataset.fmt==="pdf")chooseModules("pdf",modules=>saveServerExport("/api/export/timetable.pdf","pdf",modules));
+  if(item.dataset.fmt==="pdf")saveServerExport("/api/export/timetable.pdf","pdf");
   else if(item.dataset.fmt==="xlsx")chooseModules("xlsx",modules=>saveServerExport("/api/export/timetable.xlsx","xlsx",modules));
   else if(item.dataset.fmt==="image")chooseImageFormat();
  });

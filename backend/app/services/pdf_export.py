@@ -125,7 +125,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.drawString(x + 3 * mm, y - 5.4 * mm, text)
         return y - 12 * mm
 
-    def field(name, tooltip, x, y, w, h, value="", font_size=13, multiline=False, fill=WHITE):
+    def field(name, tooltip, x, y, w, h, value="", font_size=16, multiline=False, fill=WHITE):
         # Explicit non-zero /DA font sizes prevent viewers choosing tiny auto-size text.
         flags = "multiline" if multiline else ""
         form.textfield(
@@ -160,8 +160,8 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         day_date = week_start + timedelta(days=day_index)
         x = 10 * mm
         card_w = width - 20 * mm
-        row_h = 9.1 * mm
-        header_h = 9 * mm
+        row_h = 10.5 * mm
+        header_h = 12 * mm
         card_h = header_h + row_h * len(TIME_SLOTS) + 3 * mm
         bottom = top_y - card_h
 
@@ -170,10 +170,10 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.setFillColor(PURPLE)
         pdf.roundRect(x, top_y - header_h, card_w, header_h, 2 * mm, stroke=0, fill=1)
         pdf.setFillColor(WHITE)
-        pdf.setFont("Helvetica-Bold", 10)
-        pdf.drawString(x + 4 * mm, top_y - 5.8 * mm,
-                       f"{day_name}  |  {day_date.strftime('%d %b %Y')}")
-        time_w = 31 * mm
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(x + 4 * mm, top_y - 8 * mm,
+                       f"{day_name.upper()}  |  {day_date.strftime('%d %B %Y')}")
+        time_w = 43 * mm
         row_top = top_y - header_h
         for slot_index, (start, end) in enumerate(TIME_SLOTS):
             row_y = row_top - (slot_index + 1) * row_h
@@ -182,13 +182,21 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             pdf.setFillColor(bg)
             pdf.roundRect(x + 1.5 * mm, row_y + .5 * mm, card_w - 3 * mm, row_h - .8 * mm,
                           1 * mm, stroke=0, fill=1)
+            # Dedicated silver time-interval column with strong navy text.
+            pdf.setFillColor(colors.HexColor("#DCE4EE"))
+            pdf.roundRect(x + 1.5 * mm, row_y + .5 * mm, time_w, row_h - .8 * mm,
+                          1 * mm, stroke=0, fill=1)
+            pdf.setStrokeColor(colors.HexColor("#AAB8C9"))
+            pdf.setLineWidth(.45)
+            pdf.line(x + time_w + 1.5 * mm, row_y + .8 * mm,
+                     x + time_w + 1.5 * mm, row_y + row_h - .8 * mm)
             pdf.setFillColor(NAVY)
-            pdf.setFont("Helvetica-Bold", 8.5)
-            pdf.drawString(x + 4 * mm, row_y + 3.8 * mm, _slot_label(start, end))
+            pdf.setFont("Helvetica-Bold", 11)
+            pdf.drawCentredString(x + 1.5 * mm + time_w / 2, row_y + 4.1 * mm, _slot_label(start, end))
             if is_lunch:
                 pdf.setFillColor(PURPLE)
-                pdf.setFont("Helvetica-Bold", 9)
-                pdf.drawCentredString(x + time_w + (card_w - time_w) / 2, row_y + 3.8 * mm, "Lunch break")
+                pdf.setFont("Helvetica-Bold", 11)
+                pdf.drawCentredString(x + time_w + (card_w - time_w) / 2, row_y + 4.1 * mm, "Lunch break")
                 continue
             matches = [
                 item for item in sessions
@@ -205,19 +213,19 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 ]))
             field(
                 f"wk_{day_index}_{int(start * 60)}", f"{day_name} {_slot_label(start, end)}",
-                x + time_w, row_y + 1.2 * mm, card_w - time_w - 4 * mm, row_h - 2.2 * mm,
-                preset, font_size=13,
+                x + time_w + 2 * mm, row_y + 1.0 * mm, card_w - time_w - 6 * mm, row_h - 1.8 * mm,
+                preset, font_size=16,
             )
         return bottom - 5 * mm
 
     # ============================ weekly timetable ============================
     days = list(range(5))
-    for offset in range(0, len(days), 2):
+    for offset in range(len(days)):
         top = banner("WEEKLY TIMETABLE")
         top = metadata_card(top)
         section_heading("Weekly timetable", 10 * mm, top, width - 20 * mm)
         top -= 15 * mm
-        for day_index in days[offset:offset + 2]:
+        for day_index in days[offset:offset + 1]:
             top = draw_day_card(day_index, top)
         footer()
         pdf.showPage()
@@ -246,12 +254,12 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             pdf.setFillColor(INK)
             pdf.setFont("Helvetica-Bold", 9)
             pdf.drawString(14 * mm, top - 11 * mm, str(counts.get(module.get("code", ""), 0)))
-            field(f"mod_{idx}_code", "Module code", 14 * mm, top - 19 * mm, 55 * mm, 6 * mm,
-                  module.get("code", ""), font_size=13, fill=WHITE)
-            field(f"mod_{idx}_title", "Module title", 73 * mm, top - 19 * mm, 112 * mm, 6 * mm,
-                  module.get("title", ""), font_size=13, fill=WHITE)
+            field(f"mod_{idx}_code", "Module code", 14 * mm, top - 19 * mm, 55 * mm, 7 * mm,
+                  module.get("code", ""), font_size=16, fill=WHITE)
+            field(f"mod_{idx}_title", "Module title", 73 * mm, top - 19 * mm, 112 * mm, 7 * mm,
+                  module.get("title", ""), font_size=16, fill=WHITE)
             field(f"mod_{idx}_facilitator", "Assigned lecturer", 14 * mm, top - 32 * mm,
-                  171 * mm, 7 * mm, module.get("facilitator", ""), font_size=13, fill=WHITE)
+                  171 * mm, 8 * mm, module.get("facilitator", ""), font_size=16, fill=WHITE)
             form.checkbox(
                 name=f"mod_{idx}_include", tooltip="Include " + (module.get("code") or "additional module"),
                 x=width - 24 * mm, y=top - 10 * mm, size=5 * mm,
@@ -291,11 +299,11 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             def register_field(field_key, label, value, x_mm, y_mm, width_mm):
                 pdf.setFillColor(PURPLE)
                 pdf.setFont("Helvetica-Bold", 7)
-                pdf.drawString(x_mm * mm, y_mm * mm + 7 * mm, label.upper())
+                pdf.drawString(x_mm * mm, y_mm * mm + 8.5 * mm, label.upper())
                 field(
                     f"reg_{idx}_{field_key}", label,
-                    x_mm * mm, y_mm * mm, width_mm * mm, 6 * mm,
-                    value, font_size=13,
+                    x_mm * mm, y_mm * mm, width_mm * mm, 7.5 * mm,
+                    value, font_size=16,
                 )
 
             register_field(
