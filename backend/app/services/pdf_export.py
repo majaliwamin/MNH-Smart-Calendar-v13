@@ -158,26 +158,6 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             forceBorder=False, fieldFlags=flags,
         )
 
-    def metadata_card(y):
-        x = 10 * mm
-        gap = 3 * mm
-        card_w = (width - 20 * mm - gap) / 2
-        cards = [
-            ("WEEK", f"Week commencing {week_start.strftime('%d %b %Y')}"),
-            ("PROGRAMME / BLOCK", "PhD (MNH)  |  3rd Block  |  MUST"),
-        ]
-        for i, (label, value) in enumerate(cards):
-            cx = x + i * (card_w + gap)
-            pdf.setFillColor(PALE)
-            pdf.roundRect(cx, y - 14 * mm, card_w, 14 * mm, 2 * mm, stroke=0, fill=1)
-            pdf.setFillColor(PURPLE)
-            pdf.setFont("Helvetica-Bold", 7)
-            pdf.drawString(cx + 3 * mm, y - 5 * mm, label)
-            pdf.setFillColor(INK)
-            pdf.setFont("Helvetica-Bold", 9)
-            pdf.drawString(cx + 3 * mm, y - 10 * mm, value)
-        return y - 19 * mm
-
     def draw_day_card(day_index, top_y):
         day_name = WEEKDAY_NAMES[day_index]
         day_date = week_start + timedelta(days=day_index)
@@ -244,7 +224,6 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     # ============================ weekly timetable ============================
     # One landscape weekly grid: weekdays across the top, time slots down the side.
     top = banner("WEEKLY TIMETABLE")
-    top = metadata_card(top)
     top = section_heading("Weekly timetable", 10 * mm, top, width - 20 * mm)
     table_x = 10 * mm
     table_w = width - 20 * mm
