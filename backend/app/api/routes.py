@@ -546,8 +546,8 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
             expected = CANONICAL_RECURRING.get(item_id)
             actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
                       str(data.get("time", "")).strip())
-            if expected is None or actual != expected:
-                raise HTTPException(400, "Only Journal Club (Tuesday 13:00–14:00) and Seminar in MNH (Thursday 10:00–12:00) may recur.")
+            if expected is None or actual != expected or len(str(data.get("presenter", ""))) > 120:
+                raise HTTPException(400, "Recurring activity details are invalid; only the presenter may be changed.")
         if col == "cells":
             legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
             day_index = data.get("dayIndex")
@@ -583,7 +583,9 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
         actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
                   str(data.get("time", "")).strip())
         if expected is None or actual != expected:
-            raise HTTPException(400, "Only Journal Club (Tuesday 13:00–14:00) and Seminar in MNH (Thursday 10:00–12:00) may recur.")
+            raise HTTPException(400, "Recurring activity titles and time slots are fixed; presenter names may be edited.")
+        if len(str(data.get("presenter", ""))) > 120:
+            raise HTTPException(400, "Presenter name must be 120 characters or fewer.")
     if collection == "cells":
         legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
         day_index = data.get("dayIndex")
@@ -666,7 +668,13 @@ def delete_document(collection: str, item_id: str, mnh_session: str | None = Coo
     if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
         raise HTTPException(404, "not found")
     if collection == "recurring":
-        raise HTTPException(400, "The two programme-wide recurring activities cannot be deleted.")
+        with database() as c:
+            row=c.execute("SELECT data FROM docs WHERE col=? AND id=?",(collection,item_id)).fetchone()
+            if row:
+                data=json.loads(row["data"]);data["enabled"]=False
+                c.execute("UPDATE docs SET data=?,updated_at=? WHERE col=? AND id=?",
+                          (json.dumps(data,ensure_ascii=False),int(time.time()*1000),collection,item_id))
+        return {"ok": True}
     with database() as c:
         c.execute("DELETE FROM docs WHERE col=? AND id=?", (collection, item_id))
     return {"ok": True}
