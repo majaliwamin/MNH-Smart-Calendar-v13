@@ -994,3 +994,19 @@ body[data-theme="green"] .activity-marquee-text.tone-5{color:#ffd0c8}
 
 /* Keep the dashboard status strip out of the layout until it has a real message. */
 .status:empty{display:none!important}
+
+
+/* Midnight Silver alternative dashboard — no gold accents */
+body[data-theme="silver"]{--bg:#071426;--panel:#10243c;--card:#132b45;--field:#0b1d32;--text:#edf3fa;--muted:#aabbd0;--line:#425873;--accent:#cbd5e1;--accent-2:#65b9e8;--on-accent:#0b1728;--gold:#cbd5e1;color-scheme:dark;background:var(--bg);color:var(--text)}
+body[data-theme="silver"] .silver-dashboard-view{background:linear-gradient(180deg,#0b1b30 0%,#071426 100%);padding:clamp(12px,2vw,24px);border:1px solid #52677f;border-radius:16px}
+body[data-theme="silver"] .silver-dashboard-intro{padding:18px 20px;margin-bottom:16px;border:1px solid #52677f;border-radius:13px;background:linear-gradient(115deg,#172e49,#0c2038)}
+body[data-theme="silver"] .silver-dashboard-intro h1{margin:4px 0;color:#e2e8f0;font-size:clamp(22px,3vw,32px);font-weight:750;letter-spacing:-.025em}
+body[data-theme="silver"] .silver-dashboard-intro p{color:#b8c7d8;margin:5px 0}
+body[data-theme="silver"] .silver-dashboard-intro .silver-eyebrow{font-size:11px;letter-spacing:.16em;font-weight:800;color:#82c9ed}
+body[data-theme="silver"] #silver-analytics-body .ana-panel,body[data-theme="silver"] #silver-analytics-body .card{background:#10243c;border:1px solid #425873;color:#edf3fa;box-shadow:0 8px 24px #020a1450}
+body[data-theme="silver"] #silver-analytics-body .muted,body[data-theme="silver"] #silver-analytics-body .statlabel{color:#b7c7d9}
+body[data-theme="silver"] #silver-analytics-body .stat{color:#f1f5f9}
+body[data-theme="silver"] #silver-analytics-body .bar{background:#263e58}
+body[data-theme="silver"] #silver-analytics-body .bar i{background:linear-gradient(90deg,#7c9dbb,#62b8e8)}
+body[data-theme="silver"] #silver-analytics-body h2,body[data-theme="silver"] #silver-analytics-body h3{color:#dbeafe}
+body[data-theme="silver"] .view-tabs [data-view="silver-dashboard"].active{background:#cbd5e1;color:#0b1728;border-color:#cbd5e1}
