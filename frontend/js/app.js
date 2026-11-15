@@ -32,7 +32,7 @@ function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,
 function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
 function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
 function displayFacilitatorName(name){
- return String(name||"").replace(/\\b(professor|prof|doctor|dr|mr|mrs|ms|miss|mx)\\b\\.?/gi,"").replace(/\\s+/g," ").trim();
+ return String(name||"").replace(/\b(professor|prof|doctor|dr|mr|mrs|ms|miss|mx)\b\.?/gi,"").replace(/\s+/g," ").trim();
 }
 function facilitatorFor(code){
  const configured=String(modules[code]?.facilitator||"").trim();
