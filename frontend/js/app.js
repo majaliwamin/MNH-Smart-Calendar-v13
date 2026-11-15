@@ -1968,8 +1968,32 @@ function meetingProvider(url){
 }
 function meetingProviderMark(url,large=false){
  const kind=meetingProvider(url);if(!kind)return null;
- const mark=el("span","meeting-provider-mark "+(large?"meeting-provider-large ":"")+"meeting-provider-"+kind,kind==="zoom"?"Z":kind==="meet"?"M":kind==="teams"?"T":"↗");
- mark.setAttribute("role","img");mark.setAttribute("aria-label",kind==="zoom"?"Zoom meeting":kind==="meet"?"Google Meet":kind==="teams"?"Microsoft Teams":"Online meeting link");mark.title=mark.getAttribute("aria-label");return mark;
+ const mark=el("span","meeting-provider-mark "+(large?"meeting-provider-large ":"")+"meeting-provider-"+kind);
+ const label=kind==="zoom"?"Zoom meeting":kind==="meet"?"Google Meet":kind==="teams"?"Microsoft Teams":"Online meeting link";
+ mark.setAttribute("role","img");mark.setAttribute("aria-label",label);mark.title=label;
+ const ns="http://www.w3.org/2000/svg";
+ const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 48 48");svg.setAttribute("aria-hidden","true");svg.setAttribute("focusable","false");
+ const add=(tag,attrs)=>{const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));svg.appendChild(n);};
+ if(kind==="zoom"){
+  add("circle",{cx:"24",cy:"24",r:"23",fill:"#2D8CFF"});
+  add("rect",{x:"8",y:"14",width:"23",height:"20",rx:"5",fill:"#fff"});
+  add("path",{d:"M31 20 L41 14 Q43 13 43 16 V32 Q43 35 41 34 L31 28 Z",fill:"#fff"});
+ }else if(kind==="meet"){
+  add("path",{d:"M8 14 Q8 10 12 10 H25 V38 H12 Q8 38 8 34 Z",fill:"#00897B"});
+  add("path",{d:"M25 17 L37 9 Q40 7 40 11 V37 Q40 41 37 39 L25 31 Z",fill:"#F4B400"});
+  add("path",{d:"M8 14 Q8 10 12 10 H25 V24 H8 Z",fill:"#4285F4"});
+  add("path",{d:"M8 24 H25 V38 H12 Q8 38 8 34 Z",fill:"#34A853"});
+  add("path",{d:"M25 17 L37 9 Q40 7 40 11 V24 H25 Z",fill:"#EA4335"});
+ }else if(kind==="teams"){
+  add("rect",{x:"4",y:"12",width:"28",height:"27",rx:"5",fill:"#505AC9"});
+  add("circle",{cx:"36",cy:"13",r:"7",fill:"#7B83EB"});
+  add("rect",{x:"29",y:"20",width:"15",height:"19",rx:"4",fill:"#7B83EB"});
+  add("path",{d:"M10 19 H27 V23 H21 V34 H16 V23 H10 Z",fill:"#fff"});
+ }else{
+  add("circle",{cx:"24",cy:"24",r:"22",fill:"#64748b"});
+  add("path",{d:"M17 31 L31 17 M19 17 H31 V29",fill:"none",stroke:"#fff","stroke-width":"3","stroke-linecap":"round","stroke-linejoin":"round"});
+ }
+ mark.appendChild(svg);return mark;
 }
 function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),createdAt:+(v&&v.createdAt)||0};}
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
