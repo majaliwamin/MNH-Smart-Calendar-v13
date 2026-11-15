@@ -1606,3 +1606,7 @@ body[data-theme="red"] #view-weekly tbody th.time{
 @media(max-width:420px){
   .hd-brand-photo{width:34px}
 }
+
+/* Session meeting links shown in the tapped-session details dialog. */
+.session-meeting-link{margin-top:9px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-weight:600}
+.session-meeting-link a{color:var(--gold);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
