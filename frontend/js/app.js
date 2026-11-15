@@ -418,7 +418,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const oldId=activeCell.id;
  const weekStart=WK.isoMonday(weekOffset);
  let id=oldId||`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
- if(oldId&&/^\d+_\d+$/.test(oldId)&&dayIndex!==activeCell.dayIndex)id=`session-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+ if(oldId&&/^\d+_\d+$/.test(oldId)&&dayIndex!==activeCell.dayIndex)id=`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
  const conflict=getSessionEntries().find(x=>x.id!==oldId&&x.id!==id&&x.dayIndex===dayIndex&&start<x.endMinutes&&end>x.startMinutes);
  if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
  const previous=state.cells[oldId||id]||{},module=modules[code]||{};
@@ -633,10 +633,13 @@ async function onCells(snap){
    const migrated=[];
    for(const doc of legacyDocs){
     const raw=doc.data()||{};
-    if((/^\d+_\d+$/.test(doc.id)&&Number(doc.id.split("_")[1])>=5)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))continue;
+    const legacy=/^(\\d+)_(\\d+)$/.exec(doc.id);
+    if((legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))continue;
     const suffix=doc.id.replace(/^session-/i,"").replace(/[^A-Za-z0-9-]+/g,"-").replace(/-+/g,"-").slice(0,70)||"legacy";
     const newId=`session-2026-11-16-import-${suffix}`;
-    await cloud.doc("cells/"+newId).set({...raw,weekStart:"2026-11-16",updatedAt:Date.now()});
+    const migratedData={...raw,weekStart:"2026-11-16"};
+    if(legacy){const row=Number(legacy[1]),range=parseRange(raw.timeLabel),fallback=defaultRange(row);migratedData.dayIndex=Number(legacy[2]);migratedData.startTime=String(raw.startTime||range?.startTime||fallback.startTime);migratedData.endTime=String(raw.endTime||range?.endTime||fallback.endTime);}
+    await cloud.doc("cells/"+newId).set({...migratedData,updatedAt:Date.now()});
     migrated.push(doc.id);
    }
    for(const oldId of migrated)await cloud.doc("cells/"+oldId).delete();
