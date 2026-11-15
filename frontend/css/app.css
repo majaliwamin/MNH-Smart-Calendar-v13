@@ -1655,3 +1655,21 @@ body[data-theme="red"] #view-weekly tbody th.time{
  .site-header .hd-theme{z-index:903!important}
  .site-header .theme-picker{z-index:905!important}
 }
+
+
+/* Mobile header controls: keep theme and download popovers inside the visible viewport and above the hero. */
+@media(max-width:720px){
+ .site-header{position:relative;z-index:3000!important;overflow:visible!important}
+ .site-header .hd-band{position:relative;z-index:3001!important;overflow:visible!important}
+ .site-header .hd-right{position:relative;z-index:3003!important;isolation:isolate;flex:0 0 auto;gap:clamp(5px,1.5vw,10px)}
+ .site-header .hd-theme,.site-header .hd-dl{position:relative;z-index:3005!important;flex:0 0 auto}
+ .site-header .hd-theme-btn,.site-header .hd-dlbtn{position:relative;z-index:3006;min-width:40px;min-height:40px;touch-action:manipulation;pointer-events:auto}
+ .site-header .theme-picker{position:fixed!important;z-index:10020!important;top:82px!important;right:8px!important;left:auto!important;width:min(280px,calc(100vw - 16px))!important;max-height:calc(100dvh - 100px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+ .site-header .dl-menu{position:fixed!important;z-index:10021!important;top:82px!important;right:8px!important;left:auto!important;width:min(240px,calc(100vw - 16px));min-width:0;max-height:calc(100dvh - 100px);overflow-y:auto;overscroll-behavior:contain}
+ .site-header .theme-picker .theme-choice,.site-header .dl-menu button{min-height:44px;touch-action:manipulation}
+ .site-header .hd-band::after{pointer-events:none!important}
+}
+@media(max-width:390px){
+ .site-header .hd-right{gap:4px}
+ .site-header .hd-theme-btn,.site-header .hd-dlbtn{min-width:36px;width:36px;padding:6px}
+}
