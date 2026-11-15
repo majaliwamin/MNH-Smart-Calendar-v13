@@ -626,7 +626,7 @@ let weekMigrationRunning=false;
 async function onCells(snap){
  if(syncing||weekMigrationRunning)return;
  if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
- const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};return !raw.weekStart;});
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^\\d+_(\\d+)$/.exec(d.id);if(legacy&&Number(legacy[1])>=5)return false;const day=legacy?Number(legacy[1]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
  if(legacyDocs.length){
   weekMigrationRunning=true;
   try{
@@ -711,7 +711,7 @@ function ensureAudio(){
   return audioCtx;
  }catch(e){return null;}
 }
-function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries().map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
+function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries(WK.currentOffset()).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
@@ -803,8 +803,9 @@ function todayIndexFor(offset){return WK.currentDayIndex(offset==null?weekOffset
 // The bell and the header always describe the real current week, whatever week is being viewed.
 function todayIndex(){return todayIndexFor(WK.currentOffset());}
 function dayEntries(c,offset){
- const ws=offset==null?WEEK_START:WK.startParts(offset);
- return getSessionEntries().filter(x=>x.dayIndex===c).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const [eh,em]=x.endTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,h,m);const end=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,eh,em);return {...x,start,end,weekOffset:offset==null?weekOffset:offset};});
+ const activeOffset=offset==null?weekOffset:offset;
+ const ws=WK.startParts(activeOffset);
+ return getSessionEntries(activeOffset).filter(x=>x.dayIndex===c).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const [eh,em]=x.endTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,h,m);const end=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,eh,em);return {...x,start,end,weekOffset:activeOffset};});
 }
 function allEntries(){return days.flatMap((d,c)=>dayEntries(c));}
 // ---- header ----
