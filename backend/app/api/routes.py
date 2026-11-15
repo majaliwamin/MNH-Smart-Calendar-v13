@@ -1,6 +1,7 @@
 """Versioned-compatible REST endpoints used by the web and Flutter clients."""
 import json
 import logging
+import os
 import re
 import time
 from datetime import date, timedelta
@@ -85,8 +86,9 @@ def health():
         count = c.execute("SELECT COUNT(*) FROM docs").fetchone()[0]
         last = c.execute("SELECT MAX(at) FROM audit").fetchone()[0]
     backups = list_backups()
-    return {"ok": True, "storage": "shared", "documents": count,
-            "last_change": last, "backup_count": len(backups),
+    return {"ok": True, "storage": "shared",
+            "storage_backend": "postgresql" if os.getenv("DATABASE_URL", "").strip() else "sqlite",
+            "documents": count, "last_change": last, "backup_count": len(backups),
             "last_backup": backups[0].stat().st_mtime if backups else None}
 
 
