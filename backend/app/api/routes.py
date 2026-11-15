@@ -37,15 +37,16 @@ def _validate_restore_intervals(cleaned):
         if collection == "cells":
             interval = _cell_interval(item_id, data)
             if interval:
-                intervals.append(interval)
+                intervals.append((str(data.get("weekStart") or "2026-11-16"), *interval))
         elif collection == "recurring":
             recurring.append(data)
     by_day = {}
-    for day, start, end, label in intervals:
-        for other_start, other_end, other_label in by_day.setdefault(day, []):
+    for week_key, day, start, end, label in intervals:
+        key = (week_key, day)
+        for other_start, other_end, other_label in by_day.setdefault(key, []):
             if start < other_end and end > other_start:
                 raise HTTPException(400, f"Backup contains overlapping sessions: {label} and {other_label}.")
-        by_day[day].append((start, end, label))
+        by_day[key].append((start, end, label))
     weekday_index = {name.lower(): index for index, name in enumerate(("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"))}
     for recurring_item in recurring:
         recurring_day = weekday_index.get(str(recurring_item.get("day", "")).strip().lower())
@@ -58,7 +59,8 @@ def _validate_restore_intervals(cleaned):
         if start is None or end is None or end <= start:
             continue
         recurring_title = str(recurring_item.get("title", "")).strip().lower()
-        for other_start, other_end, other_title in by_day.get(recurring_day, []):
+        recurring_sessions = [entry for (week_key, day_key), entries in by_day.items() if day_key == recurring_day for entry in entries]
+        for other_start, other_end, other_title in recurring_sessions:
             if other_title.strip().lower() == recurring_title:
                 continue
             if other_start < end and other_end > start:
@@ -628,6 +630,8 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
                     legacy = re.fullmatch(r"(\d+)_(\d+)", existing_id)
                     existing_day = int(legacy.group(2)) if legacy else existing_data.get("dayIndex")
                     if existing_day != day_index:
+                        continue
+                    if str(existing_data.get("weekStart") or "2026-11-16") != str(data.get("weekStart") or "2026-11-16"):
                         continue
                     if legacy:
                         slot = int(legacy.group(1))
