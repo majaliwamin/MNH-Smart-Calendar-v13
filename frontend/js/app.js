@@ -123,17 +123,19 @@ function onModules(snap){
  if(currentView==="modules")renderModules();
  build();
 }
-async function addSharedModule(code,title,facilitatorId,targets={}){
- code=String(code||"").trim().slice(0,40);title=String(title||"").trim().slice(0,160);facilitatorId=String(facilitatorId||"").trim();
+async function addSharedModule(code,title,facilitatorValue,targets={}){
+ code=String(code||"").trim().slice(0,40);title=String(title||"").trim().slice(0,160);facilitatorValue=String(facilitatorValue||"").trim().slice(0,120);
  if(!code||!title){statusEl.className="status error";statusEl.textContent="Enter both a module code and title.";return;}
  if(!/^[A-Za-z0-9][A-Za-z0-9_. –-]{0,39}$/.test(code)){statusEl.className="status error";statusEl.textContent="Use letters, numbers, spaces, dots or hyphens in the module code.";return;}
  if(Object.prototype.hasOwnProperty.call(modules,code)){statusEl.className="status error";statusEl.textContent="That module code already exists.";return;}
  try{
-  const facilitator=facilitatorRecords.find(item=>String(item.id)===facilitatorId);
-  const data={title,facilitator:facilitator?String(facilitator.data.name):"Not specified",facilitatorId:facilitator?facilitatorId:"",semesterTargetSessions:targets.semesterTargetSessions,semesterTargetHours:targets.semesterTargetHours,updatedAt:Date.now()};
+  const facilitator=facilitatorRecords.find(item=>String(item.id)===facilitatorValue||String(item.data.name||"").trim().toLowerCase()===facilitatorValue.toLowerCase());
+  const data={title,facilitator:facilitatorValue||"Not specified",facilitatorId:facilitator?String(facilitator.id):"",semesterTargetSessions:targets.semesterTargetSessions,semesterTargetHours:targets.semesterTargetHours,updatedAt:Date.now()};
   if(cloud)await cloud.doc("modules/"+code).set(data);
   else await window.mnhApi.request("PUT","/api/doc/modules/"+encodeURIComponent(code),data);
-  statusEl.className="status ok";statusEl.textContent="Module added and shared with all users.";
+  modules[code]=data;refreshModuleSelect();build();
+  statusEl.className="status ok";statusEl.textContent="Module and facilitator saved permanently to the shared database.";
+  renderModules();
  }catch(e){writeFailed(e);}
 }
 function updateModuleDetails(code){
@@ -1567,8 +1569,8 @@ async function renderModules(){
   const title=document.createElement("input");title.placeholder="Full module title";title.maxLength=160;title.setAttribute("aria-label","Full module title");
   const targetSessions=document.createElement("input");targetSessions.type="number";targetSessions.min="0";targetSessions.step="1";targetSessions.placeholder="Semester target: sessions (optional)";targetSessions.setAttribute("aria-label","Semester target sessions");
   const targetHours=document.createElement("input");targetHours.type="number";targetHours.min="0";targetHours.step="0.5";targetHours.placeholder="Semester target: teaching hours (optional)";targetHours.setAttribute("aria-label","Semester target hours");
-  const fac=document.createElement("select");fac.setAttribute("aria-label","Assign lecturer");const none=document.createElement("option");none.value="";none.textContent=facilitatorRecords.length?"No lecturer assigned":"No facilitators available — add one in Facilitators";fac.appendChild(none);
-  facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.id);option.textContent=String(item.data.name);fac.appendChild(option);});
+  const fac=document.createElement("input");fac.type="text";fac.maxLength=120;fac.placeholder="Facilitator name (optional — type a name)";fac.setAttribute("aria-label","Facilitator name");
+  const facList=document.createElement("datalist");facList.id="module-facilitator-suggestions";facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.data.name);facList.appendChild(option);});form.appendChild(facList);fac.setAttribute("list",facList.id);
   [code,title,targetSessions,targetHours,fac].forEach(x=>{x.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text);";form.appendChild(x);});
   const add=el("button","primary","Add module");add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{await addSharedModule(code.value,title.value,fac.value,{semesterTargetSessions:targetSessions.value===""?null:Number(targetSessions.value),semesterTargetHours:targetHours.value===""?null:Number(targetHours.value)});}));form.appendChild(add);root.insertBefore(form,body);
  }
@@ -1580,22 +1582,18 @@ async function renderModules(){
   if(fac)card.appendChild(el("div","muted","Facilitator: "+fac));
   if(editingUnlocked){
    const titleInput=document.createElement("input");titleInput.type="text";titleInput.maxLength=160;titleInput.placeholder="Full module title";titleInput.value=module.title||title||"";titleInput.setAttribute("aria-label","Edit module title");
-   const facilitatorSelect=document.createElement("select");facilitatorSelect.setAttribute("aria-label","Assign facilitator");
-   const none=document.createElement("option");none.value="";none.textContent="No facilitator assigned";facilitatorSelect.appendChild(none);
-   facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.id);option.textContent=String(item.data.name);facilitatorSelect.appendChild(option);});
-   const currentId=String(module.facilitatorId||"");
-   const currentName=facilitatorFor(code);
-   const current=facilitatorRecords.find(item=>String(item.id)===currentId||String(item.data.name).trim().toLowerCase()===String(currentName).trim().toLowerCase());
-   facilitatorSelect.value=current?String(current.id):"";
+   const facilitatorInput=document.createElement("input");facilitatorInput.type="text";facilitatorInput.maxLength=120;facilitatorInput.placeholder="Type facilitator name (optional)";facilitatorInput.value=(module.facilitator&&module.facilitator!=="Not specified")?String(module.facilitator):facilitatorFor(code);facilitatorInput.setAttribute("aria-label","Facilitator name");
+   const facilitatorList=document.createElement("datalist");facilitatorList.id="facilitator-suggestions-"+code.replace(/[^A-Za-z0-9_-]/g,"-");facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.data.name);facilitatorList.appendChild(option);});card.appendChild(facilitatorList);facilitatorInput.setAttribute("list",facilitatorList.id);
    const targetS=document.createElement("input"),targetH=document.createElement("input");
    targetS.type="number";targetS.min="0";targetS.step="1";targetS.placeholder="Semester target sessions";targetS.value=module.semesterTargetSessions??"";
    targetH.type="number";targetH.min="0";targetH.step="0.5";targetH.placeholder="Semester target hours";targetH.value=module.semesterTargetHours??"";
-   [titleInput,facilitatorSelect,targetS,targetH].forEach(input=>{input.style.cssText="display:block;width:100%;margin:6px 0;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text)";card.appendChild(input);});
+   [titleInput,facilitatorInput,targetS,targetH].forEach(input=>{input.style.cssText="display:block;width:100%;margin:6px 0;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text)";card.appendChild(input);});
    const save=el("button","primary","Save module changes");save.type="button";save.onclick=async()=>{
     const nextTitle=titleInput.value.trim();if(!nextTitle){statusEl.className="status error";statusEl.textContent="Enter a module title before saving.";return;}
-    const assigned=facilitatorRecords.find(item=>String(item.id)===facilitatorSelect.value);
-    const data={...module,title:nextTitle,facilitator:assigned?String(assigned.data.name):"Not specified",facilitatorId:assigned?String(assigned.id):"",semesterTargetSessions:targetS.value===""?null:Number(targetS.value),semesterTargetHours:targetH.value===""?null:Number(targetH.value),updatedAt:Date.now()};
-    try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module details, facilitator and semester targets saved for everyone.";renderModules();}
+    const enteredFacilitator=facilitatorInput.value.trim().slice(0,120);
+    const assigned=facilitatorRecords.find(item=>String(item.id)===enteredFacilitator||String(item.data.name||"").trim().toLowerCase()===enteredFacilitator.toLowerCase());
+    const data={...module,title:nextTitle,facilitator:enteredFacilitator||"Not specified",facilitatorId:assigned?String(assigned.id):"",semesterTargetSessions:targetS.value===""?null:Number(targetS.value),semesterTargetHours:targetH.value===""?null:Number(targetH.value),updatedAt:Date.now()};
+    try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module details, typed facilitator name and semester targets saved permanently to the shared database.";renderModules();}
     catch(error){writeFailed(error);}
    };card.appendChild(save);
    const remove=el("button","danger","Remove module");remove.type="button";remove.onclick=async()=>{
