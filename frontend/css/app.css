@@ -1119,3 +1119,13 @@ body[data-theme="silver"] .view-tabs [data-view="silver-dashboard"].active{backg
 #view-weekly tbody th.time{position:sticky;left:0;z-index:5;background:var(--panel);background-clip:padding-box;box-shadow:3px 0 7px rgba(0,0,0,.28)}
 #view-weekly tbody th.time.highlight,#view-weekly tbody th.time.current-time-label{background:var(--gold);color:var(--page)}
 #view-weekly thead th,#view-weekly tbody th.time{backface-visibility:hidden}
+
+/* Violet-blue theme: keep the current date label legible and emphatic. */
+body[data-theme="violet"] .weekly-date-tab,
+body[data-theme="violet"] .weekly-date-tab:hover,
+body[data-theme="violet"] .weekly-date-tab.active,
+body[data-theme="violet"] .weekly-date-tab #current-day-date{
+ color:#fff!important;
+ font-weight:700!important;
+}
+body[data-theme="violet"] .weekly-date-tab .weekly-date-icon{color:#fff!important}
