@@ -102,7 +102,8 @@ def _copy_sqlite_table(source, target, table, columns, conflict_sql):
         return 0
     placeholders = ", ".join(["%s"] * len(columns))
     statement = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders}) {conflict_sql}"
-    target.executemany(statement, [tuple(row) for row in rows])
+    with target.cursor() as cursor:
+        cursor.executemany(statement, [tuple(row) for row in rows])
     return len(rows)
 
 
