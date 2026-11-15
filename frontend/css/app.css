@@ -1522,7 +1522,7 @@ body[data-theme="red"] #view-weekly tbody th.time{
   position:relative!important;
   isolation:isolate!important;
   overflow-x:auto!important;
-  overflow-y:hidden!important;
+  overflow-y:visible!important;
   -webkit-overflow-scrolling:touch!important;
   overscroll-behavior-x:contain!important;
 }
