@@ -449,6 +449,10 @@ async function downloadPdf(){
   // Cells are <button class="activity"> in this build; keep the legacy textarea path for safety.
   const cellLabel=area=>{
    if(!area)return "";
+   // Empty cells carry an "empty-activity" class and show a "+" placeholder
+   // (or nothing when editing is locked). Treat them as blank so they export
+   // as fillable 18pt fields instead of literal "+" text.
+   if(area.classList&&area.classList.contains("empty-activity"))return "";
    const name=area.querySelector&&area.querySelector(".activity-name");
    if(name)return clean(name.textContent||"");
    if(typeof area.value==="string"&&area.value)return clean(area.value);
@@ -488,7 +492,9 @@ async function downloadPdf(){
      try{
       const f=new J.AcroForm.TextField();
       f.fieldName="cell_"+r+"_"+c;f.Rect=[ix+.4,iy+.4,iw-.8,ih-.8];f.multiline=true;f.value="";f.defaultValue="";
-      f.fontSize=size;f.fontName="Helvetica";
+      // Default edit font size: 18pt, so typed entries stay legible in desktop
+      // viewers and in Google Drive's PDF editor.
+      f.fontSize=18;f.fontName="Helvetica";
       // jsPDF AcroForm expects RGB arrays for field appearance colours.
       // Hex strings can produce blank/invisible text after the PDF is saved.
       f.color=cellInk.slice();f.backgroundColor=fill.slice();f.borderColor=line.slice();

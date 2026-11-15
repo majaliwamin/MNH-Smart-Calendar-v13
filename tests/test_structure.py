@@ -277,3 +277,38 @@ def test_pwa_install_requirements_are_met():
     # No stray literal backslash-n escapes left in the PWA files.
     assert ">\\n<" not in html
     assert "\\n" not in manifest_text
+
+
+def test_editable_weekly_grid_pdf_fields_default_to_eighteen_point():
+    """The fillable weekly timetable cells default to 18pt when editing.
+
+    An explicit 18pt default keeps typed entries legible both in desktop PDF
+    viewers and in Google Drive's PDF editor, which otherwise falls back to a
+    small auto-sized appearance. Only the weekly grid cells change; the module
+    directory and session register keep their existing 16pt default.
+    """
+    pdf = (ROOT / "backend" / "app" / "services" / "pdf_export.py").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # Server-side fillable PDF (ReportLab): a named 18pt default drives the weekly grid.
+    assert "EDIT_FIELD_FONT_SIZE = 18" in pdf
+    assert "preset, font_size=EDIT_FIELD_FONT_SIZE, multiline=True," in pdf
+    # Module directory and register fields still request their explicit 16pt.
+    assert pdf.count("font_size=16") >= 4
+
+    # Browser-side fillable PDF (jsPDF): empty weekly cells become 18pt form fields.
+    assert "f.fontSize=18;f.fontName=" in app
+
+
+def test_empty_weekly_cells_export_as_fillable_fields_not_plus_placeholders():
+    """The browser PDF treats the "+" placeholder as a blank cell.
+
+    Empty weekly cells carry an "empty-activity" class and render a "+"
+    placeholder. The export must ignore that placeholder so those cells become
+    fillable 18pt fields rather than literal "+" text, which previously also
+    suppressed the field entirely because the placeholder read as content.
+    """
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    start = app.index("const cellLabel=area=>{")
+    block = app[start:app.index("};", start)]
+    assert 'classList.contains("empty-activity")' in block

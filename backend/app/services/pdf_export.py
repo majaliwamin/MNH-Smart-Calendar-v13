@@ -19,6 +19,11 @@ TITLE = "PhD in Maternal & Neonatal Health"
 APP_NAME = "MNH Smart Timetable"
 APP_SUBTITLE = "Academic Calendar 2026"
 
+# Default /DA font size for the editable weekly-timetable cells. 18pt keeps
+# typed entries legible both in desktop PDF viewers and in Google Drive's PDF
+# editor, which otherwise falls back to a small auto-sized appearance.
+EDIT_FIELD_FONT_SIZE = 18
+
 NAVY = colors.HexColor("#102B4E")
 PURPLE = colors.HexColor("#45215F")
 SILVER = colors.HexColor("#C4CBD4")
@@ -317,7 +322,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 f"{day_name} {_slot_label(start_hour, end_hour)}",
                 cell_x + 1 * mm, row_y + 1.5 * mm,
                 day_w - 2 * mm, row_h - 3 * mm,
-                preset, font_size=8, multiline=True,
+                preset, font_size=EDIT_FIELD_FONT_SIZE, multiline=True,
             )
 
     footer()
