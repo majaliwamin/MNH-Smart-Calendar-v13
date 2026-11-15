@@ -1673,3 +1673,20 @@ body[data-theme="red"] #view-weekly tbody th.time{
  .site-header .hd-right{gap:4px}
  .site-header .hd-theme-btn,.site-header .hd-dlbtn{min-width:36px;width:36px;padding:6px}
 }
+
+
+/* Meeting detail reminder: animated Doppler-style signal and live countdown. */
+.meeting-countdown{display:flex;align-items:center;gap:13px;margin-top:10px;padding:12px;border:1px solid var(--accent);border-radius:9px;background:var(--panel);color:var(--text);min-height:66px}
+.meeting-doppler{width:48px;height:48px;flex:0 0 48px;overflow:visible}
+.meeting-doppler .doppler-ring{fill:none;stroke:var(--accent);stroke-width:1.8;transform-origin:24px 24px;opacity:0}
+.meeting-doppler .doppler-ring-one{animation:meeting-doppler 2.4s ease-out infinite}
+.meeting-doppler .doppler-ring-two{animation:meeting-doppler 2.4s ease-out .8s infinite}
+.meeting-doppler .doppler-ring-three{animation:meeting-doppler 2.4s ease-out 1.6s infinite}
+.meeting-doppler .doppler-core{fill:var(--accent);stroke:var(--text);stroke-width:1}
+.meeting-countdown-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.meeting-countdown-title{font-size:14px;color:var(--text)}
+.meeting-countdown-time{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--accent)}
+.meeting-countdown.is-active .doppler-core{animation:meeting-core 1s ease-in-out infinite}
+@keyframes meeting-doppler{0%{transform:scale(.7);opacity:.95}100%{transform:scale(3.1);opacity:0}}
+@keyframes meeting-core{0%,100%{opacity:1}50%{opacity:.48}}
+@media(prefers-reduced-motion:reduce){.meeting-doppler .doppler-ring,.meeting-countdown.is-active .doppler-core{animation:none}.meeting-doppler .doppler-ring{opacity:.25;transform:scale(1.7)}}
