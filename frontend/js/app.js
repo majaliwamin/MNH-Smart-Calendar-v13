@@ -626,7 +626,7 @@ let weekMigrationRunning=false;
 async function onCells(snap){
  if(syncing||weekMigrationRunning)return;
  if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
- const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^\\d+_(\\d+)$/.exec(d.id);if(legacy&&Number(legacy[1])>=5)return false;const day=legacy?Number(legacy[1]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&Number(legacy[2])>=5)return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
  if(legacyDocs.length){
   weekMigrationRunning=true;
   try{
