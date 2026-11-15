@@ -72,7 +72,7 @@ function getSessionEntries(){
   const moduleCode=resolveModuleCode(data);
   const label=String(moduleCode||data.code||data.text||data.title||"Scheduled session");
   if((label==="Journal Club"&&dayIndex===1)||(label==="Seminar in MNH"&&dayIndex===3))return;
-  result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[moduleCode]?.title||""),facilitator:(moduleCode?facilitatorFor(moduleCode):"")||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
+  result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[moduleCode]?.title||""),facilitator:String(data.facilitatorOverride||"").trim()||(moduleCode?facilitatorFor(moduleCode):"")||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
  });
  recurringRecords.filter(row=>row.data?.enabled!==false).forEach(row=>{
   const data=row.data||{},range=parseRange(data.time),dayIndex=days.indexOf(String(data.day||""));
@@ -142,7 +142,7 @@ function updateModuleDetails(code){
  const lecturer=code?facilitatorFor(code):"";
  // The activity label is the module code; the lecturer below it comes from the Facilitators directory.
  if(labelField){labelField.value=code||"";labelField.readOnly=!!code;labelField.placeholder=code?"":"Type a custom activity name";}
- if(lecturerField)lecturerField.value=code?(lecturer||"Not assigned"):"";
+ if(lecturerField){lecturerField.value=code?lecturer:"";lecturerField.placeholder="Not assigned — enter a name if needed";}
  if(modules[code]){const m=modules[code];box.textContent="";const strong=document.createElement("strong");strong.textContent=code;box.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
  else if(code==="Journal Club")box.textContent="Journal Club · Every Tuesday, 13:00–14:00";
  else box.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
@@ -162,7 +162,7 @@ async function openModuleDialog(dayIndex,startTime,entry){
  const existingCode=resolveModuleCode(existing?.data||{});
  document.getElementById("module-select").value=existingCode;
  document.getElementById("module-label").value=existingCode||(existing?String(existing.title||existing.label||""):"");
- document.getElementById("session-lecturer").value=existingCode?(facilitatorFor(existingCode)||"Not assigned"):"";
+ document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
  document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
@@ -346,7 +346,9 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
  const previous=state.cells[oldId||id]||{},module=modules[code]||{};
  const chosenColour=document.getElementById("module-colour").value;
- const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:code?(facilitatorFor(code)||module.facilitator||""):"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value};
+ const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
+ const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
+ const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);if(saved&&oldId&&oldId!==id)await pushCell(oldId);
 });
