@@ -88,7 +88,10 @@
   }
   function currentOffset() {
     const now = localNow(), today = Date.UTC(now.year, now.month, now.day);
-    const mondayOfToday = today - ((now.weekday + 6) % 7) * DAY_MS;
+    let mondayOfToday = today - ((now.weekday + 6) % 7) * DAY_MS;
+    // Keep the current teaching week through Friday; roll forward as soon as
+    // Friday ends (Saturday 00:00 Malawi time), not on Monday morning.
+    if (now.weekday === 6 || now.weekday === 0) mondayOfToday += 7 * DAY_MS;
     const first = Date.UTC(FIRST_MONDAY.getUTCFullYear(), FIRST_MONDAY.getUTCMonth(), FIRST_MONDAY.getUTCDate());
     return Math.floor((mondayOfToday - first) / (DAY_MS * 7));
   }
