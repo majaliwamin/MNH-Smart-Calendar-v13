@@ -928,7 +928,7 @@ tbody tr.current-time-row td.current-slot .activity{border-color:var(--gold)!imp
 .activity-marquee{width:100%;overflow:hidden;position:relative;padding:11px 0;cursor:grab;touch-action:pan-y;user-select:none}
 .activity-marquee.is-dragging{cursor:grabbing}
 .activity-marquee:focus-visible{outline:2px solid var(--gold,#ecbb4c);outline-offset:2px}
-.activity-marquee-track{display:flex;align-items:center;gap:0;width:max-content;min-width:100%;white-space:nowrap;animation:activity-flow-right 42s linear infinite;will-change:transform}
+.activity-marquee-track{display:flex;align-items:center;gap:0;width:max-content;min-width:100%;white-space:nowrap;animation:activity-flow-right 90s linear infinite;will-change:transform}
 .activity-marquee:hover .activity-marquee-track,.activity-marquee:focus-within .activity-marquee-track{animation-play-state:paused}
 .activity-marquee-text{display:inline-block;font:500 13px/1.5 Arial,sans-serif;padding:0 3px}
 .activity-marquee-text .marquee-when{font-size:11px;font-weight:700;opacity:.88;letter-spacing:.025em}
