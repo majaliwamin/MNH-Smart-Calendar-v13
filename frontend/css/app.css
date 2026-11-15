@@ -1690,3 +1690,11 @@ body[data-theme="red"] #view-weekly tbody th.time{
 @keyframes meeting-doppler{0%{transform:scale(.7);opacity:.95}100%{transform:scale(3.1);opacity:0}}
 @keyframes meeting-core{0%,100%{opacity:1}50%{opacity:.48}}
 @media(prefers-reduced-motion:reduce){.meeting-doppler .doppler-ring,.meeting-countdown.is-active .doppler-core{animation:none}.meeting-doppler .doppler-ring{opacity:.25;transform:scale(1.7)}}
+
+
+/* Meeting-provider SVG shown at the right edge of the module-details panel. */
+#module-details.module-details-with-meeting{display:flex;align-items:center;justify-content:space-between;gap:14px}
+#module-details .module-details-copy{flex:1 1 auto;min-width:0}
+#module-details .module-details-meeting-mark{flex:0 0 auto;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px}
+#module-details .module-details-meeting-mark svg{display:block;width:42px;height:42px}
+@media(max-width:480px){#module-details .module-details-meeting-mark{width:40px;height:40px}#module-details .module-details-meeting-mark svg{width:36px;height:36px}}
