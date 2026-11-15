@@ -31,9 +31,6 @@ function parseClock(value){const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||""))
 function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
 function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
 function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
-function displayFacilitatorName(name){
- return String(name||"").replace(/\b(professor|prof|doctor|dr|mr|mrs|ms|miss|mx)\b\.?/gi,"").replace(/\s+/g," ").trim();
-}
 function facilitatorFor(code){
  const configured=String(modules[code]?.facilitator||"").trim();
  const configuredId=String(modules[code]?.facilitatorId||"").trim();
@@ -102,7 +99,7 @@ function showDialog(id){
  }
  el.classList.add("open");el.setAttribute("aria-hidden","false");
 }
-function hideDialog(id){const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}}
+function hideDialog(id){if(id==="details-dialog")stopMeetingCountdown();const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}}
 function contrastColour(hex){
  const n=parseInt(hex.replace("#",""),16);
  const lum=(0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255;
@@ -173,15 +170,45 @@ function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
  showDialog("module-dialog");
 }
+let meetingCountdownTimer=null;
+function stopMeetingCountdown(){if(meetingCountdownTimer){clearInterval(meetingCountdownTimer);meetingCountdownTimer=null;}}
+function meetingCountdownMarkup(){
+ const wrap=document.createElement("div");wrap.className="meeting-countdown";
+ wrap.innerHTML='<svg class="meeting-doppler" viewBox="0 0 48 48" role="img" aria-label="Meeting reminder signal"><circle class="doppler-ring doppler-ring-one" cx="24" cy="24" r="7"></circle><circle class="doppler-ring doppler-ring-two" cx="24" cy="24" r="7"></circle><circle class="doppler-ring doppler-ring-three" cx="24" cy="24" r="7"></circle><circle class="doppler-core" cx="24" cy="24" r="4"></circle></svg><div class="meeting-countdown-copy"><strong class="meeting-countdown-title">Meeting reminder</strong><span class="meeting-countdown-time" aria-live="off">Calculating…</span></div>';
+ return wrap;
+}
+function updateMeetingCountdown(wrap,meetingStart,meetingEnd){
+ const title=wrap.querySelector(".meeting-countdown-title"),time=wrap.querySelector(".meeting-countdown-time"),now=Date.now(),reminderAt=meetingStart.getTime()-600000;
+ let target,label;
+ if(now<reminderAt){target=reminderAt;label="Reminder in";}
+ else if(now<meetingStart.getTime()){target=meetingStart.getTime();label="Meeting starts in";}
+ else if(now<meetingEnd.getTime()){title.textContent="Meeting in progress";time.textContent="Scheduled session is underway";wrap.classList.add("is-active");return;}
+ else{title.textContent="Meeting time passed";time.textContent="This scheduled session has ended";wrap.classList.remove("is-active");return;}
+ const seconds=Math.max(0,Math.floor((target-now)/1000)),hh=String(Math.floor(seconds/3600)).padStart(2,"0"),mm=String(Math.floor(seconds%3600/60)).padStart(2,"0"),ss=String(seconds%60).padStart(2,"0");
+ title.textContent=label;time.textContent=hh+":"+mm+":"+ss;wrap.classList.toggle("is-active",label==="Meeting starts in");
+}
 function showSessionDetails(entry){
  if(!entry)return;
+ stopMeetingCountdown();
  const detailWeekOffset=Number.isInteger(entry.weekOffset)?entry.weekOffset:weekOffset;
  const detailDates=WK.dateLabels(detailWeekOffset),detailDate=WK.dateList(detailWeekOffset)[entry.dayIndex];
  const dateText=`${days[entry.dayIndex]} ${detailDates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
- const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){const linkRow=document.createElement("div");linkRow.className="session-meeting-link";const provider=meetingProviderMark(meetingUrl,true);if(provider)linkRow.appendChild(provider);const linkInfo=document.createElement("div");linkInfo.className="session-meeting-info";const providerName=meetingProvider(meetingUrl)==="zoom"?"Zoom":meetingProvider(meetingUrl)==="meet"?"Google Meet":meetingProvider(meetingUrl)==="teams"?"Microsoft Teams":"Online meeting";const providerLabel=el("strong","session-meeting-provider",providerName);const meetingLink=document.createElement("a");meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";linkInfo.append(providerLabel,meetingLink);linkRow.append(provider,linkInfo);details.appendChild(linkRow);}
+ const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){
+  const linkRow=document.createElement("div");linkRow.className="session-meeting-link";
+  const provider=meetingProviderMark(meetingUrl,true);
+  const linkInfo=document.createElement("div");linkInfo.className="session-meeting-info";
+  const providerName=meetingProvider(meetingUrl)==="zoom"?"Zoom":meetingProvider(meetingUrl)==="meet"?"Google Meet":meetingProvider(meetingUrl)==="teams"?"Microsoft Teams":"Online meeting";
+  const providerLabel=el("strong","session-meeting-provider",providerName),meetingLink=document.createElement("a");
+  meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";
+  linkInfo.append(providerLabel,meetingLink);linkRow.append(provider,linkInfo);details.appendChild(linkRow);
+  const countdown=meetingCountdownMarkup(),parts=WK.startParts(detailWeekOffset),[sh,sm]=entry.startTime.split(":").map(Number),[eh,em]=entry.endTime.split(":").map(Number);
+  const meetingStart=WK.makeZonedDate(parts[0],parts[1],parts[2]+entry.dayIndex,sh,sm),meetingEnd=WK.makeZonedDate(parts[0],parts[1],parts[2]+entry.dayIndex,eh,em);
+  details.appendChild(countdown);updateMeetingCountdown(countdown,meetingStart,meetingEnd);
+  meetingCountdownTimer=setInterval(()=>updateMeetingCountdown(countdown,meetingStart,meetingEnd),1000);
+ }
  document.getElementById("edit-details").style.display=(editingUnlocked&&!entry.data?.recurring)?"inline-block":"none";
  document.getElementById("edit-details").onclick=()=>{hideDialog("details-dialog");openModuleDialog(entry.dayIndex,entry.startTime,entry);};
  showDialog("details-dialog");
@@ -225,7 +252,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=displayFacilitatorName(entry.facilitator);area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,displayFacilitatorName(entry.facilitator)].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
