@@ -49,7 +49,7 @@ def _slot_label(start, end) -> str:
 def build_timetable_pdf(collections: dict, selected_modules: list | None = None, week_start=None, theme: str = "dark", font_scale: float = 1.0) -> bytes:
     theme = theme if theme in {"dark", "white", "violet", "green", "silver"} else "dark"
     palettes = {
-        "dark": ("#111318", "#252d38", "#f2c14e", "#cbd5e1", "#1b2028", "#252d38", "#4a5868", "#f8fafc", "#151d27", "#263342", "#3a3425", "#f7d98d"),
+        "dark": ("#000000", "#252d38", "#f2c14e", "#cbd5e1", "#1b2028", "#252d38", "#4a5868", "#f8fafc", "#151d27", "#263342", "#3a3425", "#f7d98d"),
         "white": ("#ffffff", "#17427a", "#17427a", "#c6cfda", "#f1f4f8", "#e8eef7", "#c6cfda", "#0a1018", "#ffffff", "#dce6f2", "#e8edf5", "#17427a"),
         "violet": ("#1c1140", "#241548", "#c7b3ff", "#c7b3ff", "#2a1a5c", "#312070", "#5a4a94", "#ffffff", "#312070", "#3a2c70", "#42315e", "#f0e8ff"),
         "green": ("#0a7d3c", "#075f2a", "#ffffff", "#ffffff", "#06612c", "#075f2a", "#a9dcc0", "#ffffff", "#075f2a", "#0a6b34", "#155b35", "#ffffff"),
@@ -81,7 +81,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     out = BytesIO()
     width, height = landscape(A4)
     pdf = canvas.Canvas(out, pagesize=landscape(A4))
-    pdf.setTitle(f"{APP_NAME} - {TITLE} - Editable Academic Calendar")
+    pdf.setTitle(f"{APP_NAME} - {TITLE} - Academic Calendar")
     pdf.setAuthor(APP_NAME)
     pdf.setSubject(f"{TITLE} | {APP_SUBTITLE}")
     font_scale = max(0.85, min(1.15, float(font_scale)))
@@ -89,7 +89,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     def set_font(name, size):
         pdf.setFont(name, max(4, size * font_scale))
 
-    pdf.setKeywords("MNH, maternal and neonatal health, PhD, editable timetable, academic calendar")
+    pdf.setKeywords("MNH, maternal and neonatal health, PhD, academic calendar")
 
     form = pdf.acroForm
     page_number = 0
@@ -372,7 +372,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         ]
     for page_idx, chunk in enumerate(register_chunks):
         top = banner("SESSION REGISTER")
-        top = section_heading("Session register  |  editable records", 10 * mm, top, width - 20 * mm)
+        top = section_heading("Session register", 10 * mm, top, width - 20 * mm)
         top -= 2 * mm
         for local_idx, item in enumerate(chunk):
             idx = page_idx * register_capacity + local_idx
