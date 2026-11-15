@@ -15,6 +15,9 @@ SEED_MODULES = {
 
 
 def connect():
+    if __import__('os').getenv('DATABASE_URL', '').strip():
+        from app.database.postgres import connect as postgres_connect
+        return postgres_connect()
     ensure_directories()
     connection = sqlite3.connect(str(DATABASE_PATH), timeout=30, check_same_thread=False)
     connection.row_factory = sqlite3.Row
@@ -109,6 +112,17 @@ def connect():
 
 @contextmanager
 def database():
+    if __import__('os').getenv('DATABASE_URL', '').strip():
+        connection = connect()
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return
     with DB_LOCK:
         connection = connect()
         try:
