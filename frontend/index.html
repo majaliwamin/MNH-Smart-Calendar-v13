@@ -7,15 +7,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.15-v14.36">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.15-v14.37">\n<link rel="manifest" href="/manifest.json?v=2026.11.15-v14.37">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.15-v14.36";</script>
-<script src="/js/week-model.js?v=2026.11.15-v14.36"></script>
-<script src="/js/api-client.js?v=2026.11.15-v14.36"></script>
+<script>window.MNH_BUILD="2026.11.15-v14.37";</script>
+<script src="/js/week-model.js?v=2026.11.15-v14.37"></script>
+<script src="/js/api-client.js?v=2026.11.15-v14.37"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.15-v14.36">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.15-v14.37">
 </head>
 <body data-theme="dark">
 <script>
@@ -59,6 +59,9 @@
    <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
+   </button>
+   <button type="button" class="hd-install" id="install-app-btn" aria-label="Install MNH Calendar app" title="Install app">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M12 6.5v7M9 10.5l3 3 3-3M9 18h6"/></svg>
    </button>
    <div class="hd-dl" id="hd-dl">
     <button type="button" class="hd-dlbtn" id="dl-btn" aria-label="Download" title="Download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-menu">
@@ -260,7 +263,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.15-v14.36-weekfix1-typedfac" defer></script>
+<script src="/js/app.js?v=2026.11.15-v14.37-weekfix1-typedfac" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
@@ -317,5 +320,35 @@
   }
 })();
 </script>
-</body></html>
+
+<script>
+(function(){
+ "use strict";
+ const button=document.getElementById("install-app-btn");
+ if(!button)return;
+ let installPrompt=null;
+ const isStandalone=()=>window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+ const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+ if(isStandalone()){button.hidden=true;return;}
+ window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();installPrompt=event;button.hidden=false;
+ });
+ button.addEventListener("click",async()=>{
+  if(installPrompt){
+   const promptEvent=installPrompt;installPrompt=null;
+   await promptEvent.prompt();
+   const choice=await promptEvent.userChoice;
+   if(choice&&choice.outcome==="accepted")button.hidden=true;
+   return;
+  }
+  if(isIOS()){
+   alert('To install MNH Calendar: tap the Share button in Safari, then choose “Add to Home Screen”.');
+   return;
+  }
+  alert('To install MNH Calendar, open your browser menu and choose “Install app” or “Add to Home screen”. If that option is not available, refresh the page and try again.');
+ });
+ window.addEventListener("appinstalled",()=>{button.hidden=true;installPrompt=null;});
+})();
+</script>
+\n</body></html>
 
