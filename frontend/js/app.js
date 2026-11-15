@@ -178,7 +178,7 @@ function showSessionDetails(entry){
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
- const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){const linkRow=document.createElement("div");linkRow.className="session-meeting-link";linkRow.appendChild(document.createTextNode("Online meeting: "));const meetingLink=document.createElement("a");meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";linkRow.appendChild(meetingLink);details.appendChild(linkRow);}
+ const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){const linkRow=document.createElement("div");linkRow.className="session-meeting-link";const provider=meetingProviderMark(meetingUrl,true);if(provider)linkRow.appendChild(provider);const linkInfo=document.createElement("div");linkInfo.className="session-meeting-info";const providerName=meetingProvider(meetingUrl)==="zoom"?"Zoom":meetingProvider(meetingUrl)==="meet"?"Google Meet":meetingProvider(meetingUrl)==="teams"?"Microsoft Teams":"Online meeting";const providerLabel=el("strong","session-meeting-provider",providerName);const meetingLink=document.createElement("a");meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";linkInfo.append(providerLabel,meetingLink);linkRow.append(provider,linkInfo);details.appendChild(linkRow);}
  document.getElementById("edit-details").style.display=(editingUnlocked&&!entry.data?.recurring)?"inline-block":"none";
  document.getElementById("edit-details").onclick=()=>{hideDialog("details-dialog");openModuleDialog(entry.dayIndex,entry.startTime,entry);};
  showDialog("details-dialog");
@@ -222,7 +222,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -366,7 +366,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
  const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
- state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);if(saved&&oldId&&oldId!==id)await pushCell(oldId);
+ state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
 document.getElementById("delete-module").addEventListener("click",async()=>{
  if(!editingUnlocked||!activeCell?.id)return;
@@ -1966,6 +1966,18 @@ async function renderAnalytics(targetId="analytics-body"){
 function safeUrl(u){
  u=String(u||"").trim();if(!u)return "";if(!/^https?:\/\//i.test(u))u="https://"+u;
  try{const x=new URL(u);return(x.protocol==="http:"||x.protocol==="https:")?x.href:"";}catch(e){return "";}
+}
+function meetingProvider(url){
+ const host=(()=>{try{return new URL(safeUrl(url)).hostname.toLowerCase().replace(/^www\\./,"");}catch(e){return "";}})();
+ if(host==="zoom.us"||host.endsWith(".zoom.us")||host==="zoom.com"||host.endsWith(".zoom.com"))return "zoom";
+ if(host==="meet.google.com"||host.endsWith(".meet.google.com"))return "meet";
+ if(host==="teams.microsoft.com"||host.endsWith(".teams.microsoft.com")||host==="teams.live.com"||host.endsWith(".teams.live.com")||host==="teams.office.com")return "teams";
+ return url?"other":"";
+}
+function meetingProviderMark(url,large=false){
+ const kind=meetingProvider(url);if(!kind)return null;
+ const mark=el("span","meeting-provider-mark "+(large?"meeting-provider-large ":"")+"meeting-provider-"+kind,kind==="zoom"?"Z":kind==="meet"?"M":kind==="teams"?"T":"↗");
+ mark.setAttribute("role","img");mark.setAttribute("aria-label",kind==="zoom"?"Zoom meeting":kind==="meet"?"Google Meet":kind==="teams"?"Microsoft Teams":"Online meeting link");mark.title=mark.getAttribute("aria-label");return mark;
 }
 function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),createdAt:+(v&&v.createdAt)||0};}
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
