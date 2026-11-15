@@ -19,10 +19,7 @@ const legacyKey="phd_mnh_weekly_calendar_v2";
 let currentRole="public";
 let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
-let recurringRecords=[
- {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
- {id:"seminar-mnh",data:{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
-];
+let recurringRecords=[];
 let editingUnlocked=true;
 let analyticsUnlocked=true;
 let activeCell=null;
@@ -1620,9 +1617,24 @@ async function renderModules(){
     try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module details, typed facilitator name and semester targets saved permanently to the shared database.";renderModules();}
     catch(error){writeFailed(error);}
    };card.appendChild(save);
-   const remove=el("button","danger","Remove module");remove.type="button";remove.onclick=async()=>{
-    if(!window.confirm("Remove "+code+" from the Modules directory? Its scheduled timetable sessions will be kept as standalone activities."))return;
-    try{if(cloud)await cloud.doc("modules/"+code).delete();else await deleteRow("modules",code);delete modules[code];refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module removed. Existing timetable sessions were preserved.";renderModules();}
+   const remove=el("button","danger",modules[code]?"Remove module":"Remove activity");remove.type="button";remove.onclick=async()=>{
+    const entries=sessionsFor(code);
+    const recurring=entries.find(item=>item.data?.recurring&&item.data?.recurringId);
+    if(modules[code]){
+     if(!window.confirm("Remove "+code+" from the Modules directory? Its scheduled timetable sessions will be kept as standalone activities."))return;
+     try{if(cloud)await cloud.doc("modules/"+code).delete();else await deleteRow("modules",code);delete modules[code];refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module removed from the shared directory. Existing timetable sessions were preserved.";renderModules();}
+     catch(error){writeFailed(error);}
+     return;
+    }
+    if(recurring){
+     if(!window.confirm("Permanently delete the recurring activity “"+code+"” from the shared timetable? This will remove it for everyone."))return;
+     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
+     catch(error){writeFailed(error);}
+     return;
+    }
+    if(!entries.length)return;
+    if(!window.confirm("Delete “"+code+"” and all its scheduled timetable entries? This cannot be undone."))return;
+    try{for(const entry of entries){if(state.cells[entry.id]){delete state.cells[entry.id];await pushCell(entry.id);}}build();statusEl.className="status ok";statusEl.textContent=code+" and its scheduled entries were deleted.";renderModules();}
     catch(error){writeFailed(error);}
    };card.appendChild(remove);
   }
@@ -2004,10 +2016,7 @@ function subscribeExtras(db){
   build();if(currentView==="modules")renderModules();
  },()=>{});
  db.collection("recurring").onSnapshot(snap=>{
-  recurringRecords=snap.docs.length?snap.docs.map(d=>({id:d.id,data:d.data()||{}})):[
-   {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
-   {id:"seminar-mnh",data:{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
-  ];
+  recurringRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}}));
   build();if(currentView==="recurring")renderManaged("recurring");
   if(currentView==="weekly")renderAnimatedFutureStrip();
  },()=>{});
