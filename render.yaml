@@ -40,7 +40,7 @@ services:
       - key: MNH_AI_MODEL
         sync: false
       - key: MNH_AI_TRIGGER_ENABLED
-        value: "0"
+        sync: false
       - key: MNH_ARI_BASE_URL
         sync: false
       - key: MNH_ARI_USER
