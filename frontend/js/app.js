@@ -55,10 +55,16 @@ function resolveModuleCode(data){
 function getSessionEntries(offset=weekOffset){
  const result=[];
  const visibleWeek=WK.isoMonday(offset);
-
+ const recordBelongsToWeek=(id,data)=>{
+  const savedWeek=String(data?.weekStart||"").trim();
+  // Legacy sessions were explicitly assigned to the 16 November 2026 week.
+  // Never let an undated record leak into any later or earlier week.
+  const effectiveWeek=savedWeek||(/^\\d+_\\d+$/.test(id)?"2026-11-16":"2026-11-16");
+  return /^\\d{4}-\\d{2}-\\d{2}$/.test(effectiveWeek)&&effectiveWeek===visibleWeek;
+ };
  Object.entries(state.cells||{}).forEach(([id,data])=>{
   if(!data||typeof data!=="object")return;
-  if(String(data.weekStart||"2026-11-16")!==visibleWeek)return;
+  if(!recordBelongsToWeek(id,data))return;
   let dayIndex,startTime,endTime,rowIndex=-1;
   const legacy=/^(\d+)_(\d+)$/.exec(id);
   if(legacy){rowIndex=+legacy[1];dayIndex=+legacy[2];if(dayIndex<0||dayIndex>=5||rowIndex<0||rowIndex>=times.length)return;}
