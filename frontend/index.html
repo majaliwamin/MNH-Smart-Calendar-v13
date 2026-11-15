@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.15-v14.46">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.15-v14.47">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.15-v14.46">
+<link rel="manifest" href="/manifest.json?v=2026.11.15-v14.47">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,11 +17,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.15-v14.46";</script>
-<script src="/js/week-model.js?v=2026.11.15-v14.46"></script>
-<script src="/js/api-client.js?v=2026.11.15-v14.46"></script>
+<script>window.MNH_BUILD="2026.11.15-v14.47";</script>
+<script src="/js/week-model.js?v=2026.11.15-v14.47"></script>
+<script src="/js/api-client.js?v=2026.11.15-v14.47"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.15-v14.46">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.15-v14.47">
 </head>
 <body data-theme="dark">
 <script>
@@ -201,6 +201,11 @@
    <label for="module-mode">Delivery mode</label>
    <select id="module-mode"><option value="unspecified">Not specified</option><option value="online">Online</option><option value="face_to_face">Face-to-face</option></select>
   </div>
+  <div class="module-field">
+   <label for="session-link">Online meeting link (Google Meet, Zoom, Teams, etc.)</label>
+   <input id="session-link" type="url" maxlength="500" inputmode="url" placeholder="https://meet.google.com/...">
+   <small class="field-hint">Optional. Saved with this session and shown when the timetable entry is tapped.</small>
+  </div>
   <div class="dialog-actions">
    <button id="delete-module">Remove entry</button>
    <button id="cancel-module">Cancel</button>
@@ -277,7 +282,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.15-v14.46" defer></script>
+<script src="/js/app.js?v=2026.11.15-v14.47" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
