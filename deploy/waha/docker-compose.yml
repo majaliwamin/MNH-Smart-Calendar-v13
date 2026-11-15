@@ -1,0 +1,35 @@
+# WAHA (WhatsApp HTTP API) — the WhatsApp bridge for MNH Smart Calendar.
+#
+# Run this on the ALWAYS-ON Asterisk/VPS host, never on a laptop.
+# It binds to localhost only; expose it to Render over HTTPS with a
+# Cloudflare Tunnel (see README.md) — never open port 3000 to the internet.
+#
+#   cp .env.example .env      # then edit .env
+#   docker compose up -d
+#   docker compose logs -f waha
+services:
+  waha:
+    image: devlikeapro/waha
+    container_name: waha
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # The API key the app sends as X-Api-Key. Put the SAME value in
+      # Render as MNH_WA_BRIDGE_TOKEN.
+      WAHA_API_KEY: ${WAHA_API_KEY:?set WAHA_API_KEY in .env}
+      # Dashboard login (separate from the API key).
+      WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USERNAME:-admin}
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:?set WAHA_DASHBOARD_PASSWORD in .env}
+      # WEBJS handles text, groups and the profile (display) name.
+      WHATSAPP_DEFAULT_ENGINE: WEBJS
+      # Bring the linked session back up automatically after a restart.
+      WHATSAPP_RESTART_ALL_SESSIONS: "true"
+    volumes:
+      # Keep the linked WhatsApp session and media across restarts.
+      - waha-sessions:/app/.sessions
+      - waha-media:/app/media
+
+volumes:
+  waha-sessions:
+  waha-media:
