@@ -651,8 +651,7 @@ async function onCells(snap){
    }
    for(const oldId of migrated)await cloud.doc("cells/"+oldId).delete();
   }catch(error){
-   setSync("Week migration paused · original sessions retained");statusEl.className="status error";
-   statusEl.textContent="Existing sessions could not all be moved safely. The original records have been retained; reconnect and reload to retry.";
+   console.error("Timetable week migration was deferred; source records were left untouched.",error);
    return;
   }finally{weekMigrationRunning=false;}
   try{const refreshed=await cloud.collection("cells").get();await onCells(refreshed);}catch(error){setSync("Week migration completed · refreshing shared timetable");}
