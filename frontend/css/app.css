@@ -1435,3 +1435,174 @@ body[data-theme="red"] #view-weekly tbody th.time{
     font-weight:700!important;
   }
 }
+
+
+/* FINAL CONTENT-FIT RULES: timetable activity cells grow to show every line. */
+#view-weekly .wrap table{
+  table-layout:fixed!important;
+}
+#view-weekly .wrap tbody tr:not(.lunch-row),
+#view-weekly .wrap tbody td{
+  height:auto!important;
+  min-height:48px!important;
+}
+#view-weekly .wrap tbody td{
+  vertical-align:middle!important;
+  padding:3px!important;
+}
+#view-weekly .wrap tbody td .cell{
+  display:flex!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:44px!important;
+  min-width:0!important;
+}
+#view-weekly .wrap tbody td .activity{
+  display:flex!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:44px!important;
+  max-height:none!important;
+  padding:6px 5px!important;
+  gap:3px!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.2!important;
+  text-align:center!important;
+}
+#view-weekly .wrap tbody td .activity-name,
+#view-weekly .wrap tbody td .activity-lecturer{
+  display:block!important;
+  flex:0 1 auto!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  height:auto!important;
+  max-height:none!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.2!important;
+}
+#view-weekly .wrap tbody td .activity-name{
+  font-size:clamp(12px,1vw,14px)!important;
+  font-weight:700!important;
+}
+#view-weekly .wrap tbody td .activity-lecturer{
+  font-size:clamp(10px,.85vw,12px)!important;
+  font-weight:500!important;
+}
+#view-weekly .wrap tbody td .activity.empty-activity{
+  min-height:44px!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+@media(max-width:720px){
+  #view-weekly .wrap tbody td .activity{
+    min-height:46px!important;
+    padding:7px 4px!important;
+  }
+  #view-weekly .wrap tbody td .activity-name{font-size:13px!important}
+  #view-weekly .wrap tbody td .activity-lecturer{font-size:11px!important}
+}
+
+
+/* DEFINITIVE FROZEN TIME RAIL: enforce a clean stacking order while swiping horizontally. */
+#view-weekly .wrap{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-x:contain!important;
+}
+#view-weekly .wrap table{
+  position:relative!important;
+  isolation:isolate!important;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+#view-weekly .wrap tbody tr{
+  position:relative!important;
+  z-index:0!important;
+}
+#view-weekly .wrap tbody td{
+  position:relative!important;
+  z-index:1!important;
+  isolation:auto!important;
+  background-color:var(--cell-bg,var(--page))!important;
+  background-image:none!important;
+}
+#view-weekly .wrap tbody td .cell,
+#view-weekly .wrap tbody td .activity{
+  position:relative!important;
+  z-index:1!important;
+}
+#view-weekly .wrap tbody th.time{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  left:0!important;
+  z-index:100!important;
+  isolation:isolate!important;
+  opacity:1!important;
+  background-color:var(--head-shade)!important;
+  background-image:none!important;
+  background-clip:padding-box!important;
+  box-shadow:5px 0 12px rgba(0,0,0,.42),1px 0 0 var(--gridline,#64748b)!important;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+#view-weekly .wrap tbody th.time.highlight,
+#view-weekly .wrap tbody th.time.current-time-label,
+#view-weekly .wrap tbody tr.current-time-row th.time{
+  background-color:var(--accent)!important;
+  background-image:none!important;
+  color:var(--on-accent)!important;
+}
+#view-weekly .wrap thead th{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  z-index:110!important;
+}
+#view-weekly .wrap thead th.corner{
+  left:0!important;
+  z-index:120!important;
+  isolation:isolate!important;
+  background-color:var(--head-shade)!important;
+  background-image:none!important;
+  box-shadow:5px 0 12px rgba(0,0,0,.42),1px 0 0 var(--gridline,#64748b)!important;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+
+
+/* Original maternal-newborn photograph at the far right of the programme header. */
+.hd-brand-photo{
+  display:block;
+  flex:0 0 auto;
+  width:clamp(54px,6vw,86px);
+  height:auto;
+  aspect-ratio:430 / 286;
+  object-fit:contain;
+  object-position:center;
+  border:1px solid var(--header-border,var(--accent));
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+}
+@media(max-width:720px){
+  .hd-right{gap:8px}
+  .hd-brand-photo{width:42px;max-width:12vw;border-radius:6px}
+}
+@media(max-width:420px){
+  .hd-brand-photo{width:34px}
+}

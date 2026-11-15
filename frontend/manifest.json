@@ -15,6 +15,12 @@
   "theme_color": "#0b1930",
   "icons": [
     {
+      "src": "/images/mnh-mother-newborn.png",
+      "sizes": "430x286",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
