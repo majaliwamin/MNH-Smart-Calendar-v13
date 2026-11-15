@@ -1,6 +1,7 @@
 """FastAPI application entry point for the MNH Calendar."""
 import threading
 import json
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -46,7 +47,7 @@ async def lifespan(app: FastAPI):
             connection.execute(
                 "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
                 ("recurring", "seminar-mnh", json.dumps(seminar_data, ensure_ascii=False),
-                 int(__import__("time").time() * 1000))
+                 int(time.time() * 1000))
             )
         else:
             seminar_data = json.loads(seminar["data"])
@@ -57,7 +58,7 @@ async def lifespan(app: FastAPI):
                 seminar_data["enabled"] = True
                 connection.execute(
                     "UPDATE docs SET data=?,updated_at=? WHERE col='recurring' AND id='seminar-mnh'",
-                    (json.dumps(seminar_data, ensure_ascii=False), int(__import__("time").time() * 1000))
+                    (json.dumps(seminar_data, ensure_ascii=False), int(time.time() * 1000))
                 )
     # Guarantee an initial snapshot on first startup; later snapshots are daily.
     if not list_backups():
