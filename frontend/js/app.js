@@ -2128,9 +2128,9 @@ load();initCloud();initAlarms();initHeader();
   const response=await fetch(path+"?"+params.toString(),{cache:"no-store"});
   if(!response.ok)throw new Error(extension.toUpperCase()+" export failed (HTTP "+response.status+").");
   const blob=await response.blob();
-  if(extension==="xlsx"){const signature=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(signature[0]!==0x50||signature[1]!==0x4B)throw new Error("The server did not return a valid Excel workbook.");}
-  download(blob,"MNH-Smart-Calendar-"+(extension==="pdf"?"Editable-Fillable-Timetable.pdf":"Editable-Timetable.xlsx"));
-  status(extension==="pdf"?"Fillable PDF downloaded. Open it in a PDF reader, complete the fields and save.":"Editable Excel timetable downloaded.","ok");
+  if(extension==="xlsx"){const signature=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(signature[0]!==0x50||signature[1]!==0x4B)throw new Error("The server did not return a valid Excel workbook.");}else if(extension==="pdf"){const signature=new Uint8Array(await blob.slice(0,5).arrayBuffer());if(String.fromCharCode(...signature)!=="%PDF-"){const detail=(await blob.text()).slice(0,240);throw new Error("The PDF export did not return a valid PDF document."+ (detail?" Server response: "+detail:""));}}
+  download(blob,extension==="pdf"?"MNH-Smart-Calendar-Timetable.pdf":"MNH-Smart-Calendar-Editable-Timetable.xlsx");
+  status(extension==="pdf"?"PDF timetable downloaded successfully.":"Editable Excel timetable downloaded.","ok");
  }
  function chooseImageFormat(){
   if(!formatSheet)formatSheet=sheet("Image format","Choose the image file type for your high-resolution timetable.",[]);
@@ -2141,7 +2141,7 @@ load();initCloud();initAlarms();initHeader();
  menu.addEventListener("click",event=>{
   const item=event.target.closest("button[data-fmt]");if(!item)return;
   closeMenu();
-  if(item.dataset.fmt==="pdf")saveServerExport("/api/export/timetable.pdf","pdf");
+  if(item.dataset.fmt==="pdf")saveServerExport("/api/export/timetable.pdf","pdf").catch(error=>status(error.message||"PDF export could not be created.","error"));
   else if(item.dataset.fmt==="xlsx")chooseModules("xlsx",modules=>saveServerExport("/api/export/timetable.xlsx","xlsx",modules));
   else if(item.dataset.fmt==="image")chooseImageFormat();
  });
