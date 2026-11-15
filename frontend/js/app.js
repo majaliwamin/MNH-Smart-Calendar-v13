@@ -21,7 +21,7 @@ let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
 let recurringRecords=[
  {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
- {id:"seminar-mnh",data:{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
+ {id:"seminar-mnh",data:{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
 ];
 let editingUnlocked=true;
 let analyticsUnlocked=true;
@@ -71,7 +71,7 @@ function getSessionEntries(){
   if(start===null||end===null||end<=start)return;
   const moduleCode=resolveModuleCode(data);
   const label=String(moduleCode||data.code||data.text||data.title||"Scheduled session");
-  if((label==="Journal Club"&&dayIndex===1)||(label==="Seminar in MNH"&&dayIndex===3))return;
+  if((label==="Journal Club"&&dayIndex===1)||(label==="MNH Seminar"&&dayIndex===3))return;
   result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[moduleCode]?.title||""),facilitator:String(data.facilitatorOverride||"").trim()||(moduleCode?facilitatorFor(moduleCode):"")||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
  });
  recurringRecords.filter(row=>row.data?.enabled!==false).forEach(row=>{
@@ -1040,7 +1040,7 @@ async function renderManaged(collection){const [title,lead]=WORKSPACE_META[colle
   if(!rows.length){
    const defaults=[
     ["journal-club",{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}],
-    ["seminar-mnh",{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}]
+    ["seminar-mnh",{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}]
    ];
    for(const [id,data] of defaults)await saveRow("recurring",id,data);
    rows=await loadRows("recurring");
@@ -2006,7 +2006,7 @@ function subscribeExtras(db){
  db.collection("recurring").onSnapshot(snap=>{
   recurringRecords=snap.docs.length?snap.docs.map(d=>({id:d.id,data:d.data()||{}})):[
    {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
-   {id:"seminar-mnh",data:{title:"Seminar in MNH",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
+   {id:"seminar-mnh",data:{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
   ];
   build();if(currentView==="recurring")renderManaged("recurring");
   if(currentView==="weekly")renderAnimatedFutureStrip();

@@ -19,7 +19,7 @@ ALLOWED_COLLECTIONS = {"cells", "resources", "settings", "modules", "facilitator
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. –-]{0,99}$")
 CANONICAL_RECURRING = {
     "journal-club": ("Journal Club", "Tuesday", "13:00–14:00"),
-    "seminar-mnh": ("Seminar in MNH", "Thursday", "10:00–12:00"),
+    "seminar-mnh": ("MNH Seminar", "Thursday", "10:00–12:00"),
 }
 
 from app.services.schedule import DEFAULT_SESSION_RANGES, WEEK_START, minutes as _minutes_checked, cell_interval as _cell_interval  # noqa: E402

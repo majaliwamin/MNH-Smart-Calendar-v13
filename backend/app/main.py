@@ -1,5 +1,7 @@
 """FastAPI application entry point for the MNH Calendar."""
 import threading
+import json
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -9,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from app.config import PROJECT_ROOT, CORS_ORIGINS, BUILD_ID, APP_VERSION, ensure_directories
-from app.database.connection import connect
+from app.database.connection import connect, database
 from app.api.routes import router
 from app.api.comm_routes import router as comm_router
 from app.services.backup_service import backup_worker, make_backup, list_backups
@@ -31,6 +33,33 @@ async def lifespan(app: FastAPI):
     global BACKUP_THREAD, REMINDER_THREAD, COMM_THREAD
     ensure_directories()
     db = connect(); db.close()
+    # Ensure the Thursday MNH Seminar is present in the shared database.
+    # Preserve any existing presenter and only migrate the previous canonical title once.
+    with database() as connection:
+        seminar = connection.execute(
+            "SELECT data FROM docs WHERE col='recurring' AND id='seminar-mnh'"
+        ).fetchone()
+        if seminar is None:
+            seminar_data = {
+                "title": "MNH Seminar", "day": "Thursday",
+                "time": "10:00–12:00", "presenter": "", "enabled": True
+            }
+            connection.execute(
+                "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+                ("recurring", "seminar-mnh", json.dumps(seminar_data, ensure_ascii=False),
+                 int(time.time() * 1000))
+            )
+        else:
+            seminar_data = json.loads(seminar["data"])
+            if seminar_data.get("title") == "Seminar in MNH":
+                seminar_data["title"] = "MNH Seminar"
+                seminar_data["day"] = "Thursday"
+                seminar_data["time"] = "10:00–12:00"
+                seminar_data["enabled"] = True
+                connection.execute(
+                    "UPDATE docs SET data=?,updated_at=? WHERE col='recurring' AND id='seminar-mnh'",
+                    (json.dumps(seminar_data, ensure_ascii=False), int(time.time() * 1000))
+                )
     # Guarantee an initial snapshot on first startup; later snapshots are daily.
     if not list_backups():
         try:
