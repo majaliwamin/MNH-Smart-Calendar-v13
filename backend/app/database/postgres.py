@@ -35,6 +35,9 @@ class HybridRow(dict):
 
 
 def _row_factory(cursor):
+    # DDL/command statements have no result description and never produce rows.
+    if cursor.description is None:
+        return lambda values: values
     columns = [item.name for item in cursor.description]
     return lambda values: HybridRow(columns, values)
 
