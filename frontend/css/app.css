@@ -1229,3 +1229,12 @@ body[data-theme="silver"]{
 .site-header .bell-panel .bp-item{color:var(--header-foreground)!important}
 .site-header .bell-panel .bp-t,.site-header .bell-panel .bp-h{color:var(--header-secondary)!important}
 .site-header .bell-panel .bp-empty{color:var(--header-foreground)!important;opacity:.82}
+
+/* Mobile PWA install action in the programme header. */
+.hd-install{width:clamp(36px,3.2vw,52px);height:clamp(36px,3.2vw,52px);display:grid;place-items:center;flex:0 0 auto;padding:8px;border:1px solid var(--header-border,var(--accent));border-radius:10px;background:var(--header-nav-surface,var(--tab));color:var(--header-foreground,var(--text));cursor:pointer}
+.hd-install svg{width:24px;height:24px;display:block}
+.hd-install:hover{background:var(--header-tab-hover,rgba(255,255,255,.12))}
+.hd-install:focus-visible{outline:2px solid var(--header-secondary,var(--accent));outline-offset:3px}
+.hd-install[hidden]{display:none!important}
+@media(min-width:721px){.hd-install{display:none}}
+@media(max-width:720px){.hd-install{width:34px;height:36px;padding:6px}.hd-install svg{width:22px;height:22px}}
