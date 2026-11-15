@@ -633,7 +633,7 @@ async function onCells(snap){
    const migrated=[];
    for(const doc of legacyDocs){
     const raw=doc.data()||{};
-    const legacy=/^(\\d+)_(\\d+)$/.exec(doc.id);
+    const legacy=/^(\d+)_(\d+)$/.exec(doc.id);
     if((legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))continue;
     const suffix=doc.id.replace(/^session-/i,"").replace(/[^A-Za-z0-9-]+/g,"-").replace(/-+/g,"-").slice(0,70)||"legacy";
     const newId=`session-2026-11-16-import-${suffix}`;
