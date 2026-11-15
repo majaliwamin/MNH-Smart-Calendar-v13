@@ -1166,8 +1166,8 @@ async function renderReminderCard(root){
  if(info){
   const wa=info.whatsapp||{},cfg=info.settings||{};
   statusLine.textContent=wa.configured
-   ?`Delivery ready · sender "${wa.sender}" · WhatsApp Cloud API ${wa.apiVersion}`
-   :`Not configured yet — add ${(wa.missing||[]).join(" and ")||"WhatsApp credentials"} on the server, then send the sample again.`;
+   ?`Delivery ready · sender "${wa.sender}" · WhatsApp bridge (${wa.style||"waha"})`
+   :`Not configured yet — add ${(wa.missing||[]).join(" and ")||"MNH_WA_BRIDGE_URL"} on the server, then send the sample again.`;
   const leadRow=el("div","reminder-leads");
   [10,20,30].forEach(minutes=>{
    const label=el("label","reminder-lead"),box=document.createElement("input");
@@ -1175,9 +1175,9 @@ async function renderReminderCard(root){
    label.append(box,document.createTextNode(" "+minutes+" min before"));leadRow.appendChild(label);
   });
   card.appendChild(leadRow);
-  card.appendChild(el("label","field-label","Recipient WhatsApp numbers (one per line)"));
+  card.appendChild(el("label","field-label","Recipients — WhatsApp numbers or group ids (one per line)"));
   const numbers=document.createElement("textarea");
-  numbers.rows=3;numbers.maxLength=2000;numbers.placeholder="+265881988156";numbers.disabled=!editingUnlocked;
+  numbers.rows=3;numbers.maxLength=2000;numbers.placeholder="+265881988156 or 1203630...@g.us";numbers.disabled=!editingUnlocked;
   numbers.value=(cfg.recipients||[]).join("\n");
   numbers.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";
   card.appendChild(numbers);
@@ -1190,12 +1190,12 @@ async function renderReminderCard(root){
   });
   card.appendChild(save);
   const testRow=el("div","reminder-test");
-  const testNumber=fieldInput("WhatsApp number for the sample","40");
+  const testNumber=fieldInput("WhatsApp number or group id for the sample","40");
   testNumber.value="+265881988156";testNumber.disabled=!editingUnlocked;
   const testBtn=el("button","primary","Send sample reminder");testBtn.type="button";testBtn.disabled=!editingUnlocked;
   testBtn.addEventListener("click",async()=>{
    testBtn.disabled=true;statusEl.className="status";statusEl.textContent="Sending the sample WhatsApp reminder…";
-   try{const r=await apiRequest("POST","/api/reminders/test",{to:testNumber.value.trim()});statusEl.className="status ok";statusEl.textContent=`Sample sent to +${r.to} from "${r.sender}".`;}
+   try{const r=await apiRequest("POST","/api/reminders/test",{to:testNumber.value.trim()});statusEl.className="status ok";statusEl.textContent=`Sample sent to ${r.isGroup?"group ":""}${r.to} as "${wa.sender}".`;}
    catch(e){statusEl.className="status error";statusEl.textContent=e.message||"The sample could not be sent.";}
    finally{testBtn.disabled=!editingUnlocked;}
   });
@@ -1246,6 +1246,17 @@ async function renderCommStatusCard(root){
   else if(v&&v.detail)text+=" — "+v.detail;
   card.appendChild(el("div","muted",text));
  });
+ const displayName=(bridge&&bridge.profileName)||"Maternal & Neonatal Health Smart Time Table";
+ card.appendChild(el("div","muted","WhatsApp display name: \""+displayName+"\""));
+ if(editingUnlocked&&bridge&&bridge.configured){
+  const setName=el("button",null,"Set WhatsApp display name to the app name");setName.type="button";
+  setName.addEventListener("click",async()=>{
+   commBusy(line,"Setting the WhatsApp display name…");
+   try{const r=await apiRequest("POST","/api/comm/whatsapp/profile",{name:""});commOk(line,"WhatsApp display name set to \""+((r&&r.name)||displayName)+"\".");}
+   catch(e){commFail(line,e);}
+  });
+  card.appendChild(setName);
+ }
  if(editingUnlocked){
   const toggle=el("button",stopped?"primary":null,stopped?"Turn emergency stop OFF":"Turn emergency stop ON");toggle.type="button";
   toggle.addEventListener("click",async()=>{
@@ -1258,8 +1269,12 @@ async function renderCommStatusCard(root){
 }
 function commContactForm(values,onSave,line,cancelBtn){
  const wrap=el("div","res-form");
+ const kind=document.createElement("select");kind.setAttribute("aria-label","Contact type");kind.style.cssText=COMM_FIELD;
+ [["individual","Person (phone number)"],["group","WhatsApp group"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;if((values.kind||"individual")===v)o.selected=true;kind.appendChild(o);});
  const name=fieldInput("Full name",120),phone=fieldInput("Phone (with country code, e.g. +265…)",30,"tel"),notes=fieldInput("Notes (optional)",300);
  name.value=values.name||"";phone.value=values.phone||"";notes.value=values.notes||"";
+ const applyKind=()=>{const group=kind.value==="group";phone.type=group?"text":"tel";phone.placeholder=group?"Group id, e.g. 1203630…@g.us":"Phone (with country code, e.g. +265…)";phone.setAttribute("aria-label",group?"WhatsApp group id":"Phone number");};
+ kind.addEventListener("change",applyKind);applyKind();
  const cat=document.createElement("select");cat.setAttribute("aria-label","Category");cat.style.cssText=COMM_FIELD;
  [["","Category…"],["staff","Staff"],["student","Student"],["other","Other"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;if(values.category===v)o.selected=true;cat.appendChild(o);});
  const consents=el("div","reminder-leads");
@@ -1269,11 +1284,11 @@ function commContactForm(values,onSave,line,cancelBtn){
  });
  const save=el("button","primary",values.id?"Save changes":"Add contact");save.type="button";
  save.addEventListener("click",()=>onSave({
-  name:name.value.trim(),phone:phone.value.trim(),category:cat.value,notes:notes.value.trim(),
+  name:name.value.trim(),kind:kind.value,phone:phone.value.trim(),category:cat.value,notes:notes.value.trim(),
   whatsapp:consents.children[0].querySelector("input").checked,
   voice:consents.children[1].querySelector("input").checked
  }));
- [name,phone,cat,notes,consents,save].forEach(x=>{x.style.cssText=x.style.cssText||COMM_FIELD;if(x===consents)x.style.cssText="margin:6px 0;";wrap.appendChild(x);});
+ [kind,name,phone,cat,notes,consents,save].forEach(x=>{x.style.cssText=x.style.cssText||COMM_FIELD;if(x===consents)x.style.cssText="margin:6px 0;";wrap.appendChild(x);});
  if(cancelBtn){const cancel=el("button",null,"Cancel");cancel.type="button";cancel.addEventListener("click",cancelBtn);wrap.appendChild(cancel);}
  return wrap;
 }
@@ -1286,9 +1301,9 @@ async function renderCommContactsCard(root){
  line.className="status ok";line.textContent=contacts.length+" contact(s) · "+dnc.length+" on the do-not-contact list.";
  if(editingUnlocked){
   card.appendChild(commContactForm({},async d=>{
-   if(!d.name||!d.phone){commFail(line,new Error("Enter a name and phone number."));return;}
+   if(!d.name||!d.phone){commFail(line,new Error(d.kind==="group"?"Enter a name and a WhatsApp group id.":"Enter a name and phone number."));return;}
    commBusy(line,"Saving contact…");
-   try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(makeId("c")),{name:d.name,phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact added.";renderCommunications();}
+   try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(makeId("c")),{name:d.name,kind:d.kind||"individual",phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact added.";renderCommunications();}
    catch(e){commFail(line,e);}
   }));
  }
@@ -1296,16 +1311,19 @@ async function renderCommContactsCard(root){
  if(!contacts.length)list.appendChild(el("p","muted","No contacts yet."));
  contacts.forEach(c=>{
   const row=el("div","card");
+  const isGroup=(c.kind||"")==="group"||/@g\.us$/i.test(c.phone||"");
   row.appendChild(el("h3",null,c.name||c.id));
-  row.appendChild(el("div","muted",[c.phone||"no phone",c.category||"other"].join(" · ")));
+  row.appendChild(el("div","muted",[isGroup?"Group":"Person",c.phone||"no address",c.category||"other"].join(" · ")));
   const badges=el("div","reminder-leads");
+  if(isGroup)badges.appendChild(el("span","pill","WhatsApp group"));
   badges.appendChild(el("span","pill",commConsent(c,"whatsapp")?"WhatsApp ✓":"WhatsApp ✗"));
-  badges.appendChild(el("span","pill",commConsent(c,"voice")?"Voice ✓":"Voice ✗"));
+  if(!isGroup)badges.appendChild(el("span","pill",commConsent(c,"voice")?"Voice ✓":"Voice ✗"));
   row.appendChild(badges);
   if(c.notes)row.appendChild(el("p","muted",c.notes));
   if(editingUnlocked){
    const btns=el("div","reminder-test");
-   [["whatsapp","WhatsApp"],["voice","Voice"]].forEach(([ch,label])=>{
+   const channels=[["whatsapp","WhatsApp"]];if(!isGroup)channels.push(["voice","Voice"]);
+   channels.forEach(([ch,label])=>{
     const granted=commConsent(c,ch),b=el("button",null,(granted?"Revoke ":"Grant ")+label+" consent");b.type="button";
     b.addEventListener("click",async()=>{
      commBusy(line,"Updating consent…");
@@ -1319,7 +1337,7 @@ async function renderCommContactsCard(root){
     row.textContent="";
     row.appendChild(commContactForm(c,async d=>{
      commBusy(line,"Saving changes…");
-     try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(c.id),{name:d.name,phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact updated.";renderCommunications();}
+     try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(c.id),{name:d.name,kind:d.kind||"individual",phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact updated.";renderCommunications();}
      catch(e){commFail(line,e);}
     },line,()=>renderCommunications()));
    });

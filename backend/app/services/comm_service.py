@@ -91,7 +91,15 @@ def _guard_preparation(actor: str) -> None:
 
 # ---- wa.me links ---------------------------------------------------------------
 def wa_link(number: str, body: str) -> str:
-    """Official Click-to-Chat link: digits only (no '+'), URL-encoded message."""
+    """Official Click-to-Chat link: digits only (no '+'), URL-encoded message.
+
+    Only people can be reached this way — a WhatsApp group has no wa.me link.
+    """
+    if comm_contacts.contact_kind({"phone": number}) == "group":
+        raise CommError(
+            "WhatsApp groups have no wa.me link. Post to a group with the AI trigger "
+            "or a reminder instead."
+        )
     digits = whatsapp.normalise_phone(number)
     return f"https://wa.me/{digits}?text={urllib.parse.quote(str(body or ''), safe='')}"
 
@@ -121,6 +129,11 @@ def delete_template(actor: str, template_id: str) -> None:
 
 
 # ---- drafts ---------------------------------------------------------------
+def _is_group_recipient(recipient: dict) -> bool:
+    """True when a draft recipient is a WhatsApp group (no wa.me link exists)."""
+    return comm_contacts.contact_kind(recipient) == "group"
+
+
 def _recipient_rows(contact_ids: list) -> list:
     if not contact_ids:
         raise CommError("Select at least one recipient.")
@@ -136,6 +149,7 @@ def _recipient_rows(contact_ids: list) -> list:
             "contactId": contact_id,
             "name": contact.get("name", ""),
             "phone": contact.get("phone", ""),
+            "kind": comm_contacts.contact_kind(contact),
             "status": "ready" if allowed else "blocked",
             "blockReason": "" if allowed else reason,
         })
@@ -164,7 +178,7 @@ def create_draft(actor: str, contact_ids: list, body: str, *, title: str = "", a
     entry["id"] = draft_id
     entry["links"] = [
         {"contactId": r["contactId"], "link": wa_link(r["phone"], text)}
-        for r in recipients if r["status"] == "ready"
+        for r in recipients if r["status"] == "ready" and not _is_group_recipient(r)
     ]
     comm_contacts.audit(actor, "draft-created", draft_id, f"{len(recipients)} recipients" + (" (AI-assisted)" if aiAssisted else ""))
     return entry
@@ -175,7 +189,7 @@ def draft_rows(limit: int = 50) -> list:
     for row in rows:
         row["links"] = [
             {"contactId": r["contactId"], "link": wa_link(r["phone"], row.get("body", ""))}
-            for r in row.get("recipients", []) if r["status"] == "ready"
+            for r in row.get("recipients", []) if r["status"] == "ready" and not _is_group_recipient(r)
         ]
     return rows
 
@@ -341,6 +355,7 @@ def status() -> dict:
     return {
         "emergencyStop": emergency_stop(),
         "contacts": len(contacts),
+        "groups": len([c for c in contacts if comm_contacts.contact_kind(c) == "group"]),
         "withConsent": len([c for c in contacts if c.get("consentWhatsapp")]),
         "dnc": len(comm_contacts.dnc_list()),
         "callWindow": {"start": call_window()[0].strftime("%H:%M"), "end": call_window()[1].strftime("%H:%M")},

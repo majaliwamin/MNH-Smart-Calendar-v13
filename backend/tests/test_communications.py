@@ -197,3 +197,44 @@ def test_drafted_contacts_without_consent_are_handled_safely(client, editor_sess
     assert data["links"] and data["links"][0]["contactId"] == consented["id"]
     by_id = {r["contactId"]: r for r in data["recipients"]}
     assert by_id[contact["id"]]["status"] == "blocked"
+
+
+# ---- WhatsApp groups ---------------------------------------------------------------------
+def test_group_contact_keeps_its_chat_id_and_needs_no_phone(db):
+    group = comm_contacts.upsert_contact("rep", {"name": "Cohort group", "kind": "group", "phone": "120363043999999999@g.us"})
+    assert group["kind"] == "group" and group["phone"] == "120363043999999999@g.us"
+    assert comm_contacts.contact_kind(group) == "group"
+    # a bare long number becomes a @g.us chat id
+    bare = comm_contacts.upsert_contact("rep", {"name": "Bare group", "kind": "group", "phone": "120363043999999999"})
+    assert bare["phone"] == "120363043999999999@g.us"
+    # a person still normalises to E.164 digits
+    person = comm_contacts.upsert_contact("rep", {"name": "Dr Banda", "phone": "0881988156"})
+    assert person["phone"] == "265881988156" and person["kind"] == "individual"
+
+
+def test_group_contact_needs_consent_before_it_is_allowed(db):
+    group = comm_contacts.upsert_contact("rep", {"name": "Cohort group", "kind": "group", "phone": "120363043999999999@g.us"})
+    allowed, reason = comm_contacts.contact_allowed(group, "whatsapp")
+    assert not allowed and "consent" in reason
+    comm_contacts.set_consent("rep", group["id"], "whatsapp", True)
+    allowed, reason = comm_contacts.contact_allowed(comm_contacts.get_contact(group["id"]), "whatsapp")
+    assert allowed and reason == ""
+
+
+def test_group_without_a_whatsapp_consent_cannot_be_drafted(monkeypatch, db):
+    monkeypatch.setattr(comm_service, "emergency_stop", lambda: False)
+    group = comm_contacts.upsert_contact("rep", {"name": "Cohort group", "kind": "group", "phone": "120363043999999999@g.us"})
+    with pytest.raises(comm_service.CommError):
+        comm_service.create_draft("rep", [group["id"]], "Hello group")
+
+
+def test_draft_has_no_wa_link_for_a_group_recipient(monkeypatch, db):
+    monkeypatch.setattr(comm_service, "emergency_stop", lambda: False)
+    group = comm_contacts.upsert_contact("rep", {"name": "Cohort group", "kind": "group", "phone": "120363043999999999@g.us"})
+    comm_contacts.set_consent("rep", group["id"], "whatsapp", True)
+    draft = comm_service.create_draft("rep", [group["id"]], "Hello group")
+    assert draft["recipients"][0]["kind"] == "group"
+    assert draft["links"] == []  # groups cannot be opened with a wa.me link
+    with pytest.raises(comm_service.CommError):
+        comm_service.wa_link("120363043999999999@g.us", "Hi")
+

@@ -148,3 +148,106 @@ def test_trigger_endpoint_sends(client, editor_session, bridge, monkeypatch):
     assert response.status_code == 200
     assert response.json()["sentCount"] == 1
     assert bridge[0]["text"] == "Hello from the AI"
+
+
+# ---- group support -------------------------------------------------------------------------
+@pytest.fixture()
+def bridge_requests(monkeypatch):
+    """A fake bridge that records the method, URL and JSON payload of every call."""
+    calls = []
+    monkeypatch.setenv("MNH_WA_BRIDGE_URL", "http://bridge.test")
+    import urllib.request
+
+    def fake_urlopen(request, timeout=None):
+        calls.append({
+            "method": request.get_method(),
+            "url": request.full_url,
+            "payload": json.loads(request.data.decode("utf-8")),
+        })
+        import io
+        return io.BytesIO(b'{"success":true}')
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    return calls
+
+
+def consented_group():
+    group = comm_contacts.upsert_contact("rep", {"name": "MNH Cohort 2026", "kind": "group", "phone": "120363043999999999@g.us"})
+    comm_contacts.set_consent("rep", group["id"], "whatsapp", True)
+    return group
+
+
+def test_bridge_normalises_person_and_group_targets():
+    assert wa_bridge.normalise_target("265881988156") == "265881988156@c.us"
+    assert wa_bridge.normalise_target("+265 881 988 156") == "265881988156@c.us"
+    assert wa_bridge.normalise_target("120363043999999999@g.us") == "120363043999999999@g.us"
+    assert wa_bridge.normalise_target("120363043999999999@G.US") == "120363043999999999@g.us"
+    assert wa_bridge.normalise_target("26599130362@s.whatsapp.net") == "26599130362@s.whatsapp.net"
+    assert wa_bridge.is_group("120363043999999999@g.us") is True
+    assert wa_bridge.is_group("265881988156") is False
+    with pytest.raises(wa_bridge.BridgeError):
+        wa_bridge.normalise_target("")
+    with pytest.raises(wa_bridge.BridgeError):
+        wa_bridge.normalise_target("not-a-number")
+
+
+def test_bridge_send_to_a_group_uses_the_group_chat_id(bridge):
+    result = wa_bridge.send_text("120363043999999999@g.us", "Hello group")
+    assert result["ok"] is True and result["isGroup"] is True
+    assert bridge == [{"session": "default", "chatId": "120363043999999999@g.us", "text": "Hello group"}]
+
+
+def test_ai_trigger_sends_to_a_group_contact(db, bridge, monkeypatch):
+    consented_group()
+    monkeypatch.setattr(ai_trigger, "compose", lambda *a, **k: ("Group notice", True))
+    result = ai_trigger.trigger_now("rep", "announcement", "Class moved to Friday.")
+    assert result["sentCount"] == 1
+    assert bridge[0]["chatId"] == "120363043999999999@g.us"
+    assert bridge[0]["text"] == "Group notice"
+    log = ai_trigger.trigger_log()
+    assert log[0]["sentKinds"] == ["group"]
+
+
+def test_ai_trigger_mixes_people_and_groups(db, bridge, monkeypatch):
+    consented_contact()
+    consented_group()
+    monkeypatch.setattr(ai_trigger, "compose", lambda *a, **k: ("Both", True))
+    result = ai_trigger.trigger_now("rep", "announcement", "Notice")
+    assert result["sentCount"] == 2
+    chat_ids = sorted(call["chatId"] for call in bridge)
+    assert chat_ids == ["120363043999999999@g.us", "265881988156@c.us"]
+
+
+def test_bridge_set_profile_name_defaults_to_the_app_name(bridge_requests, monkeypatch):
+    monkeypatch.delenv("MNH_WA_PROFILE_NAME", raising=False)
+    monkeypatch.setenv("MNH_WA_BRIDGE_STYLE", "waha")
+    monkeypatch.setenv("MNH_WA_BRIDGE_SESSION", "default")
+    result = wa_bridge.set_profile_name()
+    assert result["ok"] is True
+    assert result["name"] == "Maternal & Neonatal Health Smart Time Table"
+    assert bridge_requests == [{
+        "method": "PUT",
+        "url": "http://bridge.test/api/default/profile/name",
+        "payload": {"name": "Maternal & Neonatal Health Smart Time Table"},
+    }]
+
+
+def test_bridge_set_profile_name_accepts_an_explicit_name(bridge_requests):
+    result = wa_bridge.set_profile_name("MNH Timetable")
+    assert result["name"] == "MNH Timetable"
+    assert bridge_requests[0]["payload"] == {"name": "MNH Timetable"}
+
+
+def test_bridge_set_profile_name_requires_a_configured_bridge(monkeypatch):
+    monkeypatch.delenv("MNH_WA_BRIDGE_URL", raising=False)
+    with pytest.raises(wa_bridge.BridgeError):
+        wa_bridge.set_profile_name()
+
+
+def test_profile_endpoint_sets_the_display_name(client, editor_session, bridge_requests, monkeypatch):
+    monkeypatch.delenv("MNH_WA_PROFILE_NAME", raising=False)
+    response = client.post("/api/comm/whatsapp/profile", json={"name": ""}, cookies=editor_session)
+    assert response.status_code == 200
+    assert response.json()["name"] == "Maternal & Neonatal Health Smart Time Table"
+    assert bridge_requests[0]["method"] == "PUT"
+

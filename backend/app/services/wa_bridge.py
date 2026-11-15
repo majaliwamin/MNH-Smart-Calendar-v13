@@ -12,11 +12,26 @@ code changes:
     MNH_WA_BRIDGE_STYLE   waha | generic   (default waha)
     MNH_WA_BRIDGE_SESSION WAHA session name (default "default")
     MNH_WA_BRIDGE_TIMEOUT request timeout seconds (default 20)
+    MNH_WA_SENDER_NUMBER  the account that sends (digits, e.g. 26599130362);
+                          informational — shown in status, never a credential
+    MNH_WA_PROFILE_NAME   display/push name for the account (defaults to the
+                          application name, MNH_WHATSAPP_SENDER_NAME)
 
-WAHA style  : POST {base}/api/sendText  {"session":..., "chatId":"<digits>@c.us", "text":...}
-Generic style: POST {base}/send        {"phone":"<digits>", "message":<body>}
-              (adapt MNH_WA_BRIDGE_STYLE or point at a tiny adapter Worker if
-              your bridge speaks another shape)
+A target is either one person (a phone number) or a whole group. Both are
+addressed with a WAHA "chat id":
+
+    265881988156             -> 265881988156@c.us        (one person)
+    1203630…@g.us            -> 1203630…@g.us            (a group)
+    <digits>@s.whatsapp.net  -> <digits>@s.whatsapp.net
+
+WAHA style  : POST {base}/api/sendText  {"session":…, "chatId":…, "text":…}
+              PUT  {base}/api/{session}/profile/name  {"name":…}
+Generic style: POST {base}/send        {"phone":…, "chatId":…, "message":…}
+              POST {base}/profile/name {"name":…}
+
+Only the application name is ever shown to a recipient: call set_profile_name()
+once after the bridge is configured so the account itself carries the app name
+(never the sending phone number).
 
 Every send returns a normalised result so callers can log outcomes. This
 module never checks consent — callers (AI trigger, reminders, drafts) must
@@ -26,6 +41,13 @@ import json
 import os
 import urllib.error
 import urllib.request
+
+from app.config import WHATSAPP_SENDER_NAME
+
+# Chat-id servers WhatsApp uses. Group ids end in "@g.us"; people end in
+# "@c.us" (Cloud/Web) or "@s.whatsapp.net" (multi-device).
+CHAT_SERVERS = ("c.us", "g.us", "s.whatsapp.net", "lid", "broadcast")
+GROUP_SUFFIX = "@g.us"
 
 
 class BridgeError(RuntimeError):
@@ -52,40 +74,63 @@ def configured() -> bool:
     return bool(base_url())
 
 
+def sender_number() -> str:
+    """The WhatsApp account that sends (digits only). Informational, never a secret."""
+    return "".join(ch for ch in _env("MNH_WA_SENDER_NUMBER") if ch.isdigit())
+
+
+def profile_name() -> str:
+    """The name the account should carry — the application name by default."""
+    return _env("MNH_WA_PROFILE_NAME") or WHATSAPP_SENDER_NAME
+
+
 def status() -> dict:
     return {
         "provider": "WhatsApp bridge on the Asterisk server",
         "configured": configured(),
         "style": style(),
+        "session": session(),
+        "sender": sender_number() or None,
+        "profileName": profile_name(),
         "missing": ["MNH_WA_BRIDGE_URL"] if not configured() else [],
     }
 
 
-def send_text(number: str, body: str, *, timeout: int | None = None) -> dict:
-    """Send one WhatsApp text through the bridge. `number` is digits (E.164, no '+')."""
-    digits = str(number or "").strip().lstrip("+")
-    if not digits.isdigit():
-        raise BridgeError(f"'{number}' is not a valid WhatsApp number.")
-    text = str(body or "").strip()
+def normalise_target(target) -> str:
+    """Return a WAHA chat id for a person or a group.
+
+    A bare number becomes '<digits>@c.us'; an explicit chat id
+    ('…@g.us', '…@c.us', '…@s.whatsapp.net') is kept (server lower-cased).
+    """
+    text = str(target or "").strip()
     if not text:
-        raise BridgeError("Cannot send an empty message.")
-    if not configured():
-        raise BridgeError(
-            "The WhatsApp bridge is not configured on this server yet. "
-            "Set MNH_WA_BRIDGE_URL (and optionally MNH_WA_BRIDGE_TOKEN / _STYLE / _SESSION)."
-        )
-    if style() == "waha":
-        url = f"{base_url()}/api/sendText"
-        payload = {"session": session(), "chatId": f"{digits}@c.us", "text": text}
-    else:
-        url = f"{base_url()}/send"
-        payload = {"phone": digits, "message": text}
+        raise BridgeError("Enter a WhatsApp number or group id.")
+    if "@" in text:
+        local, _, server = text.partition("@")
+        local = "".join(ch for ch in local if ch.isdigit())
+        server = server.strip().lower()
+        if not local or server not in CHAT_SERVERS:
+            raise BridgeError(f"'{target}' is not a valid WhatsApp chat id.")
+        return f"{local}@{server}"
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        raise BridgeError(f"'{target}' is not a valid WhatsApp number.")
+    return f"{digits}@c.us"
+
+
+def is_group(target) -> bool:
+    """True when the target addresses a group rather than a single person."""
+    return str(target or "").strip().lower().endswith(GROUP_SUFFIX)
+
+
+def _call(url: str, payload: dict, *, method: str = "POST", timeout: int | None = None) -> dict:
+    """POST/PUT JSON to the bridge and return the decoded response."""
     headers = {"Content-Type": "application/json"}
     token = _env("MNH_WA_BRIDGE_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(
-        url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST"
+        url, data=json.dumps(payload).encode("utf-8"), headers=headers, method=method
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout or int(_env("MNH_WA_BRIDGE_TIMEOUT", "20"))) as response:
@@ -96,11 +141,58 @@ def send_text(number: str, body: str, *, timeout: int | None = None) -> dict:
             detail = str(json.loads(error.read().decode("utf-8") or "{}"))[:200]
         except (ValueError, AttributeError):
             detail = ""
-        raise BridgeError(f"The WhatsApp bridge rejected the message ({error.code}). {detail}".strip()) from error
+        raise BridgeError(f"The WhatsApp bridge rejected the request ({error.code}). {detail}".strip()) from error
     except urllib.error.URLError as error:
         raise BridgeError(f"The WhatsApp bridge could not be reached: {error.reason}") from error
     try:
-        result = json.loads(raw)
+        return json.loads(raw)
     except ValueError:
-        result = {"raw": raw[:200]}
-    return {"ok": True, "bridgeResponse": result, "to": digits}
+        return {"raw": raw[:200]}
+
+
+def send_text(target, body: str, *, timeout: int | None = None) -> dict:
+    """Send one WhatsApp text to a person (number) or a group (chat id)."""
+    chat = normalise_target(target)
+    group = chat.endswith(GROUP_SUFFIX)
+    text = str(body or "").strip()
+    if not text:
+        raise BridgeError("Cannot send an empty message.")
+    if not configured():
+        raise BridgeError(
+            "The WhatsApp bridge is not configured on this server yet. "
+            "Set MNH_WA_BRIDGE_URL (and optionally MNH_WA_BRIDGE_TOKEN / _STYLE / _SESSION)."
+        )
+    if style() == "waha":
+        result = _call(
+            f"{base_url()}/api/sendText",
+            {"session": session(), "chatId": chat, "text": text},
+            timeout=timeout,
+        )
+    else:
+        result = _call(
+            f"{base_url()}/send",
+            {"phone": chat.split("@", 1)[0], "chatId": chat, "isGroup": group, "message": text},
+            timeout=timeout,
+        )
+    return {"ok": True, "bridgeResponse": result, "to": chat.split("@", 1)[0], "chatId": chat, "isGroup": group}
+
+
+def set_profile_name(name: str | None = None, *, timeout: int | None = None) -> dict:
+    """Set the WhatsApp account profile (push) name shown to recipients.
+
+    Defaults to the application name so a recipient only ever sees
+    "Maternal & Neonatal Health Smart Time Table", never the sending number.
+    """
+    new_name = str(name or "").strip() or profile_name()
+    if not configured():
+        raise BridgeError(
+            "The WhatsApp bridge is not configured on this server yet. "
+            "Set MNH_WA_BRIDGE_URL before setting the display name."
+        )
+    if style() == "waha":
+        result = _call(f"{base_url()}/api/{session()}/profile/name", {"name": new_name},
+                       method="PUT", timeout=timeout)
+    else:
+        result = _call(f"{base_url()}/profile/name", {"name": new_name},
+                       method="POST", timeout=timeout)
+    return {"ok": True, "name": new_name, "bridgeResponse": result}

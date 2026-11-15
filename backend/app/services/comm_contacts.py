@@ -5,16 +5,19 @@ sees the same directory. Consent is stored per channel (whatsapp / voice) and a
 separate `comm_dnc` collection is the do-not-contact list: any phone number on
 it must never be prepared for messaging or calling, regardless of consent flags.
 
-Phone numbers are normalised with the same rule as the reminder service
-(E.164 without '+', defaulting to Malawi, 265).
+A contact is either an individual (`kind: "individual"`) or a WhatsApp group
+(`kind: "group"`). People are normalised to E.164 without '+' (defaulting to
+Malawi, 265); a group keeps its WhatsApp chat id, e.g. `1203630…@g.us`. Both are
+stored in the `phone` field so every sender resolves a single address.
 """
 import json
 import time
 
 from app.database.connection import database
-from app.services import whatsapp
+from app.services import wa_bridge, whatsapp
 
 CATEGORIES = ("staff", "student", "other")
+KINDS = ("individual", "group")
 
 
 class ContactError(RuntimeError):
@@ -61,19 +64,51 @@ def audit_rows(limit: int = 100) -> list:
 
 
 # ---- helpers ---------------------------------------------------------------
+def normalise_contact_target(raw, kind: str = "individual") -> str:
+    """A person's phone normalises to E.164 digits; a group keeps its chat id.
+
+    Groups may be given as a full chat id (`1203630…@g.us`) or a bare long
+    number, which becomes `<digits>@g.us`.
+    """
+    text = str(raw or "").strip()
+    if kind == "group":
+        if "@" not in text:
+            text = f"{''.join(ch for ch in text if ch.isdigit())}@g.us"
+        try:
+            chat = wa_bridge.normalise_target(text)
+        except wa_bridge.BridgeError as error:
+            raise ContactError(str(error)) from error
+        if not chat.endswith("@g.us"):
+            raise ContactError("A WhatsApp group id looks like 1203630…@g.us.")
+        return chat
+    try:
+        return whatsapp.normalise_phone(text)
+    except whatsapp.WhatsAppError as error:
+        raise ContactError(str(error)) from error
+
+
+def contact_kind(contact: dict | None) -> str:
+    """'group' or 'individual' — inferred from the stored kind or the address."""
+    data = contact or {}
+    kind = str(data.get("kind") or "").strip().lower()
+    if kind == "group" or wa_bridge.is_group(data.get("phone")):
+        return "group"
+    return "individual"
+
+
 def _clean_contact(data: dict, *, require_phone: bool) -> dict:
     name = str(data.get("name") or "").strip()
     if not name:
         raise ContactError("Every contact needs a name.")
-    raw_phone = str(data.get("phone") or "").strip()
+    kind = str(data.get("kind") or "individual").strip().lower()
+    if kind not in KINDS:
+        kind = "individual"
+    raw_phone = str(data.get("phone") or data.get("target") or "").strip()
     if require_phone and not raw_phone:
+        if kind == "group":
+            raise ContactError(f"Enter the group id for {name} (e.g. 1203630…@g.us).")
         raise ContactError(f"Enter a phone number for {name}.")
-    phone = ""
-    if raw_phone:
-        try:
-            phone = whatsapp.normalise_phone(raw_phone)
-        except whatsapp.WhatsAppError as error:
-            raise ContactError(str(error)) from error
+    phone = normalise_contact_target(raw_phone, kind) if raw_phone else ""
     category = str(data.get("category") or "other").strip().lower()
     if category not in CATEGORIES:
         category = "other"
@@ -84,6 +119,7 @@ def _clean_contact(data: dict, *, require_phone: bool) -> dict:
     return {
         "name": name[:120],
         "phone": phone,
+        "kind": kind,
         "category": category,
         "notes": str(data.get("notes") or "")[:500],
         "consentWhatsapp": consent_whatsapp,
@@ -204,14 +240,15 @@ def dnc_remove(actor: str, item_id: str) -> None:
 
 def contact_allowed(contact: dict, channel: str) -> tuple[bool, str]:
     """(allowed, reason) — consent, opt-out and DNC in one check."""
-    phone = str(contact.get("phone") or "")
+    phone = str(contact.get("phone") or contact.get("target") or "")
     if contact.get("optOut"):
         return False, "contact opted out"
-    if phone and phone in dnc_phones():
+    # The do-not-contact list only holds phone numbers, so a group id is never on it.
+    if phone and not wa_bridge.is_group(phone) and phone in dnc_phones():
         return False, "phone is on the do-not-contact list"
     key = "consentWhatsapp" if channel == "whatsapp" else "consentVoice"
     if not contact.get(key):
         return False, f"no {channel} consent recorded"
     if not phone:
-        return False, "contact has no phone number"
+        return False, "contact has no number or group id"
     return True, ""

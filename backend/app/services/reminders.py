@@ -5,6 +5,9 @@ the shared `settings/reminders` document, so every device and the server agree:
 
     {"enabled": true, "leadMinutes": [10, 20, 30], "recipients": ["+265881988156"]}
 
+Recipients may be individual numbers or WhatsApp group chat ids
+(`1203630…@g.us`); both are delivered through the same bridge.
+
 A background worker checks every few seconds, sends once per session, lead time and
 number, and records each attempt in `reminder_log` so a reminder is never repeated.
 """
@@ -63,13 +66,26 @@ def settings() -> dict:
     recipients = []
     for value in data.get("recipients", []):
         text = str(value or "").strip()
-        if text:
+        if not text:
+            continue
+        if "@" in text:
+            # Explicit group chat id (e.g. 1203630…@g.us) — groups are addressed
+            # directly and never go through phone normalisation.
             try:
-                number = whatsapp.normalise_phone(text)
-            except whatsapp.WhatsAppError:
+                target = wa_bridge.normalise_target(text)
+            except wa_bridge.BridgeError:
                 continue
-            if number not in recipients:
-                recipients.append(number)
+            if not target.endswith("@g.us"):
+                continue
+            if target not in recipients:
+                recipients.append(target)
+            continue
+        try:
+            number = whatsapp.normalise_phone(text)
+        except whatsapp.WhatsAppError:
+            continue
+        if number not in recipients:
+            recipients.append(number)
     return {
         "enabled": bool(data.get("enabled", True)),
         "leadMinutes": sorted(leads or list(DEFAULT_LEADS)),
@@ -231,8 +247,17 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
 
 
 def send_test(to: str, now: datetime | None = None) -> dict:
-    """Send one sample reminder to a single number (used by the interface's test button)."""
-    number = whatsapp.normalise_phone(to)
+    """Send one sample reminder to a number or a WhatsApp group (interface test button)."""
+    text = str(to or "").strip()
+    if "@" in text:
+        try:
+            number = wa_bridge.normalise_target(text)
+        except wa_bridge.BridgeError as error:
+            raise whatsapp.WhatsAppError(str(error)) from error
+        if not number.endswith("@g.us"):
+            raise whatsapp.WhatsAppError("Use a phone number or a group id like 1203630…@g.us.")
+    else:
+        number = whatsapp.normalise_phone(text)
     body = test_message(now)
     if not wa_bridge.configured():
         raise wa_bridge.BridgeError(

@@ -29,6 +29,32 @@ def comm_status(mnh_session: str | None = Cookie(None)):
     return info
 
 
+# ---- WhatsApp account: profile (display) name ------------------------------------
+@router.get("/whatsapp/profile")
+def whatsapp_profile(mnh_session: str | None = Cookie(None)):
+    """The account's current/desired display name and sender number (no credentials)."""
+    _actor(mnh_session)
+    return {
+        "configured": wa_bridge.configured(),
+        "style": wa_bridge.style(),
+        "session": wa_bridge.session(),
+        "sender": wa_bridge.sender_number() or None,
+        "profileName": wa_bridge.profile_name(),
+    }
+
+
+@router.post("/whatsapp/profile")
+def set_whatsapp_profile(mnh_session: str | None = Cookie(None), data: dict = Body(default={})):
+    """Set the account profile (push) name — recipients then see only the app name."""
+    actor = _editor(mnh_session)
+    try:
+        result = wa_bridge.set_profile_name(str(data.get("name") or ""))
+    except wa_bridge.BridgeError as error:
+        raise HTTPException(status_code=502, detail=str(error))
+    comm_contacts.audit(actor, "whatsapp-profile-set", str(result.get("name") or ""))
+    return result
+
+
 # ---- contacts -----------------------------------------------------------------
 @router.get("/contacts")
 def contacts(mnh_session: str | None = Cookie(None)):
@@ -215,6 +241,8 @@ def start_call(mnh_session: str | None = Cookie(None), data: dict = Body(...)):
     contact = comm_contacts.get_contact(contact_id)
     if not contact:
         raise HTTPException(status_code=400, detail="Contact not found.")
+    if comm_contacts.contact_kind(contact) == "group":
+        raise HTTPException(status_code=400, detail="Voice calls need a phone number — a WhatsApp group cannot be called.")
     consent_ok, _ = comm_contacts.contact_allowed(contact, "voice")
     dnc_ok, _ = comm_contacts.contact_allowed(contact, "whatsapp")  # DNC applies to both channels
     window_ok, window_reason = comm_service.within_call_window()

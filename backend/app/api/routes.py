@@ -475,12 +475,24 @@ def session_status():
 @router.get("/reminders")
 def reminders_status(mnh_session: str | None = Cookie(default=None)):
     """What reminder delivery can do right now (never credentials; numbers only to editors)."""
-    from app.services import reminders, whatsapp
+    from app.services import reminders, wa_bridge
     reminder_settings = reminders.settings()
     editor = bool(current_session(mnh_session))
+    # Reminders send through the WhatsApp bridge, so report the bridge — not the
+    # retired Meta Cloud API — as the delivery channel.
+    bridge = wa_bridge.status()
     return {
         "ok": True,
-        "whatsapp": whatsapp.status(),
+        "whatsapp": {
+            "provider": bridge["provider"],
+            "configured": bridge["configured"],
+            "style": bridge["style"],
+            "session": bridge["session"],
+            "sender": wa_bridge.profile_name(),      # name recipients see (never a number)
+            "senderNumber": bridge["sender"],
+            "profileName": bridge["profileName"],
+            "missing": bridge["missing"],
+        },
         "editor": editor,
         "settings": {"enabled": reminder_settings["enabled"],
                      "leadMinutes": reminder_settings["leadMinutes"],

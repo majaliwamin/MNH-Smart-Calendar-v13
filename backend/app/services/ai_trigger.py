@@ -82,7 +82,12 @@ def _consented_recipients(contact_ids: list | None) -> list:
     for contact in contacts:
         allowed, reason = comm_contacts.contact_allowed(contact, "whatsapp")
         if allowed:
-            out.append({"contactId": contact["id"], "name": contact.get("name", ""), "phone": contact["phone"]})
+            out.append({
+                "contactId": contact["id"],
+                "name": contact.get("name", ""),
+                "phone": contact["phone"],
+                "kind": comm_contacts.contact_kind(contact),
+            })
     return out
 
 
@@ -249,6 +254,7 @@ def _dispatch(actor: str, kind: str, message: str, recipients: list, ai_used: bo
         "message": message[:4000],
         "changes": changes[:2000],
         "sentTo": [r["contactId"] for r in recipients],
+        "sentKinds": sorted({r.get("kind", "individual") for r in recipients}),
         "sentCount": sent,
         "errors": errors[:10],
         "createdBy": actor,

@@ -102,3 +102,58 @@ def test_status_describes_the_sender_without_leaking_credentials_or_numbers():
     assert body["whatsapp"]["sender"] == "Maternal & Neonatal Health Smart Time Table"
     assert "bearer" not in str(body).lower()
     assert body["settings"]["recipients"] == []
+
+
+# ---- WhatsApp groups ----------------------------------------------------------------------
+def _use_temp_storage(monkeypatch, tmp_path):
+    from app import config
+    from app.database import connection
+    monkeypatch.setattr(config, "DATABASE_DIR", tmp_path / "database")
+    monkeypatch.setattr(connection, "DATABASE_PATH", tmp_path / "database" / "calendar.db")
+    monkeypatch.setenv("MNH_ENV", "development")
+
+
+def test_reminder_settings_accept_a_group_chat_id(monkeypatch, tmp_path):
+    import json
+    _use_temp_storage(monkeypatch, tmp_path)
+    from app.database.connection import database
+    with database() as connection:
+        connection.execute(
+            "INSERT OR REPLACE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+            ("settings", "reminders", json.dumps({
+                "enabled": True, "leadMinutes": [10],
+                "recipients": ["+265881988156", "120363043999999999@g.us", "not a number"],
+            }), 0),
+        )
+    assert reminders.settings()["recipients"] == ["265881988156", "120363043999999999@g.us"]
+
+
+def test_sample_send_can_target_a_group(monkeypatch):
+    import io, json, urllib.request
+    monkeypatch.setenv("MNH_WA_BRIDGE_URL", "http://bridge.test")
+    sent = []
+
+    def fake_urlopen(request, timeout=None):
+        sent.append(json.loads(request.data.decode("utf-8")))
+        return io.BytesIO(b'{"ok":true}')
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    result = reminders.send_test("120363043999999999@g.us")
+    assert result["isGroup"] is True
+    assert sent[0]["chatId"] == "120363043999999999@g.us"
+
+
+def test_sample_send_still_normalises_individual_numbers(monkeypatch):
+    import io, json, urllib.request
+    monkeypatch.setenv("MNH_WA_BRIDGE_URL", "http://bridge.test")
+    sent = []
+
+    def fake_urlopen(request, timeout=None):
+        sent.append(json.loads(request.data.decode("utf-8")))
+        return io.BytesIO(b'{"ok":true}')
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    result = reminders.send_test("+265 881 988 156")
+    assert result["to"] == "265881988156"
+    assert sent[0]["chatId"] == "265881988156@c.us"
+

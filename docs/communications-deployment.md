@@ -19,6 +19,8 @@ See `.env.example` for the full list with placeholders. Summary:
 | `MNH_WA_BRIDGE_TOKEN` | Bearer token for the bridge, if it has auth | bridge auth |
 | `MNH_WA_BRIDGE_STYLE` | `waha` (default) or `generic` payload shape | bridge compatibility |
 | `MNH_WA_BRIDGE_SESSION` | WAHA session name (default `default`) | WAHA bridges |
+| `MNH_WA_SENDER_NUMBER` | The WhatsApp account that sends (e.g. `26599130362`); shown in status only, never a credential | clarity |
+| `MNH_WA_PROFILE_NAME` | Display/push name recipients see (defaults to the application name) | sender identity |
 | `MNH_AI_API_KEY` | AI drafting (OpenAI-compatible) | AI draft button |
 | `MNH_AI_BASE_URL` | Provider base URL (default `https://api.openai.com/v1`) | alternative providers |
 | `MNH_AI_MODEL` | Model name (default `gpt-4o-mini`) | alternative models |
@@ -55,6 +57,33 @@ Browser / Flutter ── HTTPS ──> FastAPI (Render) ── SQLite
   exposing ARI to the public internet. ARI speaks HTTP, which the Tunnel
   proxies fine; the SIP/RTP media itself never touches the Tunnel — it flows
   directly between the Asterisk VPS and the SIP trunk/carrier.
+
+### 2.1 Sender identity and WhatsApp groups
+
+**Sender identity.** A recipient must only ever see the application name
+(`Maternal & Neonatal Health Smart Time Table`), never the sending phone
+number. Two things achieve this:
+
+1. Set `MNH_WA_PROFILE_NAME` (defaults to the app name) and apply it once from
+   the Communications → System status card ("Set WhatsApp display name to the
+   app name"), or directly:
+   `POST /api/comm/whatsapp/profile` with `{"name": "…"}`. WAHA is called at
+   `PUT {MNH_WA_BRIDGE_URL}/api/{session}/profile/name`.
+2. Every message still starts with the app name, so the sender is unambiguous
+   even on clients that truncate the profile name.
+
+**WhatsApp groups.** A group is addressed by its chat id, e.g.
+`120363043999999999@g.us` (copy it from the bridge/WAHA, or from WhatsApp Web's
+group info). Groups are first-class contacts:
+
+- Add a contact with **type = WhatsApp group** and paste the group id — it is
+  stored with `kind: "group"` and delivered through the same bridge.
+- Reminder recipients (`settings/reminders`) accept a group id alongside phone
+  numbers, so a whole cohort gets the reminder in one send.
+- Groups have **no `wa.me` link** and cannot be voice-called; the AI trigger and
+  reminders post to them, the manual draft flow does not.
+- Consent still applies: a group contact needs WhatsApp consent recorded before
+  anything is sent, exactly like a person.
 
 ---
 
