@@ -7,15 +7,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.15-v14.38">\n<link rel="manifest" href="/manifest.json?v=2026.11.15-v14.38">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.15-v14.40">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json?v=2026.11.15-v14.40">
+<meta name="theme-color" content="#0b1930">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MNH Calendar">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.15-v14.38";</script>
-<script src="/js/week-model.js?v=2026.11.15-v14.38"></script>
-<script src="/js/api-client.js?v=2026.11.15-v14.38"></script>
+<script>window.MNH_BUILD="2026.11.15-v14.40";</script>
+<script src="/js/week-model.js?v=2026.11.15-v14.40"></script>
+<script src="/js/api-client.js?v=2026.11.15-v14.40"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.15-v14.38">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.15-v14.40">
 </head>
 <body data-theme="dark">
 <script>
@@ -271,7 +277,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.15-v14.38-weekfix1-typedfac" defer></script>
+<script src="/js/app.js?v=2026.11.15-v14.40" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
@@ -334,29 +340,70 @@
  "use strict";
  const button=document.getElementById("install-app-btn");
  if(!button)return;
- let installPrompt=null;
- const isStandalone=()=>window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
- const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
- if(isStandalone()){button.hidden=true;return;}
+
+ let deferredPrompt=null;   // the saved beforeinstallprompt event
+ let promptOpen=false;      // a native prompt is currently on screen
+
+ const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
+ const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
+ const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+ const hideButton=()=>{button.hidden=true;button.setAttribute("aria-hidden","true");};
+ const showButton=()=>{if(!isStandalone()){button.hidden=false;button.removeAttribute("aria-hidden");}};
+
+ // Already running as an installed app: never offer installation.
+ if(isStandalone()){hideButton();return;}
+
+ // Hold the browser's own prompt back for now and reuse it when the icon is tapped.
  window.addEventListener("beforeinstallprompt",event=>{
-  event.preventDefault();installPrompt=event;button.hidden=false;
+  event.preventDefault();
+  deferredPrompt=event;
+  showButton();
  });
+
+ // A completed install means the icon is no longer needed.
+ window.addEventListener("appinstalled",()=>{
+  deferredPrompt=null;
+  promptOpen=false;
+  hideButton();
+ });
+
  button.addEventListener("click",async()=>{
-  if(installPrompt){
-   const promptEvent=installPrompt;installPrompt=null;
-   await promptEvent.prompt();
-   const choice=await promptEvent.userChoice;
-   if(choice&&choice.outcome==="accepted")button.hidden=true;
+  if(isStandalone()){hideButton();return;}
+  if(promptOpen)return;            // ignore repeat taps while a prompt is already open
+
+  if(deferredPrompt){
+   const promptEvent=deferredPrompt;
+   deferredPrompt=null;            // the saved event can only be used once
+   promptOpen=true;
+   try{
+    await promptEvent.prompt();
+    const choice=await promptEvent.userChoice;
+    if(choice&&choice.outcome==="accepted")hideButton();
+    // dismissed: keep the icon available so the user can try again later
+   }catch(error){
+    console.warn("MNH Calendar install prompt failed:",error);
+   }finally{
+    promptOpen=false;
+   }
    return;
   }
+
+  // No native prompt is available: give accurate, browser-specific guidance only.
   if(isIOS()){
-   alert('To install MNH Calendar: tap the Share button in Safari, then choose “Add to Home Screen”.');
-   return;
+   alert("To install MNH Calendar: tap the Share button in Safari, then choose \u201CAdd to Home Screen\u201D.");
+  }else{
+   alert("To install MNH Calendar, open your browser menu and choose \u201CInstall app\u201D or \u201CAdd to Home screen\u201D. If that option is not available, refresh the page and try again.");
   }
-  alert('To install MNH Calendar, open your browser menu and choose “Install app” or “Add to Home screen”. If that option is not available, refresh the page and try again.');
  });
- window.addEventListener("appinstalled",()=>{button.hidden=true;installPrompt=null;});
+
+ // Stay correct if the app becomes installed while this tab stays open.
+ if(standaloneQuery){
+  const onChange=()=>{if(isStandalone())hideButton();};
+  if(standaloneQuery.addEventListener)standaloneQuery.addEventListener("change",onChange);
+  else if(standaloneQuery.addListener)standaloneQuery.addListener(onChange);
+ }
 })();
 </script>
-\n</body></html>
+
+</body></html>
 

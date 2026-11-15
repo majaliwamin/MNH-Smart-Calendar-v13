@@ -121,8 +121,16 @@ async def favicon():
     return FileResponse(FRONTEND_DIR / "favicon.svg", media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=86400"})
 
 
+@app.get("/manifest.json", include_in_schema=False)
+async def manifest():
+    # Web app manifest: required for PWA installability (and beforeinstallprompt).
+    return FileResponse(FRONTEND_DIR / "manifest.json", media_type="application/manifest+json",
+                        headers={"Cache-Control": "no-cache"})
+
+
 app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
+app.mount("/icons", StaticFiles(directory=str(FRONTEND_DIR / "icons")), name="icons")
 
 
 def build_info() -> dict:

@@ -232,3 +232,48 @@ def test_upcoming_activities_are_future_only_and_use_shared_records():
     assert "start.getTime()<=now" in app
     assert "function nextRecurringDate(dayName,timeText,now)" in app
     assert "getFutureActivities().then(items=>" in app
+
+
+def test_pwa_install_requirements_are_met():
+    import json
+
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+
+    # Manifest exists, is valid JSON, and describes an installable standalone app.
+    manifest_path = ROOT / "frontend" / "manifest.json"
+    assert manifest_path.is_file()
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_text)
+    assert manifest["name"] == "MNH Calendar"
+    assert manifest["short_name"] == "MNH Calendar"
+    assert manifest["display"] == "standalone"
+    assert manifest["start_url"] == "/"
+    assert manifest["scope"] == "/"
+
+    # Required 192x192 and 512x512 PNG icons are declared and present on disk.
+    sizes = {icon["sizes"] for icon in manifest["icons"]}
+    assert "192x192" in sizes and "512x512" in sizes
+    for icon in manifest["icons"]:
+        if icon["src"].endswith(".png"):
+            assert (ROOT / "frontend" / icon["src"].lstrip("/")).is_file()
+
+    # The page links the manifest and exposes the install control.
+    assert 'rel="manifest"' in html and "/manifest.json" in html
+    assert 'id="install-app-btn"' in html
+
+    # The install handler saves and reuses the native prompt, guards repeats and state.
+    assert "beforeinstallprompt" in html
+    assert "event.preventDefault()" in html
+    assert ".prompt()" in html and "userChoice" in html
+    assert "appinstalled" in html
+    assert "display-mode: standalone" in html
+    assert "promptOpen" in html
+
+    # The backend must serve the manifest and icons (a 404 breaks installability).
+    assert '@app.get("/manifest.json", include_in_schema=False)' in main
+    assert 'app.mount("/icons"' in main
+
+    # No stray literal backslash-n escapes left in the PWA files.
+    assert ">\\n<" not in html
+    assert "\\n" not in manifest_text
