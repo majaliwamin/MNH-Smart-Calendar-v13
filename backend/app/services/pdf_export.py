@@ -79,8 +79,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     module_rows = module_catalogue(collections)
 
     out = BytesIO()
-    width, height = landscape(A4)
-    pdf = canvas.Canvas(out, pagesize=landscape(A4))
+    # Portrait A4 keeps the opening timetable page practical to view on phones.
+    width, height = A4
+    pdf = canvas.Canvas(out, pagesize=A4)
     pdf.setTitle(f"{APP_NAME} - {TITLE} - Academic Calendar")
     pdf.setAuthor(APP_NAME)
     pdf.setSubject(f"{TITLE} | {APP_SUBTITLE}")
@@ -88,6 +89,11 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
 
     def set_font(name, size):
         pdf.setFont(name, max(4, size * font_scale))
+
+    def readable_ink(background):
+        """Choose text colour from the actual cell fill for reliable contrast."""
+        luminance = 0.299 * background.red + 0.587 * background.green + 0.114 * background.blue
+        return colors.HexColor("#17283D") if luminance > 0.58 else WHITE
 
     pdf.setKeywords("MNH, maternal and neonatal health, PhD, academic calendar")
 
@@ -215,7 +221,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
             preset = ""
             if matches:
                 item = matches[0]
-                preset = " | ".join(filter(None, [
+                preset = "\n".join(filter(None, [
                     item.get("code"), item.get("lecturer"),
                     item.get("activity") if item.get("activity") != item.get("code") else "",
                 ]))
@@ -230,29 +236,30 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     # One landscape weekly grid: weekdays across the top, time slots down the side.
     top = banner("WEEKLY TIMETABLE")
     top = section_heading("Weekly timetable", 10 * mm, top, width - 20 * mm)
-    table_x = 10 * mm
-    table_w = width - 20 * mm
-    time_w = 24 * mm
+    table_x = 8 * mm
+    table_w = width - 16 * mm
+    time_w = 28 * mm
     day_w = (table_w - time_w) / 5
-    header_h = 13 * mm
-    row_h = 11.7 * mm
+    header_h = 15 * mm
+    # Larger editable rows remain inside the first portrait A4 page.
+    row_h = 20 * mm
     table_top = top - 3 * mm
     header_bottom = table_top - header_h
 
     pdf.setFillColor(NAVY)
     pdf.roundRect(table_x, header_bottom, table_w, header_h, 1.5 * mm, stroke=0, fill=1)
     pdf.setFillColor(WHITE)
-    set_font("Helvetica-Bold", 7.5)
-    pdf.drawCentredString(table_x + time_w / 2, header_bottom + 5 * mm, "TIME")
+    set_font("Helvetica-Bold", 8)
+    pdf.drawCentredString(table_x + time_w / 2, header_bottom + 8 * mm, "TIME")
     for day_index in range(5):
         day_x = table_x + time_w + day_index * day_w
         day_date = week_start + timedelta(days=day_index)
         pdf.setFillColor(WHITE)
-        set_font("Helvetica-Bold", 8)
-        pdf.drawCentredString(day_x + day_w / 2, header_bottom + 7.5 * mm,
+        set_font("Helvetica-Bold", 7.2)
+        pdf.drawCentredString(day_x + day_w / 2, header_bottom + 9.5 * mm,
                               WEEKDAY_NAMES[day_index].upper())
-        set_font("Helvetica", 7)
-        pdf.drawCentredString(day_x + day_w / 2, header_bottom + 3.5 * mm,
+        set_font("Helvetica", 6.5)
+        pdf.drawCentredString(day_x + day_w / 2, header_bottom + 4.5 * mm,
                               day_date.strftime("%d %b %Y"))
         if day_index:
             pdf.setStrokeColor(LINE)
@@ -272,16 +279,18 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.setLineWidth(.4)
         pdf.rect(table_x, row_y, table_w, row_h, stroke=1, fill=0)
         pdf.line(table_x + time_w, row_y, table_x + time_w, row_top)
-        pdf.setFillColor(NAVY)
-        set_font("Helvetica-Bold", 7.2)
-        pdf.drawCentredString(table_x + time_w / 2, row_y + 4.5 * mm,
+        # Select ink from the actual time-column fill; fixed navy disappears
+        # against dark theme fills.
+        pdf.setFillColor(readable_ink(TIME_BG))
+        set_font("Helvetica-Bold", 7.5)
+        pdf.drawCentredString(table_x + time_w / 2, row_y + 9 * mm,
                               _slot_label(start_hour, end_hour))
 
         if is_lunch:
             pdf.setFillColor(LUNCH_TEXT)
-            set_font("Helvetica-Bold", 9)
+            set_font("Helvetica-Bold", 8.5)
             pdf.drawCentredString(table_x + time_w + (table_w - time_w) / 2,
-                                  row_y + 4.5 * mm, "LUNCH BREAK")
+                                  row_y + 9 * mm, "LUNCH BREAK")
             continue
 
         for day_index in range(5):
@@ -308,7 +317,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 f"{day_name} {_slot_label(start_hour, end_hour)}",
                 cell_x + 1 * mm, row_y + 1.5 * mm,
                 day_w - 2 * mm, row_h - 3 * mm,
-                preset, font_size=10,
+                preset, font_size=8, multiline=True,
             )
 
     footer()
