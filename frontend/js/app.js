@@ -162,6 +162,7 @@ async function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("module-select").value=existingCode;
  document.getElementById("module-label").value=existingCode||(existing?String(existing.title||existing.label||""):"");
  document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
+ document.getElementById("session-link").value=existing?.data?.meetingUrl||"";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
@@ -177,6 +178,7 @@ function showSessionDetails(entry){
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
+ const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){const linkRow=document.createElement("div");linkRow.className="session-meeting-link";linkRow.appendChild(document.createTextNode("Online meeting: "));const meetingLink=document.createElement("a");meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";linkRow.appendChild(meetingLink);details.appendChild(linkRow);}
  document.getElementById("edit-details").style.display=(editingUnlocked&&!entry.data?.recurring)?"inline-block":"none";
  document.getElementById("edit-details").onclick=()=>{hideDialog("details-dialog");openModuleDialog(entry.dayIndex,entry.startTime,entry);};
  showDialog("details-dialog");
@@ -349,6 +351,8 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const start=parseClock(startTime),end=parseClock(endTime);
  if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a weekday and a valid end time later than the start time.";return;}
  const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
+ const meetingInput=document.getElementById("session-link").value.trim(),meetingUrl=meetingInput?safeUrl(meetingInput):"";
+ if(meetingInput&&!meetingUrl){statusEl.className="status error";statusEl.textContent="Enter a valid Google Meet, Zoom, Microsoft Teams or other HTTPS meeting link.";return;}
  const activityLabel=code||label;
  if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
  const oldId=activeCell.id;
@@ -360,7 +364,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const chosenColour=document.getElementById("module-colour").value;
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value};
+ const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);if(saved&&oldId&&oldId!==id)await pushCell(oldId);
 });
