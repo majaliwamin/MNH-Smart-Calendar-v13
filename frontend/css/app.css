@@ -1584,3 +1584,25 @@ body[data-theme="red"] #view-weekly tbody th.time{
   transform:translateZ(0);
   backface-visibility:hidden;
 }
+
+
+/* Original maternal-newborn photograph at the far right of the programme header. */
+.hd-brand-photo{
+  display:block;
+  flex:0 0 auto;
+  width:clamp(54px,6vw,86px);
+  height:auto;
+  aspect-ratio:430 / 286;
+  object-fit:contain;
+  object-position:center;
+  border:1px solid var(--header-border,var(--accent));
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+}
+@media(max-width:720px){
+  .hd-right{gap:8px}
+  .hd-brand-photo{width:42px;max-width:12vw;border-radius:6px}
+}
+@media(max-width:420px){
+  .hd-brand-photo{width:34px}
+}
