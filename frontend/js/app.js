@@ -299,7 +299,7 @@ themePickerButton.addEventListener("click",()=>{
  const opening=themePicker.hidden;
  themePicker.hidden=!opening;
  themePickerButton.setAttribute("aria-expanded",String(opening));
- if(opening)themeSelect.focus();
+ if(opening){const active=themePicker.querySelector(".theme-choice[aria-pressed=\"true\"]")||themePicker.querySelector(".theme-choice");if(active)active.focus();}
 });
 document.addEventListener("click",e=>{
  if(!e.target.closest("#hd-theme")){
