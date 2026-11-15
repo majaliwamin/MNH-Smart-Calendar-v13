@@ -1435,3 +1435,83 @@ body[data-theme="red"] #view-weekly tbody th.time{
     font-weight:700!important;
   }
 }
+
+
+/* FINAL CONTENT-FIT RULES: timetable activity cells grow to show every line. */
+#view-weekly .wrap table{
+  table-layout:fixed!important;
+}
+#view-weekly .wrap tbody tr:not(.lunch-row),
+#view-weekly .wrap tbody td{
+  height:auto!important;
+  min-height:48px!important;
+}
+#view-weekly .wrap tbody td{
+  vertical-align:middle!important;
+  padding:3px!important;
+}
+#view-weekly .wrap tbody td .cell{
+  display:flex!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:44px!important;
+  min-width:0!important;
+}
+#view-weekly .wrap tbody td .activity{
+  display:flex!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:44px!important;
+  max-height:none!important;
+  padding:6px 5px!important;
+  gap:3px!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.2!important;
+  text-align:center!important;
+}
+#view-weekly .wrap tbody td .activity-name,
+#view-weekly .wrap tbody td .activity-lecturer{
+  display:block!important;
+  flex:0 1 auto!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  height:auto!important;
+  max-height:none!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.2!important;
+}
+#view-weekly .wrap tbody td .activity-name{
+  font-size:clamp(12px,1vw,14px)!important;
+  font-weight:700!important;
+}
+#view-weekly .wrap tbody td .activity-lecturer{
+  font-size:clamp(10px,.85vw,12px)!important;
+  font-weight:500!important;
+}
+#view-weekly .wrap tbody td .activity.empty-activity{
+  min-height:44px!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+@media(max-width:720px){
+  #view-weekly .wrap tbody td .activity{
+    min-height:46px!important;
+    padding:7px 4px!important;
+  }
+  #view-weekly .wrap tbody td .activity-name{font-size:13px!important}
+  #view-weekly .wrap tbody td .activity-lecturer{font-size:11px!important}
+}
