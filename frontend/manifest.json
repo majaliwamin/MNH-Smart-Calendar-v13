@@ -1,0 +1,24 @@
+{
+  "name": "MNH Smart Calendar",
+  "short_name": "MNH Calendar",
+  "description": "Maternal and Neonatal Health academic timetable and calendar.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#0b1017",
+  "theme_color": "#0b1930",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}\n
