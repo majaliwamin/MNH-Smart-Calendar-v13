@@ -1152,8 +1152,8 @@ async function renderCommStatusCard(root){
  line.textContent=stopped?"Emergency stop is ON — no messages or calls will be sent.":"Emergency stop is off; normal sending is allowed.";
  const bridge=(s&&s.aiTrigger&&s.aiTrigger.bridge)||null;
  [["WhatsApp bridge (Asterisk server)",bridge],
-  ["WhatsApp send bridge — auto trigger",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["MNH_AI_TRIGGER_ENABLED"]}:null],
-  ["AI draft service",s&&s.ai],["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
+  ["Automatic WhatsApp send bridge",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["MNH_AI_TRIGGER_ENABLED"]}:null],
+  ["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
   const on=!!(v&&v.configured);
   let text=(on?"✔ ":"✖ ")+label+": "+(on?"configured":"not configured");
   if(v&&v.missing)text+=" — missing "+(Array.isArray(v.missing)?v.missing.join(", "):v.missing);
@@ -1304,7 +1304,7 @@ function commDraftRows(container,draft,line){
  });
 }
 async function renderCommComposerCard(root){
- const card=commCard(root,"Compose WhatsApp messages","Opening WhatsApp does not send the message — press Send in WhatsApp yourself, then mark it as sent. AI drafts are editable; the AI never sends anything.");
+ const card=commCard(root,"Compose WhatsApp messages","Opening WhatsApp does not send the message — press Send in WhatsApp yourself, then mark it as sent. ");
  const line=el("p","muted","Loading recipients…");card.appendChild(line);
  let contacts=[],templates=[];
  try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
@@ -1326,17 +1326,7 @@ async function renderCommComposerCard(root){
  const body=document.createElement("textarea");body.rows=5;body.maxLength=1000;body.placeholder="Message body…";body.setAttribute("aria-label","Message body");body.style.cssText=COMM_FIELD;
  card.appendChild(body);
  tpl.addEventListener("change",()=>{const t=templates.find(x=>String(x.id)===tpl.value);if(t)body.value=t.body||t.text||"";});
- let aiAssisted=false;
- const aiPrompt=fieldInput("Describe the message for the AI (optional)",300);card.appendChild(aiPrompt);
- const aiBtn=el("button",null,"Draft with AI");aiBtn.type="button";
- aiBtn.addEventListener("click",async()=>{
-  aiBtn.disabled=true;commBusy(line,"Asking the AI for a draft…");
-  try{const r=await apiRequest("POST","/api/comm/ai/draft",{prompt:aiPrompt.value.trim()});body.value=(r&&(r.draft||r.text||r.body))||body.value;aiAssisted=true;commOk(line,"AI draft inserted — edit it before preparing links. The AI never sends anything.");}
-  catch(e){commFail(line,e);}
-  finally{aiBtn.disabled=false;}
- });
- card.appendChild(aiBtn);
- const draftBox=el("div","cards");
+const draftBox=el("div","cards");
  const prep=el("button","primary","Prepare WhatsApp links");prep.type="button";
  prep.addEventListener("click",async()=>{
   const ids=[...pick.querySelectorAll("input:checked")].map(x=>x.value);
@@ -1344,7 +1334,7 @@ async function renderCommComposerCard(root){
   if(!body.value.trim()){commFail(line,new Error("Write a message first."));return;}
   prep.disabled=true;commBusy(line,"Preparing per-recipient WhatsApp links…");
   try{
-   const r=await apiRequest("POST","/api/comm/drafts",{contactIds:ids,body:body.value.trim(),title:"",aiAssisted});
+   const r=await apiRequest("POST","/api/comm/drafts",{contactIds:ids,body:body.value.trim(),title:""});
    commDraftRows(draftBox,(r&&(r.draft||r))||null,line);
    commOk(line,"Links prepared. Open each one, send it in WhatsApp yourself, then mark it as sent.");
   }
@@ -1545,7 +1535,7 @@ function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const
  fontSizeWrap.append(fontSizeLabel,fontSizeControl,fontSizeValue,fontSizeHint);card.appendChild(fontSizeWrap);
  window.downloadTimetableExcel=async()=>{say("Preparing the editable Excel timetable…");try{const response=await fetch("/api/export/timetable.xlsx?modules="+selectedParam()+selectedWeekParam(),{cache:"no-store"});if(!response.ok){const hint=response.status===404?" The server answering on this address does not have the Excel export — an older copy of the application may still be running on this port.":response.status===503?" Install the backend requirements (openpyxl) and restart.":"";throw new Error("Excel export failed (HTTP "+response.status+")."+hint);}const blob=await response.blob();const head=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(head[0]!==0x50||head[1]!==0x4B)throw new Error("The server did not return a valid .xlsx workbook.");const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Editable-Timetable.xlsx";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("Editable Excel timetable downloaded — includes your selected modules.","ok");}catch(error){say(error&&error.message?error.message:"Excel export could not be created.","error");}};
  window.downloadTimetablePDF=async()=>{say("Preparing the PDF timetable…");try{const response=await fetch("/api/export/timetable.pdf?modules="+selectedParam()+selectedWeekParam()+"&theme="+encodeURIComponent(state.theme||"dark")+"&font_scale="+encodeURIComponent((Number(fontSizeControl.value)/100).toFixed(2)),{cache:"no-store"});if(!response.ok){let detail="";try{const problem=await response.json();detail=problem.detail?" "+problem.detail:"";}catch(_error){}const hint=response.status===503?" Install the backend requirements (reportlab) and restart.":"";throw new Error("PDF export failed (HTTP "+response.status+")."+detail+hint);}const blob=await response.blob();const signature=new Uint8Array(await blob.slice(0,5).arrayBuffer());if(String.fromCharCode(...signature)!=="%PDF-"){const detail=(await blob.text()).slice(0,240);throw new Error("The server did not return a valid PDF document."+ (detail?" Server response: "+detail:""));}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Timetable.pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("PDF timetable downloaded successfully.","ok");}catch(error){say(error&&error.message?error.message:"PDF export could not be created.","error");}};
- [["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download PDF timetable (.pdf)",()=>window.downloadTimetablePDF()],["Print the timetable (browser print)",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});const info=el("p","muted","The Excel workbook includes a Monday–Friday weekly view, an editable session register and a Module Directory of the modules ticked above. The PDF includes the weekly timetable, module directory and session register. Photo exports are rendered at 4× scale; they are image copies and are not editable timetable data.");card.appendChild(info);root.appendChild(card);}
+ [["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download PDF timetable (.pdf)",()=>window.downloadTimetablePDF()],["Print the timetable (browser print)",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});root.appendChild(card);}
 async function downloadTimetableImage(mime){
  const status=document.getElementById("status"),weekly=document.getElementById("view-weekly"),wasHidden=weekly.hidden;
  if(typeof window.html2canvas!=="function"){status.className="status error";status.textContent="The image export library did not load. Check your internet connection and try again.";return;}
