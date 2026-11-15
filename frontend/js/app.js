@@ -52,10 +52,13 @@ function resolveModuleCode(data){
  }
  return explicit;
 }
-function getSessionEntries(){
+function getSessionEntries(offset=weekOffset){
  const result=[];
+ const visibleWeek=WK.isoMonday(offset);
+
  Object.entries(state.cells||{}).forEach(([id,data])=>{
   if(!data||typeof data!=="object")return;
+  if(String(data.weekStart||"2026-11-16")!==visibleWeek)return;
   let dayIndex,startTime,endTime,rowIndex=-1;
   const legacy=/^(\d+)_(\d+)$/.exec(id);
   if(legacy){rowIndex=+legacy[1];dayIndex=+legacy[2];if(dayIndex<0||dayIndex>=5||rowIndex<0||rowIndex>=times.length)return;}
@@ -138,15 +141,16 @@ async function addSharedModule(code,title,facilitatorValue,targets={}){
 function renderModuleDetailsMeetingIcon(){
  const box=document.getElementById("module-details");
  if(!box)return;
- const old=box.querySelector(".module-details-meeting-mark");
+ const old=box.querySelector(".module-details-meeting-action");
  if(old)old.remove();
  const input=document.getElementById("session-link");
  const url=safeUrl(input?.value||"");
  const mark=url?meetingProviderMark(url,true):null;
  if(mark){
-  mark.classList.add("module-details-meeting-mark");
-  mark.setAttribute("aria-label",meetingProvider(url)==="meet"?"Google Meet link":meetingProvider(url)==="teams"?"Microsoft Teams link":meetingProvider(url)==="zoom"?"Zoom link":"Online meeting link");
-  box.appendChild(mark);
+  const action=document.createElement("a");action.className="module-details-meeting-action";action.href=url;action.target="_blank";action.rel="noopener noreferrer";
+  action.setAttribute("aria-label","Tap to join the online meeting");action.title="Tap to join meeting";
+  mark.classList.add("module-details-meeting-mark");mark.setAttribute("aria-hidden","true");
+  action.appendChild(mark);box.appendChild(action);
  }
 }
 function updateModuleDetails(code){
@@ -218,11 +222,13 @@ function showSessionDetails(entry){
  const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){
   const linkRow=document.createElement("div");linkRow.className="session-meeting-link";
   const provider=meetingProviderMark(meetingUrl,true);
+  const iconLink=document.createElement("a");iconLink.className="session-meeting-icon-link";iconLink.href=meetingUrl;iconLink.target="_blank";iconLink.rel="noopener noreferrer";iconLink.setAttribute("aria-label","Tap to join the online meeting");iconLink.title="Tap to join meeting";
+  if(provider){provider.setAttribute("aria-hidden","true");iconLink.appendChild(provider);}
   const linkInfo=document.createElement("div");linkInfo.className="session-meeting-info";
   const providerName=meetingProvider(meetingUrl)==="zoom"?"Zoom":meetingProvider(meetingUrl)==="meet"?"Google Meet":meetingProvider(meetingUrl)==="teams"?"Microsoft Teams":"Online meeting";
   const providerLabel=el("strong","session-meeting-provider",providerName),meetingLink=document.createElement("a");
   meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";
-  linkInfo.append(providerLabel,meetingLink);linkRow.append(provider,linkInfo);details.appendChild(linkRow);
+  linkInfo.append(providerLabel,meetingLink);linkRow.append(iconLink,linkInfo);details.appendChild(linkRow);
   const countdown=meetingCountdownMarkup(),parts=WK.startParts(detailWeekOffset),[sh,sm]=entry.startTime.split(":").map(Number),[eh,em]=entry.endTime.split(":").map(Number);
   const meetingStart=WK.makeZonedDate(parts[0],parts[1],parts[2]+entry.dayIndex,sh,sm),meetingEnd=WK.makeZonedDate(parts[0],parts[1],parts[2]+entry.dayIndex,eh,em);
   details.appendChild(countdown);updateMeetingCountdown(countdown,meetingStart,meetingEnd);
@@ -320,6 +326,7 @@ function load(){
    ["1_0","6_0","6_1","0_2","3_2","1_3","2_3","6_3","0_4","3_4"].forEach(id=>delete state.cells[id]);
    Object.entries(state.cells).forEach(([id,v])=>{if((/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=5)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=5))delete state.cells[id];});
    // Migrate known legacy free-text module labels into structured entries.
+   Object.entries(state.cells).forEach(([id,v])=>{if(v&&typeof v==="object"&&!v.weekStart)v.weekStart="2026-11-16";});
    Object.entries(state.cells).forEach(([k,v])=>{
     if(!v||v.code||!v.text)return;
     const text=v.text.trim();
@@ -409,7 +416,8 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const activityLabel=code||label;
  if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
  const oldId=activeCell.id;
- let id=oldId||`session-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+ const weekStart=WK.isoMonday(weekOffset);
+ let id=oldId||`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
  if(oldId&&/^\d+_\d+$/.test(oldId)&&dayIndex!==activeCell.dayIndex)id=`session-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
  const conflict=getSessionEntries().find(x=>x.id!==oldId&&x.id!==id&&x.dayIndex===dayIndex&&start<x.endMinutes&&end>x.startMinutes);
  if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
@@ -417,7 +425,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const chosenColour=document.getElementById("module-colour").value;
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
+ const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
@@ -574,7 +582,7 @@ const themeKey="phd_mnh_theme";
 const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
 function setSync(t){if(syncEl)syncEl.textContent=t;}
-function cleanCell(v){const o={};["code","title","facilitator","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
+function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
 function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<5)||/^session-[A-Za-z0-9-]+$/.test(k);}
 function writeFailed(e){
  try{saveState();}catch(x){}
@@ -614,11 +622,33 @@ async function syncAll(okMsg){
  }catch(e){writeFailed(e);}
  finally{syncing=false;}
 }
-function onCells(snap){
- if(syncing)return;
+let weekMigrationRunning=false;
+async function onCells(snap){
+ if(syncing||weekMigrationRunning)return;
  if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};return !raw.weekStart;});
+ if(legacyDocs.length){
+  weekMigrationRunning=true;
+  try{
+   const migrated=[];
+   for(const doc of legacyDocs){
+    const raw=doc.data()||{};
+    if((/^\d+_\d+$/.test(doc.id)&&Number(doc.id.split("_")[1])>=5)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))continue;
+    const suffix=doc.id.replace(/^session-/i,"").replace(/[^A-Za-z0-9-]+/g,"-").replace(/-+/g,"-").slice(0,70)||"legacy";
+    const newId=`session-2026-11-16-import-${suffix}`;
+    await cloud.doc("cells/"+newId).set({...raw,weekStart:"2026-11-16",updatedAt:Date.now()});
+    migrated.push(doc.id);
+   }
+   for(const oldId of migrated)await cloud.doc("cells/"+oldId).delete();
+  }catch(error){
+   setSync("Week migration paused · original sessions retained");statusEl.className="status error";
+   statusEl.textContent="Existing sessions could not all be moved safely. The original records have been retained; reconnect and reload to retry.";
+   return;
+  }finally{weekMigrationRunning=false;}
+  return;
+ }
  const remote={};
- snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=5)||(Number.isFinite(Number(raw.dayIndex))&&Number(raw.dayIndex)>=5))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
+ snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=5)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
  if(!Object.keys(remote).length&&!state.fromCloud){
   setSync(Object.keys(state.cells).length?"Shared timetable is empty · use Save timetable to publish this copy":"Shared timetable · up to date");
   return;
