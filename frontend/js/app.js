@@ -354,7 +354,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a weekday and a valid end time later than the start time.";return;}
  const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
  const deliveryMode=document.getElementById("module-mode").value;
- const meetingInput=deliveryMode==="online"?document.getElementById("session-link").value.trim():"",meetingUrl=meetingInput?safeUrl(meetingInput):"";
+ const meetingInput=document.getElementById("session-link").value.trim(),meetingUrl=meetingInput?safeUrl(meetingInput):"";
  if(meetingInput&&!meetingUrl){statusEl.className="status error";statusEl.textContent="Enter a valid Google Meet, Zoom, Microsoft Teams or other HTTPS meeting link.";return;}
  const activityLabel=code||label;
  if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
