@@ -590,6 +590,8 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
         raise HTTPException(404, "not found")
     if collection == "modules" and (not str(data.get("title", "")).strip() or len(str(data.get("title", ""))) > 160):
         raise HTTPException(400, "A valid module title is required.")
+    if collection == "modules" and len(str(data.get("facilitator", "") or "")) > 120:
+        raise HTTPException(400, "Facilitator name must be 120 characters or fewer.")
     if collection == "recurring":
         expected = CANONICAL_RECURRING.get(item_id)
         actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
