@@ -626,7 +626,7 @@ let weekMigrationRunning=false;
 async function onCells(snap){
  if(syncing||weekMigrationRunning)return;
  if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
- const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&Number(legacy[2])>=5)return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
  if(legacyDocs.length){
   weekMigrationRunning=true;
   try{
@@ -637,7 +637,8 @@ async function onCells(snap){
     if((legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))continue;
     const suffix=doc.id.replace(/^session-/i,"").replace(/[^A-Za-z0-9-]+/g,"-").replace(/-+/g,"-").slice(0,70)||"legacy";
     const newId=`session-2026-11-16-import-${suffix}`;
-    const migratedData={...raw,weekStart:"2026-11-16"};
+    const migratedData={...(state.cells[doc.id]||{}),...raw,weekStart:"2026-11-16"};
+    if(!raw.meetingUrl&&state.cells[doc.id]?.meetingUrl)migratedData.meetingUrl=state.cells[doc.id].meetingUrl;
     if(legacy){const row=Number(legacy[1]),range=parseRange(raw.timeLabel),fallback=defaultRange(row);migratedData.dayIndex=Number(legacy[2]);migratedData.startTime=String(raw.startTime||range?.startTime||fallback.startTime);migratedData.endTime=String(raw.endTime||range?.endTime||fallback.endTime);}
     await cloud.doc("cells/"+newId).set({...migratedData,updatedAt:Date.now()});
     migrated.push(doc.id);
