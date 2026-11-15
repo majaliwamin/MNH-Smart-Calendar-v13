@@ -1515,3 +1515,72 @@ body[data-theme="red"] #view-weekly tbody th.time{
   #view-weekly .wrap tbody td .activity-name{font-size:13px!important}
   #view-weekly .wrap tbody td .activity-lecturer{font-size:11px!important}
 }
+
+
+/* DEFINITIVE FROZEN TIME RAIL: enforce a clean stacking order while swiping horizontally. */
+#view-weekly .wrap{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-x:contain!important;
+}
+#view-weekly .wrap table{
+  position:relative!important;
+  isolation:isolate!important;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+#view-weekly .wrap tbody tr{
+  position:relative!important;
+  z-index:0!important;
+}
+#view-weekly .wrap tbody td{
+  position:relative!important;
+  z-index:1!important;
+  isolation:auto!important;
+  background-color:var(--cell-bg,var(--page))!important;
+  background-image:none!important;
+}
+#view-weekly .wrap tbody td .cell,
+#view-weekly .wrap tbody td .activity{
+  position:relative!important;
+  z-index:1!important;
+}
+#view-weekly .wrap tbody th.time{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  left:0!important;
+  z-index:100!important;
+  isolation:isolate!important;
+  opacity:1!important;
+  background-color:var(--head-shade)!important;
+  background-image:none!important;
+  background-clip:padding-box!important;
+  box-shadow:5px 0 12px rgba(0,0,0,.42),1px 0 0 var(--gridline,#64748b)!important;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+#view-weekly .wrap tbody th.time.highlight,
+#view-weekly .wrap tbody th.time.current-time-label,
+#view-weekly .wrap tbody tr.current-time-row th.time{
+  background-color:var(--accent)!important;
+  background-image:none!important;
+  color:var(--on-accent)!important;
+}
+#view-weekly .wrap thead th{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  z-index:110!important;
+}
+#view-weekly .wrap thead th.corner{
+  left:0!important;
+  z-index:120!important;
+  isolation:isolate!important;
+  background-color:var(--head-shade)!important;
+  background-image:none!important;
+  box-shadow:5px 0 12px rgba(0,0,0,.42),1px 0 0 var(--gridline,#64748b)!important;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
