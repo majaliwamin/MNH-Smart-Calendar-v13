@@ -70,6 +70,13 @@ def test_pdf_is_a_fillable_acroform_document():
     assert b"Pregnancy and Neonatal Immunology" in payload
 
 
+def test_pdf_theme_and_font_scaling_generate_valid_documents():
+    dark = build_timetable_pdf({}, theme="dark", font_scale=1.15)
+    white = build_timetable_pdf({}, theme="white", font_scale=0.85)
+    assert dark.startswith(b"%PDF") and b"/AcroForm" in dark
+    assert white.startswith(b"%PDF") and b"/AcroForm" in white
+
+
 def test_pdf_selection_changes_the_module_directory():
     payload = build_timetable_pdf({}, ["MIPN 8100"])
     assert b"MIPN 8100" in payload
@@ -80,7 +87,7 @@ def test_pdf_selection_changes_the_module_directory():
 def test_export_endpoints_serve_the_selection(client):
     xlsx = client.get("/api/export/timetable.xlsx")
     assert xlsx.status_code == 200 and xlsx.content[:2] == b"PK"
-    pdf = client.get("/api/export/timetable.pdf", params={"modules": "MIPN 8100"})
+    pdf = client.get("/api/export/timetable.pdf", params={"modules": "MIPN 8100", "theme": "white", "font_scale": "1.10"})
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
     listed = client.get("/api/export/modules").json()
     codes = [m["code"] for m in listed["modules"]]
