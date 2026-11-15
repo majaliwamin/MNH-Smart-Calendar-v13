@@ -162,12 +162,12 @@ async function openModuleDialog(dayIndex,startTime,entry){
  const existingCode=resolveModuleCode(existing?.data||{});
  document.getElementById("module-select").value=existingCode;
  document.getElementById("module-label").value=existingCode||(existing?String(existing.title||existing.label||""):"");
- document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
  document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
  updateModuleDetails(document.getElementById("module-select").value);
+ document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
  showDialog("module-dialog");
 }
 function showSessionDetails(entry){
