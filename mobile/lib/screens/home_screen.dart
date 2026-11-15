@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import '../services/meeting_alarm_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -127,6 +128,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         loading = false;
       });
+      await MeetingAlarmService.instance.synchronize(
+        cellRows: records['cells']!,
+        currentWeekMonday: _currentWeekMonday,
+      );
       if (selected == 9 && analyticsUnlocked) {
         await loadAnalytics();
       }
@@ -559,6 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await api.save('cells', id, {
         'dayIndex': day, 'startTime': start.text, 'endTime': end.text,
+        'weekStart': DateFormat('yyyy-MM-dd').format(_currentWeekMonday),
         'moduleCode': selectedModule, 'code': label,
         'title': title.text.trim().isNotEmpty ? title.text.trim() : (moduleData['title'] ?? (activity.text.trim().isNotEmpty ? activity.text.trim() : label)),
         'facilitator': lecturer, 'mode': mode, if (colour.isNotEmpty) 'colour': colour
