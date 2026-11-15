@@ -19,10 +19,7 @@ const legacyKey="phd_mnh_weekly_calendar_v2";
 let currentRole="public";
 let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
-let recurringRecords=[
- {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
- {id:"seminar-mnh",data:{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
-];
+let recurringRecords=[];
 let editingUnlocked=true;
 let analyticsUnlocked=true;
 let activeCell=null;
@@ -165,6 +162,8 @@ async function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("module-select").value=existingCode;
  document.getElementById("module-label").value=existingCode||(existing?String(existing.title||existing.label||""):"");
  document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
+ document.getElementById("session-link").value=existing?.data?.meetingUrl||"";
+ document.getElementById("session-link-field").hidden=document.getElementById("module-mode").value!=="online";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
@@ -180,6 +179,7 @@ function showSessionDetails(entry){
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
+ const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){const linkRow=document.createElement("div");linkRow.className="session-meeting-link";const provider=meetingProviderMark(meetingUrl,true);if(provider)linkRow.appendChild(provider);const linkInfo=document.createElement("div");linkInfo.className="session-meeting-info";const providerName=meetingProvider(meetingUrl)==="zoom"?"Zoom":meetingProvider(meetingUrl)==="meet"?"Google Meet":meetingProvider(meetingUrl)==="teams"?"Microsoft Teams":"Online meeting";const providerLabel=el("strong","session-meeting-provider",providerName);const meetingLink=document.createElement("a");meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";linkInfo.append(providerLabel,meetingLink);linkRow.append(provider,linkInfo);details.appendChild(linkRow);}
  document.getElementById("edit-details").style.display=(editingUnlocked&&!entry.data?.recurring)?"inline-block":"none";
  document.getElementById("edit-details").onclick=()=>{hideDialog("details-dialog");openModuleDialog(entry.dayIndex,entry.startTime,entry);};
  showDialog("details-dialog");
@@ -223,7 +223,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -344,6 +344,7 @@ function requestAnalytics(){
  showView("analytics");
 }
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
+document.getElementById("module-mode").addEventListener("change",e=>{document.getElementById("session-link-field").hidden=e.target.value!=="online";});
 document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
 document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
 document.getElementById("apply-module").addEventListener("click",async()=>{
@@ -352,6 +353,9 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const start=parseClock(startTime),end=parseClock(endTime);
  if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a weekday and a valid end time later than the start time.";return;}
  const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
+ const deliveryMode=document.getElementById("module-mode").value;
+ const meetingInput=deliveryMode==="online"?document.getElementById("session-link").value.trim():"",meetingUrl=meetingInput?safeUrl(meetingInput):"";
+ if(meetingInput&&!meetingUrl){statusEl.className="status error";statusEl.textContent="Enter a valid Google Meet, Zoom, Microsoft Teams or other HTTPS meeting link.";return;}
  const activityLabel=code||label;
  if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
  const oldId=activeCell.id;
@@ -363,9 +367,9 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const chosenColour=document.getElementById("module-colour").value;
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:document.getElementById("module-mode").value,status:document.getElementById("session-status").value};
+ const record={...previous,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
- state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);if(saved&&oldId&&oldId!==id)await pushCell(oldId);
+ state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
 document.getElementById("delete-module").addEventListener("click",async()=>{
  if(!editingUnlocked||!activeCell?.id)return;
@@ -1148,8 +1152,8 @@ async function renderCommStatusCard(root){
  line.textContent=stopped?"Emergency stop is ON — no messages or calls will be sent.":"Emergency stop is off; normal sending is allowed.";
  const bridge=(s&&s.aiTrigger&&s.aiTrigger.bridge)||null;
  [["WhatsApp bridge (Asterisk server)",bridge],
-  ["WhatsApp send bridge — auto trigger",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["MNH_AI_TRIGGER_ENABLED"]}:null],
-  ["AI draft service",s&&s.ai],["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
+  ["Automatic WhatsApp send bridge",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["Automatic trigger setting"]}:null],
+  ["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
   const on=!!(v&&v.configured);
   let text=(on?"✔ ":"✖ ")+label+": "+(on?"configured":"not configured");
   if(v&&v.missing)text+=" — missing "+(Array.isArray(v.missing)?v.missing.join(", "):v.missing);
@@ -1300,7 +1304,7 @@ function commDraftRows(container,draft,line){
  });
 }
 async function renderCommComposerCard(root){
- const card=commCard(root,"Compose WhatsApp messages","Opening WhatsApp does not send the message — press Send in WhatsApp yourself, then mark it as sent. AI drafts are editable; the AI never sends anything.");
+ const card=commCard(root,"Compose WhatsApp messages","");
  const line=el("p","muted","Loading recipients…");card.appendChild(line);
  let contacts=[],templates=[];
  try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
@@ -1322,17 +1326,7 @@ async function renderCommComposerCard(root){
  const body=document.createElement("textarea");body.rows=5;body.maxLength=1000;body.placeholder="Message body…";body.setAttribute("aria-label","Message body");body.style.cssText=COMM_FIELD;
  card.appendChild(body);
  tpl.addEventListener("change",()=>{const t=templates.find(x=>String(x.id)===tpl.value);if(t)body.value=t.body||t.text||"";});
- let aiAssisted=false;
- const aiPrompt=fieldInput("Describe the message for the AI (optional)",300);card.appendChild(aiPrompt);
- const aiBtn=el("button",null,"Draft with AI");aiBtn.type="button";
- aiBtn.addEventListener("click",async()=>{
-  aiBtn.disabled=true;commBusy(line,"Asking the AI for a draft…");
-  try{const r=await apiRequest("POST","/api/comm/ai/draft",{prompt:aiPrompt.value.trim()});body.value=(r&&(r.draft||r.text||r.body))||body.value;aiAssisted=true;commOk(line,"AI draft inserted — edit it before preparing links. The AI never sends anything.");}
-  catch(e){commFail(line,e);}
-  finally{aiBtn.disabled=false;}
- });
- card.appendChild(aiBtn);
- const draftBox=el("div","cards");
+const draftBox=el("div","cards");
  const prep=el("button","primary","Prepare WhatsApp links");prep.type="button";
  prep.addEventListener("click",async()=>{
   const ids=[...pick.querySelectorAll("input:checked")].map(x=>x.value);
@@ -1340,7 +1334,7 @@ async function renderCommComposerCard(root){
   if(!body.value.trim()){commFail(line,new Error("Write a message first."));return;}
   prep.disabled=true;commBusy(line,"Preparing per-recipient WhatsApp links…");
   try{
-   const r=await apiRequest("POST","/api/comm/drafts",{contactIds:ids,body:body.value.trim(),title:"",aiAssisted});
+   const r=await apiRequest("POST","/api/comm/drafts",{contactIds:ids,body:body.value.trim(),title:""});
    commDraftRows(draftBox,(r&&(r.draft||r))||null,line);
    commOk(line,"Links prepared. Open each one, send it in WhatsApp yourself, then mark it as sent.");
   }
@@ -1526,7 +1520,7 @@ function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const
  const boxWrap=el("div","res-form");selCard.appendChild(boxWrap);
  const chosen=new Set(["ARMN – 8100","MIPN 8100","PNIM-8100"]);
  const addRow=(code,title,lecturer)=>{const label=el("label",null);label.style.cssText="display:flex;align-items:center;gap:8px;margin:6px 0";const box=document.createElement("input");box.type="checkbox";box.value=code;box.checked=chosen.has(code);box.addEventListener("change",()=>{box.checked?chosen.add(code):chosen.delete(code);});label.appendChild(box);label.appendChild(el("span",null,(title?`${code} — ${title}`:code)+` · Lecturer: ${lecturer||"Not assigned"}`));boxWrap.appendChild(label);};
- (async()=>{try{const data=await apiRequest("GET","/api/export/modules");boxWrap.textContent="";(data.modules||[]).forEach(m=>addRow(m.code,m.title,m.facilitator));selStatus.textContent="Tick the modules the document should include, then download below.";}catch(e){boxWrap.textContent="";["ARMN – 8100","MIPN 8100","PNIM-8100"].forEach(code=>addRow(code,""));selStatus.textContent="Showing the three programme modules (the module list could not be loaded).";}})();
+ (async()=>{try{const data=await apiRequest("GET","/api/export/modules");boxWrap.textContent="";(data.modules||[]).forEach(m=>addRow(m.code,m.title,m.facilitator));selStatus.textContent="";;}catch(e){boxWrap.textContent="";["ARMN – 8100","MIPN 8100","PNIM-8100"].forEach(code=>addRow(code,""));selStatus.textContent="";;}})();
  root.appendChild(selCard);
  const selectedParam=()=>encodeURIComponent([...chosen].join(","));
  const selectedWeekParam=()=>"&week_start="+encodeURIComponent(WK.isoMonday(weekOffset));
@@ -1537,11 +1531,10 @@ function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const
  fontSizeControl.style.cssText="display:block;width:100%;margin:8px 0;accent-color:var(--gold)";
  const fontSizeValue=el("strong",null,"100%");
  fontSizeControl.addEventListener("input",()=>{fontSizeValue.textContent=fontSizeControl.value+"%";});
- const fontSizeHint=el("small","muted","Adjusts text throughout the PDF. Standard is 100%.");
- fontSizeWrap.append(fontSizeLabel,fontSizeControl,fontSizeValue,fontSizeHint);card.appendChild(fontSizeWrap);
+ fontSizeWrap.append(fontSizeLabel,fontSizeControl,fontSizeValue);card.appendChild(fontSizeWrap);
  window.downloadTimetableExcel=async()=>{say("Preparing the editable Excel timetable…");try{const response=await fetch("/api/export/timetable.xlsx?modules="+selectedParam()+selectedWeekParam(),{cache:"no-store"});if(!response.ok){const hint=response.status===404?" The server answering on this address does not have the Excel export — an older copy of the application may still be running on this port.":response.status===503?" Install the backend requirements (openpyxl) and restart.":"";throw new Error("Excel export failed (HTTP "+response.status+")."+hint);}const blob=await response.blob();const head=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(head[0]!==0x50||head[1]!==0x4B)throw new Error("The server did not return a valid .xlsx workbook.");const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Editable-Timetable.xlsx";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("Editable Excel timetable downloaded — includes your selected modules.","ok");}catch(error){say(error&&error.message?error.message:"Excel export could not be created.","error");}};
  window.downloadTimetablePDF=async()=>{say("Preparing the PDF timetable…");try{const response=await fetch("/api/export/timetable.pdf?modules="+selectedParam()+selectedWeekParam()+"&theme="+encodeURIComponent(state.theme||"dark")+"&font_scale="+encodeURIComponent((Number(fontSizeControl.value)/100).toFixed(2)),{cache:"no-store"});if(!response.ok){let detail="";try{const problem=await response.json();detail=problem.detail?" "+problem.detail:"";}catch(_error){}const hint=response.status===503?" Install the backend requirements (reportlab) and restart.":"";throw new Error("PDF export failed (HTTP "+response.status+")."+detail+hint);}const blob=await response.blob();const signature=new Uint8Array(await blob.slice(0,5).arrayBuffer());if(String.fromCharCode(...signature)!=="%PDF-"){const detail=(await blob.text()).slice(0,240);throw new Error("The server did not return a valid PDF document."+ (detail?" Server response: "+detail:""));}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Timetable.pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("PDF timetable downloaded successfully.","ok");}catch(error){say(error&&error.message?error.message:"PDF export could not be created.","error");}};
- [["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download PDF timetable (.pdf)",()=>window.downloadTimetablePDF()],["Print the timetable (browser print)",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});const info=el("p","muted","The Excel workbook includes a Monday–Friday weekly view, an editable session register and a Module Directory of the modules ticked above. The PDF includes the weekly timetable, module directory and session register. Photo exports are rendered at 4× scale; they are image copies and are not editable timetable data.");card.appendChild(info);root.appendChild(card);}
+ [["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download PDF timetable (.pdf)",()=>window.downloadTimetablePDF()],["Print the timetable (browser print)",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});root.appendChild(card);}
 async function downloadTimetableImage(mime){
  const status=document.getElementById("status"),weekly=document.getElementById("view-weekly"),wasHidden=weekly.hidden;
  if(typeof window.html2canvas!=="function"){status.className="status error";status.textContent="The image export library did not load. Check your internet connection and try again.";return;}
@@ -1620,9 +1613,24 @@ async function renderModules(){
     try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module details, typed facilitator name and semester targets saved permanently to the shared database.";renderModules();}
     catch(error){writeFailed(error);}
    };card.appendChild(save);
-   const remove=el("button","danger","Remove module");remove.type="button";remove.onclick=async()=>{
-    if(!window.confirm("Remove "+code+" from the Modules directory? Its scheduled timetable sessions will be kept as standalone activities."))return;
-    try{if(cloud)await cloud.doc("modules/"+code).delete();else await deleteRow("modules",code);delete modules[code];refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module removed. Existing timetable sessions were preserved.";renderModules();}
+   const remove=el("button","danger",modules[code]?"Remove module":"Remove activity");remove.type="button";remove.onclick=async()=>{
+    const entries=sessionsFor(code);
+    const recurring=entries.find(item=>item.data?.recurring&&item.data?.recurringId);
+    if(modules[code]){
+     if(!window.confirm("Remove "+code+" from the Modules directory? Its scheduled timetable sessions will be kept as standalone activities."))return;
+     try{if(cloud)await cloud.doc("modules/"+code).delete();else await deleteRow("modules",code);delete modules[code];refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module removed from the shared directory. Existing timetable sessions were preserved.";renderModules();}
+     catch(error){writeFailed(error);}
+     return;
+    }
+    if(recurring){
+     if(!window.confirm("Permanently delete the recurring activity “"+code+"” from the shared timetable? This will remove it for everyone."))return;
+     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
+     catch(error){writeFailed(error);}
+     return;
+    }
+    if(!entries.length)return;
+    if(!window.confirm("Delete “"+code+"” and all its scheduled timetable entries? This cannot be undone."))return;
+    try{for(const entry of entries){if(state.cells[entry.id]){delete state.cells[entry.id];await pushCell(entry.id);}}build();statusEl.className="status ok";statusEl.textContent=code+" and its scheduled entries were deleted.";renderModules();}
     catch(error){writeFailed(error);}
    };card.appendChild(remove);
   }
@@ -1951,6 +1959,18 @@ function safeUrl(u){
  u=String(u||"").trim();if(!u)return "";if(!/^https?:\/\//i.test(u))u="https://"+u;
  try{const x=new URL(u);return(x.protocol==="http:"||x.protocol==="https:")?x.href:"";}catch(e){return "";}
 }
+function meetingProvider(url){
+ const host=(()=>{try{return new URL(safeUrl(url)).hostname.toLowerCase().replace(/^www[.]/,"");}catch(e){return "";}})();
+ if(host==="zoom.us"||host.endsWith(".zoom.us")||host==="zoom.com"||host.endsWith(".zoom.com"))return "zoom";
+ if(host==="meet.google.com"||host.endsWith(".meet.google.com"))return "meet";
+ if(host==="teams.microsoft.com"||host.endsWith(".teams.microsoft.com")||host==="teams.live.com"||host.endsWith(".teams.live.com")||host==="teams.office.com")return "teams";
+ return url?"other":"";
+}
+function meetingProviderMark(url,large=false){
+ const kind=meetingProvider(url);if(!kind)return null;
+ const mark=el("span","meeting-provider-mark "+(large?"meeting-provider-large ":"")+"meeting-provider-"+kind,kind==="zoom"?"Z":kind==="meet"?"M":kind==="teams"?"T":"↗");
+ mark.setAttribute("role","img");mark.setAttribute("aria-label",kind==="zoom"?"Zoom meeting":kind==="meet"?"Google Meet":kind==="teams"?"Microsoft Teams":"Online meeting link");mark.title=mark.getAttribute("aria-label");return mark;
+}
 function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),createdAt:+(v&&v.createdAt)||0};}
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
 function loadResources(){try{const r=JSON.parse(localStorage.getItem(resKey)||"[]");if(Array.isArray(r))resources=r.map(x=>({id:String(x.id||""),...cleanRes(x)})).filter(x=>x.id&&x.title&&x.url);}catch(e){}}
@@ -2004,10 +2024,7 @@ function subscribeExtras(db){
   build();if(currentView==="modules")renderModules();
  },()=>{});
  db.collection("recurring").onSnapshot(snap=>{
-  recurringRecords=snap.docs.length?snap.docs.map(d=>({id:d.id,data:d.data()||{}})):[
-   {id:"journal-club",data:{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}},
-   {id:"seminar-mnh",data:{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}}
-  ];
+  recurringRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}}));
   build();if(currentView==="recurring")renderManaged("recurring");
   if(currentView==="weekly")renderAnimatedFutureStrip();
  },()=>{});
