@@ -1109,3 +1109,13 @@ body[data-theme="silver"] .view-tabs [data-view="silver-dashboard"].active{backg
  .week-nav .week-now{padding:4px 7px}
  .week-nav .week-now .week-range{font-size:calc(12px * var(--text-scale))}
 }
+
+
+/* Fixed timetable headers and an opaque frozen hours column during horizontal swipe. */
+#view-weekly .wrap{position:relative;isolation:isolate;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+#view-weekly table{border-collapse:separate;border-spacing:0}
+#view-weekly thead th{position:sticky;top:0;z-index:6;background:var(--head);background-clip:padding-box}
+#view-weekly thead th.corner{left:0;z-index:9;background:var(--head)}
+#view-weekly tbody th.time{position:sticky;left:0;z-index:5;background:var(--panel);background-clip:padding-box;box-shadow:3px 0 7px rgba(0,0,0,.28)}
+#view-weekly tbody th.time.highlight,#view-weekly tbody th.time.current-time-label{background:var(--gold);color:var(--page)}
+#view-weekly thead th,#view-weekly tbody th.time{backface-visibility:hidden}
