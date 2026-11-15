@@ -7,8 +7,9 @@ code changes:
 
     MNH_WA_BRIDGE_URL     base URL, e.g. http://asterisk.internal:3000 (WAHA)
                           or a cloudflared hostname in front of the bridge
-    MNH_WA_BRIDGE_TOKEN   shared secret sent as "Authorization: Bearer <token>"
-                          (omit the variable for bridges with no auth)
+    MNH_WA_BRIDGE_TOKEN   shared secret. Sent as both "Authorization: Bearer
+                          <token>" and "X-Api-Key: <token>" so WAHA and generic
+                          bridges both authenticate (omit for no-auth bridges)
     MNH_WA_BRIDGE_STYLE   waha | generic   (default waha)
     MNH_WA_BRIDGE_SESSION WAHA session name (default "default")
     MNH_WA_BRIDGE_TIMEOUT request timeout seconds (default 20)
@@ -128,7 +129,10 @@ def _call(url: str, payload: dict, *, method: str = "POST", timeout: int | None 
     headers = {"Content-Type": "application/json"}
     token = _env("MNH_WA_BRIDGE_TOKEN")
     if token:
+        # WAHA authenticates with "X-Api-Key"; other bridges use "Authorization:
+        # Bearer". Send both — each bridge reads the one it understands.
         headers["Authorization"] = f"Bearer {token}"
+        headers["X-Api-Key"] = token
     request = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"), headers=headers, method=method
     )

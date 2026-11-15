@@ -244,6 +244,25 @@ def test_bridge_set_profile_name_requires_a_configured_bridge(monkeypatch):
         wa_bridge.set_profile_name()
 
 
+def test_bridge_sends_both_waha_and_bearer_auth_headers(monkeypatch):
+    """WAHA reads X-Api-Key; generic bridges read Authorization: Bearer. Send both."""
+    import io
+    import urllib.request
+
+    monkeypatch.setenv("MNH_WA_BRIDGE_URL", "http://bridge.test")
+    monkeypatch.setenv("MNH_WA_BRIDGE_TOKEN", "secret123")
+    seen = {}
+
+    def fake_urlopen(request, timeout=None):
+        seen["headers"] = {key.lower(): value for key, value in request.headers.items()}
+        return io.BytesIO(b'{"ok":true}')
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    wa_bridge.send_text("265881988156", "Hi")
+    assert seen["headers"].get("x-api-key") == "secret123"
+    assert seen["headers"].get("authorization") == "Bearer secret123"
+
+
 def test_profile_endpoint_sets_the_display_name(client, editor_session, bridge_requests, monkeypatch):
     monkeypatch.delenv("MNH_WA_PROFILE_NAME", raising=False)
     response = client.post("/api/comm/whatsapp/profile", json={"name": ""}, cookies=editor_session)

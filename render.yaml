@@ -35,6 +35,10 @@ services:
         sync: false
       - key: MNH_WA_BRIDGE_SESSION
         sync: false
+      - key: MNH_WA_SENDER_NUMBER
+        sync: false
+      - key: MNH_WA_PROFILE_NAME
+        sync: false
       - key: MNH_AI_API_KEY
         sync: false
       - key: MNH_AI_MODEL
