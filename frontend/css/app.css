@@ -1388,3 +1388,50 @@ body[data-theme="white"] .activity-marquee-empty{color:#26384c!important;font-we
   #view-weekly thead th{top:max(10px,env(safe-area-inset-top,0px))!important}
   #view-weekly thead th.corner{z-index:50!important}
 }
+
+
+/* FINAL TIME-LABEL CONTRAST: readable in every timetable theme. */
+#view-weekly thead th.corner,
+#view-weekly tbody th.time{
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:clamp(13px,1.05vw,15px)!important;
+  font-weight:700!important;
+  line-height:1.25!important;
+  letter-spacing:0!important;
+  text-align:center!important;
+  text-shadow:none!important;
+  -webkit-text-fill-color:currentColor!important;
+  opacity:1!important;
+}
+/* Light canvas: dark ink on a pale blue time rail. */
+body[data-theme="white"] #view-weekly thead th.corner,
+body[data-theme="white"] #view-weekly tbody th.time{
+  color:#17365D!important;
+  background-color:#EAF0F8!important;
+}
+/* Dark and saturated canvases: crisp white lettering on deep theme-matched rails. */
+body[data-theme="dark"] #view-weekly thead th.corner,
+body[data-theme="dark"] #view-weekly tbody th.time,
+body[data-theme="violet"] #view-weekly thead th.corner,
+body[data-theme="violet"] #view-weekly tbody th.time,
+body[data-theme="green"] #view-weekly thead th.corner,
+body[data-theme="green"] #view-weekly tbody th.time,
+body[data-theme="silver"] #view-weekly thead th.corner,
+body[data-theme="silver"] #view-weekly tbody th.time,
+body[data-theme="red"] #view-weekly thead th.corner,
+body[data-theme="red"] #view-weekly tbody th.time{
+  color:#F5F7FA!important;
+}
+/* Preserve the accent treatment for the currently highlighted time slot. */
+#view-weekly tbody th.time.highlight,
+#view-weekly tbody th.time.current-time-label,
+#view-weekly tbody tr.current-time-row th.time{
+  color:var(--on-accent,#fff)!important;
+}
+@media(max-width:720px){
+  #view-weekly thead th.corner,
+  #view-weekly tbody th.time{
+    font-size:14px!important;
+    font-weight:700!important;
+  }
+}
