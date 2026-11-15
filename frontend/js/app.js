@@ -474,8 +474,13 @@ async function downloadPdf(){
     if(editable&&!value){
      try{
       const f=new J.AcroForm.TextField();
-      f.fieldName="cell_"+r+"_"+c;f.Rect=[ix+.4,iy+.4,iw-.8,ih-.8];f.multiline=true;f.value=value;f.defaultValue=value;
-      f.fontSize=size;f.fontName="helvetica";f.color=hex(cellInk);try{f.quadding=1;}catch(e){}
+      f.fieldName="cell_"+r+"_"+c;f.Rect=[ix+.4,iy+.4,iw-.8,ih-.8];f.multiline=true;f.value="";f.defaultValue="";
+      f.fontSize=size;f.fontName="Helvetica";
+      // jsPDF AcroForm expects RGB arrays for field appearance colours.
+      // Hex strings can produce blank/invisible text after the PDF is saved.
+      f.color=cellInk.slice();f.backgroundColor=fill.slice();f.borderColor=line.slice();
+      f.borderWidth=.25;f.required=false;
+      try{f.quadding=1;}catch(e){}
       try{f.textAlign="center";}catch(e){}
       pdf.addField(f);
      }catch(e){editable=false;}
