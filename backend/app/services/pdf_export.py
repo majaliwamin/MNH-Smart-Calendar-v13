@@ -1,8 +1,8 @@
 """Fillable MNH Smart Timetable PDF (ReportLab AcroForm).
 
-The weekly timetable is a single landscape page with Monday-Friday as column
-headers and time slots down the left. Module and register pages remain portrait.
-All editable entries are real AcroForm fields.
+The opening weekly timetable uses a portrait A4 page for phone viewing, with
+Monday-Friday across the top and time slots down the left. Module and register
+pages also use portrait A4. Editable entries are real AcroForm fields.
 """
 from datetime import timedelta
 from io import BytesIO
@@ -233,7 +233,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         return bottom - 5 * mm
 
     # ============================ weekly timetable ============================
-    # One landscape weekly grid: weekdays across the top, time slots down the side.
+    # One portrait weekly grid: weekdays across the top, time slots down the side.
     top = banner("WEEKLY TIMETABLE")
     top = section_heading("Weekly timetable", 10 * mm, top, width - 20 * mm)
     table_x = 8 * mm
