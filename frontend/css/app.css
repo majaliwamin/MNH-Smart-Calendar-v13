@@ -1610,3 +1610,18 @@ body[data-theme="red"] #view-weekly tbody th.time{
 /* Session meeting links shown in the tapped-session details dialog. */
 .session-meeting-link{margin-top:9px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-weight:600}
 .session-meeting-link a{color:var(--gold);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+
+
+/* Detected video-meeting provider marks in timetable cells and session details. */
+.meeting-provider-mark{display:inline-grid;place-items:center;flex:0 0 auto;width:19px;height:19px;border-radius:5px;font:800 11px/1 Arial,Helvetica,sans-serif;letter-spacing:-.04em;box-shadow:0 1px 3px #0003;vertical-align:middle}
+.meeting-provider-zoom{background:#2d8cff;color:#fff;border-radius:50%}
+.meeting-provider-meet{background:#fff;color:#16845b;border:1px solid #d7dce3}
+.meeting-provider-teams{background:#6264a7;color:#fff;border-radius:5px}
+.meeting-provider-other{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.meeting-provider-cell{width:16px;height:16px;font-size:9px;margin:2px auto 0;box-shadow:none}
+.session-meeting-link{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.meeting-provider-large{width:44px;height:44px;flex:0 0 44px;font-size:22px;border-radius:10px}
+.meeting-provider-large.meeting-provider-zoom{border-radius:50%}
+.session-meeting-info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.session-meeting-provider{font-size:14px;color:var(--text)}
+.session-meeting-info a{color:var(--gold);font-weight:700;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
