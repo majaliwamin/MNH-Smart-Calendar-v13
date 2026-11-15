@@ -290,7 +290,7 @@ function saveState(){
  localStorage.setItem(key,JSON.stringify(state));
 }
 // Five themes; older saved values remain supported.
-const THEMES=["dark","white","violet","green","silver"];
+const THEMES=["dark","white","violet","green","silver","red"];
 function normaliseTheme(t){if(THEMES.includes(t))return t;return t==="light"?"white":"dark";}
 const themeSelect=document.getElementById("theme");
 const themePicker=document.getElementById("theme-picker");
@@ -314,13 +314,26 @@ document.addEventListener("keydown",e=>{
   themePickerButton.focus();
  }
 });
+function syncThemeChoices(){
+ themePicker.querySelectorAll("[data-theme-choice]").forEach(button=>{
+  button.setAttribute("aria-pressed",String(button.dataset.themeChoice===themeSelect.value));
+ });
+}
+themePicker.querySelectorAll("[data-theme-choice]").forEach(button=>{
+ button.addEventListener("click",()=>{
+  themeSelect.value=normaliseTheme(button.dataset.themeChoice);
+  themeSelect.dispatchEvent(new Event("change",{bubbles:true}));
+ });
+});
 themeSelect.addEventListener("change",e=>{
  state.theme=normaliseTheme(e.target.value);e.target.value=state.theme;document.body.dataset.theme=state.theme;
  try{localStorage.setItem(themeKey,state.theme);}catch(err){}
+ syncThemeChoices();
  themePicker.hidden=true;
  themePickerButton.setAttribute("aria-expanded","false");
  themePickerButton.focus();
 });
+syncThemeChoices();
 document.getElementById("settings").addEventListener("click",()=>showView("settings"));
 function requestEditing(action){
  if(typeof action==="function")action();
