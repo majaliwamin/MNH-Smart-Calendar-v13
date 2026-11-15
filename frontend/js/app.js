@@ -31,6 +31,9 @@ function parseClock(value){const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||""))
 function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
 function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
 function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
+function displayFacilitatorName(name){
+ return String(name||"").replace(/\\b(professor|prof|doctor|dr|mr|mrs|ms|miss|mx)\\b\\.?/gi,"").replace(/\\s+/g," ").trim();
+}
 function facilitatorFor(code){
  const configured=String(modules[code]?.facilitator||"").trim();
  const configuredId=String(modules[code]?.facilitatorId||"").trim();
@@ -146,10 +149,9 @@ function updateModuleDetails(code){
  else if(code==="Journal Club")box.textContent="Journal Club · Every Tuesday, 13:00–14:00";
  else box.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
 }
-async function openModuleDialog(dayIndex,startTime,entry){
- // Refresh the shared directory before opening the session editor; do not rely
- // only on the background collection subscription having completed.
- try{await refreshFacilitatorRecords();}catch(error){console.warn("Facilitator directory refresh failed:",error);}
+function openModuleDialog(dayIndex,startTime,entry){
+ // Open immediately from the in-memory directory. Shared facilitator updates
+ // arrive through the live subscription; a network request must never block the editor.
  const existing=entry||null;
  const id=existing?.id||null;
  const start=startTime||"08:00";
@@ -223,7 +225,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=displayFacilitatorName(entry.facilitator);area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,displayFacilitatorName(entry.facilitator)].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -1575,11 +1577,10 @@ function renderSchedule(){
   root.appendChild(card);
  });
 }
-async function renderModules(){
- // Load the directory before building the lecturer selector, even when the
- // background collection subscription has not completed yet.
- try{await refreshFacilitatorRecords();}catch(error){console.warn("Could not refresh facilitator directory:",error);}
- const root=workspace(...WORKSPACE_META.modules);const body=el("div","cards");root.appendChild(body);
+function renderModules(){
+  // Render from the current in-memory directory immediately. Live facilitator
+  // subscriptions refresh this view when shared data arrives.
+  const root=workspace(...WORKSPACE_META.modules);const body=el("div","cards");root.appendChild(body);
  {
   const form=el("div","card");form.style.marginBottom="12px";form.appendChild(el("h3",null,"Add a module"));
   const code=document.createElement("input");code.placeholder="Module code";code.maxLength=40;code.setAttribute("aria-label","Module code");
