@@ -645,6 +645,7 @@ async function onCells(snap){
    statusEl.textContent="Existing sessions could not all be moved safely. The original records have been retained; reconnect and reload to retry.";
    return;
   }finally{weekMigrationRunning=false;}
+  try{const refreshed=await cloud.collection("cells").get();await onCells(refreshed);}catch(error){setSync("Week migration completed · refreshing shared timetable");}
   return;
  }
  const remote={};
