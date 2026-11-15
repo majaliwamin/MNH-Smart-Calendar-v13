@@ -1968,7 +1968,7 @@ function safeUrl(u){
  try{const x=new URL(u);return(x.protocol==="http:"||x.protocol==="https:")?x.href:"";}catch(e){return "";}
 }
 function meetingProvider(url){
- const host=(()=>{try{return new URL(safeUrl(url)).hostname.toLowerCase().replace(/^www\\./,"");}catch(e){return "";}})();
+ const host=(()=>{try{return new URL(safeUrl(url)).hostname.toLowerCase().replace(/^www[.]/,"");}catch(e){return "";}})();
  if(host==="zoom.us"||host.endsWith(".zoom.us")||host==="zoom.com"||host.endsWith(".zoom.com"))return "zoom";
  if(host==="meet.google.com"||host.endsWith(".meet.google.com"))return "meet";
  if(host==="teams.microsoft.com"||host.endsWith(".teams.microsoft.com")||host==="teams.live.com"||host.endsWith(".teams.live.com")||host==="teams.office.com")return "teams";
