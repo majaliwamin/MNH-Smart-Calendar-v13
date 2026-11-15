@@ -59,7 +59,7 @@ function getSessionEntries(offset=weekOffset){
   const savedWeek=String(data?.weekStart||"").trim();
   // Legacy sessions were explicitly assigned to the 16 November 2026 week.
   // Never let an undated record leak into any later or earlier week.
-  const effectiveWeek=savedWeek||(/^\\d+_\\d+$/.test(id)?"2026-11-16":"2026-11-16");
+  const effectiveWeek=savedWeek||"2026-11-16";
   return /^\\d{4}-\\d{2}-\\d{2}$/.test(effectiveWeek)&&effectiveWeek===visibleWeek;
  };
  Object.entries(state.cells||{}).forEach(([id,data])=>{
