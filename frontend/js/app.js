@@ -135,6 +135,20 @@ async function addSharedModule(code,title,facilitatorValue,targets={}){
   renderModules();
  }catch(e){writeFailed(e);}
 }
+function renderModuleDetailsMeetingIcon(){
+ const box=document.getElementById("module-details");
+ if(!box)return;
+ const old=box.querySelector(".module-details-meeting-mark");
+ if(old)old.remove();
+ const input=document.getElementById("session-link");
+ const url=safeUrl(input?.value||"");
+ const mark=url?meetingProviderMark(url,true):null;
+ if(mark){
+  mark.classList.add("module-details-meeting-mark");
+  mark.setAttribute("aria-label",meetingProvider(url)==="meet"?"Google Meet link":meetingProvider(url)==="teams"?"Microsoft Teams link":meetingProvider(url)==="zoom"?"Zoom link":"Online meeting link");
+  box.appendChild(mark);
+ }
+}
 function updateModuleDetails(code){
  const box=document.getElementById("module-details");
  const labelField=document.getElementById("module-label"),lecturerField=document.getElementById("session-lecturer");
@@ -142,9 +156,14 @@ function updateModuleDetails(code){
  // The activity label is the module code; the lecturer below it comes from the Facilitators directory.
  if(labelField){labelField.value=code||"";labelField.readOnly=!!code;labelField.placeholder=code?"":"Type a custom activity name";}
  if(lecturerField){lecturerField.value=code?lecturer:"";lecturerField.placeholder="Not assigned — enter a name if needed";}
- if(modules[code]){const m=modules[code];box.textContent="";const strong=document.createElement("strong");strong.textContent=code;box.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
- else if(code==="Journal Club")box.textContent="Journal Club · Every Tuesday, 13:00–14:00";
- else box.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
+ box.classList.add("module-details-with-meeting");
+ box.querySelectorAll(".module-details-copy").forEach(node=>node.remove());
+ let copy=document.createElement("div");copy.className="module-details-copy";
+ if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
+ else if(code==="Journal Club")copy.textContent="Journal Club · Every Tuesday, 13:00–14:00";
+ else copy.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
+ box.prepend(copy);
+ renderModuleDetailsMeetingIcon();
 }
 function openModuleDialog(dayIndex,startTime,entry){
  // Open immediately from the in-memory directory. Shared facilitator updates
@@ -373,6 +392,8 @@ function requestAnalytics(){
  showView("analytics");
 }
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
+document.getElementById("session-link").addEventListener("input",renderModuleDetailsMeetingIcon);
+document.getElementById("session-link").addEventListener("change",renderModuleDetailsMeetingIcon);
 document.getElementById("module-mode").addEventListener("change",e=>{document.getElementById("session-link-field").hidden=e.target.value!=="online";});
 document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
 document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
