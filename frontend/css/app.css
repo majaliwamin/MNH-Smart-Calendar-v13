@@ -1297,3 +1297,94 @@ body[data-theme="white"] .activity-marquee-empty{color:#26384c!important;font-we
 @media(max-width:520px){
  .theme-picker{right:-46px;width:min(260px,calc(100vw - 24px))}
 }
+
+
+/* FINAL FROZEN TIME-COLUMN LAYER
+   One horizontal scroller owns the timetable; vertical page scrolling remains independent.
+   Keep the first column opaque and above every horizontally moving cell. */
+#view-weekly .wrap{
+  --mnh-time-column-width:clamp(56px,10vw,130px);
+  --mnh-day-column-min-width:clamp(112px,14vw,190px);
+  position:relative;
+  isolation:isolate;
+  min-width:0;
+  max-width:100%;
+  width:100%;
+  overflow-x:auto;
+  overflow-y:visible;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-gutter:stable;
+}
+#view-weekly table{
+  position:relative;
+  isolation:isolate;
+  width:100%;
+  min-width:calc(var(--mnh-time-column-width) + 5 * var(--mnh-day-column-min-width))!important;
+  table-layout:fixed;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+#view-weekly thead th{
+  position:sticky;
+  top:max(0px,env(safe-area-inset-top,0px));
+  z-index:20;
+  background-color:var(--head-shade)!important;
+  background-image:none!important;
+  opacity:1;
+  background-clip:border-box;
+}
+#view-weekly thead th.corner,
+#view-weekly tbody th.time{
+  left:0!important;
+  width:var(--mnh-time-column-width)!important;
+  min-width:var(--mnh-time-column-width)!important;
+  max-width:var(--mnh-time-column-width)!important;
+  text-align:center;
+  background-color:var(--head-shade)!important;
+  background-image:none!important;
+  background-clip:border-box!important;
+  opacity:1!important;
+}
+#view-weekly thead th.corner{
+  position:sticky!important;
+  z-index:45!important;
+  box-shadow:4px 0 9px rgba(0,0,0,.30),1px 0 0 var(--gridline,#64748b)!important;
+}
+#view-weekly tbody th.time{
+  position:sticky!important;
+  z-index:30!important;
+  color:var(--head-text,var(--text))!important;
+  box-shadow:4px 0 9px rgba(0,0,0,.34),1px 0 0 var(--gridline,#64748b)!important;
+}
+#view-weekly tbody th.time.highlight,
+#view-weekly tbody th.time.current-time-label,
+#view-weekly tbody tr.current-time-row th.time{
+  background-color:var(--accent)!important;
+  background-image:none!important;
+  color:var(--on-accent)!important;
+}
+#view-weekly thead th.daycell,
+#view-weekly tbody td{
+  min-width:var(--mnh-day-column-min-width);
+}
+#view-weekly tbody td{
+  position:relative;
+  z-index:0;
+  background-color:var(--cell-bg,var(--page))!important;
+}
+#view-weekly tbody td .activity{
+  position:relative;
+  z-index:0;
+}
+#view-weekly tbody tr.lunch-row th.time{
+  background-color:var(--head-shade)!important;
+}
+@media(max-width:720px){
+  #view-weekly .wrap{
+    padding:0 8px 12px;
+    scroll-padding-top:max(10px,env(safe-area-inset-top,0px));
+  }
+  #view-weekly thead th{top:max(10px,env(safe-area-inset-top,0px))!important}
+  #view-weekly thead th.corner{z-index:50!important}
+}
