@@ -1,5 +1,6 @@
 """Versioned-compatible REST endpoints used by the web and Flutter clients."""
 import json
+import logging
 import re
 import time
 from datetime import date, timedelta
@@ -9,6 +10,8 @@ from fastapi.responses import StreamingResponse
 from app.database.connection import database
 from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 ALLOWED_COLLECTIONS = {"cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"}
@@ -117,7 +120,7 @@ def export_timetable_xlsx(modules: str | None = None, week_start: date | None = 
 
 @router.get("/export/timetable.pdf")
 def export_timetable_pdf(modules: str | None = None, week_start: date | None = None, theme: str = "dark", font_scale: float = 1.0):
-    """Download a fillable-PDF (AcroForm) timetable the user can type into and save.
+    """Render and download the MNH timetable PDF.
 
     `modules` is an optional comma-separated list of module codes to include.
     """
@@ -138,8 +141,15 @@ def export_timetable_pdf(modules: str | None = None, week_start: date | None = N
         raise HTTPException(400, "The export week must start on a Monday.")
     if not 0.85 <= font_scale <= 1.15:
         raise HTTPException(400, "PDF font scale must be between 0.85 and 1.15.")
-    payload = build_timetable_pdf(collections, selected or None, week_start, theme, font_scale)
-    filename = "MNH-Smart-Calendar-Editable-Timetable.pdf"
+    try:
+        payload = build_timetable_pdf(collections, selected or None, week_start, theme, font_scale)
+    except Exception as exc:
+        logger.exception("PDF timetable export failed during rendering")
+        raise HTTPException(500, "PDF export could not be rendered. The server has recorded the rendering error.") from exc
+    if not payload or not payload.startswith(b"%PDF"):
+        logger.error("PDF timetable renderer returned an empty or invalid document")
+        raise HTTPException(500, "PDF export returned an invalid document. Please try again.")
+    filename = "MNH-Smart-Calendar-Timetable.pdf"
     return StreamingResponse(BytesIO(payload), media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
 
