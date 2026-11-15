@@ -1129,3 +1129,34 @@ body[data-theme="violet"] .weekly-date-tab #current-day-date{
  font-weight:700!important;
 }
 body[data-theme="violet"] .weekly-date-tab .weekly-date-icon{color:#fff!important}
+
+/* Horizontal swipe: moving timetable cells must pass BEHIND the frozen time column. */
+#view-weekly .wrap{isolation:isolate}
+#view-weekly table{position:relative;isolation:isolate}
+#view-weekly tbody th.time{
+ position:sticky!important;
+ left:0!important;
+ z-index:30!important;
+ opacity:1!important;
+ background-color:var(--head-shade,#10264a)!important;
+ background-image:none!important;
+ background-clip:border-box!important;
+ box-shadow:4px 0 9px rgba(0,0,0,.38),1px 0 0 var(--gridline,#64748b)!important;
+}
+#view-weekly tbody th.time.highlight,
+#view-weekly tbody th.time.current-time-label,
+#view-weekly tbody tr.current-time-row th.time{
+ background-color:var(--accent,#c9a65a)!important;
+ background-image:none!important;
+}
+#view-weekly thead th.corner{
+ position:sticky!important;
+ left:0!important;
+ z-index:40!important;
+ opacity:1!important;
+ background-color:var(--head-shade,#10264a)!important;
+ background-image:none!important;
+ box-shadow:4px 0 9px rgba(0,0,0,.32),1px 0 0 var(--gridline,#64748b)!important;
+}
+#view-weekly tbody td,
+#view-weekly tbody td .activity{position:relative;z-index:0}
