@@ -1575,24 +1575,43 @@ async function renderModules(){
  const all=allEntries();
  const sessionsFor=code=>all.filter(x=>x.label===code);
  const addCard=(code,title,fac)=>{
-  const card=el("div","card");card.appendChild(el("h3",null,code));
-  if(title&&title!==code)card.appendChild(el("div",null,title));
+  const module=modules[code]||{},card=el("div","card");card.appendChild(el("h3",null,code));
+  const titleText=el("div",null,title&&title!==code?title:"");if(titleText.textContent)card.appendChild(titleText);
   if(fac)card.appendChild(el("div","muted","Facilitator: "+fac));
   if(editingUnlocked){
+   const titleInput=document.createElement("input");titleInput.type="text";titleInput.maxLength=160;titleInput.placeholder="Full module title";titleInput.value=module.title||title||"";titleInput.setAttribute("aria-label","Edit module title");
+   const facilitatorSelect=document.createElement("select");facilitatorSelect.setAttribute("aria-label","Assign facilitator");
+   const none=document.createElement("option");none.value="";none.textContent="No facilitator assigned";facilitatorSelect.appendChild(none);
+   facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.id);option.textContent=String(item.data.name);facilitatorSelect.appendChild(option);});
+   const currentId=String(module.facilitatorId||"");
+   const currentName=facilitatorFor(code);
+   const current=facilitatorRecords.find(item=>String(item.id)===currentId||String(item.data.name).trim().toLowerCase()===String(currentName).trim().toLowerCase());
+   facilitatorSelect.value=current?String(current.id):"";
    const targetS=document.createElement("input"),targetH=document.createElement("input");
-   targetS.type="number";targetS.min="0";targetS.step="1";targetS.placeholder="Semester target sessions";targetS.value=modules[code]?.semesterTargetSessions??"";
-   targetH.type="number";targetH.min="0";targetH.step="0.5";targetH.placeholder="Semester target hours";targetH.value=modules[code]?.semesterTargetHours??"";
-   [targetS,targetH].forEach(input=>{input.style.cssText="display:block;width:100%;margin:6px 0;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text)";card.appendChild(input);});
-   const saveTargets=el("button","primary","Save semester targets");saveTargets.type="button";saveTargets.onclick=async()=>{const data={...modules[code],semesterTargetSessions:targetS.value===""?null:Number(targetS.value),semesterTargetHours:targetH.value===""?null:Number(targetH.value),updatedAt:Date.now()};try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;statusEl.className="status ok";statusEl.textContent="Semester targets saved.";renderModules();}catch(e){writeFailed(e);}};card.appendChild(saveTargets);
+   targetS.type="number";targetS.min="0";targetS.step="1";targetS.placeholder="Semester target sessions";targetS.value=module.semesterTargetSessions??"";
+   targetH.type="number";targetH.min="0";targetH.step="0.5";targetH.placeholder="Semester target hours";targetH.value=module.semesterTargetHours??"";
+   [titleInput,facilitatorSelect,targetS,targetH].forEach(input=>{input.style.cssText="display:block;width:100%;margin:6px 0;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text)";card.appendChild(input);});
+   const save=el("button","primary","Save module changes");save.type="button";save.onclick=async()=>{
+    const nextTitle=titleInput.value.trim();if(!nextTitle){statusEl.className="status error";statusEl.textContent="Enter a module title before saving.";return;}
+    const assigned=facilitatorRecords.find(item=>String(item.id)===facilitatorSelect.value);
+    const data={...module,title:nextTitle,facilitator:assigned?String(assigned.data.name):"Not specified",facilitatorId:assigned?String(assigned.id):"",semesterTargetSessions:targetS.value===""?null:Number(targetS.value),semesterTargetHours:targetH.value===""?null:Number(targetH.value),updatedAt:Date.now()};
+    try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module details, facilitator and semester targets saved for everyone.";renderModules();}
+    catch(error){writeFailed(error);}
+   };card.appendChild(save);
+   const remove=el("button","danger","Remove module");remove.type="button";remove.onclick=async()=>{
+    if(!window.confirm("Remove "+code+" from the Modules directory? Its scheduled timetable sessions will be kept as standalone activities."))return;
+    try{if(cloud)await cloud.doc("modules/"+code).delete();else await deleteRow("modules",code);delete modules[code];refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module removed. Existing timetable sessions were preserved.";renderModules();}
+    catch(error){writeFailed(error);}
+   };card.appendChild(remove);
   }
-  const s=sessionsFor(code),mins=s.reduce((a,x)=>a+x.mins,0);
-  card.appendChild(el("div","muted","This week: "+s.length+" session"+(s.length===1?"":"s")+(s.length?" · "+fmtH(mins):"")));
-  s.forEach(x=>{const b=el("button","item");b.type="button";b.append(el("span","it",days[x.c]),el("span","in",x.timeLabel));b.addEventListener("click",()=>showSessionDetails(x));card.appendChild(b);});
+  const sessions=sessionsFor(code),mins=sessions.reduce((sum,x)=>sum+x.mins,0);
+  card.appendChild(el("div","muted","This week: "+sessions.length+" session"+(sessions.length===1?"":"s")+(sessions.length?" · "+fmtH(mins):"")));
+  sessions.forEach(session=>{const button=el("button","item");button.type="button";button.append(el("span","it",days[session.c]),el("span","in",session.timeLabel));button.addEventListener("click",()=>showSessionDetails(session));card.appendChild(button);});
   body.appendChild(card);
  };
  Object.keys(modules).forEach(code=>addCard(code,modules[code].title,facilitatorFor(code)));
- const others=[];all.forEach(x=>{if(!modules[x.label]&&!others.includes(x.label))others.push(x.label);});
- others.forEach(l=>addCard(l,"",""));
+ const others=[];all.forEach(session=>{if(!modules[session.label]&&!others.includes(session.label))others.push(session.label);});
+ others.forEach(label=>addCard(label,"",""));
 }
 // ---- Analytics – Management Access -----------------------------------------
 const ANA_ICONS={
