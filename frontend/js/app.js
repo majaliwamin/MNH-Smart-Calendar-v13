@@ -1152,7 +1152,7 @@ async function renderCommStatusCard(root){
  line.textContent=stopped?"Emergency stop is ON — no messages or calls will be sent.":"Emergency stop is off; normal sending is allowed.";
  const bridge=(s&&s.aiTrigger&&s.aiTrigger.bridge)||null;
  [["WhatsApp bridge (Asterisk server)",bridge],
-  ["Automatic WhatsApp send bridge",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["MNH_AI_TRIGGER_ENABLED"]}:null],
+  ["Automatic WhatsApp send bridge",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["Automatic trigger setting"]}:null],
   ["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
   const on=!!(v&&v.configured);
   let text=(on?"✔ ":"✖ ")+label+": "+(on?"configured":"not configured");
@@ -1304,7 +1304,7 @@ function commDraftRows(container,draft,line){
  });
 }
 async function renderCommComposerCard(root){
- const card=commCard(root,"Compose WhatsApp messages","Opening WhatsApp does not send the message — press Send in WhatsApp yourself, then mark it as sent. ");
+ const card=commCard(root,"Compose WhatsApp messages","");
  const line=el("p","muted","Loading recipients…");card.appendChild(line);
  let contacts=[],templates=[];
  try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
@@ -1520,7 +1520,7 @@ function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const
  const boxWrap=el("div","res-form");selCard.appendChild(boxWrap);
  const chosen=new Set(["ARMN – 8100","MIPN 8100","PNIM-8100"]);
  const addRow=(code,title,lecturer)=>{const label=el("label",null);label.style.cssText="display:flex;align-items:center;gap:8px;margin:6px 0";const box=document.createElement("input");box.type="checkbox";box.value=code;box.checked=chosen.has(code);box.addEventListener("change",()=>{box.checked?chosen.add(code):chosen.delete(code);});label.appendChild(box);label.appendChild(el("span",null,(title?`${code} — ${title}`:code)+` · Lecturer: ${lecturer||"Not assigned"}`));boxWrap.appendChild(label);};
- (async()=>{try{const data=await apiRequest("GET","/api/export/modules");boxWrap.textContent="";(data.modules||[]).forEach(m=>addRow(m.code,m.title,m.facilitator));selStatus.textContent="Tick the modules the document should include, then download below.";}catch(e){boxWrap.textContent="";["ARMN – 8100","MIPN 8100","PNIM-8100"].forEach(code=>addRow(code,""));selStatus.textContent="Showing the three programme modules (the module list could not be loaded).";}})();
+ (async()=>{try{const data=await apiRequest("GET","/api/export/modules");boxWrap.textContent="";(data.modules||[]).forEach(m=>addRow(m.code,m.title,m.facilitator));selStatus.textContent="";;}catch(e){boxWrap.textContent="";["ARMN – 8100","MIPN 8100","PNIM-8100"].forEach(code=>addRow(code,""));selStatus.textContent="";;}})();
  root.appendChild(selCard);
  const selectedParam=()=>encodeURIComponent([...chosen].join(","));
  const selectedWeekParam=()=>"&week_start="+encodeURIComponent(WK.isoMonday(weekOffset));
@@ -1531,8 +1531,7 @@ function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const
  fontSizeControl.style.cssText="display:block;width:100%;margin:8px 0;accent-color:var(--gold)";
  const fontSizeValue=el("strong",null,"100%");
  fontSizeControl.addEventListener("input",()=>{fontSizeValue.textContent=fontSizeControl.value+"%";});
- const fontSizeHint=el("small","muted","Adjusts text throughout the PDF. Standard is 100%.");
- fontSizeWrap.append(fontSizeLabel,fontSizeControl,fontSizeValue,fontSizeHint);card.appendChild(fontSizeWrap);
+ fontSizeWrap.append(fontSizeLabel,fontSizeControl,fontSizeValue);card.appendChild(fontSizeWrap);
  window.downloadTimetableExcel=async()=>{say("Preparing the editable Excel timetable…");try{const response=await fetch("/api/export/timetable.xlsx?modules="+selectedParam()+selectedWeekParam(),{cache:"no-store"});if(!response.ok){const hint=response.status===404?" The server answering on this address does not have the Excel export — an older copy of the application may still be running on this port.":response.status===503?" Install the backend requirements (openpyxl) and restart.":"";throw new Error("Excel export failed (HTTP "+response.status+")."+hint);}const blob=await response.blob();const head=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(head[0]!==0x50||head[1]!==0x4B)throw new Error("The server did not return a valid .xlsx workbook.");const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Editable-Timetable.xlsx";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("Editable Excel timetable downloaded — includes your selected modules.","ok");}catch(error){say(error&&error.message?error.message:"Excel export could not be created.","error");}};
  window.downloadTimetablePDF=async()=>{say("Preparing the PDF timetable…");try{const response=await fetch("/api/export/timetable.pdf?modules="+selectedParam()+selectedWeekParam()+"&theme="+encodeURIComponent(state.theme||"dark")+"&font_scale="+encodeURIComponent((Number(fontSizeControl.value)/100).toFixed(2)),{cache:"no-store"});if(!response.ok){let detail="";try{const problem=await response.json();detail=problem.detail?" "+problem.detail:"";}catch(_error){}const hint=response.status===503?" Install the backend requirements (reportlab) and restart.":"";throw new Error("PDF export failed (HTTP "+response.status+")."+detail+hint);}const blob=await response.blob();const signature=new Uint8Array(await blob.slice(0,5).arrayBuffer());if(String.fromCharCode(...signature)!=="%PDF-"){const detail=(await blob.text()).slice(0,240);throw new Error("The server did not return a valid PDF document."+ (detail?" Server response: "+detail:""));}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Timetable.pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("PDF timetable downloaded successfully.","ok");}catch(error){say(error&&error.message?error.message:"PDF export could not be created.","error");}};
  [["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download PDF timetable (.pdf)",()=>window.downloadTimetablePDF()],["Print the timetable (browser print)",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")],["Download shared JSON backup",()=>window.downloadSharedBackup()]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});root.appendChild(card);}
