@@ -161,17 +161,14 @@ function renderModuleDetailsMeetingIcon(){
 }
 function updateModuleDetails(code){
  const box=document.getElementById("module-details");
- const labelField=document.getElementById("module-label"),lecturerField=document.getElementById("session-lecturer");
- const lecturer=code?facilitatorFor(code):"";
- // The activity label is the module code; the lecturer below it comes from the Facilitators directory.
+ const labelField=document.getElementById("module-label");
  if(labelField){labelField.value=code||"";labelField.readOnly=!!code;labelField.placeholder=code?"":"Type a custom activity name";}
- if(lecturerField){lecturerField.value=code?lecturer:"";lecturerField.placeholder="Not assigned — enter a name if needed";}
  box.classList.add("module-details-with-meeting");
  box.querySelectorAll(".module-details-copy").forEach(node=>node.remove());
  let copy=document.createElement("div");copy.className="module-details-copy";
- if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
+ if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title));}
  else if(code==="Journal Club")copy.textContent="Journal Club · Every Tuesday, 13:00–14:00";
- else copy.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
+ else copy.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code).";
  box.prepend(copy);
  renderModuleDetailsMeetingIcon();
 }
@@ -193,10 +190,8 @@ function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("session-link").value=existing?.data?.meetingUrl||"";
  document.getElementById("session-link-field").hidden=document.getElementById("module-mode").value!=="online";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
- document.getElementById("session-status").value=existing?.data?.status||"scheduled";
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
  updateModuleDetails(document.getElementById("module-select").value);
- document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
  showDialog("module-dialog");
 }
 let meetingCountdownTimer=null;
@@ -430,8 +425,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const previous=state.cells[oldId||id]||{},module=modules[code]||{};
  const chosenColour=document.getElementById("module-colour").value;
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
- const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
+ const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:moduleFacilitator,moduleCode:code,mode:deliveryMode,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
