@@ -1,5 +1,6 @@
 """AI provider adapters. Secrets and HTTP calls remain server-side."""
 import json
+from urllib.parse import urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from app.class_rep.config import provider_config
@@ -18,6 +19,9 @@ def complete(messages: list[dict]) -> tuple[str, str, str]:
         raise ProviderError("The AI provider is not configured. Add MNH_CLASSREP_AI_API_KEY in the hosting environment.")
     if not cfg["model"]:
         raise ProviderError("The AI model name is not configured.")
+    parsed_base = urlparse(cfg["base_url"])
+    if parsed_base.scheme != "https" and parsed_base.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        raise ProviderError("The AI provider endpoint must use HTTPS so the API key is protected in transit.")
     endpoint = cfg["base_url"] + "/chat/completions"
     body = json.dumps({"model": cfg["model"], "messages": messages, "temperature": 0.25,
                        "max_tokens": cfg["max_tokens"]}).encode("utf-8")
