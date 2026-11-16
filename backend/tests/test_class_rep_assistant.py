@@ -117,3 +117,58 @@ def test_assistant_uses_live_context_and_limits_history(monkeypatch):
     assert len(seen["messages"]) == 12
     assert "CURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT" in seen["messages"][0]["content"]
     assert seen["messages"][-1]["content"] == "What time is the exam?"
+
+
+def test_document_chunking_and_text_extraction():
+    from app.class_rep.documents import _extract, _split
+    assert _extract("notes.txt", b"Maternal health\nNeonatal health")[0][1].startswith("Maternal health")
+    chunks = _split("word " * 1200)
+    assert len(chunks) > 1
+    assert all(0 < len(chunk) <= 1800 for chunk in chunks)
+
+
+def test_document_ingestion_is_persisted_as_private_cara_collection(monkeypatch):
+    from app.class_rep import documents
+
+    stored = []
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, sql, params):
+            stored.append((sql, params))
+    monkeypatch.setattr(documents, "database", lambda: FakeConnection())
+    monkeypatch.setattr(documents, "_vectors", lambda texts, prefix: [[0.1, 0.2] for _ in texts])
+    result = documents.ingest("programme.txt", b"Important programme rules for students.")
+    assert result["title"] == "programme.txt"
+    assert result["chunks"] == 1
+    assert any(params[0] == "cara_documents" for _, params in stored)
+    assert any(params[0] == "cara_document_index" for _, params in stored)
+
+
+def test_document_admin_token_is_required(monkeypatch):
+    from app.class_rep.routes import _require_document_admin
+    from fastapi import HTTPException
+    monkeypatch.setenv("MNH_CLASSREP_DOCUMENT_ADMIN_TOKEN", "strong-secret")
+    try:
+        _require_document_admin("wrong")
+    except HTTPException as exc:
+        assert exc.status_code == 401
+    else:
+        raise AssertionError("Invalid document admin token must be rejected")
+    _require_document_admin("strong-secret")
+
+
+def test_voice_adapters_validate_and_return_audio(monkeypatch):
+    from app.class_rep import voice
+    monkeypatch.setattr(voice, "_run", lambda model, payload: {"text": "Hello class"})
+    assert voice.transcribe(b"audio-bytes", "audio/webm") == "Hello class"
+    try:
+        voice.transcribe(b"not-audio", "text/plain")
+    except voice.VoiceError:
+        pass
+    else:
+        raise AssertionError("Non-audio uploads must be rejected")
+    import base64
+    monkeypatch.setattr(voice, "_run", lambda model, payload: {"audio": base64.b64encode(b"mp3").decode()})
+    audio, content_type = voice.speak("Hello")
+    assert audio == b"mp3" and content_type == "audio/mpeg"
