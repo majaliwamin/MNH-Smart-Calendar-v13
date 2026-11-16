@@ -30,6 +30,7 @@ function isJournal(r,c){return r===2&&c===1;}
 function parseClock(value){const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||""));if(!m)return null;const h=+m[1],n=+m[2];return h<24&&n<60?h*60+n:null;}
 function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
 function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
+function sessionEndTimestamp(entry){const parts=WK.startParts(weekOffset),[hour,minute]=String(entry?.endTime||"").split(":").map(Number);if(!Number.isInteger(hour)||!Number.isInteger(minute))return 0;return WK.makeZonedDate(parts[0],parts[1],parts[2]+Number(entry.dayIndex||0),hour,minute).getTime();}
 function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
 function facilitatorFor(code){
  const configured=String(modules[code]?.facilitator||"").trim();
@@ -298,7 +299,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){const sessionEnd=sessionEndTimestamp(entry);if(sessionEnd>Date.now()){meetingMark.classList.add("meeting-provider-cell");meetingMark.dataset.sessionEnd=String(sessionEnd);area.appendChild(meetingMark);}}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -309,6 +310,7 @@ function build(){
 function refreshLiveTimetable(){
  const currentOffset=WK.currentOffset(),currentDay=WK.currentDayIndex(weekOffset);
  const now=WK.localNow(),minute=now.hour*60+now.minute;
+ tbody.querySelectorAll(".meeting-provider-cell[data-session-end]").forEach(mark=>{if(Number(mark.dataset.sessionEnd)<=Date.now())mark.remove();});
  thead.querySelectorAll("th.daycell").forEach(th=>th.classList.toggle("today-day",weekOffset===currentOffset&&Number(th.dataset.dayIndex)===currentDay&&currentDay>=0));
  tbody.querySelectorAll("tr[data-start-time]").forEach(tr=>{
   const start=parseClock(tr.dataset.startTime),end=parseClock(tr.dataset.endTime);
