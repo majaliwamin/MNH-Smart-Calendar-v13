@@ -1617,15 +1617,18 @@ body[data-theme="red"] #view-weekly tbody th.time{
 .session-meeting-provider{font-size:14px;color:var(--text)}
 .session-meeting-info a{color:var(--gold);font-weight:700;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
 
-/* Tappable installation message in the programme header. */
-.install-app-notice{appearance:none;-webkit-appearance:none;position:absolute;right:10px;left:auto;top:calc(100% + 7px);z-index:10050;width:max-content;max-width:calc(100vw - 20px);padding:4px 2px;border:0;border-radius:0;background:transparent;color:#00ff00;box-shadow:none;font-family:inherit;font-size:12px;font-weight:700;line-height:1.4;text-align:center;cursor:pointer;touch-action:manipulation;opacity:0;visibility:hidden;transform:translateY(-3px);transition:opacity .2s ease,transform .2s ease,visibility .2s ease}
-.install-app-notice.is-visible{opacity:1;visibility:visible;transform:translateY(0)}
-.install-app-notice.is-visible.is-action{animation:install-notice-blink 1.15s ease-in-out infinite}
-.install-app-notice.is-visible.is-action{animation:install-notice-blink 1.15s ease-in-out infinite}@keyframes install-notice-blink{0%,100%{opacity:1}50%{opacity:.55}}
-@media(prefers-reduced-motion:reduce){.install-app-notice.is-visible.is-action{animation:none;opacity:1}}
-.install-app-notice.is-action:active{transform:translateY(1px)}
-.install-app-notice:focus-visible{outline:2px solid var(--header-secondary,var(--accent));outline-offset:3px}
-.install-app-notice:disabled{cursor:default;opacity:.9}
+/* Persistent installation action at the far right of the weekly navigation row. */
+#view-tabs .install-app-notice{appearance:none;-webkit-appearance:none;position:relative;inset:auto;z-index:2;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin-left:auto;width:max-content;max-width:min(180px,38vw);padding:4px 2px;border:0;border-radius:0;background:transparent;color:#ff69b4;box-shadow:none;font-family:inherit;font-size:12px;font-weight:700;line-height:1.3;text-align:right;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;cursor:pointer;touch-action:manipulation;opacity:0;visibility:hidden;transform:translateY(-2px);transition:opacity .2s ease,transform .2s ease,visibility .2s ease}
+#view-tabs .install-app-notice.is-visible{opacity:1;visibility:visible;transform:translateY(0)}
+#view-tabs .install-app-notice.is-visible.is-action{animation:install-notice-blink 1.15s ease-in-out infinite}
+@keyframes install-notice-blink{0%,100%{opacity:1}50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){#view-tabs .install-app-notice.is-visible.is-action{animation:none;opacity:1}}
+#view-tabs .install-app-notice.is-action:active{transform:translateY(1px)}
+#view-tabs .install-app-notice:focus-visible{outline:2px solid var(--header-secondary,var(--accent));outline-offset:3px}
+#view-tabs .install-app-notice:disabled{cursor:default;opacity:.9}
+@media(max-width:560px){
+ #view-tabs .install-app-notice{font-size:11px;max-width:38vw;padding:4px 0;margin-left:auto}
+}
 
 /* Maternal-and-newborn header photograph, cropped without stretching. */
 .hd-band{position:relative;isolation:isolate;overflow:visible}
