@@ -6,7 +6,7 @@
   // Keep the full-screen assistant outside app header/transform stacking contexts.
   if (root.parentElement !== document.body) document.body.appendChild(root);
 
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "" };
+  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "" };
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -177,7 +177,28 @@
   input.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
   });
+  function syncVisualViewport() {
+    if (!window.visualViewport) return;
+    const viewport = window.visualViewport;
+    const keyboardInset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+    root.style.setProperty("--cara-keyboard-inset", Math.round(keyboardInset) + "px");
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", syncVisualViewport, { passive: true });
+    window.visualViewport.addEventListener("scroll", syncVisualViewport, { passive: true });
+    window.addEventListener("orientationchange", syncVisualViewport, { passive: true });
+  }
   function setOpen(open) {
+    if (open) {
+      state.previousBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      document.documentElement.classList.add("cara-open");
+      syncVisualViewport();
+    } else {
+      document.body.style.overflow = state.previousBodyOverflow;
+      document.documentElement.classList.remove("cara-open");
+      root.style.setProperty("--cara-keyboard-inset", "0px");
+    }
     root.classList.toggle("is-open", open);
     header.hidden = !open; body.hidden = !open; launcher.hidden = open;
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
