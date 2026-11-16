@@ -138,7 +138,8 @@ def resolve_session(token: str | None):
     session = _read(COL_SESSIONS, digest)
     if not session or int(session.get("expires_at", 0)) < int(time.time()):
         if session:
-            _delete(COL_SESSIONS, digest, "")
+            with database() as db:
+                db.execute("DELETE FROM docs WHERE col=? AND id=?", (COL_SESSIONS, digest))
         return None
     user = _read(COL_USERS, session.get("user_id", ""))
     if not user:
@@ -293,3 +294,49 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
     if reminders:
         blocks.append("UPCOMING OR DUE REMINDERS:\\n" + json.dumps(reminders[:8], ensure_ascii=False))
     return "\\n\\n".join(blocks)[:14000] if blocks else "No relevant saved user memory or task history was found."
+
+def list_memories(user_id: str) -> list[dict]:
+    return _list(COL_MEMORIES, user_id, 200)
+
+
+def save_memory(user_id: str, data: dict) -> dict:
+    content = str(data.get("content", "")).strip()[:1500]
+    if not content or SECRET_PATTERN.search(content):
+        raise MemoryError("Memory text is empty or appears to contain a secret.")
+    memory_id = str(data.get("id") or uuid.uuid4().hex)[:80]
+    old = _read(COL_MEMORIES, _doc_id(user_id, memory_id)) or {}
+    item = {**old, "kind": str(data.get("kind", old.get("kind", "user_note")))[:40],
+            "content": content, "project": str(data.get("project", old.get("project", "")))[:180],
+            "updated_at": _now(), "created_at": old.get("created_at", _now()),
+            "superseded_by": data.get("superseded_by", old.get("superseded_by"))}
+    _write(COL_MEMORIES, _doc_id(user_id, memory_id), item)
+    return {"id": memory_id, **item}
+
+
+def delete_memory(user_id: str, memory_id: str) -> bool:
+    return _delete(COL_MEMORIES, user_id, memory_id)
+
+
+def list_tasks(user_id: str) -> list[dict]:
+    return _list(COL_TASKS, user_id, 200)
+
+
+def list_conversations(user_id: str) -> list[dict]:
+    return _list(COL_CONVERSATIONS, user_id, 100)
+
+
+def tick_reminders():
+    """Move scheduled in-app reminders to due; no external delivery is claimed."""
+    now = int(time.time())
+    with database() as db:
+        rows = db.execute("SELECT id,data FROM docs WHERE col=?", (COL_REMINDERS,)).fetchall()
+        for row in rows:
+            try:
+                item = json.loads(row["data"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if item.get("status") == "scheduled" and int(item.get("scheduled_at", 0)) <= now:
+                item["status"] = "due"
+                item["due_marked_at"] = _now()
+                db.execute("UPDATE docs SET data=?,updated_at=? WHERE col=? AND id=?",
+                           (json.dumps(item, ensure_ascii=False), _now(), COL_REMINDERS, row["id"]))
