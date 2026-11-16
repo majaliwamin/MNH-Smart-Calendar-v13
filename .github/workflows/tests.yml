@@ -2,9 +2,9 @@ name: MNH Calendar checks
 
 on:
   pull_request:
-    branches: [main, development-hardening-phase-1, 'feature/**']
-  push:
     branches: [main, development-hardening-phase-1]
+  push:
+    branches: [main, development-hardening-phase-1, 'feature/**']
 
 permissions:
   contents: read
