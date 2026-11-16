@@ -312,3 +312,21 @@ def test_empty_weekly_cells_export_as_fillable_fields_not_plus_placeholders():
     start = app.index("const cellLabel=area=>{")
     block = app[start:app.index("};", start)]
     assert 'classList.contains("empty-activity")' in block
+
+
+
+def test_history_records_additions_updates_deletions_and_restores():
+    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    assert "action IN ('added','updated','deleted','restored')" in routes
+    assert 'write_activity(c, session["role"], action, collection, item_id, summary)' in routes
+    assert 'write_activity(c, "public", "deleted", collection, item_id' in routes
+    assert "make_backup()" in routes
+    assert "safety_backup_created" in routes
+
+
+def test_database_backups_are_published_atomically():
+    backup = (ROOT / "backend" / "app" / "services" / "backup_service.py").read_text(encoding="utf-8")
+    assert "tempfile.mkstemp" in backup
+    assert "os.replace(temporary, target)" in backup
+    assert "source.backup(destination)" in backup
+    assert "Retention is applied only after a new complete snapshot" in backup
