@@ -177,9 +177,12 @@ def list_documents(owner_id: str = 'shared') -> list[dict]:
 def delete_document(doc_id: str, owner_id: str = 'shared') -> bool:
     with database() as connection:
         exists = connection.execute(
-            "SELECT 1 FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,)
+            "SELECT data FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,)
         ).fetchone()
         if not exists:
+            return False
+        metadata = json.loads(exists["data"])
+        if metadata.get("owner_id", "shared") not in ("shared", owner_id):
             return False
         connection.execute("DELETE FROM docs WHERE col='cara_documents' AND id LIKE ?", (doc_id + ":%",))
         connection.execute("DELETE FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,))
