@@ -1618,10 +1618,10 @@ body[data-theme="red"] #view-weekly tbody th.time{
 .session-meeting-info a{color:var(--gold);font-weight:700;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
 
 /* Tappable installation message in the programme header. */
-.install-app-notice{appearance:none;-webkit-appearance:none;position:absolute;right:10px;left:auto;top:calc(100% + 7px);z-index:10050;width:max-content;max-width:calc(100vw - 20px);padding:10px 14px;border:1px solid var(--header-border,var(--line));border-radius:10px;background:var(--header-surface,var(--panel,var(--surface)));color:var(--header-secondary,var(--header-foreground,var(--text)));box-shadow:0 6px 18px rgba(0,0,0,.2);font-family:inherit;font-size:12px;font-weight:600;line-height:1.4;text-align:center;cursor:pointer;touch-action:manipulation;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease}
+.install-app-notice{appearance:none;-webkit-appearance:none;position:absolute;right:10px;left:auto;top:calc(100% + 7px);z-index:10050;width:max-content;max-width:calc(100vw - 20px);padding:10px 14px;border:1px solid #7650a6;border-radius:10px;background:linear-gradient(135deg,#281044 0%,#35145f 55%,#24103f 100%);color:#fff;box-shadow:0 6px 18px rgba(20,5,38,.42);font-family:inherit;font-size:12px;font-weight:700;line-height:1.4;text-align:center;cursor:pointer;touch-action:manipulation;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .25s ease,transform .25s ease,visibility .25s ease}
 .install-app-notice.is-visible{opacity:1;visibility:visible;transform:translateY(0)}
 .install-app-notice.is-visible.is-action{animation:install-notice-blink 1.15s ease-in-out infinite}
-@keyframes install-notice-blink{0%,100%{opacity:1;box-shadow:0 6px 18px rgba(0,0,0,.2),0 0 0 0 rgba(201,166,90,0)}50%{opacity:.58;box-shadow:0 6px 18px rgba(0,0,0,.2),0 0 0 5px rgba(201,166,90,.34)}}
+@keyframes install-notice-blink{0%,100%{opacity:1;box-shadow:0 6px 18px rgba(20,5,38,.42),0 0 0 0 rgba(126,78,183,0)}50%{opacity:.72;box-shadow:0 6px 18px rgba(20,5,38,.42),0 0 0 5px rgba(126,78,183,.48)}}
 @media(prefers-reduced-motion:reduce){.install-app-notice.is-visible.is-action{animation:none;opacity:1}}
 .install-app-notice.is-action:active{transform:translateY(1px)}
 .install-app-notice:focus-visible{outline:2px solid var(--header-secondary,var(--accent));outline-offset:3px}
