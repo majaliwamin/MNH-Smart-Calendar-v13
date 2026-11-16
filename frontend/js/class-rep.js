@@ -48,7 +48,7 @@
     if (/session|timetable|schedule|class|lecture|this week/.test(q)) return "For accurate session dates, times, modules and facilitators, please check the live weekly timetable. I won't guess or invent a session.";
     if (/announcement|announce|remind|broadcast/.test(q)) return "Ready-to-edit announcement:\n\nGood day, everyone. Please refer to the MNH Smart Timetable for the confirmed module, date, time and delivery details. Kindly be punctual and come prepared.\n\nThank you,\nClass Representative";
     if (/lecturer|facilitator|professor|doctor|message|email|whatsapp/.test(q)) return "Good day, [Title and Name]. I hope you are well. I am writing on behalf of the MNH class to kindly seek clarification regarding [specific issue]. Could you please advise us when convenient?\n\nThank you for your time and guidance.\nKind regards,\nClass Representative";
-    return "I can help with class announcements, messages to lecturers, meeting agendas and timetable guidance. Configure a CARA AI provider to enable live AI answers.";
+    return "I can help draft class announcements, messages to lecturers, meeting agendas and other academic communications. For confirmed timetable details, please refer to the live shared calendar.";
   }
   async function checkStatus() {
     try {
@@ -99,9 +99,14 @@
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
-      pending.textContent = error.message || "AI temporarily unavailable";
-      if (/password|authorised|analytics/i.test(error.message || "")) state.analyticsPassword = "";
-      status(error.message || "AI temporarily unavailable", false);
+      const detail = String(error && error.message || "");
+      if (/password|authorised|analytics/i.test(detail)) {
+        state.analyticsPassword = "";
+        pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
+      } else {
+        pending.textContent = "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+      }
+      status("", false);
     } finally {
       state.busy = false; input.disabled = false; input.focus();
     }
