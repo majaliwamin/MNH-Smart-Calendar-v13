@@ -61,10 +61,17 @@ def _texts(value):
                 return _texts(value[key])
         return []
     if isinstance(value, (list, tuple)):
-        if len(value) >= 2 and isinstance(value[1], str):
-            return [value[1].strip()]
-        if len(value) >= 2 and isinstance(value[1], (list, tuple)) and value[1] and isinstance(value[1][0], str):
-            return [value[1][0].strip()]
+        # PaddleOCR 2.x and EasyOCR individual detections have a polygon first.
+        # A plain list of recognised strings (PaddleOCR 3.x) must be traversed.
+        if (len(value) >= 2 and isinstance(value[0], (list, tuple))
+                and value[0] and isinstance(value[0][0], (list, tuple))
+                and isinstance(value[1], str)):
+            return [value[1].strip()] if value[1].strip() else []
+        if (len(value) >= 2 and isinstance(value[0], (list, tuple))
+                and value[0] and isinstance(value[0][0], (list, tuple))
+                and isinstance(value[1], (list, tuple)) and value[1]
+                and isinstance(value[1][0], str)):
+            return [value[1][0].strip()] if value[1][0].strip() else []
         result = []
         for item in value:
             result.extend(_texts(item))
