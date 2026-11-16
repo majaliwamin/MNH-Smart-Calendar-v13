@@ -165,6 +165,9 @@ def _explicit_task(user_id: str, message: str):
     title = match.group(1).strip().rstrip(".!?")[:180]
     if not title:
         return None
+    for existing in memory.list_tasks(user_id):
+        if existing.get("title", "").strip().casefold() == title.casefold() and existing.get("status") not in ("completed", "cancelled"):
+            return existing
     return memory.upsert_task(user_id, {"title": title, "status": "not_started", "priority": "normal"})
 
 
