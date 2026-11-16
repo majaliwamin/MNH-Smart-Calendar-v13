@@ -18,3 +18,11 @@ def test_class_rep_ui_uses_theme_tokens_and_mobile_layout():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert "var(--panel)" in css and "var(--gold)" in css and "var(--text)" in css
     assert "@media(max-width:760px)" in css
+
+def test_class_rep_starts_visible_and_has_builtin_demo_responses():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert 'root.append(header, body)' in js
+    assert 'Hello! I’m the MNH Class Rep Assistant' in js
+    assert 'function demoReply(message)' in js
+    assert 'Demo mode · built-in responses' in js
+    assert 'Please check the live weekly timetable above' in js
