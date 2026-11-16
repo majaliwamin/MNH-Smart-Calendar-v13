@@ -185,3 +185,18 @@ def test_cara_natural_language_project_task_and_reminder_creation(monkeypatch, t
         assert reminder.status_code == 200
         assert "in-app reminder" in reminder.json()["reply"]
         assert client.get("/api/class-rep/reminders").json()["reminders"]
+
+
+def test_production_cara_accounts_are_blocked_without_durable_storage(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("MNH_CARA_SQLITE_PERSISTENT_DISK", raising=False)
+    with TestClient(app) as client:
+        status = client.get("/api/class-rep/auth/me")
+        assert status.status_code == 200
+        assert status.json()["storage_ready"] is False
+        register = client.post("/api/class-rep/auth/register", json={
+            "name": "No Storage", "email": "nostorage@example.org", "password": "safe-password-123"
+        })
+        assert register.status_code == 503
