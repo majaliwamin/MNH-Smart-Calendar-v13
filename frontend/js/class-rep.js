@@ -142,7 +142,8 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detail || "AI provider unavailable");
         pending.textContent = result.reply;
-        if (restrictedAnalytics) { state.history = []; }\n        else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
+        if (restrictedAnalytics) { state.history = []; }
+        else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
         status("AI connected · " + result.provider, true);
       } else {
         pending.textContent = demoReply(message);
