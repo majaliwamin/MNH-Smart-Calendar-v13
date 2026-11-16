@@ -158,6 +158,16 @@ def _explicit_reminder(user_id: str, message: str):
     return reminder, target
 
 
+def _explicit_task(user_id: str, message: str):
+    match = re.search(r"\b(?:create|add|track)\s+(?:a\s+)?task(?:\s+to|\s*:\s*)\s*(.+)$", message.strip(), re.I)
+    if not match:
+        return None
+    title = match.group(1).strip().rstrip(".!?")[:180]
+    if not title:
+        return None
+    return memory.upsert_task(user_id, {"title": title, "status": "not_started", "priority": "normal"})
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str | None = Header(default=None)):
     user = _user(request)
@@ -171,6 +181,12 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
     conversation_id = payload.conversation_id or uuid.uuid4().hex
     try:
+        task_created = _explicit_task(user["id"], payload.message.strip())
+        if task_created:
+            confirmation = "I have saved the task “" + task_created["title"] + "” to your CARA task list as not started."
+            memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
+            return ChatResponse(reply=confirmation, provider="CARA task engine",
+                                model="persistent task memory", conversation_id=conversation_id)
         reminder_created = _explicit_reminder(user["id"], payload.message.strip())
         if reminder_created:
             reminder, scheduled_for = reminder_created
