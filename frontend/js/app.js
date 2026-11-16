@@ -73,6 +73,9 @@ function getSessionEntries(offset=weekOffset){
   const fallback=legacy?defaultRange(rowIndex):{startTime:"08:00",endTime:"10:00"};
   startTime=String(data.startTime||fromLabel?.startTime||fallback.startTime);
   endTime=String(data.endTime||fromLabel?.endTime||fallback.endTime);
+  // Canonicalise the obsolete 07:30–09:30 programme slot to the current 08:00–10:00 slot.
+  // These stale saved start times were creating an extra desktop row before the intended 08:00 grid.
+  if(startTime==="07:30"&&endTime==="09:30"){startTime="08:00";endTime="10:00";}
   const start=parseClock(startTime),end=parseClock(endTime);
   if(start===null||end===null||end<=start)return;
   const moduleCode=resolveModuleCode(data);
