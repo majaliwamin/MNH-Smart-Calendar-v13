@@ -34,12 +34,28 @@ def _paddle_reader():
         return PaddleOCR(lang="en", use_angle_cls=True, show_log=False)
 
 
+def _engine_order(engine: str | None = None) -> list[str]:
+    selected = (engine or os.getenv("MNH_CLASSREP_OCR_ENGINE", "auto")).strip().lower()
+    if selected == "auto":
+        return ["paddleocr", "easyocr"]
+    if selected in {"paddleocr", "easyocr"}:
+        return [selected]
+    raise OCRDocumentError("MNH_CLASSREP_OCR_ENGINE must be auto, paddleocr or easyocr.")
+
+
 def _texts(value):
     if value is None:
         return []
     if isinstance(value, str):
         return [value.strip()] if value.strip() else []
+    if not isinstance(value, (str, dict, list, tuple)) and hasattr(value, "json"):
+        try:
+            return _texts(value.json)
+        except Exception:
+            return []
     if isinstance(value, dict):
+        if isinstance(value.get("res"), dict):
+            return _texts(value["res"])
         for key in ("rec_texts", "texts", "text"):
             if key in value:
                 return _texts(value[key])
@@ -58,11 +74,8 @@ def _texts(value):
 
 def _ocr_image(image):
     import numpy as np
-    engine = os.getenv("MNH_CLASSREP_OCR_ENGINE", "auto").strip().lower()
-    if engine not in {"auto", "paddleocr", "easyocr"}:
-        raise OCRDocumentError("MNH_CLASSREP_OCR_ENGINE must be auto, paddleocr or easyocr.")
+    engines = _engine_order()
     array = np.asarray(image.convert("RGB"))
-    engines = ["paddleocr", "easyocr"] if engine == "auto" else [engine]
     failures = []
     for name in engines:
         try:
