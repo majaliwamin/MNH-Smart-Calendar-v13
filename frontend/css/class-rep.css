@@ -1,6 +1,7 @@
 /* CARA floating academic relations assistant — isolated, theme-aware styles. */
 .cara-widget{position:fixed;right:22px;bottom:22px;z-index:1200;width:min(390px,calc(100vw - 28px));font-family:Arial,Helvetica,sans-serif;color:var(--text);pointer-events:none}
 .cara-widget>*{pointer-events:auto}
+.cara-widget [hidden]{display:none!important}
 .cara-launcher{display:flex;align-items:center;justify-content:center;min-width:76px;height:54px;margin-left:auto;padding:0 20px;border:1px solid var(--gold);border-radius:999px;background:var(--gold);color:var(--on-accent);font-size:15px;font-weight:800;letter-spacing:.7px;box-shadow:0 8px 26px rgba(0,0,0,.34);cursor:pointer}
 .cara-launcher:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.4)}
 .cr-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;background:var(--head);border-bottom:1px solid var(--line)}
