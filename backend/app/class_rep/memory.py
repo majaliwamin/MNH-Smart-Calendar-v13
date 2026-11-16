@@ -223,6 +223,8 @@ def upsert_task(user_id: str, data: dict) -> dict:
     title = str(data.get("title", "")).strip()[:180]
     if not title:
         raise MemoryError("A task title is required.")
+    if SECRET_PATTERN.search(title) or SECRET_PATTERN.search(str(data.get("description", ""))):
+        raise MemoryError("Task content appears to contain a secret and was not saved.")
     task_id = str(data.get("id") or uuid.uuid4().hex)[:80]
     allowed = {"not_started", "in_progress", "waiting", "blocked", "completed", "cancelled"}
     status = str(data.get("status", "not_started"))
@@ -248,6 +250,8 @@ def create_reminder(user_id: str, data: dict) -> dict:
     when = data.get("scheduled_at")
     if not message or not isinstance(when, int) or when <= int(time.time()):
         raise MemoryError("A reminder needs a message and a future scheduled_at timestamp in seconds.")
+    if SECRET_PATTERN.search(message):
+        raise MemoryError("Reminder text appears to contain a secret and was not saved.")
     timezone = str(data.get("timezone", "Africa/Blantyre"))[:80]
     try:
         ZoneInfo(timezone)
