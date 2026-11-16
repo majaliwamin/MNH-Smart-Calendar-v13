@@ -26,12 +26,14 @@
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
   const form = el("form", "cr-form");
   const attachButton = el("button", "cr-icon-button cr-attach", "+"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a programme file"); attachButton.title = "Attach file";
-  const recordButton = el("button", "cr-icon-button cr-record", "🎙"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
   const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CARA…"; input.setAttribute("aria-label", "Message CARA");
+  const recordButton = el("button", "cr-icon-button cr-record", "🎙"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
+  const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
+  function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
   fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
-  form.append(attachButton, recordButton, input); body.append(transcript, form, fileInput, statusNode); root.append(launcher, header, body);
+  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode); root.append(launcher, header, body);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
@@ -73,7 +75,7 @@
     if (!message || state.busy) return;
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
-    input.value = "";
+    input.value = ""; updateComposerAction();
     addMessage("user", message);
     const pending = addMessage("assistant", "Preparing a response…");
     state.busy = true; input.disabled = true;
@@ -155,7 +157,7 @@
           const response = await fetch("/api/class-rep/transcribe", { method: "POST", body: data });
           const result = await response.json();
           if (!response.ok) throw new Error(result.detail || "Transcription failed");
-          input.value = result.text; input.focus(); status("Question transcribed · review and press Enter", true);
+          input.value = result.text; updateComposerAction(); input.focus(); status("Question transcribed · review and press Enter", true);
         } catch (error) { status(error.message || "Transcription failed", false); }
         finally { recordButton.disabled = false; }
       };
@@ -164,6 +166,7 @@
     } catch (_) { status("Microphone permission was not granted", false); }
   });
   form.addEventListener("submit", event => { event.preventDefault(); send(); });
+  input.addEventListener("input", updateComposerAction);
   input.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
   });
