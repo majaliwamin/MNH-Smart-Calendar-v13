@@ -218,6 +218,9 @@
 
         try {
           const rows = await api("GET", `/api/col/${encodeURIComponent(name)}`);
+          // Cached fallback data is for offline recovery only. Never treat it as
+          // a server snapshot or let it suppress the first authoritative response.
+          if (rows.fromCache) return;
           const signature = JSON.stringify(rows);
           failures = 0;
           if (signature !== last) {
