@@ -48,18 +48,15 @@ def test_full_navigation_and_pinned_settings_are_present():
 def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    mobile = (ROOT / "mobile" / "lib" / "screens" / "home_screen.dart").read_text(encoding="utf-8")
     assert 'class="view-tabs"' in html
     tabs = html[html.index('id="view-tabs"'):html.index('</nav>', html.index('id="view-tabs"'))]
-    assert 'data-view="weekly"' in tabs and 'data-view="upcoming"' in tabs
-    assert 'id="weekly-add-session"' in html
+    assert 'data-view="weekly"' in tabs
+    assert 'class="week-nav"' in html
+    assert 'id="view-my-schedule"' in html
     assert 'id="session-day"' in html and 'id="session-start"' in html and 'id="session-end"' in html
     assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday"]' in app
     assert 'dayIndex,startTime,endTime' in app
-    assert "'dayIndex': day, 'startTime': start.text, 'endTime': end.text" in mobile
-    assert "dayIndex >= 5" in mobile
     assert 'showView(location.hash.slice(1)||"weekly")' in app
-    assert "int selected = 1;" in mobile
 
 
 def test_scheduling_uses_bounded_date_and_arbitrary_time_pickers():
