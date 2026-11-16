@@ -16,79 +16,31 @@
   launcher.setAttribute("aria-label", "Open CARA, your intelligent academic relations assistant");
   launcher.setAttribute("aria-expanded", "false");
   const header = el("div", "cr-head");
-  const identity = el("div", "cr-identity");
-  identity.append(el("span", "cr-mark", "C"), el("div", "cr-heading"));
-  identity.lastChild.append(el("strong", "", "CARA"), el("small", "cr-tagline", "Your intelligent academic relations assistant"), el("small", "cr-status", "Checking services…"));
-  const toggle = el("button", "cr-toggle", "×");
-  toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
+  const identity = el("div", "cr-identity"); identity.append(el("strong", "cr-title", "CARA"));
+  const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
   header.append(identity, toggle);
   const body = el("div", "cr-body");
-  const intro = el("p", "cr-intro", "Ask about the live timetable, modules, facilitators, examinations, recurring activities, announcements, resources, uploaded documents and recent changes. CARA is read-only.");
-  const prompts = el("div", "cr-prompts");
-  [["This week's sessions", "Summarise this week's confirmed sessions, times and facilitators."],
-   ["Upcoming exams", "What examination information is currently recorded?"],
-   ["Draft an announcement", "Draft a concise class announcement using confirmed timetable information."],
-   ["Search programme notes", "Search uploaded programme documents for information about assessment and course requirements."]]
-    .forEach(([label, prompt]) => {
-      const button = el("button", "cr-prompt", label);
-      button.type = "button"; button.addEventListener("click", () => send(prompt));
-      prompts.append(button);
-    });
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
   const form = el("form", "cr-form");
-  const input = el("textarea", "cr-input");
-  input.rows = 2; input.maxLength = 4000; input.placeholder = "Ask the class assistant…"; input.setAttribute("aria-label", "Message the Class Rep Assistant");
-  const sendButton = el("button", "cr-send", "Send"); sendButton.type = "submit";
-  form.append(input, sendButton);
-  const tools = el("div", "cr-tools");
-  const recordButton = el("button", "cr-prompt", "🎙 Record question"); recordButton.type = "button";
-  const uploadButton = el("button", "cr-prompt", "Add programme document"); uploadButton.type = "button";
-  const fileInput = el("input", "cr-file-input"); fileInput.type = "file"; fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp";
-  fileInput.hidden = true;
-  const docsButton = el("button", "cr-prompt", "Manage documents"); docsButton.type = "button";
-  tools.append(recordButton, uploadButton, docsButton, fileInput);
-  const docsPanel = el("div", "cr-documents"); docsPanel.hidden = true;
-  const foot = el("p", "cr-foot", "CARA reads shared calendar records and authorised uploaded documents. Voice requests are processed by Cloudflare. CARA does not change timetable records or send messages.");
-  body.append(intro, prompts, transcript, form, tools, docsPanel, foot);
-  root.append(launcher, header, body);
+  const attachButton = el("button", "cr-icon-button cr-attach", "+"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a programme file"); attachButton.title = "Attach file";
+  const recordButton = el("button", "cr-icon-button cr-record", "🎙"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
+  const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CARA…"; input.setAttribute("aria-label", "Message CARA");
+  const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
+  fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp"; fileInput.hidden = true;
+  const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
+  form.append(attachButton, recordButton, input); body.append(transcript, form, fileInput, statusNode); root.append(launcher, header, body);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
-  addMessage("assistant", "Hello! I’m CARA, your intelligent academic relations assistant. I can retrieve information from the live shared calendar and authorised uploaded programme documents, and I can listen to questions and read responses aloud when voice services are configured.");
-
   function status(text, ready) {
-    const node = root.querySelector(".cr-status");
+    const node = statusNode;
     node.textContent = text;
     node.dataset.state = ready ? "ready" : "unavailable";
   }
-  function addMessage(role, text) {
-    const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"), text);
-    transcript.append(bubble);
-    if (role === "assistant") {
-      const speakButton = el("button", "cr-prompt cr-speak", "▶ Listen");
-      speakButton.type = "button";
-      speakButton.addEventListener("click", async () => {
-        speakButton.disabled = true;
-        try {
-          const response = await fetch("/api/class-rep/speak", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: bubble.textContent })
-          });
-          if (!response.ok) throw new Error("Speech service unavailable");
-          const audio = new Audio(URL.createObjectURL(await response.blob()));
-          audio.onended = () => URL.revokeObjectURL(audio.src);
-          await audio.play();
-        } catch (_) { status("Voice playback unavailable", false); }
-        finally { speakButton.disabled = false; }
-      });
-      transcript.append(speakButton);
-    }
-    transcript.scrollTop = transcript.scrollHeight;
-    return bubble;
-  }
+  function addMessage(role, text) { const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"), text); transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble; }
   function demoReply(message) {
     const q = message.toLowerCase();
     if (/hello|hi|hey/.test(q)) return "Hello! I’m here to support the MNH class representative with clear academic communication. What would you like help with?";
@@ -96,7 +48,7 @@
     if (/session|timetable|schedule|class|lecture|this week/.test(q)) return "For accurate session dates, times, modules and facilitators, please check the live weekly timetable. I won't guess or invent a session.";
     if (/announcement|announce|remind|broadcast/.test(q)) return "Ready-to-edit announcement:\n\nGood day, everyone. Please refer to the MNH Smart Timetable for the confirmed module, date, time and delivery details. Kindly be punctual and come prepared.\n\nThank you,\nClass Representative";
     if (/lecturer|facilitator|professor|doctor|message|email|whatsapp/.test(q)) return "Good day, [Title and Name]. I hope you are well. I am writing on behalf of the MNH class to kindly seek clarification regarding [specific issue]. Could you please advise us when convenient?\n\nThank you for your time and guidance.\nKind regards,\nClass Representative";
-    return "I can help with class announcements, messages to lecturers, meeting agendas and timetable guidance. Configure a CARA AI provider to enable live AI answers.";
+    return "I can help draft class announcements, messages to lecturers, meeting agendas and other academic communications. For confirmed timetable details, please refer to the live shared calendar.";
   }
   async function checkStatus() {
     try {
@@ -106,14 +58,12 @@
       state.voice = result.voice === "enabled";
       state.uploads = result.document_uploads === "enabled";
       status(state.ready ? "AI connected · " + result.provider + (result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
-      recordButton.disabled = !state.voice;
-      root.dataset.documentSearch = result.document_search || "unavailable";
-      uploadButton.disabled = !state.uploads;
-      if (!state.uploads) uploadButton.title = "Document administration is not configured by the server.";
+      recordButton.disabled = !state.voice; root.dataset.documentSearch = result.document_search || "unavailable";
+      attachButton.disabled = !state.uploads; if (!state.uploads) attachButton.title = "File uploads are not configured by the server.";
     } catch (_) {
       state.ready = false; state.voice = false; state.uploads = false;
       status("Services unavailable", false);
-      recordButton.disabled = true;
+      recordButton.disabled = true; attachButton.disabled = true;
     }
   }
   async function send(value) {
@@ -122,10 +72,9 @@
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = "";
-    prompts.hidden = true;
     addMessage("user", message);
     const pending = addMessage("assistant", "Preparing a response…");
-    state.busy = true; sendButton.disabled = true; sendButton.textContent = "…";
+    state.busy = true; input.disabled = true;
     try {
       if (state.ready) {
         const headers = { "Content-Type": "application/json" };
@@ -140,7 +89,7 @@
           cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10) })
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.detail || "AI provider unavailable");
+        if (!response.ok) throw new Error("Request could not be completed");
         pending.textContent = result.reply;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
@@ -150,43 +99,19 @@
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
-      pending.textContent = error.message || "AI temporarily unavailable";
-      if (/password|authorised|analytics/i.test(error.message || "")) state.analyticsPassword = "";
-      status(error.message || "AI temporarily unavailable", false);
+      const detail = String(error && error.message || "");
+      if (/password|authorised|analytics/i.test(detail)) {
+        state.analyticsPassword = "";
+        pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
+      } else {
+        pending.textContent = "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+      }
+      status("", false);
     } finally {
-      state.busy = false; sendButton.disabled = false; sendButton.textContent = "Send";
-      input.focus();
+      state.busy = false; input.disabled = false; input.focus();
     }
   }
-  async function loadDocuments() {
-    docsPanel.hidden = false;
-    docsPanel.replaceChildren(el("p", "cr-foot", "Loading document register…"));
-    try {
-      const response = await fetch("/api/class-rep/documents", { cache: "no-store" });
-      const result = await response.json();
-      docsPanel.replaceChildren();
-      if (!result.documents?.length) docsPanel.append(el("p", "cr-foot", "No programme documents have been indexed yet."));
-      result.documents?.forEach(doc => {
-        const row = el("div", "cr-document-row");
-        row.append(el("span", "", doc.title + " · " + doc.chunks + " passages"));
-        const remove = el("button", "cr-prompt", "Delete");
-        remove.type = "button";
-        remove.addEventListener("click", async () => {
-          const token = state.documentToken || prompt("Enter the document administrator credential to delete this file:");
-          if (!token) return;
-          state.documentToken = token;
-          const deleted = await fetch("/api/class-rep/documents/" + encodeURIComponent(doc.id), {
-            method: "DELETE", headers: { "X-CARA-Admin-Token": token }
-          });
-          if (!deleted.ok) { status("Document deletion was not authorised", false); return; }
-          loadDocuments();
-        });
-        row.append(remove); docsPanel.append(row);
-      });
-    } catch (_) { docsPanel.replaceChildren(el("p", "cr-foot", "Could not load the document register.")); }
-  }
-  docsButton.addEventListener("click", () => { if (docsPanel.hidden) loadDocuments(); else docsPanel.hidden = true; });
-  uploadButton.addEventListener("click", () => fileInput.click());
+  attachButton.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = "";
@@ -195,7 +120,7 @@
     const token = state.documentToken || prompt("Enter the document administrator credential to upload and index this file:");
     if (!token) return;
     state.documentToken = token;
-    uploadButton.disabled = true; uploadButton.textContent = "Indexing…";
+    attachButton.disabled = true;
     try {
       const data = new FormData(); data.append("file", file);
       const response = await fetch("/api/class-rep/documents", {
@@ -203,10 +128,9 @@
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Upload failed");
-      status("Indexed " + result.title + " · " + result.chunks + " passages", true);
-      docsPanel.hidden = false; await loadDocuments();
+      status("Indexed " + result.title + " · " + result.chunks + " passages", true); addMessage("assistant", "File indexed successfully: " + result.title + ".");
     } catch (error) { status(error.message || "Document indexing failed", false); }
-    finally { uploadButton.disabled = false; uploadButton.textContent = "Add programme document"; }
+    finally { attachButton.disabled = !state.uploads; }
   });
   recordButton.addEventListener("click", async () => {
     if (state.recording && state.recorder) { state.recorder.stop(); return; }
@@ -221,7 +145,7 @@
       state.recorder.ondataavailable = event => { if (event.data.size) state.audioParts.push(event.data); };
       state.recorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
-        state.recording = false; recordButton.textContent = "🎙 Record question";
+        state.recording = false; recordButton.textContent = "🎙"; recordButton.setAttribute("aria-label", "Record a voice question");
         const audio = new Blob(state.audioParts, { type: state.recorder.mimeType || "audio/webm" });
         const data = new FormData(); data.append("file", audio, "cara-question.webm");
         recordButton.disabled = true; status("Transcribing your question…", false);
@@ -229,12 +153,12 @@
           const response = await fetch("/api/class-rep/transcribe", { method: "POST", body: data });
           const result = await response.json();
           if (!response.ok) throw new Error(result.detail || "Transcription failed");
-          input.value = result.text; input.focus(); status("Question transcribed · review then Send", true);
+          input.value = result.text; input.focus(); status("Question transcribed · review and press Enter", true);
         } catch (error) { status(error.message || "Transcription failed", false); }
         finally { recordButton.disabled = false; }
       };
       state.recorder.start(); state.recording = true;
-      recordButton.textContent = "■ Stop recording"; status("Listening… select Stop recording when finished", true);
+      recordButton.textContent = "■"; recordButton.setAttribute("aria-label", "Stop recording"); status("Listening… select Stop to finish", true);
     } catch (_) { status("Microphone permission was not granted", false); }
   });
   form.addEventListener("submit", event => { event.preventDefault(); send(); });
