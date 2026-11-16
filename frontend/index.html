@@ -317,6 +317,10 @@
   var revealed = false;
   var hadController = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
   var reloadStarted = false;
+  var domReady = new Promise(function (resolve) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", resolve, { once: true });
+    else resolve();
+  });
   function reveal() {
     if (revealed) return;
     revealed = true;
@@ -368,8 +372,10 @@
       console.warn("MNH Calendar startup update check failed; opening the available app shell.", error);
     })
     .finally(function () {
-      window.clearTimeout(safetyTimer);
-      reveal();
+      domReady.then(function () {
+        window.clearTimeout(safetyTimer);
+        reveal();
+      });
     });
 })();
 </script>
