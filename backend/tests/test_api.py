@@ -90,6 +90,34 @@ def test_restore_rejects_duplicate_records_without_deleting_existing_data(monkey
         assert rows == before
 
 
+def test_restore_rejects_empty_backup_without_deleting_existing_data(monkeypatch, tmp_path):
+    configure_test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.put("/api/doc/cells/keep-me", json={"title": "Keep this record"})
+        response = client.post("/api/restore", json={
+            "format": "mnh-calendar-backup",
+            "documents": [],
+        })
+        assert response.status_code == 400
+        rows = client.get("/api/col/cells").json()
+        assert any(row["id"] == "keep-me" for row in rows)
+
+
+def test_delete_aborts_when_safety_backup_fails(monkeypatch, tmp_path):
+    configure_test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.put("/api/doc/cells/keep-me", json={"title": "Keep this record"})
+
+        def fail_backup():
+            raise OSError("backup storage unavailable")
+
+        monkeypatch.setattr("app.api.routes.make_backup", fail_backup)
+        response = client.delete("/api/doc/cells/keep-me")
+        assert response.status_code == 503
+        rows = client.get("/api/col/cells").json()
+        assert any(row["id"] == "keep-me" for row in rows)
+
+
 def test_custom_session_times_are_validated_and_saved(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
@@ -174,10 +202,9 @@ def test_restore_rejects_overlapping_custom_sessions_without_erasing_data(monkey
         assert any(row["id"] == "session-kept" for row in rows)
 
 
-def test_recurring_saturday_records_are_rejected_and_old_ones_flagged_not_deleted(monkeypatch, tmp_path):
+def test_recurring_saturday_records_are_rejected_and_legacy_records_are_deleted_with_audit(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
-        client.post("/api/auth", json={"password": "rep"})
         rejected = client.put("/api/doc/recurring/rec-sat", json={
             "title": "Saturday seminar", "day": "Saturday", "frequency": "Weekly"
         })
@@ -189,17 +216,22 @@ def test_recurring_saturday_records_are_rejected_and_old_ones_flagged_not_delete
             )
         client.get("/api/health")
         rows = client.get("/api/col/recurring").json()
-        assert "rec-old-sat" in {row["id"] for row in rows}
+        assert "rec-old-sat" not in {row["id"] for row in rows}
         with connection.database() as c:
-            flagged = json.loads(c.execute("SELECT value FROM app_meta WHERE key='flagged_non_weekday_records'").fetchone()[0])
-        assert "rec-old-sat" in {item["id"] for item in flagged}
+            audit = c.execute(
+                "SELECT action,collection,item_id FROM audit WHERE item_id='rec-old-sat'"
+            ).fetchone()
+        assert audit is not None
+        assert (audit["action"], audit["collection"], audit["item_id"]) == (
+            "migration_deleted", "recurring", "rec-old-sat"
+        )
 
 
 def test_restore_rejects_saturday_recurring_activity_without_erasing_data(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
         client.post("/api/auth", json={"password": "rep"})
-        client.put("/api/doc/recurring/keep", json={"title": "Weekday seminar", "day": "Friday"})
+        client.put("/api/doc/cells/keep", json={"title": "Keep this record", "dayIndex": 4, "startTime": "08:00", "endTime": "09:00", "weekStart": "2026-11-09"})
         backup = {
             "format": "mnh-calendar-backup",
             "documents": [{"col": "recurring", "id": "sat", "data": {"title": "Saturday seminar", "day": "Saturday"}}],
@@ -207,7 +239,7 @@ def test_restore_rejects_saturday_recurring_activity_without_erasing_data(monkey
         response = client.post("/api/restore", json=backup)
         assert response.status_code == 400
         rows = client.get("/api/col/recurring").json()
-        assert any(row["id"] == "keep" for row in rows)
+        assert any(row["id"] == "keep" for row in client.get("/api/col/cells").json())
 
 
 def test_analytics_reports_module_targets_attendance_and_delivery(monkeypatch, tmp_path):
@@ -285,7 +317,7 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         }).status_code == 200
         assert client.put("/api/doc/cells/session-1", json={
             "dayIndex": 0, "startTime": "08:30", "endTime": "10:15",
-            "code": "MIPN 8100", "title": "Ultrasound principles", "mode": "online"
+            "code": "MIPN 8100", "title": "Ultrasound principles", "mode": "online", "weekStart": "2026-11-09"
         }).status_code == 200
         response = client.get("/api/export/timetable.xlsx")
         assert response.status_code == 200
@@ -300,7 +332,7 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         assert details[3][5].value == "MIPN 8100"
         assert details[3][6].value == "Medical Imaging in Pregnancy and Neonates"
         assert details[3][7].value == "Dr Example"
-        assert weekly["A2"].hyperlink is not None                 # weekly sheet -> Session Details
+        assert weekly["B3"].hyperlink is not None                 # session cell -> Session Details
         assert details.cell(3, 1).hyperlink is not None           # Session Details -> its weekly cell
         assert any("Lunch" in str(weekly.cell(row, 1).value).replace(" ", "") for row in range(4, weekly.max_row + 1))
         assert "A1:F1" in {str(m) for m in weekly.merged_cells.ranges}   # header row merged across the table

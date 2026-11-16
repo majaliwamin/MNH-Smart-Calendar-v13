@@ -12,16 +12,17 @@ def _tabs():
     return HTML[start:HTML.index("</nav>", start)]
 
 
-def test_week_control_sits_beside_analytics_in_the_primary_navigation():
+def test_week_control_is_in_primary_navigation_and_analytics_is_in_the_menu():
     tabs = _tabs()
-    assert 'data-view="analytics"' in tabs
+    assert 'data-view="weekly"' in tabs
     assert 'class="week-nav"' in tabs
-    assert tabs.index('data-view="analytics"') < tabs.index('class="week-nav"'), "the week control must follow Analytics"
+    assert 'data-view="analytics"' in HTML
+    assert HTML.index('data-view="analytics"') < HTML.index('id="view-tabs"')
     for control in ('id="week-prev"', 'id="week-next"', 'id="week-now"'):
         assert control in tabs
     # Every label carries its own Monday–Friday date range.
-    assert 'id="week-now-label"' in tabs and 'id="week-now-range"' in tabs
-    assert "This week" in tabs and "Nov 9" in tabs
+    assert 'id="week-now-range"' in tabs
+    assert "Nov 9" in tabs
 
 
 def test_week_model_is_shared_and_loaded_before_the_app():
@@ -29,15 +30,17 @@ def test_week_model_is_shared_and_loaded_before_the_app():
     assert model.is_file()
     assert HTML.index("/js/week-model.js") < HTML.index("/js/app.js"), "the week model must load before app.js"
     source = model.read_text(encoding="utf-8")
-    assert "new Date(2026, 10, 9)" in source, "the teaching block starts on Monday 9 November 2026"
+    assert "new Date(Date.UTC(2026, 8, 7))" in source, "numbered teaching weeks start on Monday 7 September 2026"
+    schedule = (ROOT / "backend" / "app" / "services" / "schedule.py").read_text(encoding="utf-8")
+    assert "WEEK_START = date(2026, 11, 9)" in schedule, "the current block begins Monday 9 November 2026"
     assert "WEEKDAYS = 5" in source, "teaching weeks are Monday to Friday"
-    assert 'return value > 0 ? "Week " + value : "This week";' in source
+    assert 'return value === -1 ? "Orientation Week" : "Week " + (value + 1);' in source
 
 
 def test_week_dates_are_generated_not_hardcoded():
     assert 'const dates=["9 Nov"' not in APP, "the day dates must come from the week model"
-    assert "let dates=WK.dateLabels(0)" in APP
-    assert "let WEEK_START=WK.startParts(0)" in APP
+    assert "let dates=WK.dateLabels(weekOffset)" in APP
+    assert "let WEEK_START=WK.startParts(weekOffset)" in APP
     for fn in ("function setWeek(", "function applyWeekView(", "function renderWeekNav(", "function initWeekNav("):
         assert fn in APP
     assert 'getElementById("week-next").addEventListener' in APP or 'document.getElementById("week-next")' in APP
@@ -63,7 +66,7 @@ def test_pdf_reads_the_button_cells_that_the_grid_actually_renders():
 def test_pdf_draws_cell_text_and_full_intervals_not_only_form_fields():
     # Regression: fields-only exports render as empty coloured boxes in mobile readers.
     assert "if(!done&&value)" not in APP, "cell labels must always be drawn, not only when the field fails"
-    assert "if(value){\n     pdf.setFont(\"helvetica\",\"normal\");pdf.setFontSize(size)" in APP
+    assert "if(value){\n     pdf.setFont(\"helvetica\",\"bold\");pdf.setFontSize(size)" in APP
     assert "f.fieldName=\"cell_\"+r+\"_\"+c" in APP, "cells stay editable form fields"
     # Filled cells are printed once as text; only empty cells carry a field, so no label is
     # drawn twice on top of its own form-field appearance.
@@ -77,7 +80,7 @@ def test_week_control_layout_is_kept_out_of_the_printed_sheet():
     assert ".week-nav{" in CSS
     assert ".week-step{" in CSS and ".week-now{" in CSS
     assert "@media print{.week-nav{display:none!important}}" in CSS
-    assert ".week-now .week-range{font:600 calc(11px * var(--text-scale))/1.1 Arial,Helvetica,sans-serif" in CSS
+    assert ".week-now .week-range{font:600 calc(12px * var(--text-scale))/1.1 Arial,Helvetica,sans-serif" in CSS
 
 
 def test_other_views_use_the_selected_week_dates():

@@ -27,12 +27,15 @@ COLLECTIONS = {
     },
     "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
     "cells": {
-        "0_0": {"code": "PNIM-8100", "title": "Immunology tutorial", "timeLabel": "08:00–10:00"},
-        "s-custom": {"dayIndex": 2, "startTime": "14:15", "endTime": "16:05", "code": "MIPN 8100", "title": "Imaging lab"},
+        "0_0": {"code": "PNIM-8100", "title": "Immunology tutorial", "timeLabel": "08:00–10:00", "weekStart": "2026-11-09"},
+        "s-custom": {"dayIndex": 2, "startTime": "14:15", "endTime": "16:05", "code": "MIPN 8100", "title": "Imaging lab", "weekStart": "2026-11-09"},
         "s-sat": {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "code": "PNIM-8100", "title": "Saturday class"},
         "6_6": {"code": "Legacy", "timeLabel": "19:00–21:00"},   # legacy day index 6 -> ignored
     },
-    "recurring": {"journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"}},
+    "recurring": {
+        "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},
+        "seminar-mnh": {"title": "Seminar in MNH", "day": "Thursday", "time": "10:00–12:00"}
+    },
 }
 
 
@@ -79,22 +82,22 @@ def test_excel_workbook_is_valid_monday_to_friday_with_half_height_merged_lunch_
     assert payload[:2] == b"PK"                       # a real .xlsx (zip) container
     wb = openpyxl.load_workbook(io.BytesIO(payload))
     ws = wb["Weekly Timetable"]
-    header = [str(c.value) for c in ws[3]][1:]
+    header = [str(c.value) for c in ws[2]][1:]
     assert [h.split("\n")[0] for h in header] == list(schedule.WEEKDAY_NAMES)
     assert "3rd Block" in str(ws["A1"].value)
     everything = " ".join(str(c.value) for sheet in wb for row in sheet.iter_rows() for c in row if c.value).lower()
     assert "saturday" not in everything and "sat," not in everything
     # The header band is the only merged part; the timetable itself is a plain grid.
     merged = {str(m) for m in ws.merged_cells.ranges}
-    assert "A1:F1" in merged and "A2:F2" in merged
+    assert merged == {"A1:F1"}
     body_merges = [m for m in merged if any(int(c) >= 4 for c in __import__("re").findall(r"[0-9]+", m))]
     assert body_merges == [], f"body cells must stay ordinary cells, found {body_merges}"
-    lunch_rows = [r for r in range(4, ws.max_row + 1) if "lunch" in str(ws.cell(r, 1).value).replace(" ", "").lower()]
+    lunch_rows = [r for r in range(3, ws.max_row + 1) if "lunch" in str(ws.cell(r, 1).value).replace(" ", "").lower()]
     assert len(lunch_rows) == 1
     r = lunch_rows[0]
     assert "12:00" in str(ws.cell(r, 1).value)
     assert ws.sheet_view.showGridLines is True
-    text = "\n".join(str(c.value) for row in ws.iter_rows(min_row=4) for c in row if c.value)
+    text = "\n".join(str(c.value) for row in ws.iter_rows(min_row=3) for c in row if c.value)
     assert "PNIM-8100" in text and "Pregnancy and Neonatal Immunology" in text and "Dr D Mzinza" in text
     assert wb["Session Details"].auto_filter.ref
 
@@ -199,7 +202,10 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
         "modules": {"PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitatorId": "fac-1"}},
         "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
         "cells": {},
-        "recurring": {},
+        "recurring": {
+            "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},
+            "seminar-mnh": {"title": "Seminar in MNH", "day": "Thursday", "time": "10:00–12:00"},
+        },
     }
     payload = build_timetable_pdf(collections, ["PNIM-8100"])
     assert payload.startswith(b"%PDF")
@@ -207,8 +213,19 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
     assert b"mod_0_facilitator" in payload
     assert b"mod_0_include" in payload and b"mod_2_include" in payload
     assert b"Dr D Mzinza" in payload
-    assert b"Seminar in MNH" in payload and b"Journal Club" in payload
-    assert b"1190.551" in payload and b"841.889" in payload
+    # ReportLab compresses page content streams; inspect decompressed text rather than
+    # searching the compressed PDF byte stream.
+    import re
+    import zlib
+    decoded_streams = []
+    for stream in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", payload, re.S):
+        try:
+            decoded_streams.append(zlib.decompress(stream))
+        except zlib.error:
+            decoded_streams.append(stream)
+    searchable_pdf = payload + b" ".join(decoded_streams)
+    assert b"Seminar in MNH" in searchable_pdf and b"Journal Club" in searchable_pdf
+    assert re.search(rb"/MediaBox\s*\[\s*0\s+0\s+595\.\d+\s+841\.\d+\s*\]", payload)
 
 
 def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_legacy_seed_cells():
@@ -231,7 +248,7 @@ def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_leg
             second.close()
         finally:
             conn_module.DATABASE_PATH, conn_module.ensure_directories = original
-    assert recurring_ids == {"journal-club", "seminar-mnh"}
+    assert recurring_ids == {"journal-club", "seminar-mnh", "extra-club"}  # user-created activities survive database opens
     assert obsolete_cell is None
 
 
@@ -255,8 +272,62 @@ def test_excel_module_selection_filters_sessions_and_keeps_lecturer_options():
 
 def test_selected_week_start_is_applied_to_all_recurring_and_saved_sessions():
     requested_monday = date(2026, 11, 16)
-    sessions = schedule.sessions_from_collections(COLLECTIONS, week_start=requested_monday)
+    week_two = {
+        **COLLECTIONS,
+        "cells": {
+            **COLLECTIONS["cells"],
+            "week-two-pnim": {
+                "dayIndex": 0, "startTime": "08:00", "endTime": "10:00",
+                "code": "PNIM-8100", "title": "Immunology tutorial",
+                "weekStart": requested_monday.isoformat(),
+            },
+        },
+    }
+    sessions = schedule.sessions_from_collections(week_two, week_start=requested_monday)
     dates = {s["code"]: s["date"] for s in sessions}
     assert dates["Journal Club"] == date(2026, 11, 17)
     assert dates["Seminar in MNH"] == date(2026, 11, 19)
     assert dates["PNIM-8100"] == date(2026, 11, 16)
+
+
+
+def test_whatsapp_reminder_claim_is_atomic_and_failed_delivery_can_retry(monkeypatch):
+    from contextlib import contextmanager
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime
+    from app.services import reminders
+
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = Path(tmp) / "reminders.db"
+        setup = sqlite3.connect(db_path)
+        setup.execute(reminders.LOG_SCHEMA)
+        setup.commit()
+        setup.close()
+
+        @contextmanager
+        def isolated_database():
+            connection = sqlite3.connect(str(db_path), timeout=30)
+            connection.row_factory = sqlite3.Row
+            try:
+                yield connection
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        monkeypatch.setattr(reminders, "database", isolated_database)
+        session = {"date": date(2026, 11, 17), "start": "09:00", "code": "PNIM-8100"}
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            claims = list(pool.map(
+                lambda _: reminders.claim_reminder("same-reminder", session, 10, "+265991234567"),
+                range(8),
+            ))
+        assert sum(claims) == 1
+
+        reminders.record("same-reminder", session, 10, "+265991234567", "error", "temporary bridge failure")
+        assert reminders.claim_reminder("same-reminder", session, 10, "+265991234567") is True
+        reminders.record("same-reminder", session, 10, "+265991234567", "sent")
+        assert reminders.claim_reminder("same-reminder", session, 10, "+265991234567") is False

@@ -56,8 +56,15 @@ def test_excel_honours_a_custom_selection():
     from openpyxl import load_workbook
     wb = load_workbook(BytesIO(payload))
     directory = wb["Module Directory"]
-    assert directory.cell(3, 1).value == "PNIM-8100"
-    assert directory.cell(4, 1).value is None  # only the selected module listed
+    rows = {
+        str(directory.cell(row, 1).value): row
+        for row in range(3, directory.max_row + 1)
+        if directory.cell(row, 1).value
+    }
+    assert set(rows) == {"ARMN – 8100", "MIPN 8100", "PNIM-8100"}
+    assert directory.cell(rows["PNIM-8100"], 4).value == "Yes"
+    assert directory.cell(rows["ARMN – 8100"], 4).value == "No"
+    assert directory.cell(rows["MIPN 8100"], 4).value == "No"
 
 
 # ---- PDF -----------------------------------------------------------------
@@ -80,7 +87,7 @@ def test_pdf_theme_and_font_scaling_generate_valid_documents():
 def test_pdf_selection_changes_the_module_directory():
     payload = build_timetable_pdf({}, ["MIPN 8100"])
     assert b"MIPN 8100" in payload
-    assert b"Pregnancy and Neonatal Immunology" not in payload
+    assert b"Pregnancy and Neonatal Immunology" in payload  # the directory retains unselected modules with inclusion flags
 
 
 # ---- API -------------------------------------------------------------------

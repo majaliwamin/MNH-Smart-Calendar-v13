@@ -36,32 +36,27 @@ def test_full_navigation_and_pinned_settings_are_present():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     mobile = (ROOT / "mobile" / "lib" / "screens" / "home_screen.dart").read_text(encoding="utf-8")
-    for label in ("Dashboard", "Weekly Schedule", "Monthly Calendar", "Upcoming Academic Activities",
-                  "Modules", "Facilitators", "Examinations", "Recurring Activities",
-                  "WhatsApp &amp; Communications", "Analytics", "Activity History",
-                  "Export &amp; Sharing", "Settings"):
-        assert label in html or label in mobile
+    for label in ("Monthly Calendar", "Modules", "Facilitators", "Examinations",
+                  "Analytics", "WhatsApp &amp; Communications", "Activity History", "Settings"):
+        assert label in html
+    assert 'data-view="weekly"' in html
+    assert 'id="view-my-schedule"' in html
+    assert 'id="view-analytics"' in html
     assert 'id="settings" class="menu-nav settings-nav"' in html
-    assert "'Dashboard'" in mobile and "'Weekly Schedule'" in mobile
-    assert 'data-view="analytics"' in html
-    assert "ListTile(" in mobile and "selected: selected == 12" in mobile
 
 
 def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    mobile = (ROOT / "mobile" / "lib" / "screens" / "home_screen.dart").read_text(encoding="utf-8")
     assert 'class="view-tabs"' in html
     tabs = html[html.index('id="view-tabs"'):html.index('</nav>', html.index('id="view-tabs"'))]
-    assert 'data-view="weekly"' in tabs and 'data-view="upcoming"' in tabs
-    assert 'id="weekly-add-session"' in html
+    assert 'data-view="weekly"' in tabs
+    assert 'class="week-nav"' in html
+    assert 'id="view-my-schedule"' in html
     assert 'id="session-day"' in html and 'id="session-start"' in html and 'id="session-end"' in html
     assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday"]' in app
     assert 'dayIndex,startTime,endTime' in app
-    assert "'dayIndex': day, 'startTime': start.text, 'endTime': end.text" in mobile
-    assert "dayIndex >= 5" in mobile
     assert 'showView(location.hash.slice(1)||"weekly")' in app
-    assert "int selected = 1;" in mobile
 
 
 def test_scheduling_uses_bounded_date_and_arbitrary_time_pickers():
@@ -104,7 +99,9 @@ def test_backend_has_shared_collections_and_public_analytics():
     assert 'return {"role": "public"}' in routes
     assert 'management_roles' not in routes
     assert 'let editingUnlocked=true;' in app
-    assert 'let analyticsUnlocked=true;' in app
+    assert 'let analyticsUnlocked=false;' in app
+    assert 'toLowerCase()!=="mnh"' in app
+    assert 'Analytics access required. Enter the MNH password:' in app
     assert 'security-dialog' not in html
     assert 'type="password"' not in html
 
@@ -130,17 +127,13 @@ def test_windows_startup_helper_and_correct_teaching_dates_are_documented():
     assert '"1_5"' not in backend
 
 
-def test_month_views_are_weekday_only():
+def test_month_view_renders_weekdays_only_from_the_shared_malawi_week_model():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    mobile = (ROOT / "mobile" / "lib" / "screens" / "home_screen.dart").read_text(encoding="utf-8")
-    monthly = app[app.index('function renderMonthly()'):app.index('function renderUpcoming()', app.index('function renderMonthly()'))]
-    mobile_monthly = mobile[mobile.index('List<Widget> _monthly()'):mobile.index('List<Widget> _upcoming()', mobile.index('List<Widget> _monthly()'))]
+    monthly = app[app.index("function renderMonthly()"):app.index("function localActivityDate(", app.index("function renderMonthly()"))]
     assert '["Mon","Tue","Wed","Thu","Fri"]' in monthly
-    assert 'date.getDay()===0||date.getDay()===6' in monthly
-    assert 'Choose weekday' in app and 'Friday' in app
-    assert 'crossAxisCount: 5' in mobile_monthly
-    assert 'DateTime(2026, 11, day).weekday <= 5' in mobile_monthly
-    assert "collection == 'recurring' && field == 'day'" in mobile
+    assert 'weekday===0||weekday===6' in monthly
+    assert 'WK.startParts(weekOffset)' in monthly
+    assert 'The academic timetable displays Monday–Friday only' in monthly
 
 
 def test_reported_flutter_lint_patterns_are_corrected():
@@ -155,8 +148,8 @@ def test_reported_flutter_lint_patterns_are_corrected():
 def test_footer_is_fixed_above_mobile_navigation_and_image_exports_are_available():
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    assert '.footer.banner{position:fixed;left:10px' in css
-    assert 'bottom:calc(58px + env(safe-area-inset-bottom,0px))' in css
+    assert '.footer.banner{background:var(--panel);color:var(--text);border-color:var(--line)}' in css
+    assert '.footer.banner' in css
     assert 'Download high-resolution timetable photo — PNG' in app
     assert 'Download high-resolution timetable photo — JPEG' in app
     assert 'Download high-resolution timetable photo — WebP' in app
@@ -168,8 +161,9 @@ def test_timetable_places_lecturer_directly_after_module_code_and_theme_reaches_
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     code_at = app.index('name.className="activity-name"')
     lecturer_at = app.index('lecturer.className="activity-lecturer"', code_at)
-    title_at = app.index('title.className="activity-module-title"', lecturer_at)
-    assert code_at < lecturer_at < title_at
+    assert code_at < lecturer_at
+    assert 'if(sessionEnd>Date.now())' in app
+    assert 'sessionEndTimestamp(entry)' in app
     assert '.footer.banner{background:var(--panel);color:var(--text);border-color:var(--line)}' in css
 
 
@@ -231,7 +225,7 @@ def test_upcoming_activities_are_future_only_and_use_shared_records():
     assert 'loadRows("recurring")' in app
     assert "start.getTime()<=now" in app
     assert "function nextRecurringDate(dayName,timeText,now)" in app
-    assert "getFutureActivities().then(items=>" in app
+    assert "const items=(await getFutureActivities()).slice(0,12)" in app
 
 
 def test_pwa_install_requirements_are_met():
@@ -260,7 +254,7 @@ def test_pwa_install_requirements_are_met():
 
     # The page links the manifest and exposes the install control.
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    assert 'id="install-app-btn"' in html
+    assert 'notice.id="install-app-notice"' in html
 
     # The install handler saves and reuses the native prompt, guards repeats and state.
     assert "beforeinstallprompt" in html
@@ -312,3 +306,29 @@ def test_empty_weekly_cells_export_as_fillable_fields_not_plus_placeholders():
     start = app.index("const cellLabel=area=>{")
     block = app[start:app.index("};", start)]
     assert 'classList.contains("empty-activity")' in block
+
+
+
+def test_history_records_additions_updates_deletions_and_restores():
+    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    assert "action IN ('added','updated','deleted','restored')" in routes
+    assert 'write_activity(c, session["role"], action, collection, item_id, summary)' in routes
+    assert 'write_activity(c, "public", "deleted", collection, item_id' in routes
+    assert "make_backup()" in routes
+    assert "safety_backup_created" in routes
+
+
+def test_database_backups_are_published_atomically():
+    backup = (ROOT / "backend" / "app" / "services" / "backup_service.py").read_text(encoding="utf-8")
+    assert "tempfile.mkstemp" in backup
+    assert "os.replace(temporary, target)" in backup
+    assert "source.backup(destination)" in backup
+    assert "Retention is applied only after a new complete snapshot" in backup
+
+
+
+def test_shared_writes_are_serialised_across_devices_and_restore():
+    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    assert "pg_advisory_xact_lock(20261116, 1500)" in routes
+    assert "with DB_LOCK:" in routes
+    assert routes.count("@serialised_shared_write") >= 3

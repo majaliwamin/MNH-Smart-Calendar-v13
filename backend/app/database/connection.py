@@ -44,21 +44,42 @@ def connect():
         connection.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("examinations", "exam-2026-11-13", json.dumps({"title": "Examination", "date": "2026-11-13", "time": "", "venue": "", "notes": "Time and venue have not been specified."}, ensure_ascii=False), now))
         connection.execute("INSERT OR IGNORE INTO app_meta(key,value) VALUES('academic_activity_seed_v1','1')")
-    # Exactly two weekly recurring academic activities are part of the programme.
+    # Seed the two programme activities only when absent. Never overwrite edits or
+    # delete additional records here: connect() runs on ordinary requests, so doing so
+    # would silently erase user-managed recurring activities on every database open.
     recurring_schedule = {
         "journal-club": {"title": "Journal Club", "frequency": "Weekly", "day": "Tuesday", "time": "13:00–14:00", "notes": ""},
         "seminar-mnh": {"title": "Seminar in MNH", "frequency": "Weekly", "day": "Thursday", "time": "10:00–12:00", "notes": ""},
     }
-    for row in connection.execute("SELECT id FROM docs WHERE col='recurring'").fetchall():
-        if row["id"] not in recurring_schedule:
-            connection.execute("DELETE FROM docs WHERE col='recurring' AND id=?", (row["id"],))
     now = int(time.time() * 1000)
     for recurring_id, data in recurring_schedule.items():
         connection.execute(
-            "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
-            "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
+            "INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("recurring", recurring_id, json.dumps(data, ensure_ascii=False), now),
         )
+    # Saturday recurring activities are outside the programme's Monday–Friday
+    # teaching calendar. Remove only those recurring records during migration;
+    # do not delete Saturday timetable cells, which are retained for review.
+    saturday_recurring = connection.execute(
+        "SELECT id,data FROM docs WHERE col='recurring'"
+    ).fetchall()
+    for row in saturday_recurring:
+        try:
+            recurring_data = json.loads(row["data"])
+        except (TypeError, json.JSONDecodeError):
+            recurring_data = {}
+        day = str(recurring_data.get("day", "")).strip().lower()
+        if day in ("sat", "saturday"):
+            connection.execute(
+                "DELETE FROM docs WHERE col='recurring' AND id=?",
+                (str(row["id"]),),
+            )
+            connection.execute(
+                "INSERT INTO audit(at,role,action,collection,item_id,summary) VALUES(?,?,?,?,?,?)",
+                (int(time.time() * 1000), "system", "migration_deleted", "recurring",
+                 str(row["id"]), "Removed Saturday recurring activity; programme teaching days are Monday–Friday."),
+            )
+
     # Remove the known hardcoded timetable seed cells, while preserving all other
     # user-created timetable records.
     obsolete_seed_ids = ("1_0", "6_0", "6_1", "0_2", "3_2", "1_3", "2_3", "6_3", "0_4", "3_4")

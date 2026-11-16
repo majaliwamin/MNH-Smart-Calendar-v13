@@ -111,6 +111,11 @@
 })();
 </script>
 
+ <div class="upcoming-announcements-row" aria-label="Upcoming announcements">
+  <div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
+  <button type="button" class="mnh-refresh-btn" id="mnh-refresh-btn" aria-label="Refresh calendar" title="Refresh calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+ </div>
+
 <header class="site-header" id="site-header">
  <div class="hd-band">
   <div class="hd-left">
@@ -194,7 +199,6 @@
    </button>
    <button type="button" class="view-tab week-step" id="week-next" aria-label="Next academic week" title="Next academic week">&#8250;</button>
   </div>
-  <button type="button" class="mnh-refresh-btn" id="mnh-refresh-btn" aria-label="Refresh calendar" title="Refresh calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
  </div>
  </nav>
 
@@ -203,7 +207,6 @@
 <section class="view" id="view-weekly" hidden>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
 
- <div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
 <div class="wrap">
 <table aria-label="Editable Monday to Friday calendar">
 <thead id="calendar-head"></thead><tbody id="calendar-body"></tbody></table>
