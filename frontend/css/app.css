@@ -1734,19 +1734,15 @@ body[data-theme="red"] #view-weekly tbody th.time{
 @media(max-width:720px){.hd-band{min-height:82px!important;padding-top:9px!important;padding-bottom:9px!important}}
 
 
-/* v14.79: the current-date tab is an active view-tab, so override its active-tab foreground in dark palettes. */
-body[data-theme="midnight"] .view-tabs .weekly-date-tab,
-body[data-theme="midnight"] .view-tabs .weekly-date-tab:hover,
-body[data-theme="midnight"] .view-tabs .weekly-date-tab.active,
-body[data-theme="midnight"] .view-tabs .weekly-date-tab #current-day-date,
-body[data-theme="silver"] .view-tabs .weekly-date-tab,
-body[data-theme="silver"] .view-tabs .weekly-date-tab:hover,
-body[data-theme="silver"] .view-tabs .weekly-date-tab.active,
-body[data-theme="silver"] .view-tabs .weekly-date-tab #current-day-date{
+/* v14.81: force readable current-date foreground in all dark desktop and mobile palettes. */
+body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view-tabs .weekly-date-tab,
+body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view-tabs .weekly-date-tab:hover,
+body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view-tabs .weekly-date-tab.active,
+body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view-tabs .weekly-date-tab #current-day-date{
   color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
 }
-body[data-theme="midnight"] .view-tabs .weekly-date-tab .weekly-date-icon,
-body[data-theme="silver"] .view-tabs .weekly-date-tab .weekly-date-icon{
+body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view-tabs .weekly-date-tab .weekly-date-icon{
   color:#fff!important;
 }
 
