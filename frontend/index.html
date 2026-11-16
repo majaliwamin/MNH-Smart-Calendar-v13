@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.70">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.72">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.70">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.72">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,11 +17,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.70";</script>
-<script src="/js/week-model.js?v=2026.11.16-v14.70"></script>
-<script src="/js/api-client.js?v=2026.11.16-v14.70"></script>
+<script>window.MNH_BUILD="2026.11.16-v14.72";</script>
+<script src="/js/week-model.js?v=2026.11.16-v14.72"></script>
+<script src="/js/api-client.js?v=2026.11.16-v14.72"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.70">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.72">
 </head>
 <body data-theme="dark">
 <script>
@@ -73,9 +73,6 @@
    <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
-   </button>
-   <button type="button" class="hd-install" id="install-app-btn" aria-label="Install MNH Calendar app" title="Install app">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M12 6.5v7M9 10.5l3 3 3-3M9 18h6"/></svg>
    </button>
    <div class="hd-dl" id="hd-dl">
     <button type="button" class="hd-dlbtn" id="dl-btn" aria-label="Download" title="Download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-menu">
@@ -280,7 +277,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v14.70" defer></script>
+<script src="/js/app.js?v=2026.11.16-v14.72" defer></script>
 <div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
   This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
 </div>
@@ -341,65 +338,33 @@
 <script>
 (function(){
  "use strict";
- const button=document.getElementById("install-app-btn");
- if(!button)return;
-
  let deferredPrompt=null;
  let promptOpen=false;
- let noticeTimer=null;
+ let notice=null;
 
  const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
  const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
- const hideButton=()=>{button.hidden=true;button.setAttribute("aria-hidden","true");};
- const showButton=()=>{if(!isStandalone()){button.hidden=false;button.removeAttribute("aria-hidden");}};
- const showInstallNotice=(message,duration=6500)=>{
-  let notice=document.getElementById("install-app-notice");
+
+ const showInstallNotice=(message,action=true)=>{
   if(!notice){
-   notice=document.createElement("div");
+   notice=document.createElement("button");
+   notice.type="button";
    notice.id="install-app-notice";
    notice.className="install-app-notice";
-   notice.setAttribute("role","status");
-   notice.setAttribute("aria-live","polite");
+   notice.setAttribute("aria-label","Install the MNH Smart Calendar");
    const headerBand=document.querySelector(".hd-band");
    (headerBand||document.querySelector(".site-header")||document.body).appendChild(notice);
+   notice.addEventListener("click",installFromNotice);
   }
   notice.textContent=message;
+  notice.disabled=!action;
+  notice.classList.toggle("is-action",action);
   notice.classList.add("is-visible");
-  if(noticeTimer)window.clearTimeout(noticeTimer);
-  noticeTimer=window.setTimeout(()=>{
-   notice.classList.remove("is-visible");
-   noticeTimer=null;
-  },duration);
  };
 
- if(isStandalone()){hideButton();return;}
-
- // Show installation guidance automatically in the header; users do not
- // need to tap the install icon just to discover the installation steps.
- const mobileInstallView=window.matchMedia&&window.matchMedia("(max-width: 720px)").matches;
- if(mobileInstallView){
-  if(isIOS())showInstallNotice("Install the MNH Smart Calendar");
-  else showInstallNotice("Install the MNH Smart Calendar");
- }
-
- window.addEventListener("beforeinstallprompt",event=>{
-  event.preventDefault();
-  deferredPrompt=event;
-  showButton();
- });
-
- window.addEventListener("appinstalled",()=>{
-  deferredPrompt=null;
-  promptOpen=false;
-  hideButton();
-  showInstallNotice("MNH Smart Calendar has been installed.");
- });
-
- button.addEventListener("click",async()=>{
-  if(isStandalone()){hideButton();return;}
-  if(promptOpen)return;
-
+ async function installFromNotice(){
+  if(isStandalone()||promptOpen)return;
   if(deferredPrompt){
    const promptEvent=deferredPrompt;
    deferredPrompt=null;
@@ -407,7 +372,10 @@
    try{
     await promptEvent.prompt();
     const choice=await promptEvent.userChoice;
-    if(choice&&choice.outcome==="accepted")hideButton();
+    if(choice&&choice.outcome==="accepted"){
+     notice.disabled=true;
+     notice.classList.remove("is-action");
+    }
    }catch(error){
     console.warn("MNH Calendar install prompt failed:",error);
    }finally{
@@ -415,17 +383,34 @@
    }
    return;
   }
-
-  // Installation guidance is already visible in the header. Do not show a
-  // second in-app instruction when the install icon is tapped.
- });
- // Stay correct if the app becomes installed while this tab stays open.
- if(standaloneQuery){
-  const onChange=()=>{if(isStandalone())hideButton();};
-  if(standaloneQuery.addEventListener)standaloneQuery.addEventListener("change",onChange);
-  else if(standaloneQuery.addListener)standaloneQuery.addListener(onChange);
+  if(isIOS()){
+   showInstallNotice("On iPhone or iPad: tap Share, then Add to Home Screen.",false);
+  }else{
+   showInstallNotice("Installation is unavailable here. Open your browser menu and choose Install app.",false);
+  }
  }
-})();
+
+ if(isStandalone())return;
+ if(window.matchMedia&&window.matchMedia("(max-width: 720px)").matches){
+  showInstallNotice("Install the MNH Smart Calendar");
+ }
+
+ window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  deferredPrompt=event;
+  if(notice){
+   notice.disabled=false;
+   notice.classList.add("is-action");
+   notice.textContent="Install the MNH Smart Calendar";
+  }
+ });
+
+ window.addEventListener("appinstalled",()=>{
+  deferredPrompt=null;
+  promptOpen=false;
+  showInstallNotice("MNH Smart Calendar has been installed.",false);
+ });
+})();;
 </script>
 
 </body></html>
