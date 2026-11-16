@@ -1726,3 +1726,12 @@ body[data-theme="red"] #view-weekly tbody th.time{
 #view-weekly thead th.corner{z-index:200!important}
 #view-weekly tbody th.time{z-index:150!important}
 #view-weekly tbody tr.lunch-row th.time{left:0!important;inset-inline-start:0!important}
+
+
+/* Point mobile users directly to the install control. */
+@keyframes mnh-install-arrow-blink{0%,48%{opacity:1;transform:translateX(0)}49%,100%{opacity:.18;transform:translateX(3px)}}
+@media(max-width:720px){
+ .hd-install{position:relative;margin-left:18px}
+ .hd-install::before{content:"➜";position:absolute;right:calc(100% + 3px);top:50%;transform:translateY(-50%);font:800 21px/1 Arial,sans-serif;color:var(--header-secondary,var(--accent));text-shadow:0 0 7px rgba(255,255,255,.28);animation:mnh-install-arrow-blink .9s steps(2,end) infinite;pointer-events:none}
+}
+@media(prefers-reduced-motion:reduce){.hd-install::before{animation:none;opacity:1}}
