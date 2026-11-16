@@ -74,6 +74,8 @@
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
+  authPanel.hidden = true;
+  memoryPanel.hidden = true;
   function status(text, ready) {
     const node = statusNode;
     node.textContent = text;
@@ -162,12 +164,12 @@
       const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
       const result = await response.json();
       state.user = result.authenticated ? result.user : null;
-      signOut.hidden = !state.user;
+      signOut.hidden = !state.user; memoryButton.hidden = !state.user;
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true; memoryButton.hidden = true; authPanel.hidden = false; body.hidden = true;
     }
   }
   async function authenticate() {
