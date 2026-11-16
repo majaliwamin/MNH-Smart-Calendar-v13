@@ -130,7 +130,7 @@ def export_timetable_xlsx(modules: str | None = None, week_start: date | None = 
     except ImportError as exc:
         raise HTTPException(503, "Excel export is unavailable: install backend requirements (openpyxl).") from exc
     with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs ORDER BY col,id").fetchall()
+        rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
     collections = {}
     for row in rows:
         try:
