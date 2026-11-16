@@ -48,11 +48,13 @@ def _cloudflare(payload: dict) -> dict:
 
 
 def _extract(filename: str, content: bytes) -> list[tuple[int | None, str]]:
+    from app.class_rep.ocr import extract_pdf, extract_image, OCRDocumentError
     lower = filename.lower()
     if lower.endswith(".pdf"):
         try:
-            reader = PdfReader(BytesIO(content))
-            return [(index + 1, page.extract_text() or "") for index, page in enumerate(reader.pages)]
+            return extract_pdf(content)
+        except OCRDocumentError as exc:
+            raise DocumentError(str(exc)) from exc
         except Exception as exc:
             raise DocumentError("The PDF could not be read. It may be encrypted or damaged.") from exc
     if lower.endswith(".docx"):
@@ -70,7 +72,12 @@ def _extract(filename: str, content: bytes) -> list[tuple[int | None, str]]:
             return [(None, content.decode("utf-8-sig"))]
         except UnicodeDecodeError as exc:
             raise DocumentError("Text documents must use UTF-8 encoding.") from exc
-    raise DocumentError("Supported document formats are PDF, DOCX, TXT and Markdown.")
+    if lower.endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp")):
+        try:
+            return [(1, extract_image(content))]
+        except OCRDocumentError as exc:
+            raise DocumentError(str(exc)) from exc
+    raise DocumentError("Supported formats are PDF, DOCX, TXT, Markdown and PNG, JPG, TIFF, BMP or WEBP images.")
 
 
 def _split(text: str) -> list[str]:
