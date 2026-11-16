@@ -260,3 +260,46 @@ def test_selected_week_start_is_applied_to_all_recurring_and_saved_sessions():
     assert dates["Journal Club"] == date(2026, 11, 17)
     assert dates["Seminar in MNH"] == date(2026, 11, 19)
     assert dates["PNIM-8100"] == date(2026, 11, 16)
+
+
+
+def test_whatsapp_reminder_claim_is_atomic_and_failed_delivery_can_retry(monkeypatch):
+    from contextlib import contextmanager
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime
+    from app.services import reminders
+
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = Path(tmp) / "reminders.db"
+        setup = sqlite3.connect(db_path)
+        setup.execute(reminders.LOG_SCHEMA)
+        setup.commit()
+        setup.close()
+
+        @contextmanager
+        def isolated_database():
+            connection = sqlite3.connect(str(db_path), timeout=30)
+            connection.row_factory = sqlite3.Row
+            try:
+                yield connection
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+
+        monkeypatch.setattr(reminders, "database", isolated_database)
+        session = {"date": date(2026, 11, 17), "start": "09:00", "code": "PNIM-8100"}
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            claims = list(pool.map(
+                lambda _: reminders.claim_reminder("same-reminder", session, 10, "+265991234567"),
+                range(8),
+            ))
+        assert sum(claims) == 1
+
+        reminders.record("same-reminder", session, 10, "+265991234567", "error", "temporary bridge failure")
+        assert reminders.claim_reminder("same-reminder", session, 10, "+265991234567") is True
+        reminders.record("same-reminder", session, 10, "+265991234567", "sent")
+        assert reminders.claim_reminder("same-reminder", session, 10, "+265991234567") is False
