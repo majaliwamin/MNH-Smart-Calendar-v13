@@ -640,7 +640,8 @@ async function syncAll(okMsg){
 let weekMigrationRunning=false;
 async function onCells(snap){
  if(syncing||weekMigrationRunning)return;
- if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
+ // Offline collection caches are never authoritative; wait for a live server snapshot.
+ if(snap.metadata&&snap.metadata.fromCache)return;
  const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
  if(legacyDocs.length){
   weekMigrationRunning=true;
@@ -668,10 +669,8 @@ async function onCells(snap){
  }
  const remote={};
  snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=5)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
- if(!Object.keys(remote).length&&!state.fromCloud){
-  setSync(Object.keys(state.cells).length?"Shared timetable is empty · use Save timetable to publish this copy":"Shared timetable · up to date");
-  return;
- }
+ // A successful server snapshot is authoritative, including an empty collection.
+ // This clears obsolete per-browser timetable rows instead of preserving them indefinitely.
  state.cells=remote;state.fromCloud=true;
  try{saveState();}catch(e){}
  build();setSync("Shared timetable · up to date");
