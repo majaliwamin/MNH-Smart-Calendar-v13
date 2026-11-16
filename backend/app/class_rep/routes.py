@@ -115,8 +115,8 @@ def status():
 
 
 def _explicit_reminder(user_id: str, message: str):
-    """Create only clearly time-bound reminders; default unspecified time to 09:00 Blantyre."""
-    match = re.search(r"\\bremind me (tomorrow|today|next week|on monday|on tuesday|on wednesday|on thursday|on friday|on saturday|on sunday|on \\d{4}-\\d{2}-\\d{2})(?: at (\\d{1,2}:\\d{2})| at (\\d{1,2})(?:\\s*(am|pm))?)? to (.+)$", message.strip(), re.I)
+    """Create only explicit time-bound reminders; default unspecified time to 09:00 Blantyre."""
+    match = re.search(r"\bremind me (tomorrow|today|next week|on monday|on tuesday|on wednesday|on thursday|on friday|on saturday|on sunday|on \d{4}-\d{2}-\d{2})(?: at (\d{1,2}:\d{2})| at (\d{1,2})(?:\s*(am|pm))?)? to (.+)$", message.strip(), re.I)
     if not match:
         return None
     tz = ZoneInfo("Africa/Blantyre")
@@ -129,7 +129,7 @@ def _explicit_reminder(user_id: str, message: str):
         target = now + timedelta(days=1)
     elif day == "next week":
         target = now + timedelta(days=7)
-    elif day.startswith("on 20"):
+    elif day.startswith("on ") and day[3:7].isdigit():
         target = datetime.strptime(day[3:], "%Y-%m-%d").replace(tzinfo=tz)
     elif day.startswith("on "):
         weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -151,10 +151,12 @@ def _explicit_reminder(user_id: str, message: str):
     target = target.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if target <= now:
         return None
-    return memory.create_reminder(user_id, {
+    reminder = memory.create_reminder(user_id, {
         "message": task.strip(), "scheduled_at": int(target.timestamp()),
         "timezone": "Africa/Blantyre"
-    }), target
+    })
+    return reminder, target
+
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str | None = Header(default=None)):
@@ -169,6 +171,13 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
     conversation_id = payload.conversation_id or uuid.uuid4().hex
     try:
+        reminder_created = _explicit_reminder(user["id"], payload.message.strip())
+        if reminder_created:
+            reminder, scheduled_for = reminder_created
+            confirmation = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CARA when you return; no SMS, email or push notification channel is configured."
+            memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
+            return ChatResponse(reply=confirmation, provider="CARA reminder engine",
+                                model="persistent in-app reminder", conversation_id=conversation_id)
         retrieved = memory.retrieve_context(user["id"], payload.message.strip(), conversation_id)
         answer, provider, model, updated = reply(payload.message.strip(),
             [item.model_dump() for item in payload.history],
