@@ -3,6 +3,8 @@
   const root = document.getElementById("class-rep-assistant");
   if (!root || root.dataset.ready === "1") return;
   root.dataset.ready = "1";
+  // Keep the full-screen assistant outside app header/transform stacking contexts.
+  if (root.parentElement !== document.body) document.body.appendChild(root);
 
   const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "" };
   const el = (tag, cls, text) => {
@@ -27,7 +29,12 @@
   const form = el("form", "cr-form");
   const attachButton = el("button", "cr-icon-button cr-attach", "+"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a programme file"); attachButton.title = "Attach file";
   const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CARA…"; input.setAttribute("aria-label", "Message CARA");
-  const recordButton = el("button", "cr-icon-button cr-record", "🎙"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
+  const recordButton = el("button", "cr-icon-button cr-record"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
+  const micIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  micIcon.setAttribute("viewBox", "0 0 24 24"); micIcon.setAttribute("width", "22"); micIcon.setAttribute("height", "22"); micIcon.setAttribute("fill", "none"); micIcon.setAttribute("stroke", "currentColor"); micIcon.setAttribute("stroke-width", "2"); micIcon.setAttribute("stroke-linecap", "round"); micIcon.setAttribute("stroke-linejoin", "round"); micIcon.setAttribute("aria-hidden", "true");
+  const micBody = document.createElementNS("http://www.w3.org/2000/svg", "rect"); micBody.setAttribute("x", "9"); micBody.setAttribute("y", "2"); micBody.setAttribute("width", "6"); micBody.setAttribute("height", "12"); micBody.setAttribute("rx", "3");
+  const micStand = document.createElementNS("http://www.w3.org/2000/svg", "path"); micStand.setAttribute("d", "M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8");
+  micIcon.append(micBody, micStand); recordButton.append(micIcon);
   const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
   function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
@@ -149,7 +156,7 @@
       state.recorder.ondataavailable = event => { if (event.data.size) state.audioParts.push(event.data); };
       state.recorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
-        state.recording = false; recordButton.textContent = "🎙"; recordButton.setAttribute("aria-label", "Record a voice question");
+        state.recording = false; recordButton.replaceChildren(micIcon); recordButton.setAttribute("aria-label", "Record a voice question");
         const audio = new Blob(state.audioParts, { type: state.recorder.mimeType || "audio/webm" });
         const data = new FormData(); data.append("file", audio, "cara-question.webm");
         recordButton.disabled = true; status("Transcribing your question…", false);
