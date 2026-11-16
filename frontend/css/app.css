@@ -1735,3 +1735,7 @@ body[data-theme="red"] #view-weekly tbody th.time{
  .hd-install::before{content:"➜";position:absolute;right:calc(100% + 3px);top:50%;transform:translateY(-50%);font:800 21px/1 Arial,sans-serif;color:var(--header-secondary,var(--accent));text-shadow:0 0 7px rgba(255,255,255,.28);animation:mnh-install-arrow-blink .9s steps(2,end) infinite;pointer-events:none}
 }
 @media(prefers-reduced-motion:reduce){.hd-install::before{animation:none;opacity:1}}
+
+
+/* Scheduling form lecturer assignment indicator. */
+.lecturer-assignment-status{margin-top:5px;color:var(--success,#3b9b69);font-size:12px;font-weight:750;letter-spacing:.025em}
