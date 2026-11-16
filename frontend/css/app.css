@@ -1869,3 +1869,18 @@ body{overflow-x:clip}
   .week-nav-row .mnh-refresh-btn{flex-basis:34px;width:34px;height:34px;min-height:34px;padding:6px}
 }
 @media(prefers-reduced-motion:reduce){.mnh-refresh-btn.is-refreshing svg{animation:none}}
+
+
+/* v14.95: keep embedded email browsers at the same readable text sizing as the full browser. */
+html,body{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+  width:100%;
+  min-width:0;
+}
+#view-weekly .wrap{
+  max-width:100%;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#view-weekly table{min-width:940px;width:100%;}
