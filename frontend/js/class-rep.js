@@ -271,14 +271,11 @@
     fileInput.value = "";
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { status("Files must be 10 MB or smaller", false); return; }
-    const token = state.documentToken || prompt("Enter the document administrator credential to upload and index this file:");
-    if (!token) return;
-    state.documentToken = token;
     attachButton.disabled = true;
     try {
       const data = new FormData(); data.append("file", file);
       const response = await fetch("/api/class-rep/documents", {
-        method: "POST", headers: { "X-CARA-Admin-Token": token }, body: data
+        method: "POST", body: data
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Upload failed");
