@@ -247,6 +247,11 @@ def create_reminder(user_id: str, data: dict) -> dict:
         ZoneInfo(timezone)
     except ZoneInfoNotFoundError as exc:
         raise MemoryError("The reminder timezone is not recognised.") from exc
+    for existing in list_reminders(user_id):
+        if (existing.get("message", "").strip().casefold() == message.casefold()
+                and int(existing.get("scheduled_at", 0)) == when
+                and existing.get("status") in ("scheduled", "due")):
+            return existing
     reminder_id = uuid.uuid4().hex
     item = {"message": message, "task_id": str(data.get("task_id", ""))[:80],
             "project": str(data.get("project", ""))[:180], "scheduled_at": when,
