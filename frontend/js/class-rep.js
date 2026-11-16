@@ -44,7 +44,7 @@
   const tools = el("div", "cr-tools");
   const recordButton = el("button", "cr-prompt", "🎙 Record question"); recordButton.type = "button";
   const uploadButton = el("button", "cr-prompt", "Add programme document"); uploadButton.type = "button";
-  const fileInput = el("input", "cr-file-input"); fileInput.type = "file"; fileInput.accept = ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
+  const fileInput = el("input", "cr-file-input"); fileInput.type = "file"; fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp";
   fileInput.hidden = true;
   const docsButton = el("button", "cr-prompt", "Manage documents"); docsButton.type = "button";
   tools.append(recordButton, uploadButton, docsButton, fileInput);
