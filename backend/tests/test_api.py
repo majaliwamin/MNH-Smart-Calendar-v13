@@ -227,7 +227,7 @@ def test_restore_rejects_saturday_recurring_activity_without_erasing_data(monkey
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
         client.post("/api/auth", json={"password": "rep"})
-        client.put("/api/doc/recurring/keep", json={"title": "Weekday seminar", "day": "Friday"})
+        client.put("/api/doc/cells/keep", json={"title": "Keep this record", "dayIndex": 4, "startTime": "08:00", "endTime": "09:00", "weekStart": "2026-11-09"})
         backup = {
             "format": "mnh-calendar-backup",
             "documents": [{"col": "recurring", "id": "sat", "data": {"title": "Saturday seminar", "day": "Saturday"}}],
@@ -235,7 +235,7 @@ def test_restore_rejects_saturday_recurring_activity_without_erasing_data(monkey
         response = client.post("/api/restore", json=backup)
         assert response.status_code == 400
         rows = client.get("/api/col/recurring").json()
-        assert any(row["id"] == "keep" for row in rows)
+        assert any(row["id"] == "keep" for row in client.get("/api/col/cells").json())
 
 
 def test_analytics_reports_module_targets_attendance_and_delivery(monkeypatch, tmp_path):
@@ -313,7 +313,7 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         }).status_code == 200
         assert client.put("/api/doc/cells/session-1", json={
             "dayIndex": 0, "startTime": "08:30", "endTime": "10:15",
-            "code": "MIPN 8100", "title": "Ultrasound principles", "mode": "online"
+            "code": "MIPN 8100", "title": "Ultrasound principles", "mode": "online", "weekStart": "2026-11-09"
         }).status_code == 200
         response = client.get("/api/export/timetable.xlsx")
         assert response.status_code == 200
