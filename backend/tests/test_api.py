@@ -202,10 +202,9 @@ def test_restore_rejects_overlapping_custom_sessions_without_erasing_data(monkey
         assert any(row["id"] == "session-kept" for row in rows)
 
 
-def test_recurring_saturday_records_are_rejected_and_old_ones_flagged_not_deleted(monkeypatch, tmp_path):
+def test_recurring_saturday_records_are_rejected_and_legacy_records_are_deleted_with_audit(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
-        client.post("/api/auth", json={"password": "rep"})
         rejected = client.put("/api/doc/recurring/rec-sat", json={
             "title": "Saturday seminar", "day": "Saturday", "frequency": "Weekly"
         })
@@ -217,10 +216,15 @@ def test_recurring_saturday_records_are_rejected_and_old_ones_flagged_not_delete
             )
         client.get("/api/health")
         rows = client.get("/api/col/recurring").json()
-        assert "rec-old-sat" in {row["id"] for row in rows}
+        assert "rec-old-sat" not in {row["id"] for row in rows}
         with connection.database() as c:
-            flagged = json.loads(c.execute("SELECT value FROM app_meta WHERE key='flagged_non_weekday_records'").fetchone()[0])
-        assert "rec-old-sat" in {item["id"] for item in flagged}
+            audit = c.execute(
+                "SELECT action,collection,item_id FROM audit WHERE item_id='rec-old-sat'"
+            ).fetchone()
+        assert audit is not None
+        assert (audit["action"], audit["collection"], audit["item_id"]) == (
+            "migration_deleted", "recurring", "rec-old-sat"
+        )
 
 
 def test_restore_rejects_saturday_recurring_activity_without_erasing_data(monkeypatch, tmp_path):
@@ -328,7 +332,7 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         assert details[3][5].value == "MIPN 8100"
         assert details[3][6].value == "Medical Imaging in Pregnancy and Neonates"
         assert details[3][7].value == "Dr Example"
-        assert weekly["A2"].hyperlink is not None                 # weekly sheet -> Session Details
+        assert weekly["B3"].hyperlink is not None                 # session cell -> Session Details
         assert details.cell(3, 1).hyperlink is not None           # Session Details -> its weekly cell
         assert any("Lunch" in str(weekly.cell(row, 1).value).replace(" ", "") for row in range(4, weekly.max_row + 1))
         assert "A1:F1" in {str(m) for m in weekly.merged_cells.ranges}   # header row merged across the table
