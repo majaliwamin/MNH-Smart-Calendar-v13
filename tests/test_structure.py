@@ -254,7 +254,7 @@ def test_pwa_install_requirements_are_met():
 
     # The page links the manifest and exposes the install control.
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    assert 'id="install-app-btn"' in html
+    assert 'notice.id="install-app-notice"' in html
 
     # The install handler saves and reuses the native prompt, guards repeats and state.
     assert "beforeinstallprompt" in html
