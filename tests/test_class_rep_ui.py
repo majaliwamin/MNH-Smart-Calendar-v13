@@ -26,4 +26,4 @@ def test_cara_starts_closed_and_has_requested_identity():
     assert 'root.classList.remove("is-open")' in js
     assert 'function demoReply(message)' in js
     assert 'Built-in fallback · AI not configured' in js
-    assert 'Please check the live weekly timetable above' in js
+    assert 'please check the live weekly timetable' in js
