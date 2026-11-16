@@ -118,6 +118,14 @@ def status():
 
 def _explicit_reminder(user_id: str, message: str):
     """Create only explicit time-bound reminders; default unspecified time to 09:00 Blantyre."""
+    follow_up = re.search(r"\bfollow up on (.+?) next week\b", message.strip(), re.I)
+    if follow_up:
+        target = (datetime.now(ZoneInfo("Africa/Blantyre")) + timedelta(days=7)).replace(hour=9, minute=0, second=0, microsecond=0)
+        reminder = memory.create_reminder(user_id, {
+            "message": "Follow up on " + follow_up.group(1).strip(),
+            "scheduled_at": int(target.timestamp()), "timezone": "Africa/Blantyre"
+        })
+        return reminder, target
     match = re.search(r"\bremind me (tomorrow|today|next week|on monday|on tuesday|on wednesday|on thursday|on friday|on saturday|on sunday|on \d{4}-\d{2}-\d{2})(?: at (\d{1,2}:\d{2})| at (\d{1,2})(?:\s*(am|pm))?)? to (.+)$", message.strip(), re.I)
     if not match:
         return None
