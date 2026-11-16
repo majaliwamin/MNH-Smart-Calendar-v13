@@ -166,8 +166,9 @@ def list_documents(owner_id: str = 'shared') -> list[dict]:
     for row in rows:
         try:
             item = json.loads(row["data"])
-            result.append({"id": row["id"], "title": item.get("title"),
-                           "chunks": item.get("chunks"), "created_at": item.get("created_at")})
+            if item.get("owner_id", "shared") in ("shared", owner_id):
+                result.append({"id": row["id"], "title": item.get("title"),
+                               "chunks": item.get("chunks"), "created_at": item.get("created_at")})
         except (TypeError, json.JSONDecodeError):
             continue
     return result
