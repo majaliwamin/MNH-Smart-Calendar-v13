@@ -39,11 +39,13 @@ services:
         sync: false
       - key: MNH_WA_PROFILE_NAME
         sync: false
-      - key: MNH_AI_API_KEY
+      - key: MNH_COMM_AI_API_KEY
         sync: false
-      - key: MNH_AI_MODEL
+      - key: MNH_COMM_AI_BASE_URL
         sync: false
-      - key: MNH_AI_TRIGGER_ENABLED
+      - key: MNH_COMM_AI_MODEL
+        sync: false
+      - key: MNH_COMM_AI_TRIGGER_ENABLED
         sync: false
       - key: MNH_ARI_BASE_URL
         sync: false
