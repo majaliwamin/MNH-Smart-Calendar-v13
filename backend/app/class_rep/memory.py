@@ -190,9 +190,8 @@ def extract_durable_memory(user_id: str, text: str, conversation_id: str):
         (r"^(?:we decided|the decision is|our decision is) (?:that )?(.+)$", "decision"),
         (r"^(?:my preference is|i prefer) (.+)$", "preference"),
     )
-    lower = clean.lower()
     for pattern, kind in patterns:
-        match = re.match(pattern, lower, re.I)
+        match = re.match(pattern, clean, re.I)
         if not match:
             continue
         value = match.group(1).strip()[:1000]
