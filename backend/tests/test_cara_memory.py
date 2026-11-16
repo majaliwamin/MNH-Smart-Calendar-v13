@@ -112,3 +112,33 @@ def test_private_cara_records_are_excluded_from_public_backup_and_export(monkeyp
         exported = client.get("/api/export").json()
         assert all(not item["col"].startswith("cara_") for item in backup["documents"])
         assert all(not item["col"].startswith("cara_") for item in exported)
+
+
+def test_cara_memory_redacts_credential_like_messages_and_deduplicates_reminders(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    from app.class_rep import memory
+
+    with TestClient(app) as client:
+        client.post("/api/class-rep/auth/register", json={
+            "name": "Safe Owner", "email": "safe@example.org", "password": "a-long-safe-password"
+        })
+        user = memory.resolve_session(client.cookies.get("cara_session"))
+        memory.save_turn(user["id"], "conversation-safe", "My API key: sk-1234567890abcdefghijkl", "I will not repeat it.")
+        saved = memory.list_conversations(user["id"])[0]["messages"][0]["content"]
+        assert "sk-1234567890" not in saved
+        when = 4102444800
+        first = memory.create_reminder(user["id"], {"message": "Send the class announcement", "scheduled_at": when})
+        second = memory.create_reminder(user["id"], {"message": "Send the class announcement", "scheduled_at": when})
+        assert first["id"] == second["id"]
+
+
+def test_cara_documents_are_account_scoped(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    from app.class_rep import documents
+
+    monkeypatch.setattr(documents, "_vectors", lambda texts, prefix: [[0.1, 0.2] for _ in texts])
+    documents.ingest("private-one.txt", b"Account one confidential timetable notes.", owner_id="account-one")
+    documents.ingest("private-two.txt", b"Account two separate research notes.", owner_id="account-two")
+    assert [item["title"] for item in documents.list_documents("account-one")] == ["private-one.txt"]
+    assert [item["title"] for item in documents.list_documents("account-two")] == ["private-two.txt"]
+    assert documents.delete_document("missing-document", owner_id="account-one") is False
