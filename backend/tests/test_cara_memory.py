@@ -142,3 +142,23 @@ def test_cara_documents_are_account_scoped(monkeypatch, tmp_path):
     assert [item["title"] for item in documents.list_documents("account-one")] == ["private-one.txt"]
     assert [item["title"] for item in documents.list_documents("account-two")] == ["private-two.txt"]
     assert documents.delete_document("missing-document", owner_id="account-one") is False
+
+
+def test_cara_projects_are_persisted_and_account_scoped(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.post("/api/class-rep/auth/register", json={
+            "name": "Project Owner", "email": "project@example.org", "password": "project-owner-password"
+        })
+        project = client.post("/api/class-rep/projects", json={
+            "title": "Placental malaria study", "description": "Longitudinal maternal and neonatal project",
+            "status": "active", "next_action": "Finalize the protocol"
+        })
+        assert project.status_code == 200
+        assert client.get("/api/class-rep/projects").json()["projects"][0]["title"] == "Placental malaria study"
+        task = client.post("/api/class-rep/tasks", json={
+            "title": "Review cytokine panel", "project": "Placental malaria study",
+            "project_id": project.json()["id"], "status": "in_progress"
+        })
+        assert task.status_code == 200
+        assert task.json()["project_id"] == project.json()["id"]
