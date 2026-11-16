@@ -162,3 +162,22 @@ def test_cara_projects_are_persisted_and_account_scoped(monkeypatch, tmp_path):
         })
         assert task.status_code == 200
         assert task.json()["project_id"] == project.json()["id"]
+
+
+def test_cara_natural_language_project_task_and_reminder_creation(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.post("/api/class-rep/auth/register", json={
+            "name": "Continuity User", "email": "continuity@example.org", "password": "continuity-password-123"
+        })
+        project = client.post("/api/class-rep/chat", json={"message": "Create project called MNH seminar planning"})
+        assert project.status_code == 200
+        task = client.post("/api/class-rep/chat", json={"message": "Create task to draft the seminar announcement"})
+        assert task.status_code == 200
+        tasks = client.get("/api/class-rep/tasks").json()["tasks"]
+        assert tasks[0]["project"] == "MNH seminar planning"
+        assert tasks[0]["project_id"]
+        reminder = client.post("/api/class-rep/chat", json={"message": "Remind me tomorrow at 10:00 to send the seminar announcement"})
+        assert reminder.status_code == 200
+        assert "in-app reminder" in reminder.json()["reply"]
+        assert client.get("/api/class-rep/reminders").json()["reminders"]
