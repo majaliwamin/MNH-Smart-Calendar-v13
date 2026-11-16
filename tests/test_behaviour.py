@@ -27,12 +27,12 @@ COLLECTIONS = {
     },
     "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
     "cells": {
-        "0_0": {"code": "PNIM-8100", "title": "Immunology tutorial", "timeLabel": "08:00–10:00"},
-        "s-custom": {"dayIndex": 2, "startTime": "14:15", "endTime": "16:05", "code": "MIPN 8100", "title": "Imaging lab"},
+        "0_0": {"code": "PNIM-8100", "title": "Immunology tutorial", "timeLabel": "08:00–10:00", "weekStart": "2026-11-09"},
+        "s-custom": {"dayIndex": 2, "startTime": "14:15", "endTime": "16:05", "code": "MIPN 8100", "title": "Imaging lab", "weekStart": "2026-11-09"},
         "s-sat": {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "code": "PNIM-8100", "title": "Saturday class"},
         "6_6": {"code": "Legacy", "timeLabel": "19:00–21:00"},   # legacy day index 6 -> ignored
     },
-    "recurring": {"journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"}},
+    "recurring": {\n        "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},\n        "seminar-mnh": {"title": "Seminar in MNH", "day": "Thursday", "time": "10:00–12:00"}\n    },
 }
 
 
@@ -79,14 +79,14 @@ def test_excel_workbook_is_valid_monday_to_friday_with_half_height_merged_lunch_
     assert payload[:2] == b"PK"                       # a real .xlsx (zip) container
     wb = openpyxl.load_workbook(io.BytesIO(payload))
     ws = wb["Weekly Timetable"]
-    header = [str(c.value) for c in ws[3]][1:]
+    header = [str(c.value) for c in ws[2]][1:]
     assert [h.split("\n")[0] for h in header] == list(schedule.WEEKDAY_NAMES)
     assert "3rd Block" in str(ws["A1"].value)
     everything = " ".join(str(c.value) for sheet in wb for row in sheet.iter_rows() for c in row if c.value).lower()
     assert "saturday" not in everything and "sat," not in everything
     # The header band is the only merged part; the timetable itself is a plain grid.
     merged = {str(m) for m in ws.merged_cells.ranges}
-    assert "A1:F1" in merged and "A2:F2" in merged
+    assert merged == {"A1:F1"}
     body_merges = [m for m in merged if any(int(c) >= 4 for c in __import__("re").findall(r"[0-9]+", m))]
     assert body_merges == [], f"body cells must stay ordinary cells, found {body_merges}"
     lunch_rows = [r for r in range(4, ws.max_row + 1) if "lunch" in str(ws.cell(r, 1).value).replace(" ", "").lower()]
@@ -208,7 +208,7 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
     assert b"mod_0_include" in payload and b"mod_2_include" in payload
     assert b"Dr D Mzinza" in payload
     assert b"Seminar in MNH" in payload and b"Journal Club" in payload
-    assert b"1190.551" in payload and b"841.889" in payload
+    assert b"595.276" in payload and b"841.889" in payload
 
 
 def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_legacy_seed_cells():
@@ -231,7 +231,7 @@ def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_leg
             second.close()
         finally:
             conn_module.DATABASE_PATH, conn_module.ensure_directories = original
-    assert recurring_ids == {"journal-club", "seminar-mnh"}
+    assert recurring_ids == {"journal-club", "seminar-mnh", "extra-club"}  # user-created activities survive database opens
     assert obsolete_cell is None
 
 
