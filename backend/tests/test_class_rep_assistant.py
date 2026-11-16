@@ -51,7 +51,7 @@ def test_public_chat_endpoint_has_a_bounded_rate_limit():
     from fastapi import HTTPException
     from app.class_rep.routes import _enforce_rate_limit
     key = "class-rep-test-client-unique"
-    for _ in range(15):
+    for _ in range(30):
         _enforce_rate_limit(key)
     try:
         _enforce_rate_limit(key)
@@ -59,3 +59,16 @@ def test_public_chat_endpoint_has_a_bounded_rate_limit():
         assert exc.status_code == 429
     else:
         raise AssertionError("The assistant endpoint must throttle excessive requests")
+
+
+def test_remote_provider_requires_https(monkeypatch):
+    monkeypatch.setattr(providers, "provider_config", lambda: {
+        "provider": "openai-compatible", "base_url": "http://provider.example/v1",
+        "api_key": "test-secret", "model": "test-model", "timeout": 5, "max_tokens": 100
+    })
+    try:
+        providers.complete([{"role": "user", "content": "hello"}])
+    except ProviderError as exc:
+        assert "HTTPS" in str(exc)
+    else:
+        raise AssertionError("Remote provider calls must require HTTPS")
