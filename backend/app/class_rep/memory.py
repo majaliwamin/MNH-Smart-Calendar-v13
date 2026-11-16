@@ -188,7 +188,6 @@ def extract_durable_memory(user_id: str, text: str, conversation_id: str):
     patterns = (
         (r"^(?:please )?remember (?:that )?(.+)$", "user_note"),
         (r"^(?:we decided|the decision is|our decision is) (?:that )?(.+)$", "decision"),
-        (r"^(?:my project is|this project is) (.+)$", "project"),
         (r"^(?:my preference is|i prefer) (.+)$", "preference"),
     )
     lower = clean.lower()
