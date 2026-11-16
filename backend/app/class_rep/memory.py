@@ -194,6 +194,18 @@ def extract_durable_memory(user_id: str, text: str, conversation_id: str):
         if any(m.get("content", "").lower() == value.lower() and not m.get("superseded_by") for m in existing):
             return
         item_id = uuid.uuid4().hex
+        if kind == "decision":
+            new_terms = set(WORD_PATTERN.findall(value.lower()))
+            for previous in existing:
+                if previous.get("kind") != "decision" or previous.get("superseded_by"):
+                    continue
+                old_terms = set(WORD_PATTERN.findall(previous.get("content", "").lower()))
+                if len(new_terms & old_terms) >= 2:
+                    previous["superseded_by"] = item_id
+                    previous["updated_at"] = _now()
+                    _write(COL_MEMORIES, _doc_id(user_id, previous["id"]), {
+                        k: v for k, v in previous.items() if k not in ("id", "updated_at")
+                    })
         _write(COL_MEMORIES, _doc_id(user_id, item_id), {
             "kind": kind, "content": value, "source_conversation": conversation_id,
             "created_at": _now(), "updated_at": _now(), "superseded_by": None,
@@ -216,6 +228,8 @@ def upsert_task(user_id: str, data: dict) -> dict:
             "status": status, "priority": str(data.get("priority", old.get("priority", "normal")))[:20],
             "due_at": data.get("due_at", old.get("due_at")), "timezone": str(data.get("timezone", old.get("timezone", "Africa/Blantyre"))),
             "next_action": str(data.get("next_action", old.get("next_action", "")))[:1000],
+            "related_conversation": str(data.get("related_conversation", old.get("related_conversation", "")))[:80],
+            "dependencies": data.get("dependencies", old.get("dependencies", []))[:20],
             "decisions": data.get("decisions", old.get("decisions", []))[:20],
             "created_at": old.get("created_at", _now()), "updated_at": _now(),
             "history": (old.get("history", []) + [{"status": status, "at": _now()}])[-50:]}
