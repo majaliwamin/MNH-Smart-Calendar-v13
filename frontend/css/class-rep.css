@@ -1,17 +1,20 @@
-/* Class Representative Assistant — isolated styles; inherits the active calendar theme. */
-.class-rep-assistant{
-  width:min(100%,560px);margin:22px 0 26px auto;
-  color:var(--text);background:var(--panel);border:1px solid var(--line);
-  border-top:3px solid var(--gold);border-radius:14px;overflow:hidden;
-  box-shadow:0 12px 30px rgba(0,0,0,.18);font-family:Arial,Helvetica,sans-serif;
-}
+/* CARA floating academic relations assistant — isolated, theme-aware styles. */
+.cara-widget{position:fixed;right:22px;bottom:22px;z-index:1200;width:min(390px,calc(100vw - 28px));font-family:Arial,Helvetica,sans-serif;color:var(--text);pointer-events:none}
+.cara-widget>*{pointer-events:auto}
+.cara-launcher{display:flex;align-items:center;justify-content:center;min-width:76px;height:54px;margin-left:auto;padding:0 20px;border:1px solid var(--gold);border-radius:999px;background:var(--gold);color:var(--on-accent);font-size:15px;font-weight:800;letter-spacing:.7px;box-shadow:0 8px 26px rgba(0,0,0,.34);cursor:pointer}
+.cara-launcher:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.4)}
 .cr-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;background:var(--head);border-bottom:1px solid var(--line)}
+.cara-widget.is-open{display:flex;flex-direction:column;gap:0}
+.cara-widget.is-open .cr-head{order:0;border:1px solid var(--line);border-bottom:0;border-top:3px solid var(--gold);border-radius:15px 15px 0 0;box-shadow:0 12px 30px rgba(0,0,0,.24)}
+.cara-widget.is-open .cr-body{order:1;border:1px solid var(--line);border-top:0;border-radius:0 0 15px 15px;box-shadow:0 12px 30px rgba(0,0,0,.24)}
 .cr-identity{display:flex;align-items:center;gap:11px;min-width:0}
-.cr-mark{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:11px;background:var(--gold);color:var(--on-accent);font-size:12px;font-weight:800;letter-spacing:.5px}
-.cr-heading{display:grid;gap:4px}.cr-heading strong{font-size:15px;line-height:1.2;color:var(--text)}.cr-heading small{font-size:12px;color:var(--muted)}
+.cr-mark{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:11px;background:var(--gold);color:var(--on-accent);font-size:16px;font-weight:800}
+.cr-heading{display:grid;gap:4px}.cr-heading strong{font-size:16px;line-height:1.2;color:var(--text)}.cr-heading small{font-size:12px;line-height:1.35;color:var(--muted)}
+.cr-heading .cr-tagline{color:var(--text);font-size:12px}
 .cr-status[data-state="ready"]{color:#71d6a0}.cr-status[data-state="unavailable"]{color:var(--muted)}
-.cr-toggle{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--text);font-size:22px;line-height:1;cursor:pointer}
-.cr-body{padding:14px 16px 12px}.cr-intro{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5}
+.cr-toggle{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--text);font-size:21px;line-height:1;cursor:pointer}
+.cr-body{padding:14px 16px 12px;background:var(--panel);color:var(--text)}
+.cr-intro{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5}
 .cr-prompts{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
 .cr-prompt{border:1px solid var(--line);border-radius:999px;background:var(--field);color:var(--text);padding:7px 10px;font-size:12px;cursor:pointer}
 .cr-prompt:hover,.cr-toggle:hover{border-color:var(--gold)}
@@ -25,5 +28,5 @@
 .cr-send{min-width:72px;padding:0 14px;border:0;border-radius:10px;background:var(--gold);color:var(--on-accent);font-size:13px;font-weight:700;cursor:pointer}
 .cr-send:disabled{opacity:.55;cursor:wait}
 .cr-foot{margin:9px 0 0;color:var(--muted);font-size:11px;line-height:1.4;opacity:.85}
-@media(max-width:760px){.class-rep-assistant{width:calc(100% - 16px);margin:18px 8px 24px}.cr-body{padding:12px}.cr-transcript{max-height:220px}.cr-message{max-width:96%}}
-@media(prefers-reduced-motion:no-preference){.class-rep-assistant{animation:cr-enter .35s ease-out both}@keyframes cr-enter{from{opacity:.6;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}}
+@media(max-width:760px){.cara-widget{right:14px;bottom:14px;width:min(370px,calc(100vw - 28px))}.cara-widget.is-open{width:min(370px,calc(100vw - 28px))}.cr-body{padding:12px}.cr-transcript{max-height:220px}.cr-message{max-width:96%}}
+@media(prefers-reduced-motion:no-preference){.cara-launcher{transition:transform .18s ease,box-shadow .18s ease}.cara-widget.is-open{animation:cara-enter .22s ease-out both}@keyframes cara-enter{from{opacity:.7;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
