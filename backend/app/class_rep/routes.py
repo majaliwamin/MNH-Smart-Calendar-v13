@@ -52,6 +52,7 @@ def _require_durable_storage():
 
 
 def _user(request: Request):
+    _require_durable_storage()
     user = memory.resolve_session(request.cookies.get("cara_session"))
     if not user:
         raise HTTPException(401, "Sign in to your CARA account to use private conversations and memory.")
@@ -76,6 +77,7 @@ def _require_document_admin(token: str | None):
 
 @router.post("/auth/register")
 def register(payload: dict, request: Request, response: Response):
+    _require_durable_storage()
     _rate("register:" + (request.client.host if request.client else "unknown"), 8)
     try:
         user = memory.create_account(payload.get("name"), payload.get("email"), payload.get("password"))
@@ -87,6 +89,7 @@ def register(payload: dict, request: Request, response: Response):
 
 @router.post("/auth/login")
 def login(payload: dict, request: Request, response: Response):
+    _require_durable_storage()
     _rate("login:" + (request.client.host if request.client else "unknown"), 8)
     user = memory.verify_account(payload.get("email", ""), payload.get("password", ""))
     if not user:
