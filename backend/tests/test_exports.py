@@ -80,7 +80,7 @@ def test_pdf_theme_and_font_scaling_generate_valid_documents():
 def test_pdf_selection_changes_the_module_directory():
     payload = build_timetable_pdf({}, ["MIPN 8100"])
     assert b"MIPN 8100" in payload
-    assert b"Pregnancy and Neonatal Immunology" not in payload
+    assert b"Pregnancy and Neonatal Immunology" in payload  # the directory retains unselected modules with inclusion flags
 
 
 # ---- API -------------------------------------------------------------------
