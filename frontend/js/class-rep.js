@@ -55,7 +55,7 @@
   }
   function demoReply(message) {
     const q = message.toLowerCase();
-    if (/\\b(hello|hi|hey|good morning|good afternoon|good evening)\\b/.test(q)) return "Hello! I’m here to support the MNH class representative with clear academic communication. What would you like help with?";
+    if (/\b(hello|hi|hey|good morning|good afternoon|good evening)\\b/.test(q)) return "Hello! I’m here to support the MNH class representative with clear academic communication. What would you like help with?";
     if (/exam|examination|test|assessment/.test(q)) return "I can help prepare an examination notice, but demo mode is not connected to the live examination register. Please open the Examinations section and confirm the date, time and venue there. Share the confirmed details and I can turn them into a clear class announcement.";
     if (/session|timetable|schedule|class|lecture|this week/.test(q)) return "For accurate session dates, times, modules and facilitators, please check the live weekly timetable above. Demo mode does not read calendar records, so I won't guess or invent a session. I can draft a reminder once you provide the confirmed details.";
     if (/announcement|announce|remind|broadcast/.test(q)) return "Ready-to-edit announcement:\\n\\nGood day, everyone. This is a reminder about our upcoming academic session. Please refer to the MNH Smart Timetable for the confirmed module, date, time and delivery details. Kindly be punctual and come prepared.\\n\\nThank you,\\nClass Representative\\n\\nPlease verify the timetable details before sharing.";
