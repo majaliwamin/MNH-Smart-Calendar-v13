@@ -249,6 +249,17 @@
     refresh();
   });
 
+  // Mobile PWAs are usually resumed from the background instead of reloaded, so the
+  // shared timetable must be polled again as soon as the app becomes visible again.
+  const resumeSync = () => {
+    if (document.hidden) return;
+    refresh();
+    if (navigator.onLine) flushQueue(true).catch(() => {});
+  };
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeSync(); });
+  window.addEventListener("pageshow", resumeSync);
+  window.addEventListener("focus", resumeSync);
+
   window.mnhApi = {
     use: async (name) =>
       name === "db" ? (await api("GET", "/api/ping"), { doc, collection }) : null,

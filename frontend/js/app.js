@@ -913,8 +913,10 @@ function initWeekNav(){
   renderCurrentDayBadge();
  applyWeekView(false);
  setInterval(syncCurrentAcademicWeek,15000);
- document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncCurrentAcademicWeek();});
- window.addEventListener("focus",syncCurrentAcademicWeek);
+ const resumeApp=()=>{if(!cloud&&navigator.onLine)initCloud();syncCurrentAcademicWeek();};
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)resumeApp();});
+ window.addEventListener("focus",resumeApp);
+ window.addEventListener("pageshow",resumeApp);
 }
 // ---- navigation ----
 function syncCurrentAcademicWeek(){
