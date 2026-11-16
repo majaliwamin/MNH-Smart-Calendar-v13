@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.88">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.89">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.88">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.89">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -43,11 +43,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.88";</script>
-<script src="/js/week-model.js?v=2026.11.16-v14.88"></script>
-<script src="/js/api-client.js?v=2026.11.16-v14.88"></script>
+<script>window.MNH_BUILD="2026.11.16-v14.89";</script>
+<script src="/js/week-model.js?v=2026.11.16-v14.89"></script>
+<script src="/js/api-client.js?v=2026.11.16-v14.89"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.88">
+  <script>document.documentElement.classList.add("mnh-startup-pending");</script>
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.89">
 
 </head>
 <body data-theme="dark">
@@ -148,6 +149,7 @@
   </button>
   <button type="button" class="view-tab week-step" id="week-next" aria-label="Next academic week" title="Next academic week">&#8250;</button>
  </div>
+ <button type="button" class="mnh-refresh-btn" id="mnh-refresh-btn" aria-label="Refresh calendar" title="Refresh calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </nav>
 
 <div class="status" id="status" role="status" aria-live="polite"></div>
@@ -305,27 +307,76 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v14.88" defer></script>
+<script src="/js/app.js?v=2026.11.16-v14.89" defer></script>
 <script>
 (function () {
   "use strict";
-
-  // 2. Service worker: always check for a new worker and switch to it immediately.
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" }).then((reg) => {
-        reg.update().catch(() => {});
-        setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
-      }).catch((error) => console.error("MNH Calendar offline cache registration failed:", error));
-    });
-    let reloaded = false;
-    const hadController = !!navigator.serviceWorker.controller; // first-ever install must not reload
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloaded || !hadController) return;
-      reloaded = true;
-      location.reload();
+  var root = document.documentElement;
+  var build = window.MNH_BUILD || "2026.11.16-v14.89";
+  var reloadKey = "mnh-startup-reload-" + build;
+  var revealed = false;
+  var hadController = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+  var reloadStarted = false;
+  var domReady = new Promise(function (resolve) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", resolve, { once: true });
+    else resolve();
+  });
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    root.classList.remove("mnh-startup-pending");
+  }
+  function reloadOnce() {
+    if (reloadStarted) return;
+    reloadStarted = true;
+    try {
+      if (sessionStorage.getItem(reloadKey) === "1") return;
+      sessionStorage.setItem(reloadKey, "1");
+    } catch (error) { /* retain the in-memory reload guard */ }
+    window.location.reload();
+  }
+  function waitForWorker(worker, limit) {
+    return new Promise(function (resolve) {
+      if (!worker || worker.state === "activated" || worker.state === "redundant") return resolve();
+      var done = false;
+      var finish = function () {
+        if (done) return;
+        if (worker.state === "activated" || worker.state === "redundant") {
+          done = true;
+          worker.removeEventListener("statechange", finish);
+          resolve();
+        }
+      };
+      worker.addEventListener("statechange", finish);
+      window.setTimeout(function () {
+        if (done) return;
+        done = true;
+        worker.removeEventListener("statechange", finish);
+        resolve();
+      }, limit);
     });
   }
+  if (!("serviceWorker" in navigator)) { reveal(); return; }
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (hadController) reloadOnce();
+  });
+  var safetyTimer = window.setTimeout(reveal, 7000);
+  navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" })
+    .then(async function (registration) {
+      await registration.update();
+      var installing = registration.installing;
+      if (installing) await waitForWorker(installing, 5000);
+      if (registration.waiting) registration.waiting.postMessage("SKIP_WAITING");
+    })
+    .catch(function (error) {
+      console.warn("MNH Calendar startup update check failed; opening the available app shell.", error);
+    })
+    .finally(function () {
+      domReady.then(function () {
+        window.clearTimeout(safetyTimer);
+        reveal();
+      });
+    });
 })();
 </script>
 
