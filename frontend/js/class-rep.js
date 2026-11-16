@@ -160,7 +160,34 @@
           });
           await loadMemoryPanel();
         });
-        row.append(cancel);
+        const complete = el("button", "cr-memory-delete", "Complete"); complete.type = "button";
+        complete.addEventListener("click", async () => {
+          await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
+            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" })
+          });
+          await loadMemoryPanel();
+        });
+        const reschedule = el("button", "cr-memory-delete", "Reschedule"); reschedule.type = "button";
+        reschedule.addEventListener("click", () => {
+          const editor = el("input", "cr-auth-input"); editor.type = "datetime-local";
+          const localDate = new Date(reminder.scheduled_at * 1000 - new Date().getTimezoneOffset() * 60000);
+          editor.value = localDate.toISOString().slice(0, 16);
+          const save = el("button", "cr-memory-edit", "Save new time"); save.type = "button";
+          save.addEventListener("click", async () => {
+            const timestamp = Math.floor(new Date(editor.value).getTime() / 1000);
+            if (!Number.isFinite(timestamp) || timestamp <= Math.floor(Date.now() / 1000)) {
+              status("Choose a future reminder time.", false); return;
+            }
+            const response = await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
+              method: "PATCH", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ scheduled_at: timestamp })
+            });
+            if (!response.ok) { status("The reminder could not be rescheduled.", false); return; }
+            await loadMemoryPanel();
+          });
+          row.append(editor, save);
+        });
+        row.append(complete, reschedule, cancel);
       }
       reminderItems.append(row);
     }
