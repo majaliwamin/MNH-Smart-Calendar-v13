@@ -358,7 +358,7 @@ main{flex:1;display:flex;flex-direction:column;min-height:0}
 .hd-bell .ic{width:clamp(24px,2.2vw,32px);height:clamp(24px,2.2vw,32px)}
 .site-header #menu-panel{position:absolute;left:auto;right:clamp(8px,2vw,28px);top:100%;bottom:auto;margin-top:4px}
 .bell-panel{top:100%;right:clamp(52px,6vw,90px);margin-top:4px}
-#view-dashboard:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0;padding:clamp(6px,1.2vw,16px) clamp(6px,1.5vw,20px) clamp(4px,.8vw,10px);width:100%;max-width:1800px;margin:0 auto}
+#view-weekly:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0;padding:clamp(6px,1.2vw,16px) clamp(6px,1.5vw,20px) clamp(4px,.8vw,10px);width:100%;max-width:1800px;margin:0 auto}
 .wrap{flex:1;display:flex;flex-direction:column;min-height:360px;padding:0;overflow:visible}
 table{flex:1;width:100%;max-width:none;min-width:0;margin:0;background:#0a1d38;border:1px solid var(--line);border-radius:10px;border-collapse:separate;border-spacing:0}
 th,td{border:0;border-right:1px solid #1b3559;border-bottom:1px solid #1b3559;padding:2px}
@@ -1755,11 +1755,6 @@ body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view
 .install-app-notice{text-decoration:underline!important;text-underline-offset:2px;text-decoration-thickness:1px}
 
 
-/* v14.83: use the measured PWA window height after cold launch to prevent a compact first render. */
-html.mnh-viewport-ready{height:var(--mnh-app-height)!important;min-height:var(--mnh-app-height)!important}
-body.mnh-viewport-ready{height:var(--mnh-app-height)!important;min-height:var(--mnh-app-height)!important;max-height:none!important}
-body.mnh-viewport-ready>main{min-height:0!important;flex:1 1 auto!important}
-
 
 /* v14.85: keep the Module details dialog title fully visible on short screens and while scrolling. */
 .colour-dialog{
@@ -1790,6 +1785,18 @@ body.mnh-viewport-ready>main{min-height:0!important;flex:1 1 auto!important}
 }
 
 
-/* v14.86: suppress the transient compact PWA frame until its launch viewport settles. */
-html.mnh-booting,html.mnh-booting body{visibility:hidden!important;overflow:hidden!important}
-html.mnh-viewport-ready,html.mnh-viewport-ready body{min-height:var(--mnh-app-height)!important}
+
+/* v14.87: size the actual weekly view to the live PWA viewport; do not gate first paint. */
+#view-weekly:not([hidden]){
+  display:flex;
+  flex-direction:column;
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  max-width:1800px;
+  margin:0 auto;
+  padding:clamp(6px,1.2vw,16px) clamp(6px,1.5vw,20px) clamp(4px,.8vw,10px);
+}
+#view-weekly:not([hidden]) .wrap{flex:1 1 auto;min-height:0}
+html{min-height:100%;height:100%}
+body{min-height:var(--mnh-app-height,100dvh);min-height:max(100dvh,var(--mnh-app-height,100dvh))}
