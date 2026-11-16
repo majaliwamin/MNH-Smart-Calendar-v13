@@ -36,6 +36,9 @@
   form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode); root.append(launcher, header, body);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
+  // Keep the full-screen assistant outside dashboard containers that may create
+  // transformed/scrolling containing blocks on mobile browsers.
+  if (root.parentElement !== document.body) document.body.appendChild(root);
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
@@ -172,6 +175,7 @@
   });
   function setOpen(open) {
     root.classList.toggle("is-open", open);
+    document.body.classList.toggle("cara-open", open);
     header.hidden = !open; body.hidden = !open; launcher.hidden = open;
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
   }
