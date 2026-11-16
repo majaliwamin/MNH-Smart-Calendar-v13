@@ -24,6 +24,7 @@ def test_cara_account_memory_is_persistent_and_isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(routes, "reply", lambda message, history, **kwargs:
                         ("A real assistant response.", "cloudflare", "test-model", None))
     with TestClient(app) as client:
+        assert client.get("/api/class-rep/memories").status_code == 401
         created = client.post("/api/class-rep/auth/register", json={
             "name": "Student One", "email": "one@example.org", "password": "correct-horse-battery"
         })
@@ -96,3 +97,18 @@ def test_explicit_natural_language_reminder_parser():
         assert when.hour == 10 and when.minute == 30
     finally:
         routes.memory.create_reminder = original
+
+
+def test_private_cara_records_are_excluded_from_public_backup_and_export(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.post("/api/class-rep/auth/register", json={
+            "name": "Private Owner", "email": "private@example.org", "password": "private-password-123"
+        })
+        from app.class_rep import memory
+        user = memory.resolve_session(client.cookies.get("cara_session"))
+        memory.save_memory(user["id"], {"content": "private personal note"})
+        backup = client.get("/api/backup").json()
+        exported = client.get("/api/export").json()
+        assert all(not item["col"].startswith("cara_") for item in backup["documents"])
+        assert all(not item["col"].startswith("cara_") for item in exported)
