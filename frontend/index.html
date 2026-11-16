@@ -15,33 +15,41 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MNH Calendar">
 
+
+<script>
+/* Prevent a compact PWA cold-start frame from ever being painted. Reveal only after
+   the launch viewport has settled; this avoids showing the transient minimized layout. */
+(function(){
+ "use strict";
+ var root=document.documentElement, started=Date.now(), last="", stable=0, timer=null;
+ root.classList.add("mnh-booting");
+ function sample(){
+  var w=Math.round(window.innerWidth||root.clientWidth||0);
+  var h=Math.round(window.innerHeight||root.clientHeight||0);
+  var size=w+"x"+h;
+  if(size===last)stable++;else{last=size;stable=0;}
+  if((Date.now()-started>=500&&stable>=3)||Date.now()-started>=5000){
+   clearInterval(timer);
+   root.style.setProperty("--mnh-app-height",Math.max(320,h)+"px");
+   root.classList.remove("mnh-booting");
+   root.classList.add("mnh-viewport-ready");
+   if(document.body)document.body.classList.add("mnh-viewport-ready");
+   requestAnimationFrame(function(){window.dispatchEvent(new Event("resize"));});
+  }
+ }
+ timer=setInterval(sample,120);
+ window.addEventListener("resize",function(){last="";stable=0;},{passive:true});
+})();
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.85";</script>
+<script>window.MNH_BUILD="2026.11.16-v14.86";</script>
 <script src="/js/week-model.js?v=2026.11.16-v14.73"></script>
 <script src="/js/api-client.js?v=2026.11.16-v14.73"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.85">
-<script>
-/* MNH cold-open refresh: one network-backed reload per newly opened page context. */
-(function(){
- "use strict";
- var key="mnh_cold_open_refresh_v1484";
- try{
-  if(!sessionStorage.getItem(key)){
-   sessionStorage.setItem(key,"1");
-   window.addEventListener("load",function(){
-    setTimeout(function(){
-     try{sessionStorage.removeItem(key);}catch(_e){}
-    },12000);
-    setTimeout(function(){
-     if(!document.hidden)window.location.reload();
-    },1800);
-   },{once:true});
-  }
- }catch(_e){}
-})();
-</script>
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.86">
+
 </head>
 <body data-theme="dark">
 <script>
