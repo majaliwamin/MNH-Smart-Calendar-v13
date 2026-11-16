@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.97">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.98">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.97">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.98">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,11 +20,61 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.97";</script>
-<script src="/js/week-model.js?v=2026.11.16-v14.97"></script>
-<script src="/js/api-client.js?v=2026.11.16-v14.97"></script>
+<script>window.MNH_BUILD="2026.11.16-v14.98";</script>
+<script>
+(function () {
+  "use strict";
+  // Compare the page opened by an email link with the live server build.
+  // Email clients may open links in an embedded browser with its own stale page cache.
+  const pageBuild = String(window.MNH_BUILD || "");
+  let checking = false;
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.97">
+  async function checkLiveBuild() {
+    if (checking || !pageBuild) return;
+    checking = true;
+    try {
+      const response = await fetch("/health?mnh_build_check=" + Date.now(), {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Cache-Control": "no-cache" }
+      });
+      if (!response.ok) return;
+      const info = await response.json();
+      const liveBuild = String(info.build || "");
+      if (!liveBuild || liveBuild === pageBuild) return;
+
+      // A query-string cache buster forces email webviews to request the current HTML.
+      const guardKey = "mnh_auto_refresh_build_" + liveBuild;
+      try {
+        if (sessionStorage.getItem(guardKey) === "1") return;
+        sessionStorage.setItem(guardKey, "1");
+      } catch (_) {}
+      const target = new URL(window.location.href);
+      target.searchParams.set("mnh_build", liveBuild);
+      target.searchParams.set("mnh_reload", String(Date.now()));
+      window.location.replace(target.toString());
+    } catch (error) {
+      console.warn("MNH Calendar live-build check will retry:", error);
+    } finally {
+      checking = false;
+    }
+  }
+
+  checkLiveBuild();
+  window.addEventListener("pageshow", checkLiveBuild);
+  window.addEventListener("focus", checkLiveBuild);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkLiveBuild();
+  });
+  window.addEventListener("online", checkLiveBuild);
+  window.setInterval(checkLiveBuild, 60000);
+})();
+</script>
+<script src="/js/week-model.js?v=2026.11.16-v14.98"></script>
+<script src="/js/api-client.js?v=2026.11.16-v14.98"></script>
+
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.98">
 
 </head>
 <body data-theme="dark">
@@ -285,13 +335,13 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v14.97" defer></script>
+<script src="/js/app.js?v=2026.11.16-v14.98" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.16-v14.97";
+  const workerUrl = "/service-worker.js?v=2026.11.16-v14.98";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
