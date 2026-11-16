@@ -26,7 +26,7 @@ COL_TASKS = "cara_tasks"
 COL_REMINDERS = "cara_reminders"
 SESSION_SECONDS = 60 * 60 * 24 * 30
 PBKDF2_ROUNDS = 310_000
-SECRET_PATTERN = re.compile(r"(api[_ -]?key|password|passwd|token|secret)\s*[:=]", re.I)
+SECRET_PATTERN = re.compile(r"(api[_ -]?key|password|passwd|token|secret|authorization)\s*[:=]|\bbearer\s+\S+|\bsk-[A-Za-z0-9_-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
 WORD_PATTERN = re.compile(r"[a-z0-9]{3,}", re.I)
 
 
