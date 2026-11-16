@@ -23,7 +23,7 @@ See `.env.example` for the full list with placeholders. Summary:
 | `MNH_WA_PROFILE_NAME` | Display/push name recipients see (defaults to the application name) | sender identity |
 | `MNH_COMM_AI_API_KEY` | AI drafting (configured) | AI draft button |
 | `MNH_COMM_AI_BASE_URL` | Provider base URL (no default) | alternative providers |
-| `MNH_COMM_AI_MODEL` | Model name (default `your-selected-model`) | alternative models |
+| `MNH_COMM_AI_MODEL` | Model name (no default) | alternative models |
 | `MNH_COMM_AI_TRIGGER_ENABLED` | `1` = AI detects timetable changes and sends automatically (default off) | auto-trigger |
 | `MNH_ARI_BASE_URL` | Asterisk ARI root, e.g. `http://10.0.0.5:8088/ari` | voice calls |
 | `MNH_ARI_USER` / `MNH_ARI_PASSWORD` | ARI credentials from `ari.conf` | voice calls |
@@ -32,7 +32,7 @@ See `.env.example` for the full list with placeholders. Summary:
 | `MNH_CALL_WINDOW_START/END` | Allowed calling hours, Africa/Blantyre | voice calls |
 | `MNH_WHATSAPP_TOKEN` / `MNH_WHATSAPP_PHONE_ID` | ~~Retired~~ — Meta Cloud API removed; see bridge variables above | — |
 
-All `MNH_ARI_*` and `MNH_AI_*` values stay server-side. They are never sent to
+All `MNH_ARI_*` and `MNH_COMM_AI_*` values stay server-side. They are never sent to
 the browser; the UI only receives booleans and missing-variable names.
 
 ---
