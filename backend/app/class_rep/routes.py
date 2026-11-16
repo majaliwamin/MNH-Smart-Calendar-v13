@@ -191,7 +191,12 @@ def _explicit_task(user_id: str, message: str, conversation_id: str = ""):
     for existing in memory.list_tasks(user_id):
         if existing.get("title", "").strip().casefold() == title.casefold() and existing.get("status") not in ("completed", "cancelled"):
             return existing
-    return memory.upsert_task(user_id, {"title": title, "status": "not_started", "priority": "normal", "related_conversation": conversation_id})
+    active_projects = [p for p in memory.list_projects(user_id) if p.get("status") == "active"]
+    task_data = {"title": title, "status": "not_started", "priority": "normal", "related_conversation": conversation_id}
+    if len(active_projects) == 1:
+        task_data["project_id"] = active_projects[0]["id"]
+        task_data["project"] = active_projects[0]["title"]
+    return memory.upsert_task(user_id, task_data)
 
 
 @router.post("/chat", response_model=ChatResponse)
