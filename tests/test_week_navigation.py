@@ -34,7 +34,7 @@ def test_week_model_is_shared_and_loaded_before_the_app():
     schedule = (ROOT / "backend" / "app" / "services" / "schedule.py").read_text(encoding="utf-8")
     assert "WEEK_START = date(2026, 11, 9)" in schedule, "the current block begins Monday 9 November 2026"
     assert "WEEKDAYS = 5" in source, "teaching weeks are Monday to Friday"
-    assert 'return value > 0 ? "Week " + value : "This week";' in source
+    assert 'return value === -1 ? "Orientation Week" : "Week " + (value + 1);' in source
 
 
 def test_week_dates_are_generated_not_hardcoded():
