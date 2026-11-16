@@ -45,3 +45,17 @@ def test_provider_parses_chat_completion_response(monkeypatch):
     monkeypatch.setattr(providers, "urlopen", lambda request, timeout: FakeResponse())
     result = providers.complete([{"role": "user", "content": "hello"}])
     assert result == ("Hello class", "openai-compatible", "test-model")
+
+
+def test_public_chat_endpoint_has_a_bounded_rate_limit():
+    from fastapi import HTTPException
+    from app.class_rep.routes import _enforce_rate_limit
+    key = "class-rep-test-client-unique"
+    for _ in range(15):
+        _enforce_rate_limit(key)
+    try:
+        _enforce_rate_limit(key)
+    except HTTPException as exc:
+        assert exc.status_code == 429
+    else:
+        raise AssertionError("The assistant endpoint must throttle excessive requests")
