@@ -60,7 +60,8 @@ def _require_document_admin(token: str | None):
 
 
 @router.post("/auth/register")
-def register(payload: dict, response: Response):
+def register(payload: dict, request: Request, response: Response):
+    _rate("register:" + (request.client.host if request.client else "unknown"), 8)
     try:
         user = memory.create_account(payload.get("name"), payload.get("email"), payload.get("password"))
     except memory.MemoryError as exc:
@@ -70,7 +71,8 @@ def register(payload: dict, response: Response):
 
 
 @router.post("/auth/login")
-def login(payload: dict, response: Response):
+def login(payload: dict, request: Request, response: Response):
+    _rate("login:" + (request.client.host if request.client else "unknown"), 8)
     user = memory.verify_account(payload.get("email", ""), payload.get("password", ""))
     if not user:
         raise HTTPException(401, "Email or password is incorrect.")
@@ -182,7 +184,7 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
             raise HTTPException(403, "Management analytics require an authorised HOD, coordinator or executive dean password.")
         from app.api.routes import analytics as get_analytics
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
-    conversation_id = payload.conversation_id or uuid.uuid4().hex
+    conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", payload.conversation_id or "")[:80] or uuid.uuid4().hex
     try:
         task_created = _explicit_task(user["id"], payload.message.strip())
         if task_created:
