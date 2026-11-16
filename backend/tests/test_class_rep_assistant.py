@@ -210,10 +210,17 @@ def test_ocr_text_normaliser_handles_easyocr_and_paddleocr_results():
     assert _texts(paddle_v3) == ["Pregnancy", "Newborn"]
 
 
-def test_ocr_engine_configuration_is_validated(monkeypatch):
+def test_ocr_engine_order_and_configuration():
+    from app.class_rep.ocr import _engine_order, OCRDocumentError
     import pytest
-    from app.class_rep.ocr import _ocr_image, OCRDocumentError
-    from PIL import Image
-    monkeypatch.setenv("MNH_CLASSREP_OCR_ENGINE", "unknown")
+    assert _engine_order("auto") == ["paddleocr", "easyocr"]
+    assert _engine_order("easyocr") == ["easyocr"]
     with pytest.raises(OCRDocumentError, match="must be auto"):
-        _ocr_image(Image.new("RGB", (10, 10)))
+        _engine_order("unknown")
+
+
+def test_paddleocr_v3_result_object_is_supported():
+    from app.class_rep.ocr import _texts
+    class Result:
+        json = {"res": {"rec_texts": ["OCR output"]}}
+    assert _texts([Result()]) == ["OCR output"]
