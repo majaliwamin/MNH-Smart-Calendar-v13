@@ -109,8 +109,8 @@ Render dashboard → **mnh-calendar** → *Environment* → add:
 | `MNH_WA_BRIDGE_SESSION` | `default` |
 | `MNH_WA_SENDER_NUMBER` | `26599130362` |
 | `MNH_WA_PROFILE_NAME` | `Maternal & Neonatal Health Smart Time Table` |
-| `MNH_AI_API_KEY` | your OpenAI-compatible key (for AI drafting) |
-| `MNH_AI_TRIGGER_ENABLED` | `0` for now |
+| `MNH_COMM_AI_API_KEY` | optional key for the explicitly configured drafting provider |
+| `MNH_COMM_AI_BASE_URL` | optional provider endpoint; no default is assumed |\n| `MNH_COMM_AI_MODEL` | optional provider model name |\n| `MNH_COMM_AI_TRIGGER_ENABLED` | `0` for now |
 
 Save and wait for the service to restart.
 

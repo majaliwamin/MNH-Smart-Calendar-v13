@@ -1,7 +1,7 @@
 """Environment-backed Class Rep Assistant configuration.
 
 CARA deliberately uses Cloudflare Workers AI first, then Hugging Face, then Groq.
-OpenAI is not part of the CARA provider chain. Secrets are read only on the server.
+Secrets are read only on the server.
 """
 import os
 
@@ -37,9 +37,10 @@ def provider_configs() -> list[dict]:
 
     groq_key = _value("MNH_CLASSREP_GROQ_API_KEY")
     groq_model = _value("MNH_CLASSREP_GROQ_MODEL", "llama-3.3-70b-versatile")
-    if groq_key and groq_model:
+    groq_base_url = _value("MNH_CLASSREP_GROQ_BASE_URL")
+    if groq_key and groq_model and groq_base_url:
         providers.append({
-            "provider": "groq", "base_url": "https://api.groq.com/openai/v1",
+            "provider": "groq", "base_url": groq_base_url,
             "api_key": groq_key, "model": groq_model,
             "timeout": timeout, "max_tokens": max_tokens,
         })

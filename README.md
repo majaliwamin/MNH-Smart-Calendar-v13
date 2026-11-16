@@ -57,28 +57,42 @@ Open `http://127.0.0.1:8000/` (or `http://localhost:8000/`). Do not enter `http:
 
 To stop the local server, press `Ctrl+C` in the terminal. Do not open `frontend/index.html` directly or use VS Code Live Server: the application requires the API server for shared records.
 
-## Class Representative AI Assistant
+## CARA — Classroom and Academic Relations Assistant
 
-The weekly timetable includes a Class Rep Assistant panel beneath the timetable, aligned to the right. It is a separate frontend module backed by an isolated FastAPI package:
+CARA is the persistent academic assistant in the web application. Its AI provider priority is Cloudflare Workers AI, then Hugging Face, then Groq. Credentials are server-side environment variables only.
 
-- `backend/app/class_rep/config.py`: provider configuration from environment variables.
-- `providers.py`: server-side OpenAI Chat Completions-compatible adapter.
-- `context.py`: bounded, read-only retrieval from shared timetable collections.
-- `assistant.py`: conversation orchestration and MNH-specific instructions.
-- `schemas.py`: validated request and response contracts.
-- `routes.py`: status and chat API endpoints.
-- `frontend/js/class-rep.js` and `frontend/css/class-rep.css`: isolated assistant UI and client.
+The CARA backend is in `backend/app/class_rep/`:
 
-Configure these environment variables on the hosting service (Render → Environment):
+- `config.py` and `providers.py`: provider configuration and fallback.
+- `assistant.py` and `context.py`: response orchestration and live timetable context.
+- `memory.py`: individual accounts, persistent conversations, memories, tasks and reminders.
+- `documents.py`: account-owned document indexing and retrieval.
+- `routes.py` and `schemas.py`: authenticated API endpoints and request validation.
 
-- `MNH_CLASSREP_AI_PROVIDER=openai-compatible`
-- `MNH_CLASSREP_AI_BASE_URL=https://api.openai.com/v1`
-- `MNH_CLASSREP_AI_API_KEY` = your provider API key (secret; never put it in frontend files)
-- `MNH_CLASSREP_AI_MODEL=gpt-4o-mini`
+### CARA account setup
 
-The adapter supports OpenAI-compatible endpoints, including providers such as OpenAI, Groq and OpenRouter when their base URL and model are configured. The assistant reports as not configured until a server-side API key is supplied. No key is committed to the repository.
+Open CARA from the web dashboard and create an account using your name, email address and a password of at least 12 characters. Sign in on later visits to restore your previous conversation and access your account-scoped memories, tasks, uploaded documents and reminders. Passwords are stored as salted PBKDF2 hashes; session cookies are HttpOnly.
 
-The first release is read-only: it can answer using shared calendar records and draft class communications, but it cannot edit the timetable or send messages. Conversation history is held in the current browser page only and is not persisted by the server. AI-generated details should be checked against programme records before distribution.
+CARA memory is stored in the existing application database. It uses recent conversation retrieval, keyword matching for saved memories and tasks, and semantic document retrieval when the configured embedding service is available. Private CARA collections are excluded from public timetable exports.
+
+### CARA environment variables
+
+Set these in Render → Environment. Do not commit credentials:
+
+- `MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID`
+- `MNH_CLASSREP_CLOUDFLARE_API_KEY`
+- `MNH_CLASSREP_CLOUDFLARE_MODEL`
+- `MNH_CLASSREP_HF_API_KEY` and `MNH_CLASSREP_HF_MODEL` (optional fallback)
+- `MNH_CLASSREP_GROQ_API_KEY`, `MNH_CLASSREP_GROQ_MODEL` and `MNH_CLASSREP_GROQ_BASE_URL` (optional fallback; set the endpoint explicitly)
+- `MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL`
+- `MNH_CLASSREP_CLOUDFLARE_STT_MODEL` (optional speech-to-text model)
+- `MNH_CLASSREP_CLOUDFLARE_TTS_MODEL` (optional text-to-speech model)
+
+The Communications Centre has a separate optional provider configuration: `MNH_COMM_AI_API_KEY`, `MNH_COMM_AI_BASE_URL`, `MNH_COMM_AI_MODEL`, and `MNH_COMM_AI_TRIGGER_ENABLED`. Its endpoint and model must be explicitly configured; the application assumes no default vendor or model.
+
+### CARA reminders
+
+CARA can create persistent in-app reminders in the `Africa/Blantyre` timezone. They become due in the account reminder list and are visible when the user returns to CARA. No SMS, email or push notification channel is currently configured, so CARA does not claim to send external notifications.
 
 ## 2. Access from different Wi-Fi networks / mobile data
 

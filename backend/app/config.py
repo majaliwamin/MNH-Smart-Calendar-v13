@@ -27,8 +27,6 @@ TIMEZONE = os.getenv("MNH_TIMEZONE", "Africa/Blantyre")
 REMINDER_INTERVAL_SECONDS = max(10, int(os.getenv("MNH_REMINDER_INTERVAL_SECONDS", "30")))
 
 # ---- Communications Centre (WhatsApp Click-to-Chat + Asterisk ARI) ----------
-# Secrets are environment-only; nothing below is a credential.
-AI_API_BASE = os.getenv("MNH_AI_BASE_URL", "https://api.openai.com/v1")
 ARI_CALL_WINDOW_START = os.getenv("MNH_CALL_WINDOW_START", "08:00")
 ARI_CALL_WINDOW_END = os.getenv("MNH_CALL_WINDOW_END", "18:00")
 

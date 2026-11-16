@@ -8,7 +8,7 @@ triggerer of the messaging", Meta APIs retired). Two entry points:
 2. Automatic trigger — the background worker diffs the week's timetable
    against a stored snapshot; on new/changed/removed sessions the AI composes
    a notice and sends it through the WhatsApp bridge to every contact with
-   WhatsApp consent. Requires MNH_AI_TRIGGER_ENABLED=1 (off by default so the
+   WhatsApp consent. Requires MNH_COMM_AI_TRIGGER_ENABLED=1 (off by default so the
    behaviour is switched on deliberately, not accidentally).
 
 Hard limits the AI can never cross (unchanged from the master spec):
@@ -49,7 +49,7 @@ def _now() -> int:
 
 
 def enabled() -> bool:
-    return _env("MNH_AI_TRIGGER_ENABLED", "0").lower() in ("1", "true", "yes")
+    return _env("MNH_COMM_AI_TRIGGER_ENABLED", "0").lower() in ("1", "true", "yes")
 
 
 def status() -> dict:

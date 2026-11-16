@@ -115,7 +115,7 @@ def test_ai_trigger_compose_falls_back_to_template_without_ai(db, monkeypatch):
 # ---- automatic trigger (schedule watcher) ---------------------------------------------------
 def test_auto_check_baseline_then_changes(db, bridge, monkeypatch):
     consented_contact()
-    monkeypatch.setenv("MNH_AI_TRIGGER_ENABLED", "1")
+    monkeypatch.setenv("MNH_COMM_AI_TRIGGER_ENABLED", "1")
     monkeypatch.setattr(ai_trigger, "compose", lambda *a, **k: ("AI notice", True))
     from app.services import reminders
     sessions = [{"id": "cell-1", "date": "2026-11-16", "start": "08:00", "end": "10:00",
@@ -131,7 +131,7 @@ def test_auto_check_baseline_then_changes(db, bridge, monkeypatch):
 
 
 def test_auto_check_disabled_by_default(db, bridge, monkeypatch):
-    monkeypatch.delenv("MNH_AI_TRIGGER_ENABLED", raising=False)
+    monkeypatch.delenv("MNH_COMM_AI_TRIGGER_ENABLED", raising=False)
     result = ai_trigger.auto_check()
     assert result["enabled"] is False and bridge == []
 

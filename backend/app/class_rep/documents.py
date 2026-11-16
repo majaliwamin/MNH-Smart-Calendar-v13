@@ -115,7 +115,7 @@ def _vectors(texts: list[str], prefix: str) -> list[list[float]]:
     return clean
 
 
-def ingest(filename: str, content: bytes) -> dict:
+def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
     if len(content) > MAX_FILE_BYTES:
         raise DocumentError("Files must be 10 MB or smaller.")
     pages = _extract(filename, content)
@@ -137,7 +137,7 @@ def ingest(filename: str, content: bytes) -> dict:
     with database() as connection:
         for index, (item, vector) in enumerate(zip(chunks, vectors)):
             record = {
-                "document_id": doc_id, "title": filename[:180],
+                "document_id": doc_id, "owner_id": owner_id, "title": filename[:180],
                 "page": item["page"], "text": item["text"],
                 "embedding": vector, "sha256": digest,
                 "created_at": now,
@@ -150,14 +150,14 @@ def ingest(filename: str, content: bytes) -> dict:
         connection.execute(
             "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("cara_document_index", doc_id,
-             json.dumps({"title": filename[:180], "chunks": len(chunks),
+             json.dumps({"title": filename[:180], "owner_id": owner_id, "chunks": len(chunks),
                          "sha256": digest, "created_at": now}, ensure_ascii=False), now),
         )
     return {"id": doc_id, "title": filename[:180], "chunks": len(chunks),
             "pages": len(pages), "sha256": digest}
 
 
-def list_documents() -> list[dict]:
+def list_documents(owner_id: str = 'shared') -> list[dict]:
     with database() as connection:
         rows = connection.execute(
             "SELECT id,data FROM docs WHERE col='cara_document_index' ORDER BY updated_at DESC"
@@ -166,19 +166,23 @@ def list_documents() -> list[dict]:
     for row in rows:
         try:
             item = json.loads(row["data"])
-            result.append({"id": row["id"], "title": item.get("title"),
-                           "chunks": item.get("chunks"), "created_at": item.get("created_at")})
+            if item.get("owner_id", "shared") in ("shared", owner_id):
+                result.append({"id": row["id"], "title": item.get("title"),
+                               "chunks": item.get("chunks"), "created_at": item.get("created_at")})
         except (TypeError, json.JSONDecodeError):
             continue
     return result
 
 
-def delete_document(doc_id: str) -> bool:
+def delete_document(doc_id: str, owner_id: str = 'shared') -> bool:
     with database() as connection:
         exists = connection.execute(
-            "SELECT 1 FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,)
+            "SELECT data FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,)
         ).fetchone()
         if not exists:
+            return False
+        metadata = json.loads(exists["data"])
+        if metadata.get("owner_id", "shared") != owner_id:
             return False
         connection.execute("DELETE FROM docs WHERE col='cara_documents' AND id LIKE ?", (doc_id + ":%",))
         connection.execute("DELETE FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,))
@@ -192,7 +196,7 @@ def _cosine(left: list[float], right: list[float]) -> float:
     return sum(x*y for x, y in zip(left, right)) / denom if denom else -1.0
 
 
-def search_documents(query: str, limit: int = 5) -> list[dict]:
+def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> list[dict]:
     query = query.strip()[:1000]
     if not query:
         return []
@@ -203,7 +207,9 @@ def search_documents(query: str, limit: int = 5) -> list[dict]:
     records = []
     for row in rows:
         try:
-            records.append(json.loads(row["data"]))
+            record = json.loads(row["data"])
+            if record.get("owner_id", "shared") in ("shared", owner_id):
+                records.append(record)
         except (TypeError, json.JSONDecodeError):
             continue
     if not records:

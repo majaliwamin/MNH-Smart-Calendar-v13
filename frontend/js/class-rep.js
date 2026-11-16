@@ -6,7 +6,7 @@
   // Keep the full-screen assistant outside app header/transform stacking contexts.
   if (root.parentElement !== document.body) document.body.appendChild(root);
 
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "" };
+  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null };
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -22,7 +22,9 @@
   identity.append(el("strong", "cr-title", "CARA (Classroom and Academic Relations Assistant)"));
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
-  header.append(identity, toggle);
+  const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;
+  const memoryButton = el("button", "cr-account", "Memory"); memoryButton.type = "button"; memoryButton.hidden = true;
+  header.append(identity, memoryButton, signOut, toggle);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -40,12 +42,44 @@
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
   fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
-  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode); root.append(launcher, header, body);
+  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
+  const authPanel = el("section", "cr-auth-panel");
+  const authCard = el("div", "cr-auth-card");
+  const authTitle = el("strong", "cr-auth-title", "Your private CARA account");
+  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved tasks and memories.");
+  const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
+  const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
+  const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.placeholder = "Password (at least 12 characters)"; authPassword.autocomplete = "current-password";
+  const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
+  const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
+  const authFeedback = el("p", "cr-auth-feedback", "");
+  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback);
+  authPanel.append(authCard);
+  const memoryPanel = el("section", "cr-memory-panel"); memoryPanel.hidden = true;
+  const memoryHead = el("div", "cr-memory-head");
+  memoryHead.append(el("strong", "", "Your saved CARA memory"));
+  const memoryClose = el("button", "cr-toggle", "×"); memoryClose.type = "button"; memoryClose.setAttribute("aria-label", "Close memory");
+  memoryHead.append(memoryClose);
+  const memoryIntro = el("p", "cr-memory-intro", "Review or correct saved notes. Select a note to edit it, or delete it.");
+  const memoryEditor = el("textarea", "cr-memory-editor"); memoryEditor.placeholder = "Add a useful project decision, preference or note…";
+  const memorySave = el("button", "cr-auth-submit", "Save memory"); memorySave.type = "button";
+  const memoryItems = el("div", "cr-memory-items");
+  const projectItems = el("div", "cr-memory-items");
+  const taskItems = el("div", "cr-memory-items");
+  const reminderItems = el("div", "cr-memory-items");
+  memoryPanel.append(memoryHead, memoryIntro, memoryEditor, memorySave,
+    el("strong", "cr-memory-section", "Saved memories"), memoryItems,
+    el("strong", "cr-memory-section", "Projects"), projectItems,
+    el("strong", "cr-memory-section", "Tasks"), taskItems,
+    el("strong", "cr-memory-section", "Reminders"), reminderItems);
+  root.append(launcher, header, body, authPanel, memoryPanel);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
+  authPanel.hidden = true;
+  memoryPanel.hidden = true;
   function status(text, ready) {
     const node = statusNode;
     node.textContent = text;
@@ -77,9 +111,131 @@
       recordButton.disabled = true; attachButton.disabled = true;
     }
   }
+  let authMode = "login";
+  let editingMemoryId = null;
+  async function loadMemoryPanel() {
+    memoryItems.replaceChildren(); projectItems.replaceChildren(); taskItems.replaceChildren(); reminderItems.replaceChildren();
+    const [mRes, pRes, tRes, rRes] = await Promise.all([
+      fetch("/api/class-rep/memories"), fetch("/api/class-rep/projects"), fetch("/api/class-rep/tasks"), fetch("/api/class-rep/reminders")
+    ]);
+    const [mData, pData, tData, rData] = await Promise.all([mRes.json(), pRes.json(), tRes.json(), rRes.json()]);
+    for (const item of (mData.memories || [])) {
+      const row = el("div", "cr-memory-row");
+      const edit = el("button", "cr-memory-edit", item.content); edit.type = "button";
+      edit.addEventListener("click", () => { editingMemoryId = item.id; memoryEditor.value = item.content; memorySave.textContent = "Update memory"; memoryEditor.focus(); });
+      const del = el("button", "cr-memory-delete", "Delete"); del.type = "button";
+      del.addEventListener("click", async () => { await fetch("/api/class-rep/memories/" + encodeURIComponent(item.id), { method: "DELETE" }); await loadMemoryPanel(); });
+      row.append(edit, del); memoryItems.append(row);
+    }
+    if (!(mData.memories || []).length) memoryItems.append(el("p", "cr-memory-intro", "No saved memories yet."));
+    for (const project of (pData.projects || [])) {
+      projectItems.append(el("p", "cr-memory-item", project.title + " · " + project.status));
+    }
+    if (!(pData.projects || []).length) projectItems.append(el("p", "cr-memory-intro", "No projects tracked yet."));
+    for (const task of (tData.tasks || [])) {
+      const row = el("div", "cr-memory-row");
+      row.append(el("p", "cr-memory-item", task.title + " · " + task.status));
+      if (task.status !== "completed" && task.status !== "cancelled") {
+        const done = el("button", "cr-memory-delete", "Complete"); done.type = "button";
+        done.addEventListener("click", async () => {
+          await fetch("/api/class-rep/tasks/" + encodeURIComponent(task.id), {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: task.title, description: task.description, project: task.project, priority: task.priority, due_at: task.due_at, timezone: task.timezone, next_action: task.next_action, decisions: task.decisions, status: "completed" })
+          });
+          await loadMemoryPanel();
+        });
+        row.append(done);
+      }
+      taskItems.append(row);
+    }
+    if (!(tData.tasks || []).length) taskItems.append(el("p", "cr-memory-intro", "No tracked tasks yet."));
+    for (const reminder of (rData.reminders || [])) {
+      const row = el("div", "cr-memory-row");
+      row.append(el("p", "cr-memory-item", reminder.message + " · " + reminder.status + " · " + new Date(reminder.scheduled_at * 1000).toLocaleString()));
+      if (["scheduled", "due"].includes(reminder.status)) {
+        const cancel = el("button", "cr-memory-delete", "Cancel"); cancel.type = "button";
+        cancel.addEventListener("click", async () => {
+          await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
+            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" })
+          });
+          await loadMemoryPanel();
+        });
+        row.append(cancel);
+      }
+      reminderItems.append(row);
+    }
+    if (!(rData.reminders || []).length) reminderItems.append(el("p", "cr-memory-intro", "No reminders yet."));
+  }
+  memoryButton.addEventListener("click", async () => { memoryPanel.hidden = false; await loadMemoryPanel(); });
+  memoryClose.addEventListener("click", () => { memoryPanel.hidden = true; });
+  memorySave.addEventListener("click", async () => {
+    const text = memoryEditor.value.trim(); if (!text) return;
+    const response = await fetch("/api/class-rep/memories", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingMemoryId, content: text, kind: "user_note" }) });
+    if (!response.ok) { status("Memory could not be saved.", false); return; }
+    editingMemoryId = null; memoryEditor.value = ""; memorySave.textContent = "Save memory"; await loadMemoryPanel();
+  });
+  function setAuthMode(mode) {
+    authMode = mode;
+    authName.hidden = mode !== "register";
+    authPassword.autocomplete = mode === "register" ? "new-password" : "current-password";
+    authSubmit.textContent = mode === "register" ? "Create account" : "Sign in";
+    authSwitch.textContent = mode === "register" ? "I already have an account" : "Create a new account";
+    authFeedback.textContent = "";
+  }
+  async function loadPreviousConversation() {
+    try {
+      const response = await fetch("/api/class-rep/conversations", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      const latest = (data.conversations || [])[0];
+      if (!latest) return;
+      state.conversationId = latest.id;
+      state.history = (latest.messages || []).slice(-12).map(m => ({ role: m.role, content: m.content }));
+      transcript.replaceChildren();
+      for (const message of state.history) addMessage(message.role, message.content);
+    } catch (_) {}
+  }
+  async function checkAuth() {
+    try {
+      const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
+      const result = await response.json();
+      state.user = result.authenticated ? result.user : null;
+      signOut.hidden = !state.user; memoryButton.hidden = !state.user;
+      authPanel.hidden = Boolean(state.user);
+      body.hidden = !state.user;
+      if (state.user) await loadPreviousConversation();
+    } catch (_) {
+      state.user = null; signOut.hidden = true; memoryButton.hidden = true; authPanel.hidden = false; body.hidden = true;
+    }
+  }
+  async function authenticate() {
+    authSubmit.disabled = true;
+    try {
+      const payload = { email: authEmail.value.trim(), password: authPassword.value };
+      if (authMode === "register") payload.name = authName.value.trim();
+      const response = await fetch("/api/class-rep/auth/" + authMode, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || "Account request failed.");
+      state.user = result.user; state.history = []; state.conversationId = null; memoryButton.hidden = false;
+      transcript.replaceChildren(); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      authPassword.value = ""; status("Signed in · private memory enabled", true);
+    } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
+    finally { authSubmit.disabled = false; }
+  }
+  authSubmit.addEventListener("click", authenticate);
+  authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+  authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
+  signOut.addEventListener("click", async () => {
+    await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
+    state.user = null; state.history = []; state.conversationId = null; memoryButton.hidden = true; memoryPanel.hidden = true; transcript.replaceChildren();
+    body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
+  });
   async function send(value) {
     const message = String(value || input.value).trim();
-    if (!message || state.busy) return;
+    if (!message || state.busy || !state.user) return;
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = ""; updateComposerAction();
@@ -97,16 +253,27 @@
         }
         const response = await fetch("/api/class-rep/chat", {
           method: "POST", headers,
-          cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10) })
+          cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId })
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error("Request could not be completed");
         pending.textContent = result.reply;
+        state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
         status("AI connected · " + result.provider, true);
       } else {
         pending.textContent = demoReply(message);
+        const saved = await fetch("/api/class-rep/conversation/turn", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
+        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (saved) {
+          state.conversationId = saved.conversation_id;
+          pending.textContent = saved.reply;
+          state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
+          state.history = state.history.slice(-12);
+        }
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
@@ -116,6 +283,17 @@
         pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
       } else {
         pending.textContent = "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+      }
+      if (!restrictedAnalytics && state.user) {
+        const saved = await fetch("/api/class-rep/conversation/turn", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
+        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (saved) {
+          state.conversationId = saved.conversation_id;
+          state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
+          state.history = state.history.slice(-12);
+        }
       }
       status("", false);
     } finally {
@@ -128,14 +306,11 @@
     fileInput.value = "";
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { status("Files must be 10 MB or smaller", false); return; }
-    const token = state.documentToken || prompt("Enter the document administrator credential to upload and index this file:");
-    if (!token) return;
-    state.documentToken = token;
     attachButton.disabled = true;
     try {
       const data = new FormData(); data.append("file", file);
       const response = await fetch("/api/class-rep/documents", {
-        method: "POST", headers: { "X-CARA-Admin-Token": token }, body: data
+        method: "POST", body: data
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Upload failed");
@@ -177,11 +352,34 @@
   input.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
   });
-  function setOpen(open) {
-    root.classList.toggle("is-open", open);
-    header.hidden = !open; body.hidden = !open; launcher.hidden = open;
-    launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
+  function syncVisualViewport() {
+    if (!window.visualViewport) return;
+    const viewport = window.visualViewport;
+    const keyboardInset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+    root.style.setProperty("--cara-keyboard-inset", Math.round(keyboardInset) + "px");
   }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", syncVisualViewport, { passive: true });
+    window.visualViewport.addEventListener("scroll", syncVisualViewport, { passive: true });
+    window.addEventListener("orientationchange", syncVisualViewport, { passive: true });
+  }
+  function setOpen(open) {
+    if (open) {
+      state.previousBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      document.documentElement.classList.add("cara-open");
+      syncVisualViewport();
+    } else {
+      document.body.style.overflow = state.previousBodyOverflow;
+      document.documentElement.classList.remove("cara-open");
+      root.style.setProperty("--cara-keyboard-inset", "0px");
+    }
+    root.classList.toggle("is-open", open);
+    header.hidden = !open; body.hidden = true; authPanel.hidden = !open; memoryPanel.hidden = true; launcher.hidden = open;
+    launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
+    if (open) { void checkAuth(); }
+  }
+  setAuthMode("login");
   launcher.addEventListener("click", () => setOpen(true));
   toggle.addEventListener("click", () => setOpen(false));
   checkStatus();

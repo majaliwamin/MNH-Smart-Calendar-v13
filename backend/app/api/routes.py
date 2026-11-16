@@ -130,7 +130,7 @@ def export_timetable_xlsx(modules: str | None = None, week_start: date | None = 
     except ImportError as exc:
         raise HTTPException(503, "Excel export is unavailable: install backend requirements (openpyxl).") from exc
     with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs ORDER BY col,id").fetchall()
+        rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
     collections = {}
     for row in rows:
         try:
@@ -157,7 +157,7 @@ def export_timetable_pdf(modules: str | None = None, week_start: date | None = N
     except ImportError as exc:
         raise HTTPException(503, "PDF export is unavailable: install backend requirements (reportlab).") from exc
     with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs ORDER BY col,id").fetchall()
+        rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
     collections = {}
     for row in rows:
         try:
@@ -488,7 +488,7 @@ def history():
 @router.get("/backup")
 def backup_json():
     with database() as c:
-        rows = c.execute("SELECT col,id,data FROM docs ORDER BY col,id").fetchall()
+        rows = c.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
     return {"format": "mnh-calendar-backup", "version": 1, "created_at": int(time.time()*1000),
             "documents": [{"col": r["col"], "id": r["id"], "data": json.loads(r["data"])} for r in rows]}
 
@@ -555,7 +555,7 @@ def reminders_run_now(mnh_session: str | None = Cookie(default=None)):
 @router.get("/export")
 def export_all():
     with database() as c:
-        rows = c.execute("SELECT col,id,data FROM docs ORDER BY col,id").fetchall()
+        rows = c.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
     return [{"col": r["col"], "id": r["id"], "data": json.loads(r["data"])} for r in rows]
 
 

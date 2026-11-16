@@ -1,15 +1,7 @@
-"""AI message assistant — drafts text only, never sends anything.
+"""Optional Communications Centre message drafter using a configured external provider.
 
-Provider-agnostic, OpenAI-compatible chat-completions client using only the
-standard library (urllib). Credentials live in the environment:
-
-    MNH_AI_API_KEY    API key (drafting is disabled when missing)
-    MNH_AI_BASE_URL   OpenAI-compatible base URL (default https://api.openai.com/v1)
-    MNH_AI_MODEL      model name (default gpt-4o-mini)
-
-The assistant is a drafting aid: every result is returned to the caller for
-human review and editing. It has no access to the WhatsApp module and cannot
-create wa.me links, open conversations, place calls, or touch the outbox.
+The endpoint, model and credential are explicit environment settings. No provider
+endpoint or vendor is assumed by the application.
 """
 import json
 import os
@@ -26,28 +18,31 @@ def _env(name: str, default: str = "") -> str:
 
 
 def api_key() -> str:
-    return _env("MNH_AI_API_KEY")
+    return _env("MNH_COMM_AI_API_KEY")
 
 
 def base_url() -> str:
-    url = _env("MNH_AI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-    return url if url.endswith("/v1") or "/v1" in url else url
+    return _env("MNH_COMM_AI_BASE_URL").rstrip("/")
 
 
 def model() -> str:
-    return _env("MNH_AI_MODEL", "gpt-4o-mini")
+    return _env("MNH_COMM_AI_MODEL")
 
 
 def enabled() -> bool:
-    return bool(api_key())
+    return bool(api_key() and base_url() and model())
 
 
 def status() -> dict:
     return {
-        "provider": "OpenAI-compatible chat completions",
+        "provider": "Configured Communications Centre provider",
         "configured": enabled(),
-        "model": model(),
-        "missing": ["MNH_AI_API_KEY"] if not enabled() else [],
+        "model": model() if enabled() else "",
+        "missing": [name for name, value in (
+            ("MNH_COMM_AI_API_KEY", api_key()),
+            ("MNH_COMM_AI_BASE_URL", base_url()),
+            ("MNH_COMM_AI_MODEL", model()),
+        ) if not value],
     }
 
 
@@ -66,8 +61,8 @@ def draft(prompt: str, *, timeout: int = 45) -> str:
     """Return an AI-drafted message for human review. Raises AIError on failure."""
     if not enabled():
         raise AIError(
-            "AI drafting is not configured on this server yet. Set MNH_AI_API_KEY "
-            "(and optionally MNH_AI_BASE_URL / MNH_AI_MODEL)."
+            "Communications Centre AI drafting is not configured. Set "
+            "MNH_COMM_AI_API_KEY, MNH_COMM_AI_BASE_URL and MNH_COMM_AI_MODEL."
         )
     text = str(prompt or "").strip()
     if not text:
@@ -91,19 +86,13 @@ def draft(prompt: str, *, timeout: int = 45) -> str:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8") or "{}")
     except urllib.error.HTTPError as error:
-        detail = ""
-        try:
-            failure = json.loads(error.read().decode("utf-8") or "{}")
-            detail = str((failure.get("error") or {}).get("message") or "")
-        except (ValueError, AttributeError):
-            detail = ""
-        raise AIError(f"The AI provider rejected the request ({error.code}). {detail}".strip()) from error
+        raise AIError(f"The configured provider rejected the request ({error.code}).") from error
     except urllib.error.URLError as error:
-        raise AIError(f"The AI provider could not be reached: {error.reason}") from error
+        raise AIError(f"The configured provider could not be reached: {error.reason}") from error
     try:
         content = str(data["choices"][0]["message"]["content"]).strip()
     except (KeyError, IndexError, TypeError):
-        raise AIError("The AI provider returned an unexpected response.")
+        raise AIError("The configured provider returned an unexpected response.")
     if not content:
-        raise AIError("The AI provider returned an empty draft.")
+        raise AIError("The configured provider returned an empty draft.")
     return content

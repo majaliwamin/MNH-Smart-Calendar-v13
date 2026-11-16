@@ -58,6 +58,8 @@ async def lifespan(app: FastAPI):
         while not stop_event.wait(30):
             try:
                 comm_service.run_due_jobs()
+                from app.class_rep.memory import tick_reminders
+                tick_reminders()
                 from app.services import ari_service, ai_trigger
                 if ai_trigger.enabled():
                     outcome = ai_trigger.auto_check()
