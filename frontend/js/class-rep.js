@@ -227,6 +227,19 @@
     try {
       const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
       const result = await response.json();
+      if (result.storage_ready === false) {
+        state.user = null; signOut.hidden = true; memoryButton.hidden = true;
+        body.hidden = true; authPanel.hidden = false;
+        authTitle.textContent = "Private CARA memory is being prepared";
+        authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
+        authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
+        authSubmit.disabled = true; authSwitch.disabled = true;
+        return;
+      }
+      authTitle.textContent = "Your private CARA account";
+      authIntro.textContent = "Sign in to continue your conversations and access your saved tasks and memories.";
+      authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
+      authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
       signOut.hidden = !state.user; memoryButton.hidden = !state.user;
       authPanel.hidden = Boolean(state.user);
