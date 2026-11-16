@@ -174,6 +174,7 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error("Request could not be completed");
         pending.textContent = result.reply;
+        state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
         status("AI connected · " + result.provider, true);
@@ -272,10 +273,12 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
-    header.hidden = !open; body.hidden = !open; launcher.hidden = open;
+    header.hidden = !open; body.hidden = true; authPanel.hidden = !open; launcher.hidden = open;
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
+    if (open) { void checkAuth(); }
   }
-  setAuthMode("login");\n  launcher.addEventListener("click", () => setOpen(true));
+  setAuthMode("login");
+  launcher.addEventListener("click", () => setOpen(true));
   toggle.addEventListener("click", () => setOpen(false));
   checkStatus();
 })();
