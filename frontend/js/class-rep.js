@@ -108,7 +108,8 @@
       status(state.ready ? "AI connected · " + result.provider + (result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
       recordButton.disabled = !state.voice;
       root.dataset.documentSearch = result.document_search || "unavailable";
-      uploadButton.disabled = !state.uploads;\n      if (!state.uploads) uploadButton.title = "Document administration is not configured by the server.";
+      uploadButton.disabled = !state.uploads;
+      if (!state.uploads) uploadButton.title = "Document administration is not configured by the server.";
     } catch (_) {
       state.ready = false; state.voice = false; state.uploads = false;
       status("Services unavailable", false);
