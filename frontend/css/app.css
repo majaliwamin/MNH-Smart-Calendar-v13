@@ -1749,3 +1749,7 @@ body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view
 
 /* v14.80: pink installation action label. */
 .install-app-notice{color:#ff69b4!important}
+
+
+/* v14.82: lowercase, underlined install prompt link treatment. */
+.install-app-notice{text-decoration:underline!important;text-underline-offset:2px;text-decoration-thickness:1px}
