@@ -90,6 +90,34 @@ def test_restore_rejects_duplicate_records_without_deleting_existing_data(monkey
         assert rows == before
 
 
+def test_restore_rejects_empty_backup_without_deleting_existing_data(monkeypatch, tmp_path):
+    configure_test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.put("/api/doc/cells/keep-me", json={"title": "Keep this record"})
+        response = client.post("/api/restore", json={
+            "format": "mnh-calendar-backup",
+            "documents": [],
+        })
+        assert response.status_code == 400
+        rows = client.get("/api/col/cells").json()
+        assert any(row["id"] == "keep-me" for row in rows)
+
+
+def test_delete_aborts_when_safety_backup_fails(monkeypatch, tmp_path):
+    configure_test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.put("/api/doc/cells/keep-me", json={"title": "Keep this record"})
+
+        def fail_backup():
+            raise OSError("backup storage unavailable")
+
+        monkeypatch.setattr("app.api.routes.make_backup", fail_backup)
+        response = client.delete("/api/doc/cells/keep-me")
+        assert response.status_code == 503
+        rows = client.get("/api/col/cells").json()
+        assert any(row["id"] == "keep-me" for row in rows)
+
+
 def test_custom_session_times_are_validated_and_saved(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
