@@ -198,3 +198,22 @@ def test_cara_analytics_intent_accepts_only_management_roles(monkeypatch):
     assert routes._ANALYTICS_QUERY.search("Show missed sessions and attendance")
     assert routes._ANALYTICS_QUERY.search("Compare online vs face-to-face")
     assert routes._ANALYTICS_ROLES == {"hod", "coordinator", "executive_dean"}
+
+
+def test_ocr_text_normaliser_handles_easyocr_and_paddleocr_results():
+    from app.class_rep.ocr import _texts
+    easy = [[[0, 0], [1, 0], [1, 1], [0, 1]], "Maternal health", 0.98]
+    paddle_v2 = [[[0, 0], [1, 0], [1, 1], [0, 1]], ["Neonatal health", 0.97]]
+    paddle_v3 = {"rec_texts": ["Pregnancy", "Newborn"]}
+    assert _texts([easy]) == ["Maternal health"]
+    assert _texts([paddle_v2]) == ["Neonatal health"]
+    assert _texts(paddle_v3) == ["Pregnancy", "Newborn"]
+
+
+def test_ocr_engine_configuration_is_validated(monkeypatch):
+    import pytest
+    from app.class_rep.ocr import _ocr_image, OCRDocumentError
+    from PIL import Image
+    monkeypatch.setenv("MNH_CLASSREP_OCR_ENGINE", "unknown")
+    with pytest.raises(OCRDocumentError, match="must be auto"):
+        _ocr_image(Image.new("RGB", (10, 10)))
