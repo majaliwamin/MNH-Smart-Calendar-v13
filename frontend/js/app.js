@@ -571,7 +571,7 @@ async function downloadPdf(){
   pdf.setFont("helvetica","normal");pdf.setFontSize(9);pdf.setTextColor(...cyan);
   txt("Penrose ScholarMw · Your academic partner for excellence",M,PH-M+1);
   txt("Monday–Friday timetable · Fill empty cells to complete the schedule",PW-M,PH-M+1,{align:"right"});
-  pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
+  pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
   const blob=pdf.output("blob"),name="MNH-PhD-Timetable-"+WK.isoMonday(weekOffset)+"-"+(weekOffset===0?"this-week":"week-"+weekOffset)+".pdf";
   const url=URL.createObjectURL(blob),l=document.createElement("a");l.href=url;l.download=name;l.click();setTimeout(()=>URL.revokeObjectURL(url),4000);statusEl.className="status ok";statusEl.textContent="PDF ready.";
  }catch(e){console.error(e);statusEl.className="status error";statusEl.textContent="The PDF could not be created.";}
@@ -794,7 +794,7 @@ function initAlarms(){
  setInterval(alarmTick,1000);
 }
 // ---- Header (editable + navigable) and extra views ----
-const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Block",subtitle:"Academic Calendar"};
+const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
 const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
