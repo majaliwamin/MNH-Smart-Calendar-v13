@@ -160,6 +160,7 @@ def test_document_admin_token_is_required(monkeypatch):
 
 def test_voice_adapters_validate_and_return_audio(monkeypatch):
     from app.class_rep import voice
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "@cf/test/speech-to-text")
     monkeypatch.setattr(voice, "_run", lambda model, payload: {"text": "Hello class"})
     assert voice.transcribe(b"audio-bytes", "audio/webm") == "Hello class"
     try:
@@ -183,6 +184,7 @@ def test_cara_analytics_intent_rejects_unauthorised_request(monkeypatch):
         host = "127.0.0.1"
     class Request:
         client = Client()
+    monkeypatch.setattr(routes, "_user", lambda request: {"id": "test-user"})
     monkeypatch.setattr(routes, "role_for_password", lambda password: None)
     try:
         routes.chat(ChatRequest(message="Show programme analytics"), Request(), None)
