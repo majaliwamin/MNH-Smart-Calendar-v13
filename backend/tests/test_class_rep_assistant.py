@@ -224,3 +224,38 @@ def test_paddleocr_v3_result_object_is_supported():
     class Result:
         json = {"res": {"rec_texts": ["OCR output"]}}
     assert _texts([Result()]) == ["OCR output"]
+
+
+
+def test_cloudflare_http_failures_log_status_and_error_code_without_secrets(monkeypatch, caplog):
+    from io import BytesIO
+    from urllib.error import HTTPError
+
+    monkeypatch.setattr(providers, "provider_configs", lambda: [{
+        "provider": "cloudflare", "account_id": "account-test",
+        "api_key": "never-log-this-token", "model": "@cf/qwen/test",
+        "timeout": 5, "max_tokens": 100,
+    }])
+
+    def reject_request(request, timeout):
+        raise HTTPError(
+            request.full_url, 403, "Forbidden", {},
+            BytesIO(json.dumps({"success": False, "errors": [
+                {"code": 10000, "message": "Authentication error"}
+            ]}).encode()),
+        )
+
+    monkeypatch.setattr(providers, "urlopen", reject_request)
+    with caplog.at_level("WARNING"):
+        try:
+            providers.complete([{"role": "user", "content": "private prompt"}])
+        except ProviderError as exc:
+            assert "temporarily unavailable" in str(exc)
+        else:
+            raise AssertionError("A rejected provider request must fail safely")
+
+    assert "provider=cloudflare" in caplog.text
+    assert "http_status=403" in caplog.text
+    assert "error_codes=10000" in caplog.text
+    assert "never-log-this-token" not in caplog.text
+    assert "private prompt" not in caplog.text
