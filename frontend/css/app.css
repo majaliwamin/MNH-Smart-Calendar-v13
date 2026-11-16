@@ -1822,3 +1822,50 @@ body{height:auto;min-height:0}
   #view-weekly:not([hidden]) .wrap{padding-left:0;padding-right:0}
   #view-weekly table{min-width:940px}
 }
+
+/* v14.92: keep the install prompt and the manual refresh control inside the
+   weekly-navigation row, and stop Android "shrink to fit" by clamping the
+   document to the viewport. The timetable still scrolls horizontally. */
+html,body{max-width:100%}
+html{overflow-x:clip}
+body{overflow-x:clip}
+.week-nav-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:nowrap;
+  width:100%;
+  min-width:0;
+}
+.week-nav-row .week-nav{flex:0 0 auto;width:auto;max-width:none;margin:0}
+.mnh-refresh-btn{
+  appearance:none;
+  -webkit-appearance:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  min-height:40px;
+  margin:0;
+  padding:8px;
+  border:1px solid var(--tab-line);
+  border-radius:9px;
+  background:var(--tab);
+  color:var(--text);
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:background .18s ease,border-color .18s ease;
+}
+.mnh-refresh-btn svg{display:block;width:22px;height:22px}
+.mnh-refresh-btn:hover{background:var(--field);border-color:var(--accent)}
+.mnh-refresh-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.mnh-refresh-btn.is-refreshing svg{animation:mnh-refresh-spin .8s linear infinite}
+@keyframes mnh-refresh-spin{to{transform:rotate(360deg)}}
+@media(max-width:560px){
+  .week-nav-row{gap:4px}
+  .week-nav-row .install-app-notice{max-width:34vw;padding:4px 0}
+  .week-nav-row .mnh-refresh-btn{flex-basis:34px;width:34px;height:34px;min-height:34px;padding:6px}
+}
+@media(prefers-reduced-motion:reduce){.mnh-refresh-btn.is-refreshing svg{animation:none}}

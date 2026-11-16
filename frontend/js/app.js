@@ -2372,3 +2372,40 @@ load();initCloud();initAlarms();initHeader();
   else if(item.dataset.fmt==="image")chooseImageFormat();
  });
 })();
+
+
+// v14.92: manual refresh checks for a new service worker before reloading the app shell.
+(function(){
+ "use strict";
+ const button=document.getElementById("mnh-refresh-btn");
+ if(!button)return;
+ let refreshing=false;
+ button.addEventListener("click",async function(){
+  if(refreshing)return;
+  refreshing=true;
+  button.disabled=true;
+  button.classList.add("is-refreshing");
+  button.setAttribute("aria-label","Refreshing calendar");
+  try{
+   if("serviceWorker" in navigator){
+    const registration=await navigator.serviceWorker.getRegistration();
+    if(registration){
+     await registration.update().catch(()=>{});
+     const worker=registration.installing;
+     if(worker){
+      await Promise.race([
+       new Promise(resolve=>{
+        if(worker.state==="activated"||worker.state==="redundant")return resolve();
+        const changed=()=>{if(worker.state==="activated"||worker.state==="redundant"){worker.removeEventListener("statechange",changed);resolve();}};
+        worker.addEventListener("statechange",changed);
+       }),
+       new Promise(resolve=>setTimeout(resolve,3500))
+      ]);
+     }
+     if(registration.waiting)registration.waiting.postMessage("SKIP_WAITING");
+    }
+   }
+  }catch(error){console.warn("MNH Calendar refresh check failed; reloading the current app shell.",error);}
+  window.location.reload();
+ });
+})();
