@@ -98,13 +98,15 @@ def create_account(name: str, email: str, password: str) -> dict:
     if len(password) < 12 or len(password) > 256:
         raise MemoryError("Use a password between 12 and 256 characters.")
     user_id = _email_id(email)
-    if _read(COL_USERS, user_id):
-        raise MemoryError("An account with this email already exists.")
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ROUNDS)
     user = {"name": name, "email": email, "salt": salt.hex(), "password_hash": digest.hex(),
             "created_at": _now(), "updated_at": _now()}
-    _write(COL_USERS, user_id, user)
+    with database() as db:
+        cursor = db.execute("INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+                            (COL_USERS, user_id, json.dumps(user, ensure_ascii=False), _now()))
+        if cursor.rowcount == 0:
+            raise MemoryError("An account with this email already exists.")
     return {"id": user_id, "name": name, "email": email}
 
 
