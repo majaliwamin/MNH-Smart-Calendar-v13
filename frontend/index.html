@@ -346,7 +346,13 @@
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
  const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 
+ let installNoticeTimer=null;
+ const hideInstallNotice=()=>{
+  if(installNoticeTimer){clearTimeout(installNoticeTimer);installNoticeTimer=null;}
+  if(notice){notice.classList.remove("is-visible","is-action");}
+ };
  const showInstallNotice=(message,action=true)=>{
+  if(installNoticeTimer){clearTimeout(installNoticeTimer);installNoticeTimer=null;}
   if(!notice){
    notice=document.createElement("button");
    notice.type="button";
@@ -361,9 +367,11 @@
   notice.disabled=!action;
   notice.classList.toggle("is-action",action);
   notice.classList.add("is-visible");
+  if(action)installNoticeTimer=setTimeout(hideInstallNotice,8000);
  };
 
  async function installFromNotice(){
+  hideInstallNotice();
   if(isStandalone()||promptOpen)return;
   if(deferredPrompt){
    const promptEvent=deferredPrompt;
@@ -373,8 +381,7 @@
     await promptEvent.prompt();
     const choice=await promptEvent.userChoice;
     if(choice&&choice.outcome==="accepted"){
-     notice.disabled=true;
-     notice.classList.remove("is-action");
+     hideInstallNotice();
     }
    }catch(error){
     console.warn("MNH Calendar install prompt failed:",error);
@@ -406,7 +413,7 @@
  window.addEventListener("appinstalled",()=>{
   deferredPrompt=null;
   promptOpen=false;
-  showInstallNotice("MNH Smart Calendar has been installed.",false);
+  hideInstallNotice();
  });
 })();;
 </script>
