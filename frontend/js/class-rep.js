@@ -4,7 +4,7 @@
   if (!root || root.dataset.ready === "1") return;
   root.dataset.ready = "1";
 
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "" };
+  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "" };
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -125,8 +125,15 @@
     state.busy = true; sendButton.disabled = true; sendButton.textContent = "…";
     try {
       if (state.ready) {
+        const headers = { "Content-Type": "application/json" };
+        if (/analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message)) {
+          const password = state.analyticsPassword || prompt("Management analytics are restricted. Enter the HOD, coordinator or executive dean password:");
+          if (!password) { pending.textContent = "Management analytics access was cancelled. No restricted information was retrieved."; return; }
+          state.analyticsPassword = password;
+          headers["X-CARA-Analytics-Password"] = password;
+        }
         const response = await fetch("/api/class-rep/chat", {
-          method: "POST", headers: { "Content-Type": "application/json" },
+          method: "POST", headers,
           cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10) })
         });
         const result = await response.json().catch(() => ({}));
@@ -140,7 +147,8 @@
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
-      pending.textContent = demoReply(message);
+      pending.textContent = error.message || "AI temporarily unavailable";
+      if (/password|authorised|analytics/i.test(error.message || "")) state.analyticsPassword = "";
       status(error.message || "AI temporarily unavailable", false);
     } finally {
       state.busy = false; sendButton.disabled = false; sendButton.textContent = "Send";
