@@ -58,6 +58,7 @@ def status():
     configured = provider_configs()
     has_cloudflare = bool(os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
                           and os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip())
+    stt_model = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "").strip()
     return {
         "ready": bool(configured), "provider": cfg["provider"], "model": cfg["model"],
         "secret_configured": bool(configured),
@@ -69,8 +70,8 @@ def status():
         "document_uploads": "enabled" if os.getenv("MNH_CLASSREP_DOCUMENT_ADMIN_TOKEN", "").strip() else "disabled_missing_admin_token",
         "document_search": "semantic" if has_cloudflare else "keyword_only",
         "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
-        "voice": "enabled" if has_cloudflare else "disabled_missing_cloudflare",
-        "speech_to_text_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "@cf/openai/whisper-large-v3-turbo"),
+        "voice": "enabled" if has_cloudflare and stt_model else "disabled_missing_voice_model",
+        "speech_to_text_model": stt_model or None,
         "text_to_speech_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL", "@cf/deepgram/aura-2-en"),
         "management_analytics": "role_restricted",
         "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
