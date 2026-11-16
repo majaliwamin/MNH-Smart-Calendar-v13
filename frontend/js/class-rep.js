@@ -22,7 +22,9 @@
   identity.append(el("strong", "cr-title", "CARA (Classroom and Academic Relations Assistant)"));
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
-  const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;\n  const memoryButton = el("button", "cr-account", "Memory"); memoryButton.type = "button"; memoryButton.hidden = true;\n  header.append(identity, memoryButton, signOut, toggle);
+  const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;
+  const memoryButton = el("button", "cr-account", "Memory"); memoryButton.type = "button"; memoryButton.hidden = true;
+  header.append(identity, memoryButton, signOut, toggle);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
