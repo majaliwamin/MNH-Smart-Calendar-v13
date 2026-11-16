@@ -182,7 +182,7 @@ def delete_document(doc_id: str, owner_id: str = 'shared') -> bool:
         if not exists:
             return False
         metadata = json.loads(exists["data"])
-        if metadata.get("owner_id", "shared") not in ("shared", owner_id):
+        if metadata.get("owner_id", "shared") != owner_id:
             return False
         connection.execute("DELETE FROM docs WHERE col='cara_documents' AND id LIKE ?", (doc_id + ":%",))
         connection.execute("DELETE FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,))
