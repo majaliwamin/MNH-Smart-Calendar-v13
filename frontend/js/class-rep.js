@@ -23,7 +23,7 @@
   toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
   header.append(identity, toggle);
   const body = el("div", "cr-body");
-  const intro = el("p", "cr-intro", "Ask about class coordination, examinations or announcements. Demo mode is active: responses are built in and do not yet read live timetable records.");
+  const intro = el("p", "cr-intro", "Ask about the live timetable, modules, facilitators, examinations, recurring activities, announcements, resources and recent changes. CARA is read-only and uses recorded application information.");
   const prompts = el("div", "cr-prompts");
   [["This week's sessions", "Summarise this week's confirmed sessions, times and facilitators."],
    ["Upcoming exams", "What examination information is currently recorded?"],
@@ -41,7 +41,7 @@
   input.rows = 2; input.maxLength = 4000; input.placeholder = "Ask the class assistant…"; input.setAttribute("aria-label", "Message the Class Rep Assistant");
   const sendButton = el("button", "cr-send", "Send"); sendButton.type = "submit";
   form.append(input, sendButton);
-  const foot = el("p", "cr-foot", "Demo responses are illustrative. Confirm dates, times and decisions against the live calendar and programme office.");
+  const foot = el("p", "cr-foot", "Read-only access to shared application records. Uploaded-document search, management analytics and voice features are not enabled yet.");
   body.append(intro, prompts, transcript, form, foot);
   root.append(launcher, header, body);
   root.classList.remove("class-rep-assistant");
@@ -49,7 +49,7 @@
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
-  addMessage("assistant", "Hello! I’m CARA, your intelligent academic relations assistant. I’m currently running with built-in demo responses, so I can help draft class communications and guide you to the right calendar section. Live timetable-aware AI will be connected later.");
+  addMessage("assistant", "Hello! I’m CARA, your intelligent academic relations assistant. I can answer from the live shared calendar records when an AI provider is configured, and I can help draft class communications. I never change timetable records or claim to send messages.");
 
   function status(text, ready) {
     const node = root.querySelector(".cr-status");
@@ -71,17 +71,17 @@
     if (/lecturer|facilitator|professor|doctor|message|email|whatsapp/.test(q)) return "Polite message draft:\\n\\nGood day, [Title and Name]. I hope you are well. I am writing on behalf of the MNH class to kindly seek clarification regarding [state the specific issue]. Could you please advise us when convenient?\\n\\nThank you for your time and guidance.\\nKind regards,\\nClass Representative";
     if (/agenda|meeting|minutes/.test(q)) return "Suggested class meeting agenda:\\n\\n1. Welcome and purpose of the meeting\\n2. Review of confirmed timetable and assessments\\n3. Student questions or concerns\\n4. Agreed actions, responsible persons and deadlines\\n5. Any other business and closing\\n\\nRecord only decisions actually agreed by the group.";
     if (/thank/.test(q)) return "You're welcome. I’m ready to help with class announcements, messages to lecturers, meeting agendas and timetable guidance.";
-    return "I can help with class announcements, messages to lecturers, meeting agendas and general timetable guidance. Try one of the suggested prompts, or tell me what message you want drafted.\\n\\nThis is a hardcoded demo response; live calendar lookup and provider-based AI are not enabled yet.";
+    return "I can help with class announcements, messages to lecturers, meeting agendas and general timetable guidance. Try one of the suggested prompts, or tell me what message you want drafted.\\n\\nThis is a built-in fallback response. Configure at least one CARA provider to enable AI answers grounded in live application records.";
   }
   async function checkStatus() {
     try {
       const response = await fetch("/api/class-rep/status", { cache: "no-store" });
       const result = await response.json();
       state.ready = Boolean(response.ok && result.ready);
-      status(state.ready ? "AI connected · " + result.provider : "Demo mode · built-in responses", state.ready);
+      status(state.ready ? "AI connected · " + result.provider + (result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
     } catch (_) {
       state.ready = false;
-      status("Demo mode · built-in responses", false);
+      status("Built-in fallback · AI not configured", false);
     }
   }
   async function send(value) {
