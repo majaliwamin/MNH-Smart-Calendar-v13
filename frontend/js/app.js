@@ -21,7 +21,7 @@ let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
 let recurringRecords=[];
 let editingUnlocked=true;
-let analyticsUnlocked=true;
+let analyticsUnlocked=false;
 let activeCell=null;
 let selectedTime=-1;
 
@@ -415,8 +415,6 @@ function requestEditing(action){
  if(typeof action==="function")action();
 }
 function requestAnalytics(){
- analyticsUnlocked=true;
- updateRoleNav();
  showView("analytics");
 }
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
@@ -839,7 +837,7 @@ function initAlarms(){
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
 const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
-function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
+function updateRoleNav(){document.querySelectorAll('[data-view="analytics"]').forEach(x=>{x.title="Password required to open Analytics";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
@@ -962,6 +960,16 @@ function syncCurrentAcademicWeek(){
 }
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
+ if(name==="analytics"&&!analyticsUnlocked){
+  const entered=window.prompt("Analytics access required. Enter the MNH password:");
+  if(String(entered||"").trim().toLowerCase()!=="mnh"){
+   const fallback=VIEWS.includes(currentView)&&currentView!=="analytics"?currentView:"weekly";
+   try{history.replaceState(null,"",location.pathname+location.search+(fallback==="weekly"?"":"#"+fallback));}catch(e){}
+   return;
+  }
+  analyticsUnlocked=true;
+  updateRoleNav();
+ }
  currentView=name;
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";
@@ -1706,7 +1714,7 @@ async function downloadTimetableImage(mime){
 }
 window.downloadTimetableImage=downloadTimetableImage;
 function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme;sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
- const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted","Open access is enabled. Anyone with the website link can view, edit, replace and restore shared programme records, and view Analytics."));const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=false;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
+ const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted","Open access is enabled. Anyone with the website link can view, edit, replace and restore shared programme records. Analytics requires the shared MNH password."));const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=false;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
  const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
  const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}
 function itemButton(x){
