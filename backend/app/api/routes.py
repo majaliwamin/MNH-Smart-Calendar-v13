@@ -4,11 +4,13 @@ import logging
 import os
 import re
 import time
+from contextlib import contextmanager
+from functools import wraps
 from datetime import date, timedelta
 from io import BytesIO
 from fastapi import APIRouter, Body, Cookie, HTTPException
 from fastapi.responses import StreamingResponse
-from app.database.connection import database
+from app.database.connection import database, DB_LOCK
 from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups, make_backup
 
@@ -65,6 +67,28 @@ def _validate_restore_intervals(cleaned):
                 continue
             if other_start < end and other_end > start:
                 raise HTTPException(400, f"Backup contains a {recurring_item.get('day')} session overlapping a recurring activity.")
+
+
+@contextmanager
+def _shared_write_lock():
+    """Serialize timetable mutations so concurrent devices cannot pass the same clash check."""
+    if os.getenv("DATABASE_URL", "").strip():
+        # Transaction-scoped PostgreSQL advisory lock coordinates all app workers/instances.
+        with database() as connection:
+            connection.execute("SELECT pg_advisory_xact_lock(20261116, 1500)")
+            yield
+    else:
+        # SQLite's process lock is re-entrant because database() acquires it too.
+        with DB_LOCK:
+            yield
+
+
+def serialised_shared_write(handler):
+    @wraps(handler)
+    def wrapped(*args, **kwargs):
+        with _shared_write_lock():
+            return handler(*args, **kwargs)
+    return wrapped
 
 
 def current_session(mnh_session: str | None = None):
@@ -557,6 +581,7 @@ def logout():
 
 
 @router.post("/restore")
+@serialised_shared_write
 def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=None)):
     require_editor(mnh_session)
     if payload.get("format") != "mnh-calendar-backup" or not isinstance(payload.get("documents"), list):
@@ -611,6 +636,7 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
 
 
 @router.put("/doc/{collection}/{item_id}")
+@serialised_shared_write
 def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_session: str | None = Cookie(default=None)):
     session = require_editor(mnh_session)
     if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
@@ -708,6 +734,7 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
 
 
 @router.delete("/doc/{collection}/{item_id}")
+@serialised_shared_write
 def delete_document(collection: str, item_id: str, mnh_session: str | None = Cookie(default=None)):
     require_editor(mnh_session)
     if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
