@@ -129,7 +129,7 @@ def test_windows_startup_helper_and_correct_teaching_dates_are_documented():
 
 def test_month_view_renders_weekdays_only_from_the_shared_malawi_week_model():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    monthly = app[app.index("function renderMonthly()"):app.index("function localActivityDate()", app.index("function renderMonthly()"))]
+    monthly = app[app.index("function renderMonthly()"):app.index("function localActivityDate(", app.index("function renderMonthly()"))]
     assert '["Mon","Tue","Wed","Thu","Fri"]' in monthly
     assert 'weekday===0||weekday===6' in monthly
     assert 'WK.startParts(weekOffset)' in monthly
@@ -225,7 +225,7 @@ def test_upcoming_activities_are_future_only_and_use_shared_records():
     assert 'loadRows("recurring")' in app
     assert "start.getTime()<=now" in app
     assert "function nextRecurringDate(dayName,timeText,now)" in app
-    assert "getFutureActivities().then(items=>" in app
+    assert "const items=(await getFutureActivities()).slice(0,12)" in app
 
 
 def test_pwa_install_requirements_are_met():
@@ -254,7 +254,7 @@ def test_pwa_install_requirements_are_met():
 
     # The page links the manifest and exposes the install control.
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    assert 'id="install-app-btn"' in html
+    assert 'notice.id="install-app-notice"' in html
 
     # The install handler saves and reuses the native prompt, guards repeats and state.
     assert "beforeinstallprompt" in html
