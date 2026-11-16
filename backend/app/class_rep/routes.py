@@ -169,7 +169,7 @@ def _explicit_reminder(user_id: str, message: str):
 
 
 def _explicit_project(user_id: str, message: str, conversation_id: str = ""):
-    match = re.search(r"\b(?:create|start|track)\s+(?:a\s+)?project(?:\s+called|\s+named|\s*:\s*)\s*(.+)$", message.strip(), re.I)
+    match = re.search(r"\b(?:(?:create|start|track)\s+(?:a\s+)?project(?:\s+called|\s+named|\s*:\s*)\s*|my project is\s+)(.+)$", message.strip(), re.I)
     if not match:
         return None
     title = match.group(1).strip().rstrip(".!?")[:180]
