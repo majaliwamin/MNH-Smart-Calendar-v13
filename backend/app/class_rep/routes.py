@@ -199,6 +199,12 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
     conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", payload.conversation_id or "")[:80] or uuid.uuid4().hex
     try:
+        project_created = _explicit_project(user["id"], payload.message.strip())
+        if project_created:
+            confirmation = "I have saved the project '" + project_created["title"] + "' to your CARA project records."
+            memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
+            return ChatResponse(reply=confirmation, provider="CARA project memory",
+                                model="persistent project record", conversation_id=conversation_id)
         task_created = _explicit_task(user["id"], payload.message.strip())
         if task_created:
             confirmation = "I have saved the task “" + task_created["title"] + "” to your CARA task list as not started."
@@ -234,7 +240,10 @@ def conversation_turn(request: Request, payload: dict):
     conversation_id = str(payload.get("conversation_id") or uuid.uuid4().hex)[:80]
     if not message or not answer:
         raise HTTPException(400, "A user message and assistant response are required.")
-    task = _explicit_task(user["id"], message)
+    project = _explicit_project(user["id"], message)
+    if project:
+        answer = "I have saved the project '" + project["title"] + "' to your CARA project records."
+    task = None if project else _explicit_task(user["id"], message)
     if task:
         answer = "I have saved the task “" + task["title"] + "” to your CARA task list as not started."
     reminder_result = _explicit_reminder(user["id"], message)
