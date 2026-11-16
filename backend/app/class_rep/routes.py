@@ -208,6 +208,25 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         raise HTTPException(503, "CARA is temporarily unavailable. Please try again later.") from exc
 
 
+@router.post("/conversation/turn")
+def conversation_turn(request: Request, payload: dict):
+    user = _user(request)
+    message = str(payload.get("message", "")).strip()[:4000]
+    answer = str(payload.get("reply", "")).strip()[:6000]
+    conversation_id = str(payload.get("conversation_id") or uuid.uuid4().hex)[:80]
+    if not message or not answer:
+        raise HTTPException(400, "A user message and assistant response are required.")
+    task = _explicit_task(user["id"], message)
+    if task:
+        answer = "I have saved the task “" + task["title"] + "” to your CARA task list as not started."
+    reminder_result = _explicit_reminder(user["id"], message)
+    if reminder_result:
+        reminder, scheduled_for = reminder_result
+        answer = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CARA when you return; no SMS, email or push notification channel is configured."
+    memory.save_turn(user["id"], conversation_id, message, answer)
+    return {"saved": True, "conversation_id": conversation_id, "reply": answer}
+
+
 @router.get("/memories")
 def memories_list(request: Request):
     return {"memories": memory.list_memories(_user(request)["id"])}
