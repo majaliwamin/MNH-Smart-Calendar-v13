@@ -6,7 +6,7 @@
   // Keep the full-screen assistant outside app header/transform stacking contexts.
   if (root.parentElement !== document.body) document.body.appendChild(root);
 
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "" };
+  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null };
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -22,7 +22,7 @@
   identity.append(el("strong", "cr-title", "CARA (Classroom and Academic Relations Assistant)"));
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
-  header.append(identity, toggle);
+  const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;\n  header.append(identity, signOut, toggle);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -40,7 +40,20 @@
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
   fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
-  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode); root.append(launcher, header, body);
+  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
+  const authPanel = el("section", "cr-auth-panel");
+  const authCard = el("div", "cr-auth-card");
+  const authTitle = el("strong", "cr-auth-title", "Your private CARA account");
+  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved tasks and memories.");
+  const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
+  const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
+  const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.placeholder = "Password (at least 12 characters)"; authPassword.autocomplete = "current-password";
+  const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
+  const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
+  const authFeedback = el("p", "cr-auth-feedback", "");
+  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback);
+  authPanel.append(authCard);
+  root.append(launcher, header, body, authPanel);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
@@ -77,9 +90,68 @@
       recordButton.disabled = true; attachButton.disabled = true;
     }
   }
+  let authMode = "login";
+  function setAuthMode(mode) {
+    authMode = mode;
+    authName.hidden = mode !== "register";
+    authPassword.autocomplete = mode === "register" ? "new-password" : "current-password";
+    authSubmit.textContent = mode === "register" ? "Create account" : "Sign in";
+    authSwitch.textContent = mode === "register" ? "I already have an account" : "Create a new account";
+    authFeedback.textContent = "";
+  }
+  async function loadPreviousConversation() {
+    try {
+      const response = await fetch("/api/class-rep/conversations", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      const latest = (data.conversations || [])[0];
+      if (!latest) return;
+      state.conversationId = latest.id;
+      state.history = (latest.messages || []).slice(-12).map(m => ({ role: m.role, content: m.content }));
+      transcript.replaceChildren();
+      for (const message of state.history) addMessage(message.role, message.content);
+    } catch (_) {}
+  }
+  async function checkAuth() {
+    try {
+      const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
+      const result = await response.json();
+      state.user = result.authenticated ? result.user : null;
+      signOut.hidden = !state.user;
+      authPanel.hidden = Boolean(state.user);
+      body.hidden = !state.user;
+      if (state.user) await loadPreviousConversation();
+    } catch (_) {
+      state.user = null; authPanel.hidden = false; body.hidden = true;
+    }
+  }
+  async function authenticate() {
+    authSubmit.disabled = true;
+    try {
+      const payload = { email: authEmail.value.trim(), password: authPassword.value };
+      if (authMode === "register") payload.name = authName.value.trim();
+      const response = await fetch("/api/class-rep/auth/" + authMode, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || "Account request failed.");
+      state.user = result.user; state.history = []; state.conversationId = null;
+      transcript.replaceChildren(); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      authPassword.value = ""; status("Signed in · private memory enabled", true);
+    } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
+    finally { authSubmit.disabled = false; }
+  }
+  authSubmit.addEventListener("click", authenticate);
+  authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+  authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
+  signOut.addEventListener("click", async () => {
+    await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
+    state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
+    body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
+  });
   async function send(value) {
     const message = String(value || input.value).trim();
-    if (!message || state.busy) return;
+    if (!message || state.busy || !state.user) return;
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = ""; updateComposerAction();
@@ -97,7 +169,7 @@
         }
         const response = await fetch("/api/class-rep/chat", {
           method: "POST", headers,
-          cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10) })
+          cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId })
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error("Request could not be completed");
@@ -203,7 +275,7 @@
     header.hidden = !open; body.hidden = !open; launcher.hidden = open;
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
   }
-  launcher.addEventListener("click", () => setOpen(true));
+  setAuthMode("login");\n  launcher.addEventListener("click", () => setOpen(true));
   toggle.addEventListener("click", () => setOpen(false));
   checkStatus();
 })();
