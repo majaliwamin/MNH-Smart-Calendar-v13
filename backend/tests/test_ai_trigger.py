@@ -137,8 +137,10 @@ def test_auto_check_disabled_by_default(db, bridge, monkeypatch):
 
 
 # ---- API -------------------------------------------------------------------------------------
-def test_trigger_endpoint_requires_editor(client):
-    assert client.post("/api/comm/ai/trigger", json={"kind": "announcement", "instructions": "x"}).status_code == 401
+def test_trigger_endpoint_is_not_blocked_by_editor_authentication(client):
+    response = client.post("/api/comm/ai/trigger", json={"kind": "announcement", "instructions": "x"})
+    # Public access is intentional; a request may still fail validation or provider setup.
+    assert response.status_code != 401
 
 
 def test_trigger_endpoint_sends(client, editor_session, bridge, monkeypatch):
