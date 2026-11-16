@@ -93,16 +93,18 @@ def _split(text: str) -> list[str]:
 
 
 def _vectors(texts: list[str], prefix: str) -> list[list[float]]:
-    result = _cloudflare({"input": [prefix + text for text in texts], "dimensions": 256})
-    vectors = result.get("data")
-    if not isinstance(vectors, list) or len(vectors) != len(texts):
-        raise DocumentError("Embedding service returned an unexpected vector count.")
     clean = []
-    for item in vectors:
-        vector = item.get("embedding") if isinstance(item, dict) else item
-        if not isinstance(vector, list) or not vector:
-            raise DocumentError("Embedding service returned an invalid vector.")
-        clean.append([float(value) for value in vector])
+    for offset in range(0, len(texts), 64):
+        batch = texts[offset:offset + 64]
+        result = _cloudflare({"input": [prefix + text for text in batch], "dimensions": 256})
+        vectors = result.get("data")
+        if not isinstance(vectors, list) or len(vectors) != len(batch):
+            raise DocumentError("Embedding service returned an unexpected vector count.")
+        for item in vectors:
+            vector = item.get("embedding") if isinstance(item, dict) else item
+            if not isinstance(vector, list) or not vector:
+                raise DocumentError("Embedding service returned an invalid vector.")
+            clean.append([float(value) for value in vector])
     return clean
 
 
