@@ -1884,3 +1884,37 @@ html,body{
   -webkit-overflow-scrolling:touch;
 }
 #view-weekly table{min-width:940px;width:100%;}
+
+
+/* Upcoming announcements share the reserved row above the main header.
+   Keep the ticker flexible and pin manual refresh to the far-right edge. */
+.upcoming-announcements-row{
+ display:flex;
+ align-items:center;
+ gap:10px;
+ width:100%;
+ min-width:0;
+ margin:0;
+ padding:8px clamp(10px,2vw,20px);
+ box-sizing:border-box;
+ background:var(--head,var(--panel));
+ border-bottom:1px solid var(--line);
+}
+.upcoming-announcements-row .activity-marquee-shell{
+ flex:1 1 auto;
+ min-width:0;
+ width:0;
+ margin:0;
+}
+.upcoming-announcements-row .activity-marquee{
+ padding:9px 0;
+}
+.upcoming-announcements-row .mnh-refresh-btn{
+ flex:0 0 40px;
+ margin-left:auto;
+}
+@media(max-width:560px){
+ .upcoming-announcements-row{gap:6px;padding:6px 8px}
+ .upcoming-announcements-row .activity-marquee{padding:7px 0}
+ .upcoming-announcements-row .mnh-refresh-btn{flex-basis:36px;width:36px;height:36px;min-height:36px;padding:6px}
+}
