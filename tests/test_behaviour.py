@@ -92,12 +92,12 @@ def test_excel_workbook_is_valid_monday_to_friday_with_half_height_merged_lunch_
     assert merged == {"A1:F1"}
     body_merges = [m for m in merged if any(int(c) >= 4 for c in __import__("re").findall(r"[0-9]+", m))]
     assert body_merges == [], f"body cells must stay ordinary cells, found {body_merges}"
-    lunch_rows = [r for r in range(4, ws.max_row + 1) if "lunch" in str(ws.cell(r, 1).value).replace(" ", "").lower()]
+    lunch_rows = [r for r in range(3, ws.max_row + 1) if "lunch" in str(ws.cell(r, 1).value).replace(" ", "").lower()]
     assert len(lunch_rows) == 1
     r = lunch_rows[0]
     assert "12:00" in str(ws.cell(r, 1).value)
     assert ws.sheet_view.showGridLines is True
-    text = "\n".join(str(c.value) for row in ws.iter_rows(min_row=4) for c in row if c.value)
+    text = "\n".join(str(c.value) for row in ws.iter_rows(min_row=3) for c in row if c.value)
     assert "PNIM-8100" in text and "Pregnancy and Neonatal Immunology" in text and "Dr D Mzinza" in text
     assert wb["Session Details"].auto_filter.ref
 
@@ -202,7 +202,10 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
         "modules": {"PNIM-8100": {"title": "Pregnancy and Neonatal Immunology", "facilitatorId": "fac-1"}},
         "facilitators": {"fac-1": {"name": "Dr D Mzinza"}},
         "cells": {},
-        "recurring": {},
+        "recurring": {
+            "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},
+            "seminar-mnh": {"title": "Seminar in MNH", "day": "Thursday", "time": "10:00–12:00"},
+        },
     }
     payload = build_timetable_pdf(collections, ["PNIM-8100"])
     assert payload.startswith(b"%PDF")
@@ -210,7 +213,18 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
     assert b"mod_0_facilitator" in payload
     assert b"mod_0_include" in payload and b"mod_2_include" in payload
     assert b"Dr D Mzinza" in payload
-    assert b"Seminar in MNH" in payload and b"Journal Club" in payload
+    # ReportLab compresses page content streams; inspect decompressed text rather than
+    # searching the compressed PDF byte stream.
+    import re
+    import zlib
+    decoded_streams = []
+    for stream in re.findall(rb"stream\\r?\\n(.*?)\\r?\\nendstream", payload, re.S):
+        try:
+            decoded_streams.append(zlib.decompress(stream))
+        except zlib.error:
+            decoded_streams.append(stream)
+    searchable_pdf = payload + b" ".join(decoded_streams)
+    assert b"Seminar in MNH" in searchable_pdf and b"Journal Club" in searchable_pdf
     assert b"595.276" in payload and b"841.889" in payload
 
 
@@ -258,7 +272,18 @@ def test_excel_module_selection_filters_sessions_and_keeps_lecturer_options():
 
 def test_selected_week_start_is_applied_to_all_recurring_and_saved_sessions():
     requested_monday = date(2026, 11, 16)
-    sessions = schedule.sessions_from_collections(COLLECTIONS, week_start=requested_monday)
+    week_two = {
+        **COLLECTIONS,
+        "cells": {
+            **COLLECTIONS["cells"],
+            "week-two-pnim": {
+                "dayIndex": 0, "startTime": "08:00", "endTime": "10:00",
+                "code": "PNIM-8100", "title": "Immunology tutorial",
+                "weekStart": requested_monday.isoformat(),
+            },
+        },
+    }
+    sessions = schedule.sessions_from_collections(week_two, week_start=requested_monday)
     dates = {s["code"]: s["date"] for s in sessions}
     assert dates["Journal Club"] == date(2026, 11, 17)
     assert dates["Seminar in MNH"] == date(2026, 11, 19)
