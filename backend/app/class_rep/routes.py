@@ -107,8 +107,11 @@ def logout(request: Request, response: Response):
 
 @router.get("/auth/me")
 def me(request: Request):
+    if not _durable_storage_ready():
+        return {"authenticated": False, "user": None, "storage_ready": False,
+                "message": "Private CARA memory is waiting for a persistent database or an attached persistent disk."}
     user = memory.resolve_session(request.cookies.get("cara_session"))
-    return {"authenticated": bool(user), "user": user}
+    return {"authenticated": bool(user), "user": user, "storage_ready": True}
 
 
 @router.get("/status")
@@ -130,7 +133,7 @@ def status():
             "text_to_speech_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL", "@cf/deepgram/aura-2-en"),
             "management_analytics": "role_restricted",
             "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
-            "account_memory": "persistent_account_scoped", "reminder_delivery": "in_app_only"}
+            "account_memory": "persistent_account_scoped" if _durable_storage_ready() else "disabled_missing_durable_storage", "reminder_delivery": "in_app_only"}
 
 
 
