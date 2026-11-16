@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v15.01">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v15.03">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v15.01">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v15.03">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.16-v15.01";</script>
+<script>window.MNH_BUILD="2026.11.16-v15.03";</script>
 <script>
 (function () {
   "use strict";
@@ -89,11 +89,11 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.16-v15.01"></script>
-<script src="/js/api-client.js?v=2026.11.16-v15.01"></script>
+<script src="/js/week-model.js?v=2026.11.16-v15.03"></script>
+<script src="/js/api-client.js?v=2026.11.16-v15.03"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v15.01">
-<link rel="stylesheet" href="/css/class-rep.css?v=1">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v15.03">
+<link rel="stylesheet" href="/css/class-rep.css?v=3">
 
 </head>
 <body data-theme="dark">
@@ -212,7 +212,7 @@
 <table aria-label="Editable Monday to Friday calendar">
 <thead id="calendar-head"></thead><tbody id="calendar-body"></tbody></table>
 </div>
-<div id="class-rep-assistant" class="class-rep-assistant" aria-label="Class Representative AI Assistant"></div>
+<div id="class-rep-assistant" class="cara-widget" aria-label="Class Representative AI Assistant"></div>
 </section>
 <section class="view vw" id="view-my-schedule" hidden>
  <h2>My Schedule</h2><p class="lead" id="schedule-lead">Everything planned for the week of 9–13 Nov 2026. Select an item for details.</p>
@@ -358,14 +358,14 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v15.01" defer></script>
-<script src="/js/class-rep.js?v=1" defer></script>
+<script src="/js/app.js?v=2026.11.16-v15.03" defer></script>
+<script src="/js/class-rep.js?v=3" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.16-v15.01";
+  const workerUrl = "/service-worker.js?v=2026.11.16-v15.03";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
