@@ -1749,3 +1749,7 @@ body[data-theme="midnight"] .view-tabs .weekly-date-tab .weekly-date-icon,
 body[data-theme="silver"] .view-tabs .weekly-date-tab .weekly-date-icon{
   color:#fff!important;
 }
+
+
+/* v14.80: pink installation action label. */
+.install-app-notice{color:#ff69b4!important}
