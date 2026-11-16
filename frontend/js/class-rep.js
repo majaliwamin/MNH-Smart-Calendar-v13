@@ -64,11 +64,13 @@
   const memoryEditor = el("textarea", "cr-memory-editor"); memoryEditor.placeholder = "Add a useful project decision, preference or note…";
   const memorySave = el("button", "cr-auth-submit", "Save memory"); memorySave.type = "button";
   const memoryItems = el("div", "cr-memory-items");
+  const projectItems = el("div", "cr-memory-items");
   const taskItems = el("div", "cr-memory-items");
   const reminderItems = el("div", "cr-memory-items");
   memoryPanel.append(memoryHead, memoryIntro, memoryEditor, memorySave,
     el("strong", "cr-memory-section", "Saved memories"), memoryItems,
-    el("strong", "cr-memory-section", "Tasks and projects"), taskItems,
+    el("strong", "cr-memory-section", "Projects"), projectItems,
+    el("strong", "cr-memory-section", "Tasks"), taskItems,
     el("strong", "cr-memory-section", "Reminders"), reminderItems);
   root.append(launcher, header, body, authPanel, memoryPanel);
   root.classList.remove("class-rep-assistant");
@@ -112,11 +114,11 @@
   let authMode = "login";
   let editingMemoryId = null;
   async function loadMemoryPanel() {
-    memoryItems.replaceChildren(); taskItems.replaceChildren(); reminderItems.replaceChildren();
-    const [mRes, tRes, rRes] = await Promise.all([
-      fetch("/api/class-rep/memories"), fetch("/api/class-rep/tasks"), fetch("/api/class-rep/reminders")
+    memoryItems.replaceChildren(); projectItems.replaceChildren(); taskItems.replaceChildren(); reminderItems.replaceChildren();
+    const [mRes, pRes, tRes, rRes] = await Promise.all([
+      fetch("/api/class-rep/memories"), fetch("/api/class-rep/projects"), fetch("/api/class-rep/tasks"), fetch("/api/class-rep/reminders")
     ]);
-    const [mData, tData, rData] = await Promise.all([mRes.json(), tRes.json(), rRes.json()]);
+    const [mData, pData, tData, rData] = await Promise.all([mRes.json(), pRes.json(), tRes.json(), rRes.json()]);
     for (const item of (mData.memories || [])) {
       const row = el("div", "cr-memory-row");
       const edit = el("button", "cr-memory-edit", item.content); edit.type = "button";
