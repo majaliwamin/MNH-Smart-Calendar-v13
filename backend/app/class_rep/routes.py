@@ -55,6 +55,10 @@ def _admin(token: str | None):
         raise HTTPException(401, "A valid document administrator credential is required.")
 
 
+def _require_document_admin(token: str | None):
+    return _admin(token)
+
+
 @router.post("/auth/register")
 def register(payload: dict, response: Response):
     try:
