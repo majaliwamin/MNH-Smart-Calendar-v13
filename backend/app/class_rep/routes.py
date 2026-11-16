@@ -160,6 +160,19 @@ def _explicit_reminder(user_id: str, message: str):
     return reminder, target
 
 
+def _explicit_project(user_id: str, message: str):
+    match = re.search(r"\b(?:create|start|track)\s+(?:a\s+)?project(?:\s+called|\s+named|\s*:\s*)\s*(.+)$", message.strip(), re.I)
+    if not match:
+        return None
+    title = match.group(1).strip().rstrip(".!?")[:180]
+    if not title:
+        return None
+    for existing in memory.list_projects(user_id):
+        if existing.get("title", "").strip().casefold() == title.casefold() and existing.get("status") not in ("completed", "archived"):
+            return existing
+    return memory.upsert_project(user_id, {"title": title, "status": "active"})
+
+
 def _explicit_task(user_id: str, message: str):
     match = re.search(r"\b(?:create|add|track)\s+(?:a\s+)?task(?:\s+to|\s*:\s*)\s*(.+)$", message.strip(), re.I)
     if not match:
