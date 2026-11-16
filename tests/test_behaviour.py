@@ -218,7 +218,7 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
     import re
     import zlib
     decoded_streams = []
-    for stream in re.findall(rb"stream\\r?\\n(.*?)\\r?\\nendstream", payload, re.S):
+    for stream in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", payload, re.S):
         try:
             decoded_streams.append(zlib.decompress(stream))
         except zlib.error:
