@@ -48,7 +48,7 @@
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
-  addMessage("assistant", "Hello! I’m the MNH Class Rep Assistant. I’m currently running with built-in demo responses, so I can help draft class communications and guide you to the right calendar section. Live timetable-aware AI will be connected later.");
+  addMessage("assistant", "Hello! I’m CARA, your intelligent academic relations assistant. I’m currently running with built-in demo responses, so I can help draft class communications and guide you to the right calendar section. Live timetable-aware AI will be connected later.");
 
   function status(text, ready) {
     const node = root.querySelector(".cr-status");
