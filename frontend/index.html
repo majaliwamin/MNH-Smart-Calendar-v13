@@ -359,11 +359,7 @@
    }
    return;
   }
-  if(isIOS()){
-   showInstallNotice("On iPhone or iPad: tap Share, then Add to Home Screen.",false);
-  }else{
-   showInstallNotice("Installation is unavailable here. Open your browser menu and choose Install app.",false);
-  }
+  // No fallback instruction banner: the installation notice simply dismisses when tapped.
  }
 
  if(isStandalone())return;
