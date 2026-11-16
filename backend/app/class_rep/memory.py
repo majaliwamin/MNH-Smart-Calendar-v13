@@ -163,9 +163,15 @@ def save_turn(user_id: str, conversation_id: str, user_message: str, assistant_m
     key = _doc_id(user_id, conversation_id)
     current = _read(COL_CONVERSATIONS, key) or {"messages": [], "created_at": _now()}
     messages = current.get("messages", [])
+    user_text = str(user_message)[:4000]
+    assistant_text = str(assistant_message)[:6000]
+    if SECRET_PATTERN.search(user_text):
+        user_text = "[redacted: credential-like content was not retained]"
+    if SECRET_PATTERN.search(assistant_text):
+        assistant_text = "[redacted: credential-like content was not retained]"
     messages.extend([
-        {"role": "user", "content": str(user_message)[:4000], "at": _now()},
-        {"role": "assistant", "content": str(assistant_message)[:6000], "at": _now()},
+        {"role": "user", "content": user_text, "at": _now()},
+        {"role": "assistant", "content": assistant_text, "at": _now()},
     ])
     current.update({"messages": messages[-100:], "updated_at": _now()})
     _write(COL_CONVERSATIONS, key, current)
