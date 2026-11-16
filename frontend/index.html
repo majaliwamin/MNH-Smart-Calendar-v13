@@ -17,11 +17,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.82";</script>
+<script>window.MNH_BUILD="2026.11.16-v14.83";</script>
 <script src="/js/week-model.js?v=2026.11.16-v14.73"></script>
 <script src="/js/api-client.js?v=2026.11.16-v14.73"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.82">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.83">
 </head>
 <body data-theme="dark">
 <script>
@@ -36,6 +36,30 @@
       document.body.dataset.theme = savedTheme;
     }
   } catch (error) { /* use the default theme if browser storage is unavailable */ }
+})();
+</script>
+<script>
+/* Keep the installed app fitted to its real launch window. Some PWA shells report a
+   temporary, undersized viewport during cold start; remeasure after the window settles. */
+(function(){
+ "use strict";
+ let frame=0;
+ function syncMnhViewport(){
+  if(frame)cancelAnimationFrame(frame);
+  frame=requestAnimationFrame(function(){
+   frame=0;
+   const height=Math.max(320,Math.round(window.innerHeight||document.documentElement.clientHeight||0));
+   if(!height)return;
+   document.documentElement.style.setProperty("--mnh-app-height",height+"px");
+   document.documentElement.classList.add("mnh-viewport-ready");
+   document.body&&document.body.classList.add("mnh-viewport-ready");
+   window.dispatchEvent(new Event("resize"));
+  });
+ }
+ ["pageshow","load","resize","orientationchange","focus"].forEach(type=>window.addEventListener(type,syncMnhViewport,{passive:true}));
+ if(window.visualViewport)window.visualViewport.addEventListener("resize",syncMnhViewport,{passive:true});
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncMnhViewport();});
+ [80,250,700,1400].forEach(delay=>setTimeout(syncMnhViewport,delay));
 })();
 </script>
 <header class="site-header" id="site-header">
