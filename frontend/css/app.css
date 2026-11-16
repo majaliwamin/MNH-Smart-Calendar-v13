@@ -1725,3 +1725,10 @@ body[data-theme="red"] #view-weekly tbody th.time{
 
 /*/* Scheduling form lecturer assignment indicator. */
 .lecturer-assignment-status{margin-top:5px;color:var(--success,#3b9b69);font-size:12px;font-weight:750;letter-spacing:.025em}
+
+
+/* v14.77 desktop masthead: taller title band with a fine top-edge accent. */
+.site-header{position:relative!important;isolation:isolate}
+.site-header::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent 0%,var(--header-border,var(--accent)) 12%,var(--header-border,var(--accent)) 88%,transparent 100%);z-index:5;pointer-events:none}
+.hd-band{min-height:clamp(92px,9vw,150px)!important;padding-top:14px!important;padding-bottom:14px!important}
+@media(max-width:720px){.hd-band{min-height:82px!important;padding-top:9px!important;padding-bottom:9px!important}}
