@@ -1753,3 +1753,9 @@ body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view
 
 /* v14.82: lowercase, underlined install prompt link treatment. */
 .install-app-notice{text-decoration:underline!important;text-underline-offset:2px;text-decoration-thickness:1px}
+
+
+/* v14.83: use the measured PWA window height after cold launch to prevent a compact first render. */
+html.mnh-viewport-ready{height:var(--mnh-app-height)!important;min-height:var(--mnh-app-height)!important}
+body.mnh-viewport-ready{height:var(--mnh-app-height)!important;min-height:var(--mnh-app-height)!important;max-height:none!important}
+body.mnh-viewport-ready>main{min-height:0!important;flex:1 1 auto!important}
