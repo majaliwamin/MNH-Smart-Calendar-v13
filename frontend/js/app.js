@@ -159,12 +159,20 @@ function renderModuleDetailsMeetingIcon(){
   action.appendChild(mark);box.appendChild(action);
  }
 }
+function updateLecturerAssignmentStatus(){
+ const field=document.getElementById("session-lecturer"),indicator=document.getElementById("lecturer-assignment-status");
+ if(!field||!indicator)return;
+ const assigned=!!field.value.trim();
+ indicator.hidden=!assigned;
+ indicator.textContent=assigned?"Lecturer assigned":"";
+}
 function updateModuleDetails(code){
  const box=document.getElementById("module-details");
  const labelField=document.getElementById("module-label"),lecturerField=document.getElementById("session-lecturer");
  const lecturer=code?facilitatorFor(code):"";
  if(labelField){labelField.value=code||"";labelField.readOnly=!!code;labelField.placeholder=code?"":"Type a custom activity name";}
  if(lecturerField){lecturerField.value=code?lecturer:"";lecturerField.placeholder="Not assigned — enter a name if needed";}
+ updateLecturerAssignmentStatus();
  box.classList.add("module-details-with-meeting");
  box.querySelectorAll(".module-details-copy").forEach(node=>node.remove());
  let copy=document.createElement("div");copy.className="module-details-copy";
@@ -196,6 +204,7 @@ function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
  updateModuleDetails(document.getElementById("module-select").value);
  document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
+ updateLecturerAssignmentStatus();
  showDialog("module-dialog");
 }
 let meetingCountdownTimer=null;
@@ -404,7 +413,8 @@ function requestAnalytics(){
  showView("analytics");
 }
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
-document.getElementById("session-link").addEventListener("input",renderModuleDetailsMeetingIcon);
+document.getElementById("session-lecturer").addEventListener("input",updateLecturerAssignmentStatus);
+ document.getElementById("session-link").addEventListener("input",renderModuleDetailsMeetingIcon);
 document.getElementById("session-link").addEventListener("change",renderModuleDetailsMeetingIcon);
 document.getElementById("module-mode").addEventListener("change",e=>{document.getElementById("session-link-field").hidden=e.target.value!=="online";});
 document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
