@@ -233,7 +233,7 @@ def upsert_task(user_id: str, data: dict) -> dict:
         raise MemoryError("Invalid task status.")
     old = _read(COL_TASKS, _doc_id(user_id, task_id)) or {}
     item = {**old, "title": title, "description": str(data.get("description", old.get("description", "")))[:4000],
-            "project": str(data.get("project", old.get("project", "")))[:180],
+            "project": str(data.get("project", old.get("project", "")))[:180],\n            "project_id": str(data.get("project_id", old.get("project_id", "")))[:80],
             "status": status, "priority": str(data.get("priority", old.get("priority", "normal")))[:20],
             "due_at": data.get("due_at", old.get("due_at")), "timezone": str(data.get("timezone", old.get("timezone", "Africa/Blantyre"))),
             "next_action": str(data.get("next_action", old.get("next_action", "")))[:1000],
