@@ -97,3 +97,23 @@ def test_activity_history_is_included_in_cara_context(monkeypatch):
     assert data["records"]["modules"][0]["title"] == "Medical Imaging"
     assert data["recent_activity_history"][0]["summary"] == "Updated session: MIPN 8100"
     assert updated is not None
+
+from app.class_rep import assistant
+
+
+def test_assistant_uses_live_context_and_limits_history(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(assistant, "build_calendar_context",
+                        lambda: ('{"records":{"examinations":[]}}', "2026-11-16T10:00"))
+    def fake_complete(messages):
+        seen["messages"] = messages
+        return "The examination time is not recorded.", "cloudflare", "test-model"
+    monkeypatch.setattr(assistant, "complete", fake_complete)
+    history = [{"role": "user", "content": "old %s" % n} for n in range(20)]
+    answer, provider, model, updated = assistant.reply("What time is the exam?", history)
+    assert "not recorded" in answer
+    assert provider == "cloudflare" and model == "test-model"
+    assert updated == "2026-11-16T10:00"
+    assert len(seen["messages"]) == 12
+    assert "CURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT" in seen["messages"][0]["content"]
+    assert seen["messages"][-1]["content"] == "What time is the exam?"
