@@ -39,7 +39,8 @@ def _rate(key: str, limit: int = _RATE_LIMIT):
 def _durable_storage_ready() -> bool:
     if not os.getenv("RENDER"):
         return True
-    return bool(os.getenv("DATABASE_URL", "").strip()) or os.getenv("MNH_CARA_SQLITE_PERSISTENT_DISK", "").strip() == "1"
+    data_dir = os.getenv("MNH_DATA_DIR", "").strip()
+    return bool(os.getenv("DATABASE_URL", "").strip()) or bool(data_dir and os.path.ismount(data_dir))
 
 
 def _require_durable_storage():
