@@ -23,6 +23,7 @@ COL_SESSIONS = "cara_sessions"
 COL_CONVERSATIONS = "cara_conversations"
 COL_MEMORIES = "cara_memories"
 COL_TASKS = "cara_tasks"
+COL_PROJECTS = "cara_projects"
 COL_REMINDERS = "cara_reminders"
 SESSION_SECONDS = 60 * 60 * 24 * 30
 PBKDF2_ROUNDS = 310_000
@@ -312,6 +313,15 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
     relevant_memories.sort(key=lambda x: (x[0], x[1]), reverse=True)
     if relevant_memories:
         blocks.append("PERSISTENT USER MEMORIES:\\n" + json.dumps([x[2] for x in relevant_memories[:8]], ensure_ascii=False))
+    projects = _list(COL_PROJECTS, user_id, 100)
+    project_matches = []
+    for project in projects:
+        score = len(terms & set(WORD_PATTERN.findall((project.get("title", "") + " " + project.get("description", "")).lower())))
+        if score or project.get("status") == "active":
+            project_matches.append((score, project.get("updated_at", 0), project))
+    project_matches.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    if project_matches:
+        blocks.append("PROJECT RECORDS:\\n" + json.dumps([x[2] for x in project_matches[:6]], ensure_ascii=False))
     tasks = _list(COL_TASKS, user_id, 100)
     task_matches = []
     for task in tasks:
@@ -346,6 +356,31 @@ def save_memory(user_id: str, data: dict) -> dict:
 
 def delete_memory(user_id: str, memory_id: str) -> bool:
     return _delete(COL_MEMORIES, user_id, memory_id)
+
+
+def upsert_project(user_id: str, data: dict) -> dict:
+    title = str(data.get("title", "")).strip()[:180]
+    if not title or SECRET_PATTERN.search(title):
+        raise MemoryError("A valid project title is required.")
+    project_id = str(data.get("id") or uuid.uuid4().hex)[:80]
+    allowed = {"active", "paused", "completed", "archived"}
+    status = str(data.get("status", "active"))
+    if status not in allowed:
+        raise MemoryError("Invalid project status.")
+    old = _read(COL_PROJECTS, _doc_id(user_id, project_id)) or {}
+    item = {**old, "title": title,
+            "description": str(data.get("description", old.get("description", "")))[:4000],
+            "status": status, "priority": str(data.get("priority", old.get("priority", "normal")))[:20],
+            "next_action": str(data.get("next_action", old.get("next_action", "")))[:1000],
+            "decisions": data.get("decisions", old.get("decisions", []))[:30],
+            "created_at": old.get("created_at", _now()), "updated_at": _now(),
+            "history": (old.get("history", []) + [{"status": status, "at": _now()}])[-50:]}
+    _write(COL_PROJECTS, _doc_id(user_id, project_id), item)
+    return {"id": project_id, **item}
+
+
+def list_projects(user_id: str) -> list[dict]:
+    return _list(COL_PROJECTS, user_id, 200)
 
 
 def list_tasks(user_id: str) -> list[dict]:
