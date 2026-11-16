@@ -39,6 +39,10 @@ def test_cara_account_memory_is_persistent_and_isolated(monkeypatch, tmp_path):
         assert client.get("/api/class-rep/memories").json()["memories"][0]["content"] == "The seminar is on Thursday."
         conversations = client.get("/api/class-rep/conversations").json()["conversations"]
         assert any(item["id"] == conversation_id for item in conversations)
+        client.post("/api/class-rep/auth/logout")
+        signed_in = client.post("/api/class-rep/auth/login", json={"email": "one@example.org", "password": "correct-horse-battery"})
+        assert signed_in.status_code == 200
+        assert client.get("/api/class-rep/memories").json()["memories"][0]["content"] == "The seminar is on Thursday."
 
         other = TestClient(app)
         try:
