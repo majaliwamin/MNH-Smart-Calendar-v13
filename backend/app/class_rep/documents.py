@@ -207,7 +207,9 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
     records = []
     for row in rows:
         try:
-            records.append(json.loads(row["data"]))
+            record = json.loads(row["data"])
+            if record.get("owner_id", "shared") in ("shared", owner_id):
+                records.append(record)
         except (TypeError, json.JSONDecodeError):
             continue
     if not records:
