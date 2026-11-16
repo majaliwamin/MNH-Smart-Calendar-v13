@@ -640,16 +640,21 @@ async function syncAll(okMsg){
  }catch(e){writeFailed(e);}
  finally{syncing=false;}
 }
+const LEGACY_MIGRATION_SKIP_KEY="mnh_calendar_legacy_week_migration_skipped_v1";
+const legacyMigrationSkipped=(()=>{
+ try{const value=JSON.parse(localStorage.getItem(LEGACY_MIGRATION_SKIP_KEY)||"[]");return new Set(Array.isArray(value)?value.filter(x=>typeof x==="string"):[]);}
+ catch(error){return new Set();}
+})();
 let weekMigrationRunning=false;
 async function onCells(snap){
  if(syncing||weekMigrationRunning)return;
  // Offline collection caches are never authoritative; wait for a live server snapshot.
  if(snap.metadata&&snap.metadata.fromCache)return;
- const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart)return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart||legacyMigrationSkipped.has(d.id))return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
  if(legacyDocs.length){
   weekMigrationRunning=true;
+  const migrated=[],blocked=[];
   try{
-   const migrated=[];
    for(const doc of legacyDocs){
     const raw=doc.data()||{};
     const legacy=/^(\d+)_(\d+)$/.exec(doc.id);
@@ -659,16 +664,32 @@ async function onCells(snap){
     const migratedData={...(state.cells[doc.id]||{}),...raw,weekStart:"2026-11-16"};
     if(!raw.meetingUrl&&state.cells[doc.id]?.meetingUrl)migratedData.meetingUrl=state.cells[doc.id].meetingUrl;
     if(legacy){const row=Number(legacy[1]),range=parseRange(raw.timeLabel),fallback=defaultRange(row);migratedData.dayIndex=Number(legacy[2]);migratedData.startTime=String(raw.startTime||range?.startTime||fallback.startTime);migratedData.endTime=String(raw.endTime||range?.endTime||fallback.endTime);}
-    await cloud.doc("cells/"+newId).set({...migratedData,updatedAt:Date.now()});
-    migrated.push(doc.id);
+    try{
+     await cloud.doc("cells/"+newId).set({...migratedData,updatedAt:Date.now()});
+     migrated.push(doc.id);
+    }catch(error){
+     // A legacy record that conflicts with a newer session must not block the
+     // authoritative shared snapshot. Keep the original record for recovery and
+     // leave it in the snapshot (undated records still belong to the initial week).
+     if(error&&(error.status===400||error.status===409)){
+      blocked.push(doc.id);legacyMigrationSkipped.add(doc.id);
+      console.warn("Legacy timetable entry kept in place because its week migration conflicts with another session.",doc.id,error);
+      continue;
+     }
+     throw error;
+    }
    }
    for(const oldId of migrated)await cloud.doc("cells/"+oldId).delete();
+   if(blocked.length){
+    try{localStorage.setItem(LEGACY_MIGRATION_SKIP_KEY,JSON.stringify([...legacyMigrationSkipped]));}catch(error){}
+   }
   }catch(error){
-   console.error("Timetable week migration was deferred; source records were left untouched.",error);
-   return;
+   console.error("Timetable week migration was deferred; original records were retained.",error);
   }finally{weekMigrationRunning=false;}
-  try{const refreshed=await cloud.collection("cells").get();await onCells(refreshed);}catch(error){setSync("Week migration completed · refreshing shared timetable");}
-  return;
+  if(migrated.length){
+   try{const refreshed=await cloud.collection("cells").get();return await onCells(refreshed);}
+   catch(error){setSync("Shared timetable · refreshing after week migration");}
+  }
  }
  const remote={};
  snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=5)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
