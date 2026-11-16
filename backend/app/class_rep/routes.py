@@ -274,6 +274,28 @@ def memories_delete(memory_id: str, request: Request):
     return {"deleted": True, "id": memory_id}
 
 
+@router.get("/projects")
+def projects_list(request: Request):
+    return {"projects": memory.list_projects(_user(request)["id"])}
+
+
+@router.post("/projects")
+def projects_create(request: Request, payload: dict):
+    try:
+        return memory.upsert_project(_user(request)["id"], payload)
+    except memory.MemoryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.put("/projects/{project_id}")
+def projects_update(project_id: str, request: Request, payload: dict):
+    payload["id"] = project_id
+    try:
+        return memory.upsert_project(_user(request)["id"], payload)
+    except memory.MemoryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @router.get("/tasks")
 def tasks_list(request: Request):
     return {"tasks": memory.list_tasks(_user(request)["id"])}
