@@ -49,7 +49,7 @@ def _now() -> int:
 
 
 def enabled() -> bool:
-    return _env("MNH_AI_TRIGGER_ENABLED", "0").lower() in ("1", "true", "yes")
+    return _env("MNH_COMM_AI_TRIGGER_ENABLED", "0").lower() in ("1", "true", "yes")
 
 
 def status() -> dict:
