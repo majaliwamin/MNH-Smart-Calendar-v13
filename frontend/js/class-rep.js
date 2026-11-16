@@ -11,12 +11,16 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  const launcher = el("button", "cara-launcher", "CARA");
+  launcher.type = "button";
+  launcher.setAttribute("aria-label", "Open CARA, your intelligent academic relations assistant");
+  launcher.setAttribute("aria-expanded", "false");
   const header = el("div", "cr-head");
   const identity = el("div", "cr-identity");
-  identity.append(el("span", "cr-mark", "CR"), el("div", "cr-heading"));
-  identity.lastChild.append(el("strong", "", "Class Rep Assistant"), el("small", "cr-status", "Demo mode · built-in responses"));
-  const toggle = el("button", "cr-toggle", "−");
-  toggle.type = "button"; toggle.setAttribute("aria-label", "Collapse assistant"); toggle.setAttribute("aria-expanded", "true");
+  identity.append(el("span", "cr-mark", "C"), el("div", "cr-heading"));
+  identity.lastChild.append(el("strong", "", "CARA"), el("small", "cr-tagline", "Your intelligent academic relations assistant"), el("small", "cr-status", "Demo mode · built-in responses"));
+  const toggle = el("button", "cr-toggle", "×");
+  toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
   header.append(identity, toggle);
   const body = el("div", "cr-body");
   const intro = el("p", "cr-intro", "Ask about class coordination, examinations or announcements. Demo mode is active: responses are built in and do not yet read live timetable records.");
@@ -39,7 +43,11 @@
   form.append(input, sendButton);
   const foot = el("p", "cr-foot", "Demo responses are illustrative. Confirm dates, times and decisions against the live calendar and programme office.");
   body.append(intro, prompts, transcript, form, foot);
-  root.append(header, body);
+  root.append(launcher, header, body);
+  root.classList.add("cara-widget");
+  root.classList.remove("is-open");
+  header.hidden = true;
+  body.hidden = true;
   addMessage("assistant", "Hello! I’m the MNH Class Rep Assistant. I’m currently running with built-in demo responses, so I can help draft class communications and guide you to the right calendar section. Live timetable-aware AI will be connected later.");
 
   function status(text, ready) {
