@@ -1788,3 +1788,8 @@ body.mnh-viewport-ready>main{min-height:0!important;flex:1 1 auto!important}
   .colour-dialog{padding-top:calc(6px + env(safe-area-inset-top, 0px));padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px))}
   .dialog-card{max-height:calc(100vh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));max-height:calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));padding:16px}
 }
+
+
+/* v14.86: suppress the transient compact PWA frame until its launch viewport settles. */
+html.mnh-booting,html.mnh-booting body{visibility:hidden!important;overflow:hidden!important}
+html.mnh-viewport-ready,html.mnh-viewport-ready body{min-height:var(--mnh-app-height)!important}
