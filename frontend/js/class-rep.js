@@ -119,6 +119,8 @@
   async function send(value) {
     const message = String(value || input.value).trim();
     if (!message || state.busy) return;
+    const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
+    if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = "";
     prompts.hidden = true;
     addMessage("user", message);
@@ -127,7 +129,7 @@
     try {
       if (state.ready) {
         const headers = { "Content-Type": "application/json" };
-        if (/analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message)) {
+        if (restrictedAnalytics) {
           const password = state.analyticsPassword || prompt("Management analytics are restricted. Enter the HOD, coordinator or executive dean password:");
           if (!password) { pending.textContent = "Management analytics access was cancelled. No restricted information was retrieved."; return; }
           state.analyticsPassword = password;
@@ -140,8 +142,7 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detail || "AI provider unavailable");
         pending.textContent = result.reply;
-        state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply });
-        state.history = state.history.slice(-12);
+        if (restrictedAnalytics) { state.history = []; }\n        else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
         status("AI connected · " + result.provider, true);
       } else {
         pending.textContent = demoReply(message);
