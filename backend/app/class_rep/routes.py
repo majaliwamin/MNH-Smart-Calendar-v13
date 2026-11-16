@@ -4,7 +4,7 @@ import threading
 import time
 from collections import deque
 from fastapi import APIRouter, HTTPException, Request
-from app.class_rep.config import provider_config
+from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
 from app.class_rep.assistant import reply
 from app.class_rep.providers import ProviderError
@@ -27,7 +27,6 @@ def _enforce_rate_limit(client_key: str) -> None:
         if len(bucket) >= _RATE_LIMIT:
             raise HTTPException(status_code=429, detail="Too many assistant requests. Please wait a minute and try again.")
         bucket.append(now)
-        # Bound memory if many transient client addresses reach the public endpoint.
         if len(_RATE_BUCKETS) > 2000:
             for key in list(_RATE_BUCKETS)[:500]:
                 if not _RATE_BUCKETS[key] or now - _RATE_BUCKETS[key][-1] >= _RATE_WINDOW_SECONDS:
@@ -37,9 +36,22 @@ def _enforce_rate_limit(client_key: str) -> None:
 @router.get("/status")
 def status():
     cfg = provider_config()
-    return {"ready": bool(cfg["api_key"] and cfg["model"]),
-            "provider": cfg["provider"], "model": cfg["model"],
-            "secret_configured": bool(cfg["api_key"])}
+    configured = provider_configs()
+    return {
+        "ready": bool(configured),
+        "provider": cfg["provider"],
+        "model": cfg["model"],
+        "secret_configured": bool(configured),
+        "fallbacks": [item["provider"] for item in configured[1:]],
+        "provider_priority": ["cloudflare", "huggingface", "groq"],
+        "knowledge_sources": [
+            "timetable", "modules", "facilitators", "examinations",
+            "recurring_activities", "announcements", "resources",
+            "recent_activity_history",
+        ],
+        "document_uploads": "not_enabled",
+        "voice": "not_enabled",
+    }
 
 
 @router.post("/chat", response_model=ChatResponse)
