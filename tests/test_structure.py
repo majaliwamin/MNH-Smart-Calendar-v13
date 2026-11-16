@@ -330,3 +330,11 @@ def test_database_backups_are_published_atomically():
     assert "os.replace(temporary, target)" in backup
     assert "source.backup(destination)" in backup
     assert "Retention is applied only after a new complete snapshot" in backup
+
+
+
+def test_shared_writes_are_serialised_across_devices_and_restore():
+    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    assert "pg_advisory_xact_lock(20261116, 1500)" in routes
+    assert "with DB_LOCK:" in routes
+    assert routes.count("@serialised_shared_write") >= 3
