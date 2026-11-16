@@ -128,6 +128,10 @@
       row.append(edit, del); memoryItems.append(row);
     }
     if (!(mData.memories || []).length) memoryItems.append(el("p", "cr-memory-intro", "No saved memories yet."));
+    for (const project of (pData.projects || [])) {
+      projectItems.append(el("p", "cr-memory-item", project.title + " · " + project.status));
+    }
+    if (!(pData.projects || []).length) projectItems.append(el("p", "cr-memory-intro", "No projects tracked yet."));
     for (const task of (tData.tasks || [])) {
       const row = el("div", "cr-memory-row");
       row.append(el("p", "cr-memory-item", task.title + " · " + task.status));
