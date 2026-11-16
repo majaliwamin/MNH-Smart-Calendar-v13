@@ -32,7 +32,10 @@ COLLECTIONS = {
         "s-sat": {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "code": "PNIM-8100", "title": "Saturday class"},
         "6_6": {"code": "Legacy", "timeLabel": "19:00–21:00"},   # legacy day index 6 -> ignored
     },
-    "recurring": {\n        "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},\n        "seminar-mnh": {"title": "Seminar in MNH", "day": "Thursday", "time": "10:00–12:00"}\n    },
+    "recurring": {
+        "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},
+        "seminar-mnh": {"title": "Seminar in MNH", "day": "Thursday", "time": "10:00–12:00"}
+    },
 }
 
 
