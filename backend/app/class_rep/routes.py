@@ -1,5 +1,7 @@
 """CARA API: authenticated chat, private memory, tasks and reminders."""
-import logging, os, re, threading, time, uuid\nfrom datetime import datetime, timedelta\nfrom zoneinfo import ZoneInfo
+import logging, os, re, threading, time, uuid
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from collections import deque
 from hmac import compare_digest
 from io import BytesIO
