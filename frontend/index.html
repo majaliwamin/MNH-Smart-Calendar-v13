@@ -17,11 +17,31 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.83";</script>
+<script>window.MNH_BUILD="2026.11.16-v14.84";</script>
 <script src="/js/week-model.js?v=2026.11.16-v14.73"></script>
 <script src="/js/api-client.js?v=2026.11.16-v14.73"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.83">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.84">
+<script>
+/* MNH cold-open refresh: one network-backed reload per newly opened page context. */
+(function(){
+ "use strict";
+ var key="mnh_cold_open_refresh_v1484";
+ try{
+  if(!sessionStorage.getItem(key)){
+   sessionStorage.setItem(key,"1");
+   window.addEventListener("load",function(){
+    setTimeout(function(){
+     try{sessionStorage.removeItem(key);}catch(_e){}
+    },12000);
+    setTimeout(function(){
+     if(!document.hidden)window.location.reload();
+    },1800);
+   },{once:true});
+  }
+ }catch(_e){}
+})();
+</script>
 </head>
 <body data-theme="dark">
 <script>
