@@ -148,8 +148,7 @@
     }
   }
   async function loadDocuments() {
-    docsPanel.hidden = !docsPanel.hidden;
-    if (docsPanel.hidden) return;
+    docsPanel.hidden = false;
     docsPanel.replaceChildren(el("p", "cr-foot", "Loading document register…"));
     try {
       const response = await fetch("/api/class-rep/documents", { cache: "no-store" });
@@ -175,7 +174,7 @@
       });
     } catch (_) { docsPanel.replaceChildren(el("p", "cr-foot", "Could not load the document register.")); }
   }
-  docsButton.addEventListener("click", loadDocuments);
+  docsButton.addEventListener("click", () => { if (docsPanel.hidden) loadDocuments(); else docsPanel.hidden = true; });
   uploadButton.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files && fileInput.files[0];
