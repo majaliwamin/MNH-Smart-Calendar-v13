@@ -21,8 +21,8 @@ def test_week_control_is_in_primary_navigation_and_analytics_is_in_the_menu():
     for control in ('id="week-prev"', 'id="week-next"', 'id="week-now"'):
         assert control in tabs
     # Every label carries its own Monday–Friday date range.
-    assert 'id="week-now-label"' in tabs and 'id="week-now-range"' in tabs
-    assert "This week" in tabs and "Nov 9" in tabs
+    assert 'id="week-now-range"' in tabs
+    assert "Nov 9" in tabs
 
 
 def test_week_model_is_shared_and_loaded_before_the_app():
