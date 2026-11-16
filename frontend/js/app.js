@@ -234,7 +234,11 @@ function showSessionDetails(entry){
  const detailDates=WK.dateLabels(detailWeekOffset),detailDate=WK.dateList(detailWeekOffset)[entry.dayIndex];
  const dateText=`${days[entry.dayIndex]} ${detailDates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
  const details=document.getElementById("details-content");details.textContent="";
- const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
+ const addedAt=Number(entry.data?.createdAt);
+ const addedText=Number.isFinite(addedAt)&&addedAt>0
+  ? "Added to timetable: "+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(addedAt))
+  : "Added to timetable: date not recorded for this older session";
+ const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,addedText,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
  const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){
   const linkRow=document.createElement("div");linkRow.className="session-meeting-link";
@@ -443,7 +447,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const chosenColour=document.getElementById("module-colour").value;
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
+ const record={...previous,createdAt:Number(previous.createdAt)>0?Number(previous.createdAt):Date.now(),weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
@@ -600,7 +604,7 @@ const themeKey="phd_mnh_theme";
 const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
 function setSync(t){if(syncEl)syncEl.textContent=t;}
-function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
+function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;if(Number.isFinite(Number(v?.createdAt))&&Number(v.createdAt)>0)o.createdAt=Number(v.createdAt);return o;}
 function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<5)||/^session-[A-Za-z0-9-]+$/.test(k);}
 function writeFailed(e){
  try{saveState();}catch(x){}
