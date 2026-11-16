@@ -225,7 +225,7 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
             decoded_streams.append(stream)
     searchable_pdf = payload + b" ".join(decoded_streams)
     assert b"Seminar in MNH" in searchable_pdf and b"Journal Club" in searchable_pdf
-    assert b"595.276" in payload and b"841.889" in payload
+    assert re.search(rb"/MediaBox\\s*\\[\\s*0\\s+0\\s+595\\.\\d+\\s+841\\.\\d+\\s*\\]", payload)
 
 
 def test_database_keeps_only_the_two_canonical_recurring_records_and_removes_legacy_seed_cells():
