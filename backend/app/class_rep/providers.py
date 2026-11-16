@@ -88,7 +88,7 @@ def _complete_one(cfg: dict, messages: list[dict]) -> str:
 
 
 def complete(messages: list[dict]) -> tuple[str, str, str]:
-    """Try configured providers in priority order; never call OpenAI."""
+    """Try configured providers in priority order."""
     configured = provider_configs()
     if not configured:
         raise ProviderError(
