@@ -197,7 +197,7 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         retrieved = memory.retrieve_context(user["id"], payload.message.strip(), conversation_id)
         answer, provider, model, updated = reply(payload.message.strip(),
             [item.model_dump() for item in payload.history],
-            management_analytics=analytics_context, memory_context=retrieved)
+            management_analytics=analytics_context, memory_context=retrieved, owner_id=user['id'])
         memory.save_turn(user["id"], conversation_id, payload.message.strip(), answer)
         return ChatResponse(reply=answer, provider=provider, model=model,
                             context_updated_at=updated, conversation_id=conversation_id)
@@ -311,19 +311,18 @@ def conversations_list(request: Request):
 @router.get("/documents")
 def documents_list(request: Request):
     _user(request)
-    return {"documents": list_documents()}
+    return {"documents": list_documents(_user(request)["id"])}
 
 
 @router.post("/documents")
 async def documents_upload(request: Request, file: UploadFile = File(...),
                            x_cara_admin_token: str | None = Header(default=None)):
     _user(request)
-    _admin(x_cara_admin_token)
     filename = (file.filename or "").replace("\\\\", "/").split("/")[-1][:180]
     content = await file.read(10 * 1024 * 1024 + 1)
     await file.close()
     try:
-        return ingest(filename, content)
+        return ingest(filename, content, owner_id=_user(request)["id"])
     except DocumentError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -335,7 +334,7 @@ def documents_delete(document_id: str, request: Request,
     _admin(x_cara_admin_token)
     if not document_id.isalnum() or len(document_id) != 32:
         raise HTTPException(400, "Invalid document identifier.")
-    if not delete_document(document_id):
+    if not delete_document(document_id, owner_id=_user(request)["id"]):
         raise HTTPException(404, "Document not found.")
     return {"deleted": True, "id": document_id}
 
