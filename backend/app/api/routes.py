@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Cookie, HTTPException
 from fastapi.responses import StreamingResponse
 from app.database.connection import database
 from app.services.audit_service import write_activity, VISIBLE_ROLES
-from app.services.backup_service import list_backups
+from app.services.backup_service import list_backups, make_backup
 
 logger = logging.getLogger(__name__)
 
@@ -452,10 +452,12 @@ def history():
     with database() as c:
         rows = c.execute(
             "SELECT at,role,action,collection,item_id,summary FROM audit "
-            "WHERE action='added' AND collection IN ('cells','resources','examinations','recurring','communications') ORDER BY seq DESC LIMIT 100"
+            "WHERE action IN ('added','updated','deleted','restored') "
+            "AND collection IN ('cells','resources','settings','modules','facilitators','examinations','recurring','communications') "
+            "ORDER BY seq DESC LIMIT 200"
         ).fetchall()
-    return [{"at": r["at"], "role": VISIBLE_ROLES.get(r["role"], "Staff"),
-             "action": "added", "collection": r["collection"], "id": r["item_id"], "summary": r["summary"]}
+    return [{"at": r["at"], "role": VISIBLE_ROLES.get(r["role"], "Public user"),
+             "action": r["action"], "collection": r["collection"], "id": r["item_id"], "summary": r["summary"]}
             for r in rows]
 
 
@@ -593,10 +595,19 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
         seen_documents.add(identity)
         cleaned.append((col, item_id, json.dumps(data, ensure_ascii=False), int(time.time()*1000)))
     _validate_restore_intervals(cleaned)
+    # A restore replaces the shared document collection. Take a full database snapshot
+    # first; if that safety copy cannot be written, refuse the destructive operation.
+    try:
+        make_backup()
+    except Exception as exc:
+        logger.exception("Pre-restore safety backup failed; restore was not applied")
+        raise HTTPException(503, "A safety backup could not be created. No data was restored; please retry.") from exc
     with database() as c:
         c.execute("DELETE FROM docs")
         c.executemany("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)", cleaned)
-    return {"ok": True, "restored": len(cleaned)}
+        write_activity(c, "public", "restored", None, None,
+                       f"Restored {len(cleaned)} shared timetable records from a validated backup.")
+    return {"ok": True, "restored": len(cleaned), "safety_backup_created": True}
 
 
 @router.put("/doc/{collection}/{item_id}")
@@ -685,12 +696,14 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
         c.execute("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
                   "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
                   (collection, item_id, json.dumps(data, ensure_ascii=False), int(time.time()*1000)))
-        if not exists and collection in ("cells", "resources", "examinations", "recurring", "communications"):
+        if collection in ("cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"):
             description = next((str(data.get(k, "")).strip() for k in
                                 ("title", "activity", "message", "text", "name", "module", "code", "label") if data.get(k)), "")
-            kind = "session" if collection == "cells" else "activity"
-            summary = "Added %s%s" % (kind, (": " + description[:170]) if description else "")
-            write_activity(c, session["role"], "added", collection, item_id, summary)
+            kind = "session" if collection == "cells" else "record"
+            action = "updated" if exists else "added"
+            verb = "Updated" if exists else "Added"
+            summary = "%s %s%s" % (verb, kind, (": " + description[:170]) if description else "")
+            write_activity(c, session["role"], action, collection, item_id, summary)
     return {"ok": True}
 
 
@@ -706,7 +719,19 @@ def delete_document(collection: str, item_id: str, mnh_session: str | None = Coo
                 data=json.loads(row["data"]);data["enabled"]=False
                 c.execute("UPDATE docs SET data=?,updated_at=? WHERE col=? AND id=?",
                           (json.dumps(data,ensure_ascii=False),int(time.time()*1000),collection,item_id))
+                write_activity(c, "public", "updated", collection, item_id,
+                               "Disabled recurring activity: " + str(data.get("title") or item_id)[:170])
         return {"ok": True}
     with database() as c:
-        c.execute("DELETE FROM docs WHERE col=? AND id=?", (collection, item_id))
+        row = c.execute("SELECT data FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
+        if row:
+            try:
+                deleted_data = json.loads(row["data"])
+            except (TypeError, json.JSONDecodeError):
+                deleted_data = {}
+            description = next((str(deleted_data.get(k, "")).strip() for k in
+                                ("title", "activity", "name", "code", "label") if deleted_data.get(k)), item_id)
+            c.execute("DELETE FROM docs WHERE col=? AND id=?", (collection, item_id))
+            write_activity(c, "public", "deleted", collection, item_id,
+                           "Deleted record: " + description[:170])
     return {"ok": True}
