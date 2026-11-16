@@ -36,6 +36,21 @@ def _rate(key: str, limit: int = _RATE_LIMIT):
         bucket.append(now)
 
 
+def _durable_storage_ready() -> bool:
+    if not os.getenv("RENDER"):
+        return True
+    return bool(os.getenv("DATABASE_URL", "").strip()) or os.getenv("MNH_CARA_SQLITE_PERSISTENT_DISK", "").strip() == "1"
+
+
+def _require_durable_storage():
+    if not _durable_storage_ready():
+        raise HTTPException(
+            503,
+            "Private CARA memory is temporarily unavailable because durable storage is not configured. "
+            "Do not create an account yet; the current free web-service filesystem is temporary."
+        )
+
+
 def _user(request: Request):
     user = memory.resolve_session(request.cookies.get("cara_session"))
     if not user:
