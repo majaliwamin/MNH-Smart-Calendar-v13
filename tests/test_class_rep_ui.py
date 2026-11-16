@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=6' in html
+    assert '/js/class-rep.js?v=7' in html
     assert '/css/class-rep.css?v=4' in html
 
 
