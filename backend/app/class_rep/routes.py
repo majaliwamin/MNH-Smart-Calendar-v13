@@ -1,5 +1,5 @@
 """CARA API: authenticated chat, private memory, tasks and reminders."""
-import logging, os, re, threading, time, uuid
+import logging, os, re, threading, time, uuid\nfrom datetime import datetime, timedelta\nfrom zoneinfo import ZoneInfo
 from collections import deque
 from hmac import compare_digest
 from io import BytesIO
@@ -106,6 +106,49 @@ def status():
             "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
             "account_memory": "persistent_account_scoped", "reminder_delivery": "in_app_only"}
 
+
+
+def _explicit_reminder(user_id: str, message: str):
+    """Create only clearly time-bound reminders; default unspecified time to 09:00 Blantyre."""
+    match = re.search(r"\\bremind me (tomorrow|today|next week|on monday|on tuesday|on wednesday|on thursday|on friday|on saturday|on sunday|on \\d{4}-\\d{2}-\\d{2})(?: at (\\d{1,2}:\\d{2})| at (\\d{1,2})(?:\\s*(am|pm))?)? to (.+)$", message.strip(), re.I)
+    if not match:
+        return None
+    tz = ZoneInfo("Africa/Blantyre")
+    now = datetime.now(tz)
+    phrase, clock, hour_only, meridiem, task = match.groups()
+    day = phrase.lower()
+    if day == "today":
+        target = now
+    elif day == "tomorrow":
+        target = now + timedelta(days=1)
+    elif day == "next week":
+        target = now + timedelta(days=7)
+    elif day.startswith("on 20"):
+        target = datetime.strptime(day[3:], "%Y-%m-%d").replace(tzinfo=tz)
+    elif day.startswith("on "):
+        weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        wanted = weekdays.index(day[3:])
+        delta = (wanted - now.weekday()) % 7 or 7
+        target = now + timedelta(days=delta)
+    else:
+        return None
+    if clock:
+        hour, minute = map(int, clock.split(":"))
+    elif hour_only:
+        hour, minute = int(hour_only), 0
+        if meridiem:
+            hour = hour % 12 + (12 if meridiem.lower() == "pm" else 0)
+    else:
+        hour, minute = 9, 0
+    if hour > 23 or minute > 59:
+        return None
+    target = target.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if target <= now:
+        return None
+    return memory.create_reminder(user_id, {
+        "message": task.strip(), "scheduled_at": int(target.timestamp()),
+        "timezone": "Africa/Blantyre"
+    }), target
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str | None = Header(default=None)):
