@@ -21,10 +21,10 @@ See `.env.example` for the full list with placeholders. Summary:
 | `MNH_WA_BRIDGE_SESSION` | WAHA session name (default `default`) | WAHA bridges |
 | `MNH_WA_SENDER_NUMBER` | The WhatsApp account that sends (e.g. `26599130362`); shown in status only, never a credential | clarity |
 | `MNH_WA_PROFILE_NAME` | Display/push name recipients see (defaults to the application name) | sender identity |
-| `MNH_AI_API_KEY` | AI drafting (OpenAI-compatible) | AI draft button |
-| `MNH_AI_BASE_URL` | Provider base URL (default `https://api.openai.com/v1`) | alternative providers |
-| `MNH_AI_MODEL` | Model name (default `gpt-4o-mini`) | alternative models |
-| `MNH_AI_TRIGGER_ENABLED` | `1` = AI detects timetable changes and sends automatically (default off) | auto-trigger |
+| `MNH_COMM_AI_API_KEY` | AI drafting (configured) | AI draft button |
+| `MNH_COMM_AI_BASE_URL` | Provider base URL (no default) | alternative providers |
+| `MNH_COMM_AI_MODEL` | Model name (default `your-selected-model`) | alternative models |
+| `MNH_COMM_AI_TRIGGER_ENABLED` | `1` = AI detects timetable changes and sends automatically (default off) | auto-trigger |
 | `MNH_ARI_BASE_URL` | Asterisk ARI root, e.g. `http://10.0.0.5:8088/ari` | voice calls |
 | `MNH_ARI_USER` / `MNH_ARI_PASSWORD` | ARI credentials from `ari.conf` | voice calls |
 | `MNH_ARI_APP` | Stasis app name (default `mnh-calendar`) | voice calls |
@@ -43,7 +43,7 @@ the browser; the UI only receives booleans and missing-variable names.
 Browser / Flutter ── HTTPS ──> FastAPI (Render) ── SQLite
                                   │
                                   ├─ WhatsApp bridge (HTTP) → WAHA/gateway on the Asterisk VPS → WhatsApp
-                                  ├─ AI drafts/triggers → OpenAI-compatible API (outbound HTTPS)
+                                  ├─ AI drafts/triggers → configured API (outbound HTTPS)
                                   └─ ARI (HTTP + poll) → Cloudflare Tunnel → Asterisk core
 ```
 
@@ -177,10 +177,10 @@ directly against Asterisk — do not assume the Tunnel carries RTP.
 
 ## 5. AI provider
 
-Any OpenAI-compatible chat-completions endpoint works:
+Any configured chat-completions endpoint works:
 
-- OpenAI: `MNH_AI_BASE_URL=https://api.openai.com/v1`, e.g. `MNH_AI_MODEL=gpt-4o-mini`
-- Self-hosted (e.g. an internal LLM gateway): point `MNH_AI_BASE_URL` at it.
+- vendor-specific: `MNH_COMM_AI_BASE_URL=https://api.configured-provider.com/v1`, e.g. `MNH_COMM_AI_MODEL=your-selected-model`
+- Self-hosted (e.g. an internal LLM gateway): point `MNH_COMM_AI_BASE_URL` at it.
 
 The assistant drafts only. It cannot send WhatsApp messages, place calls, or
 override consent — the code has no path for that.
