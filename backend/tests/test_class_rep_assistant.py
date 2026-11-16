@@ -28,7 +28,7 @@ def test_provider_fails_closed_when_api_key_is_missing(monkeypatch):
     try:
         providers.complete([{"role": "user", "content": "hello"}])
     except ProviderError as exc:
-        assert "API key" in str(exc)
+        assert "MNH_CLASSREP_AI_API_KEY" in str(exc)
     else:
         raise AssertionError("Provider must not make unauthenticated requests")
 
