@@ -126,9 +126,38 @@
       row.append(edit, del); memoryItems.append(row);
     }
     if (!(mData.memories || []).length) memoryItems.append(el("p", "cr-memory-intro", "No saved memories yet."));
-    for (const task of (tData.tasks || [])) taskItems.append(el("p", "cr-memory-item", task.title + " · " + task.status));
+    for (const task of (tData.tasks || [])) {
+      const row = el("div", "cr-memory-row");
+      row.append(el("p", "cr-memory-item", task.title + " · " + task.status));
+      if (task.status !== "completed" && task.status !== "cancelled") {
+        const done = el("button", "cr-memory-delete", "Complete"); done.type = "button";
+        done.addEventListener("click", async () => {
+          await fetch("/api/class-rep/tasks/" + encodeURIComponent(task.id), {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: task.title, description: task.description, project: task.project, priority: task.priority, due_at: task.due_at, timezone: task.timezone, next_action: task.next_action, decisions: task.decisions, status: "completed" })
+          });
+          await loadMemoryPanel();
+        });
+        row.append(done);
+      }
+      taskItems.append(row);
+    }
     if (!(tData.tasks || []).length) taskItems.append(el("p", "cr-memory-intro", "No tracked tasks yet."));
-    for (const reminder of (rData.reminders || [])) reminderItems.append(el("p", "cr-memory-item", reminder.message + " · " + reminder.status + " · " + new Date(reminder.scheduled_at * 1000).toLocaleString()));
+    for (const reminder of (rData.reminders || [])) {
+      const row = el("div", "cr-memory-row");
+      row.append(el("p", "cr-memory-item", reminder.message + " · " + reminder.status + " · " + new Date(reminder.scheduled_at * 1000).toLocaleString()));
+      if (["scheduled", "due"].includes(reminder.status)) {
+        const cancel = el("button", "cr-memory-delete", "Cancel"); cancel.type = "button";
+        cancel.addEventListener("click", async () => {
+          await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
+            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" })
+          });
+          await loadMemoryPanel();
+        });
+        row.append(cancel);
+      }
+      reminderItems.append(row);
+    }
     if (!(rData.reminders || []).length) reminderItems.append(el("p", "cr-memory-intro", "No reminders yet."));
   }
   memoryButton.addEventListener("click", async () => { memoryPanel.hidden = false; await loadMemoryPanel(); });
