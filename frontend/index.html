@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.73">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.87">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.73">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.87">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,38 +17,37 @@
 
 
 <script>
-/* Prevent a compact PWA cold-start frame from ever being painted. Reveal only after
-   the launch viewport has settled; this avoids showing the transient minimized layout. */
+/* One viewport controller for browser and installed Android PWA launches.
+   Never hide the app or accept a delayed, potentially undersized "stable" frame. */
 (function(){
  "use strict";
- var root=document.documentElement, started=Date.now(), last="", stable=0, timer=null;
- root.classList.add("mnh-booting");
- function sample(){
-  var w=Math.round(window.innerWidth||root.clientWidth||0);
-  var h=Math.round(window.innerHeight||root.clientHeight||0);
-  var size=w+"x"+h;
-  if(size===last)stable++;else{last=size;stable=0;}
-  if((Date.now()-started>=500&&stable>=3)||Date.now()-started>=5000){
-   clearInterval(timer);
-   root.style.setProperty("--mnh-app-height",Math.max(320,h)+"px");
-   root.classList.remove("mnh-booting");
-   root.classList.add("mnh-viewport-ready");
-   if(document.body)document.body.classList.add("mnh-viewport-ready");
-   requestAnimationFrame(function(){window.dispatchEvent(new Event("resize"));});
-  }
+ var root=document.documentElement, frame=0, lastHeight=0;
+ function syncViewport(){
+  if(frame)cancelAnimationFrame(frame);
+  frame=requestAnimationFrame(function(){
+   frame=0;
+   var height=Math.round(window.innerHeight||root.clientHeight||0);
+   if(!height||height===lastHeight)return;
+   lastHeight=height;
+   root.style.setProperty("--mnh-app-height",height+"px");
+  });
  }
- timer=setInterval(sample,120);
- window.addEventListener("resize",function(){last="";stable=0;},{passive:true});
+ ["pageshow","load","resize","orientationchange"].forEach(function(type){
+  window.addEventListener(type,syncViewport,{passive:true});
+ });
+ if(window.visualViewport)window.visualViewport.addEventListener("resize",syncViewport,{passive:true});
+ document.addEventListener("visibilitychange",function(){if(!document.hidden)syncViewport();});
+ syncViewport();
 })();
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.86";</script>
-<script src="/js/week-model.js?v=2026.11.16-v14.73"></script>
-<script src="/js/api-client.js?v=2026.11.16-v14.73"></script>
+<script>window.MNH_BUILD="2026.11.16-v14.87";</script>
+<script src="/js/week-model.js?v=2026.11.16-v14.87"></script>
+<script src="/js/api-client.js?v=2026.11.16-v14.87"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.86">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.87">
 
 </head>
 <body data-theme="dark">
@@ -66,30 +65,7 @@
   } catch (error) { /* use the default theme if browser storage is unavailable */ }
 })();
 </script>
-<script>
-/* Keep the installed app fitted to its real launch window. Some PWA shells report a
-   temporary, undersized viewport during cold start; remeasure after the window settles. */
-(function(){
- "use strict";
- let frame=0;
- function syncMnhViewport(){
-  if(frame)cancelAnimationFrame(frame);
-  frame=requestAnimationFrame(function(){
-   frame=0;
-   const height=Math.max(320,Math.round(window.innerHeight||document.documentElement.clientHeight||0));
-   if(!height)return;
-   document.documentElement.style.setProperty("--mnh-app-height",height+"px");
-   document.documentElement.classList.add("mnh-viewport-ready");
-   document.body&&document.body.classList.add("mnh-viewport-ready");
-   window.dispatchEvent(new Event("resize"));
-  });
- }
- ["pageshow","load","resize","orientationchange","focus"].forEach(type=>window.addEventListener(type,syncMnhViewport,{passive:true}));
- if(window.visualViewport)window.visualViewport.addEventListener("resize",syncMnhViewport,{passive:true});
- document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncMnhViewport();});
- [80,250,700,1400].forEach(delay=>setTimeout(syncMnhViewport,delay));
-})();
-</script>
+
 <header class="site-header" id="site-header">
  <div class="hd-band">
   <div class="hd-left">
@@ -329,7 +305,7 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v14.77" defer></script>
+<script src="/js/app.js?v=2026.11.16-v14.87" defer></script>
 <script>
 (function () {
   "use strict";
