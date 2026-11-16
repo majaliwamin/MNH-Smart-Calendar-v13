@@ -7,7 +7,7 @@ WEEKDAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 LUNCH_START, LUNCH_END = 12 * 60, 13 * 60 + 30   # 12:00–13:30
 RECURRING_ACTIVITIES = (
     {"id": "journal-club", "title": "Journal Club", "day": 1, "weekday": "Tuesday", "start": "13:00", "end": "14:00"},
-    {"id": "seminar-mnh", "title": "MNH Seminar", "day": 3, "weekday": "Thursday", "start": "10:00", "end": "12:00"},
+    {"id": "seminar-mnh", "title": "Seminar in MNH", "day": 3, "weekday": "Thursday", "start": "10:00", "end": "12:00"},
 )
 DEFAULT_SESSION_RANGES = (
     "08:00-10:00", "10:00-12:00", "12:00-13:30", "13:30-15:30",
