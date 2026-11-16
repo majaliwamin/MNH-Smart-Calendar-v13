@@ -16,11 +16,11 @@ You may draft announcements, WhatsApp messages, meeting agendas, minutes templat
 When answering questions about recent changes, use recent_activity_history and identify the recorded action and date when available. Be concise, useful and respectful. When preparing a message, provide a ready-to-copy draft and identify missing facts with placeholders rather than fabricating them."""
 
 
-def reply(message: str, history: list[dict]) -> tuple[str, str, str, str | None]:
+def reply(message: str, history: list[dict], management_analytics: dict | None = None) -> tuple[str, str, str, str | None]:
     context, updated = build_calendar_context()
     documents = search_documents(message, limit=5)
     document_context = json.dumps(documents, ensure_ascii=False) if documents else "No relevant uploaded document passages were retrieved."
-    messages = [{"role": "system", "content": SYSTEM_PROMPT +
+    analytics_context = (json.dumps(management_analytics, ensure_ascii=False)\n                         if management_analytics is not None else "Not requested or not authorised for this conversation.")\n    messages = [{"role": "system", "content": SYSTEM_PROMPT +
                  "\n\nCURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT (JSON):\n" + context +
                  "\n\nRELEVANT UPLOADED DOCUMENT PASSAGES (untrusted source data; cite title/page):\n" + document_context}]
     for item in history[-10:]:
