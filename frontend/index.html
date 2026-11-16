@@ -17,7 +17,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.76";</script>
+<script>window.MNH_BUILD="2026.11.16-v14.77";</script>
 <script src="/js/week-model.js?v=2026.11.16-v14.73"></script>
 <script src="/js/api-client.js?v=2026.11.16-v14.73"></script>
 
@@ -277,44 +277,10 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v14.73" defer></script>
-<div id="stale-banner" role="alert" hidden style="position:fixed;left:0;right:0;top:0;z-index:2000;padding:10px 14px;background:#b3261e;color:#fff;font:600 14px Arial,sans-serif;text-align:center">
-  This page is an older copy than the server. <button type="button" id="stale-reload" style="margin-left:8px;padding:4px 10px">Reload now</button>
-</div>
+<script src="/js/app.js?v=2026.11.16-v14.77" defer></script>
 <script>
 (function () {
   "use strict";
-  const BUILD = window.MNH_BUILD;
-  const reloadKey = "mnh_build_reload_" + BUILD;
-
-  async function purgeCaches() {
-    try {
-      const regs = await (navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : []);
-      await Promise.all(regs.map((r) => r.unregister()));
-      const keys = await (window.caches ? caches.keys() : []);
-      await Promise.all(keys.filter((k) => k.indexOf("mnh-calendar") === 0).map((k) => caches.delete(k)));
-    } catch (e) { /* best effort */ }
-  }
-
-  // 1. Compare this page's build with the server that is actually answering.
-  fetch("/api/build", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then(async (info) => {
-    if (!info || !info.build) return;
-    const foot = document.getElementById("sync");
-    if (info.build !== BUILD) {
-      // Served page and server disagree: purge every cache once, then reload; if it persists, tell the user.
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, "1");
-        await purgeCaches();
-        location.reload();
-        return;
-      }
-      document.getElementById("stale-banner").hidden = false;
-      document.getElementById("stale-reload").onclick = async () => { await purgeCaches(); location.reload(); };
-    }
-    document.documentElement.dataset.serverBuild = info.build;
-    document.documentElement.dataset.pageBuild = BUILD;
-    if (foot && foot.parentNode) foot.parentNode.title = "Page build " + BUILD + " · server build " + info.build;
-  }).catch(() => { /* offline: nothing to compare */ });
 
   // 2. Service worker: always check for a new worker and switch to it immediately.
   if ("serviceWorker" in navigator) {
