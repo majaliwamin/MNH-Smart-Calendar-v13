@@ -229,6 +229,16 @@
         status("AI connected · " + result.provider, true);
       } else {
         pending.textContent = demoReply(message);
+        const saved = await fetch("/api/class-rep/conversation/turn", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
+        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (saved) {
+          state.conversationId = saved.conversation_id;
+          pending.textContent = saved.reply;
+          state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
+          state.history = state.history.slice(-12);
+        }
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
@@ -238,6 +248,17 @@
         pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
       } else {
         pending.textContent = "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+      }
+      if (!restrictedAnalytics && state.user) {
+        const saved = await fetch("/api/class-rep/conversation/turn", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
+        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (saved) {
+          state.conversationId = saved.conversation_id;
+          state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
+          state.history = state.history.slice(-12);
+        }
       }
       status("", false);
     } finally {
