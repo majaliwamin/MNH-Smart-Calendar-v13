@@ -1,6 +1,7 @@
 """HTTP boundary for the Class Rep Assistant."""
 import logging
 import os
+import re
 import threading
 import time
 from collections import deque
@@ -16,6 +17,7 @@ from app.class_rep.assistant import reply
 from app.class_rep.providers import ProviderError
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
+from app.services.authentication import role_for_password
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/class-rep", tags=["Class Representative Assistant"])
@@ -23,6 +25,8 @@ _RATE_LOCK = threading.Lock()
 _RATE_BUCKETS: dict[str, deque] = {}
 _RATE_WINDOW_SECONDS = 60
 _RATE_LIMIT = 30
+_ANALYTICS_QUERY = re.compile(r"analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours", re.I)
+_ANALYTICS_ROLES = {"hod", "coordinator", "executive_dean"}
 
 
 def _enforce_rate_limit(client_key: str, limit: int = _RATE_LIMIT) -> None:
@@ -55,33 +59,44 @@ def status():
     has_cloudflare = bool(os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
                           and os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip())
     return {
-        "ready": bool(configured),
-        "provider": cfg["provider"],
-        "model": cfg["model"],
+        "ready": bool(configured), "provider": cfg["provider"], "model": cfg["model"],
         "secret_configured": bool(configured),
         "fallbacks": [item["provider"] for item in configured[1:]],
         "provider_priority": ["cloudflare", "huggingface", "groq"],
-        "knowledge_sources": [
-            "timetable", "modules", "facilitators", "examinations",
-            "recurring_activities", "announcements", "resources",
-            "recent_activity_history", "uploaded_documents",
-        ],
+        "knowledge_sources": ["timetable", "modules", "facilitators", "examinations",
+                              "recurring_activities", "announcements", "resources",
+                              "recent_activity_history", "uploaded_documents"],
         "document_uploads": "enabled" if os.getenv("MNH_CLASSREP_DOCUMENT_ADMIN_TOKEN", "").strip() else "disabled_missing_admin_token",
         "document_search": "semantic" if has_cloudflare else "keyword_only",
         "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
         "voice": "enabled" if has_cloudflare else "disabled_missing_cloudflare",
         "speech_to_text_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "@cf/openai/whisper-large-v3-turbo"),
         "text_to_speech_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL", "@cf/deepgram/aura-2-en"),
+        "management_analytics": "role_restricted",
+        "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
     }
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, request: Request):
+def chat(payload: ChatRequest, request: Request,
+         x_cara_analytics_password: str | None = Header(default=None)):
     client_key = request.client.host if request.client else "unknown"
     _enforce_rate_limit("chat:" + client_key)
+    management_context = None
+    if _ANALYTICS_QUERY.search(payload.message):
+        role = role_for_password(x_cara_analytics_password or "")
+        if role not in _ANALYTICS_ROLES:
+            raise HTTPException(status_code=403, detail="Management analytics require an authorised HOD, coordinator or executive dean password.")
+        try:
+            from app.api.routes import analytics as get_analytics
+            management_context = {"authorised_role": role, "summary": get_analytics()}
+        except Exception as exc:
+            logger.exception("CARA management analytics retrieval failed")
+            raise HTTPException(status_code=503, detail="Management analytics are temporarily unavailable.") from exc
     try:
         text, provider, model, updated = reply(
-            payload.message.strip(), [item.model_dump() for item in payload.history]
+            payload.message.strip(), [item.model_dump() for item in payload.history],
+            management_analytics=management_context,
         )
         return ChatResponse(reply=text, provider=provider, model=model, context_updated_at=updated)
     except ProviderError as exc:
