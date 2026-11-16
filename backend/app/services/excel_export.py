@@ -174,6 +174,8 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
             details.cell(number, 1).hyperlink = f"#'Weekly Timetable'!{target}"
             details.cell(number, 1).font = Font(color="0563C1", underline="single")
             details.cell(number, 1).alignment = Alignment(vertical="top", wrap_text=True)
+            # Add the reverse link as well, so a timetable entry opens its register row.
+            ws[target].hyperlink = f"#'Session Details'!A{number}"
 
     details.auto_filter.ref = f"A2:L{max(3, len(sessions) + 2)}"
     for col, width in enumerate([24, 17, 13, 11, 11, 18, 40, 24, 32, 16, 16, 38], start=1):
