@@ -361,8 +361,8 @@ def delete_memory(user_id: str, memory_id: str) -> bool:
 
 def upsert_project(user_id: str, data: dict) -> dict:
     title = str(data.get("title", "")).strip()[:180]
-    if not title or SECRET_PATTERN.search(title):
-        raise MemoryError("A valid project title is required.")
+    if not title or SECRET_PATTERN.search(title) or SECRET_PATTERN.search(str(data.get("description", ""))):
+        raise MemoryError("A valid project title and non-secret description are required.")
     project_id = str(data.get("id") or uuid.uuid4().hex)[:80]
     allowed = {"active", "paused", "completed", "archived"}
     status = str(data.get("status", "active"))
@@ -370,6 +370,7 @@ def upsert_project(user_id: str, data: dict) -> dict:
         raise MemoryError("Invalid project status.")
     old = _read(COL_PROJECTS, _doc_id(user_id, project_id)) or {}
     item = {**old, "title": title,
+            "related_conversation": str(data.get("related_conversation", old.get("related_conversation", "")))[:80],
             "description": str(data.get("description", old.get("description", "")))[:4000],
             "status": status, "priority": str(data.get("priority", old.get("priority", "normal")))[:20],
             "next_action": str(data.get("next_action", old.get("next_action", "")))[:1000],
