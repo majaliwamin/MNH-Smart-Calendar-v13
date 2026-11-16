@@ -16,7 +16,9 @@
   launcher.setAttribute("aria-label", "Open CARA, your intelligent academic relations assistant");
   launcher.setAttribute("aria-expanded", "false");
   const header = el("div", "cr-head");
-  const identity = el("div", "cr-identity"); identity.append(el("strong", "cr-title", "CARA"));
+  const identity = el("div", "cr-identity");
+  identity.append(el("strong", "cr-title", "CARA (Classroom and Academic Relations Assistant)"));
+  identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
   header.append(identity, toggle);
   const body = el("div", "cr-body");
