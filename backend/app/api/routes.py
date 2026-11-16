@@ -587,6 +587,8 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
     if payload.get("format") != "mnh-calendar-backup" or not isinstance(payload.get("documents"), list):
         raise HTTPException(400, "Unsupported backup format.")
     documents = payload["documents"]
+    if not documents:
+        raise HTTPException(400, "An empty backup cannot replace the shared calendar. No data was changed.")
     if len(documents) > 10000:
         raise HTTPException(400, "Backup contains too many records.")
     cleaned = []
@@ -752,6 +754,13 @@ def delete_document(collection: str, item_id: str, mnh_session: str | None = Coo
     with database() as c:
         row = c.execute("SELECT data FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
         if row:
+            # Preserve a complete recovery point before physically deleting a record.
+            # If the snapshot fails, abort the deletion and leave the live row untouched.
+            try:
+                make_backup()
+            except Exception as exc:
+                logger.exception("Pre-delete safety backup failed; deletion was not applied")
+                raise HTTPException(503, "A safety backup could not be created. No data was deleted; please retry.") from exc
             try:
                 deleted_data = json.loads(row["data"])
             except (TypeError, json.JSONDecodeError):
