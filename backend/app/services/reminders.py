@@ -192,10 +192,30 @@ def _key(session: dict, lead: int, phone: str) -> str:
     return f"{day}|{session.get('code', '')}|{session.get('start', '')}|{lead}|{phone}"
 
 
-def already_sent(key: str) -> bool:
+def claim_reminder(key: str, session: dict, lead: int, phone: str) -> bool:
+    """Atomically reserve a reminder key before sending, preventing duplicate sends across workers."""
+    session_date = session.get("date")
+    starts = ""
+    if isinstance(session_date, date):
+        starts = f"{session_date.isoformat()} {session.get('start', '')}".strip()
+    now = datetime.now(TZ)
+    now_text = now.isoformat(timespec="seconds")
+    stale_before = (now - timedelta(minutes=2)).isoformat(timespec="seconds")
     with database() as connection:
-        row = connection.execute("SELECT 1 FROM reminder_log WHERE ikey=?", (key,)).fetchone()
-    return bool(row)
+        cursor = connection.execute(
+            "INSERT OR IGNORE INTO reminder_log(ikey,sent_at,phone,code,starts,lead,status,detail) VALUES(?,?,?,?,?,?,?,?)",
+            (key, now_text, phone, str(session.get("code", "")), starts, lead, "pending", ""),
+        )
+        if cursor.rowcount == 1:
+            return True
+        # Permit retry after a recorded delivery error or a worker crash that left
+        # a pending claim behind for more than two minutes.
+        retry = connection.execute(
+            "UPDATE reminder_log SET sent_at=?,status='pending',detail='' "
+            "WHERE ikey=? AND (status='error' OR (status='pending' AND sent_at<?))",
+            (now_text, key, stale_before),
+        )
+        return retry.rowcount == 1
 
 
 def record(key: str, session: dict, lead: int, phone: str, status: str, detail: str = "") -> None:
@@ -228,11 +248,11 @@ def run_once(now: datetime | None = None, dry_run: bool = False) -> dict:
         text = reminder_text(session, lead)
         for phone in config["recipients"]:
             key = _key(session, lead, phone)
-            if already_sent(key):
-                skipped += 1
-                continue
+            # Dry runs are previews only: they must not reserve a real reminder key.
             if dry_run:
-                record(key, session, lead, phone, "dry-run")
+                continue
+            if not claim_reminder(key, session, lead, phone):
+                skipped += 1
                 continue
             try:
                 wa_bridge.send_text(phone, text)
