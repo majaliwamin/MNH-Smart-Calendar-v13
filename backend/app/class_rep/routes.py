@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/class-rep", tags=["Class Representative Assistan
 _RATE_LOCK = threading.Lock()
 _RATE_BUCKETS: dict[str, deque] = {}
 _RATE_WINDOW_SECONDS = 60
-_RATE_LIMIT = 15
+_RATE_LIMIT = 30
 
 
 def _enforce_rate_limit(client_key: str) -> None:
