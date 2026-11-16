@@ -89,7 +89,7 @@
           cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10) })
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.detail || "AI provider unavailable");
+        if (!response.ok) throw new Error("Request could not be completed");
         pending.textContent = result.reply;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
