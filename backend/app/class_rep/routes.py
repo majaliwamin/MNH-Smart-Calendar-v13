@@ -102,7 +102,7 @@ def status():
             "knowledge_sources": ["timetable", "modules", "facilitators", "examinations", "recurring_activities",
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
                                   "account_memories", "account_tasks"],
-            "document_uploads": "enabled" if os.getenv("MNH_CLASSREP_DOCUMENT_ADMIN_TOKEN", "").strip() else "disabled_missing_admin_token",
+            "document_uploads": "enabled" if cloudflare else "disabled_missing_embedding_provider",
             "document_search": "semantic" if cloudflare else "keyword_only",
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
             "voice": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
