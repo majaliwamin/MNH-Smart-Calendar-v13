@@ -1759,3 +1759,32 @@ body:is([data-theme="dark"],[data-theme="midnight"],[data-theme="silver"]) .view
 html.mnh-viewport-ready{height:var(--mnh-app-height)!important;min-height:var(--mnh-app-height)!important}
 body.mnh-viewport-ready{height:var(--mnh-app-height)!important;min-height:var(--mnh-app-height)!important;max-height:none!important}
 body.mnh-viewport-ready>main{min-height:0!important;flex:1 1 auto!important}
+
+
+/* v14.85: keep the Module details dialog title fully visible on short screens and while scrolling. */
+.colour-dialog{
+  box-sizing:border-box;
+  align-items:flex-start;
+  justify-content:center;
+  overflow-y:auto;
+  padding:calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.dialog-card{
+  box-sizing:border-box;
+  max-height:calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  max-height:calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  margin:auto 0;
+}
+.dialog-card h2{
+  position:sticky;
+  top:-1px;
+  z-index:3;
+  padding-top:2px;
+  padding-bottom:8px;
+  margin-top:0;
+  background:var(--panel);
+}
+@media(max-height:620px){
+  .colour-dialog{padding-top:calc(6px + env(safe-area-inset-top, 0px));padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px))}
+  .dialog-card{max-height:calc(100vh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));max-height:calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));padding:16px}
+}
