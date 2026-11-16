@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.98">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v14.99">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.98">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v14.99">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,7 +20,25 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.98";</script>
+<script>
+(function () {
+  "use strict";
+  // Always make a fresh network navigation when this shared link is opened.
+  // The one-use URL marker prevents a reload loop, including in email-launched Chrome tabs.
+  var marker = "__mnh_open_refresh";
+  var url = new URL(window.location.href);
+  if (!url.searchParams.has(marker)) {
+    url.searchParams.set(marker, String(Date.now()));
+    window.location.replace(url.toString());
+    return;
+  }
+  url.searchParams.delete(marker);
+  try {
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  } catch (_) {}
+})();
+</script>
+<script>window.MNH_BUILD="2026.11.16-v14.99";</script>
 <script>
 (function () {
   "use strict";
@@ -71,10 +89,10 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.16-v14.98"></script>
-<script src="/js/api-client.js?v=2026.11.16-v14.98"></script>
+<script src="/js/week-model.js?v=2026.11.16-v14.99"></script>
+<script src="/js/api-client.js?v=2026.11.16-v14.99"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.98">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v14.99">
 
 </head>
 <body data-theme="dark">
@@ -335,13 +353,13 @@
 
 
 
-<script src="/js/app.js?v=2026.11.16-v14.98" defer></script>
+<script src="/js/app.js?v=2026.11.16-v14.99" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.16-v14.98";
+  const workerUrl = "/service-worker.js?v=2026.11.16-v14.99";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
