@@ -83,7 +83,7 @@ Set these in Render → Environment. Do not commit credentials:
 - `MNH_CLASSREP_CLOUDFLARE_API_KEY`
 - `MNH_CLASSREP_CLOUDFLARE_MODEL`
 - `MNH_CLASSREP_HF_API_KEY` and `MNH_CLASSREP_HF_MODEL` (optional fallback)
-- `MNH_CLASSREP_GROQ_API_KEY` and `MNH_CLASSREP_GROQ_MODEL` (optional fallback)
+- `MNH_CLASSREP_GROQ_API_KEY`, `MNH_CLASSREP_GROQ_MODEL` and `MNH_CLASSREP_GROQ_BASE_URL` (optional fallback; set the endpoint explicitly)
 - `MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL`
 - `MNH_CLASSREP_CLOUDFLARE_STT_MODEL` (optional speech-to-text model)
 - `MNH_CLASSREP_CLOUDFLARE_TTS_MODEL` (optional text-to-speech model)
