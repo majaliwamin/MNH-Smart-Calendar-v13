@@ -75,7 +75,7 @@
     if (!message || state.busy) return;
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
-    input.value = "";
+    input.value = ""; updateComposerAction();
     addMessage("user", message);
     const pending = addMessage("assistant", "Preparing a response…");
     state.busy = true; input.disabled = true;
