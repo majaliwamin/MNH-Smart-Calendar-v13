@@ -68,7 +68,9 @@ def make_backup():
             destination = sqlite3.connect(temporary)
             try:
                 source.backup(destination)
-                destination.execute("PRAGMA integrity_check")
+                integrity = destination.execute("PRAGMA integrity_check").fetchone()
+                if not integrity or integrity[0] != "ok":
+                    raise RuntimeError("SQLite backup failed its integrity check.")
                 destination.commit()
             finally:
                 destination.close()
