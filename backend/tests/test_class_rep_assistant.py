@@ -172,3 +172,29 @@ def test_voice_adapters_validate_and_return_audio(monkeypatch):
     monkeypatch.setattr(voice, "_run", lambda model, payload: {"audio": base64.b64encode(b"mp3").decode()})
     audio, content_type = voice.speak("Hello")
     assert audio == b"mp3" and content_type == "audio/mpeg"
+
+
+def test_cara_analytics_intent_rejects_unauthorised_request(monkeypatch):
+    from app.class_rep import routes
+    from app.class_rep.schemas import ChatRequest
+    from fastapi import HTTPException
+
+    class Client:
+        host = "127.0.0.1"
+    class Request:
+        client = Client()
+    monkeypatch.setattr(routes, "role_for_password", lambda password: None)
+    try:
+        routes.chat(ChatRequest(message="Show programme analytics"), Request(), None)
+    except HTTPException as exc:
+        assert exc.status_code == 403
+        assert "HOD" in exc.detail
+    else:
+        raise AssertionError("CARA analytics must require an authorised management role")
+
+
+def test_cara_analytics_intent_accepts_only_management_roles(monkeypatch):
+    from app.class_rep import routes
+    assert routes._ANALYTICS_QUERY.search("Show missed sessions and attendance")
+    assert routes._ANALYTICS_QUERY.search("Compare online vs face-to-face")
+    assert routes._ANALYTICS_ROLES == {"hod", "coordinator", "executive_dean"}
