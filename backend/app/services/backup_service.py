@@ -19,6 +19,19 @@ def list_backups():
                   key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def _fsync_backup_directory() -> None:
+    """Persist directory-entry changes where the platform supports directory fsync."""
+    try:
+        descriptor = os.open(str(BACKUP_DIR), os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    except OSError:
+        # Some platforms/filesystems do not permit opening or syncing directories.
+        pass
+
+
 def _atomic_json_snapshot(target: Path, payload: dict) -> None:
     fd, temporary = tempfile.mkstemp(prefix=".mnh-backup-", suffix=".tmp", dir=str(BACKUP_DIR))
     try:
@@ -27,6 +40,7 @@ def _atomic_json_snapshot(target: Path, payload: dict) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, target)
+        _fsync_backup_directory()
     except Exception:
         try:
             os.unlink(temporary)
@@ -48,6 +62,9 @@ def make_backup():
         target = BACKUP_DIR / f"mnh-calendar-{stamp}.json"
         snapshot = {}
         with database() as connection:
+            # All tables must come from one consistent point-in-time view, even while
+            # other devices are editing the shared calendar.
+            connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             for table, order in (("docs", "col,id"), ("audit", "seq"), ("app_meta", "key"),
                                  ("reminder_log", "ikey"), ("comm_audit", "id")):
                 rows = connection.execute(f"SELECT * FROM {table} ORDER BY {order}").fetchall()
@@ -76,6 +93,7 @@ def make_backup():
                 destination.close()
                 source.close()
             os.replace(temporary, target)
+            _fsync_backup_directory()
         except Exception:
             try:
                 os.unlink(temporary)
