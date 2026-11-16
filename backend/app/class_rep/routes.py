@@ -160,7 +160,7 @@ def _explicit_reminder(user_id: str, message: str):
     return reminder, target
 
 
-def _explicit_project(user_id: str, message: str):
+def _explicit_project(user_id: str, message: str, conversation_id: str = ""):
     match = re.search(r"\b(?:create|start|track)\s+(?:a\s+)?project(?:\s+called|\s+named|\s*:\s*)\s*(.+)$", message.strip(), re.I)
     if not match:
         return None
@@ -170,10 +170,10 @@ def _explicit_project(user_id: str, message: str):
     for existing in memory.list_projects(user_id):
         if existing.get("title", "").strip().casefold() == title.casefold() and existing.get("status") not in ("completed", "archived"):
             return existing
-    return memory.upsert_project(user_id, {"title": title, "status": "active"})
+    return memory.upsert_project(user_id, {"title": title, "status": "active", "related_conversation": conversation_id})
 
 
-def _explicit_task(user_id: str, message: str):
+def _explicit_task(user_id: str, message: str, conversation_id: str = ""):
     match = re.search(r"\b(?:create|add|track)\s+(?:a\s+)?task(?:\s+to|\s*:\s*)\s*(.+)$", message.strip(), re.I)
     if not match:
         return None
@@ -183,7 +183,7 @@ def _explicit_task(user_id: str, message: str):
     for existing in memory.list_tasks(user_id):
         if existing.get("title", "").strip().casefold() == title.casefold() and existing.get("status") not in ("completed", "cancelled"):
             return existing
-    return memory.upsert_task(user_id, {"title": title, "status": "not_started", "priority": "normal"})
+    return memory.upsert_task(user_id, {"title": title, "status": "not_started", "priority": "normal", "related_conversation": conversation_id})
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -199,13 +199,13 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
     conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", payload.conversation_id or "")[:80] or uuid.uuid4().hex
     try:
-        project_created = _explicit_project(user["id"], payload.message.strip())
+        project_created = _explicit_project(user["id"], payload.message.strip(), conversation_id)
         if project_created:
             confirmation = "I have saved the project '" + project_created["title"] + "' to your CARA project records."
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
             return ChatResponse(reply=confirmation, provider="CARA project memory",
                                 model="persistent project record", conversation_id=conversation_id)
-        task_created = _explicit_task(user["id"], payload.message.strip())
+        task_created = _explicit_task(user["id"], payload.message.strip(), conversation_id)
         if task_created:
             confirmation = "I have saved the task “" + task_created["title"] + "” to your CARA task list as not started."
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
@@ -240,10 +240,10 @@ def conversation_turn(request: Request, payload: dict):
     conversation_id = str(payload.get("conversation_id") or uuid.uuid4().hex)[:80]
     if not message or not answer:
         raise HTTPException(400, "A user message and assistant response are required.")
-    project = _explicit_project(user["id"], message)
+    project = _explicit_project(user["id"], message, conversation_id)
     if project:
         answer = "I have saved the project '" + project["title"] + "' to your CARA project records."
-    task = None if project else _explicit_task(user["id"], message)
+    task = None if project else _explicit_task(user["id"], message, conversation_id)
     if task:
         answer = "I have saved the task “" + task["title"] + "” to your CARA task list as not started."
     reminder_result = _explicit_reminder(user["id"], message)
