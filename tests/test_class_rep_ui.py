@@ -24,7 +24,7 @@ def test_cara_starts_closed_and_has_requested_identity():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     assert 'el("button", "cara-launcher", "CARA")' in js
     assert 'CARA (Classroom and Academic Relations Assistant)' in js
-    assert '/api/class-rep/auth/register' in js
+    assert '"/api/class-rep/auth/" + authMode' in js
     assert '/api/class-rep/memories' in js
     assert 'Your intelligent academic relations assistant' in js
     assert 'root.classList.remove("is-open")' in js
