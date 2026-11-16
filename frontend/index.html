@@ -17,7 +17,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script>window.MNH_BUILD="2026.11.16-v14.77";</script>
+<script>window.MNH_BUILD="2026.11.16-v14.78";</script>
 <script src="/js/week-model.js?v=2026.11.16-v14.73"></script>
 <script src="/js/api-client.js?v=2026.11.16-v14.73"></script>
 
@@ -312,7 +312,9 @@
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
  const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 
+ const INSTALL_DONE_KEY="mnh_calendar_install_completed";
  let installNoticeTimer=null;
+ const markInstalled=()=>{try{localStorage.setItem(INSTALL_DONE_KEY,"1");}catch(e){}};
  const hideInstallNotice=()=>{
   if(installNoticeTimer){clearTimeout(installNoticeTimer);installNoticeTimer=null;}
   if(notice){notice.classList.remove("is-visible","is-action");}
@@ -333,7 +335,7 @@
   notice.disabled=!action;
   notice.classList.toggle("is-action",action);
   notice.classList.add("is-visible");
-  if(action)installNoticeTimer=setTimeout(hideInstallNotice,8000);
+  installNoticeTimer=setTimeout(hideInstallNotice,8000);
  };
 
  async function installFromNotice(){
@@ -347,6 +349,7 @@
     await promptEvent.prompt();
     const choice=await promptEvent.userChoice;
     if(choice&&choice.outcome==="accepted"){
+     markInstalled();
      hideInstallNotice();
     }
    }catch(error){
@@ -379,6 +382,7 @@
  window.addEventListener("appinstalled",()=>{
   deferredPrompt=null;
   promptOpen=false;
+  markInstalled();
   hideInstallNotice();
  });
 })();;
