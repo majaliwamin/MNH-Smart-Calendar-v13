@@ -14,6 +14,7 @@ from app.config import PROJECT_ROOT, CORS_ORIGINS, BUILD_ID, APP_VERSION, ensure
 from app.database.connection import connect, database
 from app.api.routes import router
 from app.api.comm_routes import router as comm_router
+from app.class_rep.routes import router as class_rep_router
 from app.services.backup_service import backup_worker, make_backup, list_backups
 from app.services.reminders import reminder_worker
 from app.services import comm_service
@@ -110,6 +111,7 @@ async def http_error_handler(request: Request, exc: HTTPException):
 
 app.include_router(router)
 app.include_router(comm_router)
+app.include_router(class_rep_router)
 
 
 @app.get("/", include_in_schema=False)

@@ -57,6 +57,29 @@ Open `http://127.0.0.1:8000/` (or `http://localhost:8000/`). Do not enter `http:
 
 To stop the local server, press `Ctrl+C` in the terminal. Do not open `frontend/index.html` directly or use VS Code Live Server: the application requires the API server for shared records.
 
+## Class Representative AI Assistant
+
+The weekly timetable includes a Class Rep Assistant panel beneath the timetable, aligned to the right. It is a separate frontend module backed by an isolated FastAPI package:
+
+- `backend/app/class_rep/config.py`: provider configuration from environment variables.
+- `providers.py`: server-side OpenAI Chat Completions-compatible adapter.
+- `context.py`: bounded, read-only retrieval from shared timetable collections.
+- `assistant.py`: conversation orchestration and MNH-specific instructions.
+- `schemas.py`: validated request and response contracts.
+- `routes.py`: status and chat API endpoints.
+- `frontend/js/class-rep.js` and `frontend/css/class-rep.css`: isolated assistant UI and client.
+
+Configure these environment variables on the hosting service (Render → Environment):
+
+- `MNH_CLASSREP_AI_PROVIDER=openai-compatible`
+- `MNH_CLASSREP_AI_BASE_URL=https://api.openai.com/v1`
+- `MNH_CLASSREP_AI_API_KEY` = your provider API key (secret; never put it in frontend files)
+- `MNH_CLASSREP_AI_MODEL=gpt-4o-mini`
+
+The adapter supports OpenAI-compatible endpoints, including providers such as OpenAI, Groq and OpenRouter when their base URL and model are configured. The assistant reports as not configured until a server-side API key is supplied. No key is committed to the repository.
+
+The first release is read-only: it can answer using shared calendar records and draft class communications, but it cannot edit the timetable or send messages. Conversation history is held in the current browser page only and is not persisted by the server. AI-generated details should be checked against programme records before distribution.
+
 ## 2. Access from different Wi-Fi networks / mobile data
 
 For access outside the local network, deploy the service publicly. The included `render.yaml` configures a Render web service with:
