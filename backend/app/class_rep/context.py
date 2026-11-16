@@ -1,12 +1,17 @@
-"""Read-only retrieval of authoritative shared MNH calendar context."""
+"""Read-only retrieval of authoritative shared MNH calendar and activity data."""
 import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 from app.database.connection import database
 from app.config import TIMEZONE
 
-COLLECTIONS = ("cells", "modules", "facilitators", "examinations", "recurring", "communications", "resources")
-MAX_CONTEXT_CHARS = 24000
+COLLECTIONS = (
+    "cells", "modules", "facilitators", "examinations",
+    "recurring", "communications", "resources",
+)
+MAX_CONTEXT_CHARS = 30000
+MAX_ACTIVITY_ITEMS = 60
 
 
 def _bounded_value(value, depth: int = 0):
@@ -14,24 +19,39 @@ def _bounded_value(value, depth: int = 0):
     if depth > 4:
         return str(value)[:300]
     if isinstance(value, str):
-        return value[:900]
+        return value[:1400]
     if isinstance(value, dict):
         return {str(key)[:100]: _bounded_value(item, depth + 1)
-                for key, item in list(value.items())[:30]}
+                for key, item in list(value.items())[:35]}
     if isinstance(value, list):
-        return [_bounded_value(item, depth + 1) for item in value[:20]]
+        return [_bounded_value(item, depth + 1) for item in value[:25]]
     if value is None or isinstance(value, (bool, int, float)):
         return value
     return str(value)[:300]
 
 
-def build_calendar_context(limit: int = 180) -> tuple[str, str | None]:
-    """Build a bounded, read-only snapshot. The assistant cannot mutate calendar data."""
+def build_calendar_context(limit: int = 240) -> tuple[str, str | None]:
+    """Build a bounded snapshot from live shared records and non-sensitive audit summaries.
+
+    This reads the same records used by the timetable UI. It does not write, mutate,
+    or infer missing calendar facts. Activity history is limited to action summaries.
+    """
     with database() as connection:
         rows = connection.execute(
-            "SELECT col,id,data,updated_at FROM docs WHERE col IN (" + ",".join("?" for _ in COLLECTIONS) + ") ORDER BY updated_at DESC LIMIT ?",
+            "SELECT col,id,data,updated_at FROM docs WHERE col IN (" +
+            ",".join("?" for _ in COLLECTIONS) +
+            ") ORDER BY updated_at DESC LIMIT ?",
             (*COLLECTIONS, limit),
         ).fetchall()
+        try:
+            activity_rows = connection.execute(
+                "SELECT at,action,collection,item_id,summary FROM audit "
+                "ORDER BY at DESC LIMIT ?", (MAX_ACTIVITY_ITEMS,)
+            ).fetchall()
+        except Exception:
+            # Older database deployments may not yet have the audit table.
+            activity_rows = []
+
     grouped = {name: [] for name in COLLECTIONS}
     newest = None
     for row in rows:
@@ -39,20 +59,50 @@ def build_calendar_context(limit: int = 180) -> tuple[str, str | None]:
             data = json.loads(row["data"])
         except (TypeError, json.JSONDecodeError):
             continue
-        grouped[row["col"]].append({"id": str(row["id"])[:100], **_bounded_value(data)})
+        record = _bounded_value(data)
+        if not isinstance(record, dict):
+            record = {"value": record}
+        record["id"] = str(row["id"])[:100]
+        grouped[row["col"]].append(record)
         stamp = row["updated_at"]
         if stamp is not None and (newest is None or stamp > newest):
             newest = stamp
+
+    activity = []
+    for row in activity_rows:
+        activity.append({
+            "at": row["at"],
+            "action": str(row["action"] or "")[:50],
+            "collection": str(row["collection"] or "")[:50],
+            "item_id": str(row["item_id"] or "")[:100],
+            "summary": str(row["summary"] or "")[:220],
+        })
+        if row["at"] is not None and (newest is None or row["at"] > newest):
+            newest = row["at"]
+
     now = datetime.now(ZoneInfo(TIMEZONE)).isoformat(timespec="minutes")
-    payload = {"timezone": TIMEZONE, "local_now": now, "records": grouped}
+    payload = {
+        "timezone": TIMEZONE,
+        "local_now": now,
+        "records": grouped,
+        "recent_activity_history": activity,
+        "data_scope": "live shared application records; read-only",
+    }
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    # Remove oldest records until the complete JSON document fits; never slice JSON mid-record.
+    # Trim oldest records, then oldest activity, without slicing JSON mid-record.
     while len(encoded) > MAX_CONTEXT_CHARS:
         candidates = [name for name, items in grouped.items() if items]
-        if not candidates:
+        if candidates:
+            largest = max(candidates, key=lambda name: len(grouped[name]))
+            grouped[largest].pop()
+        elif activity:
+            activity.pop()
+        else:
             break
-        largest = max(candidates, key=lambda name: len(grouped[name]))
-        grouped[largest].pop()
         encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    updated = datetime.fromtimestamp(newest / 1000, ZoneInfo(TIMEZONE)).isoformat(timespec="minutes") if newest else None
+
+    updated = (
+        datetime.fromtimestamp(newest / 1000, ZoneInfo(TIMEZONE)).isoformat(timespec="minutes")
+        if newest else None
+    )
     return encoded, updated

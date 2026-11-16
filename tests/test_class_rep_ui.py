@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=3' in html
+    assert '/js/class-rep.js?v=4' in html
     assert '/css/class-rep.css?v=3' in html
 
 
@@ -25,5 +25,5 @@ def test_cara_starts_closed_and_has_requested_identity():
     assert 'Your intelligent academic relations assistant' in js
     assert 'root.classList.remove("is-open")' in js
     assert 'function demoReply(message)' in js
-    assert 'Demo mode · built-in responses' in js
-    assert 'Please check the live weekly timetable above' in js
+    assert 'Built-in fallback · AI not configured' in js
+    assert 'please check the live weekly timetable' in js

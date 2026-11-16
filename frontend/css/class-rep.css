@@ -31,3 +31,13 @@
 .cr-foot{margin:9px 0 0;color:var(--muted);font-size:11px;line-height:1.4;opacity:.85}
 @media(max-width:760px){.cara-widget{right:14px;bottom:14px;width:min(370px,calc(100vw - 28px))}.cara-widget.is-open{width:min(370px,calc(100vw - 28px))}.cr-body{padding:12px}.cr-transcript{max-height:220px}.cr-message{max-width:96%}}
 @media(prefers-reduced-motion:no-preference){.cara-launcher{transition:transform .18s ease,box-shadow .18s ease}.cara-widget.is-open{animation:cara-enter .22s ease-out both}@keyframes cara-enter{from{opacity:.7;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
+
+
+/* CARA knowledge and voice tools */
+.cr-tools{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
+.cr-tools .cr-prompt,.cr-documents .cr-prompt,.cr-speak{font-size:12px;padding:7px 10px}
+.cr-documents{border:1px solid var(--line);border-radius:10px;padding:9px;margin:8px 0;max-height:180px;overflow:auto}
+.cr-document-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}
+.cr-document-row:last-child{border-bottom:0}
+.cr-file-input{display:none}
+.cr-tools button:disabled{opacity:.45;cursor:not-allowed}

@@ -1,0 +1,7 @@
+# Optional CPU OCR stack. Install separately to keep standard API deployments lean.
+# pip install -r backend/requirements-ocr.txt
+numpy>=1.26,<3
+Pillow>=10.0,<13
+paddlepaddle>=3.0,<4
+paddleocr>=3.0,<4
+easyocr>=1.7.2,<2
