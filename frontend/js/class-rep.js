@@ -3,8 +3,6 @@
   const root = document.getElementById("class-rep-assistant");
   if (!root || root.dataset.ready === "1") return;
   root.dataset.ready = "1";
-  // Keep the full-screen assistant outside app header/transform stacking contexts.
-  if (root.parentElement !== document.body) document.body.appendChild(root);
 
   const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null };
   const el = (tag, cls, text) => {
@@ -57,11 +55,38 @@
   const authFeedback = el("p", "cr-auth-feedback", "");
   authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback);
   authPanel.append(authCard);
-  root.append(launcher, header, body, authPanel);
+  root.append(body, authPanel);
+  const landingNav = document.getElementById("view-tabs");
+  if (landingNav) landingNav.appendChild(launcher);
+  let landingVisible = true;
+  let schedulingVisible = false;
+  function updateLauncherVisibility() {
+    launcher.hidden = root.classList.contains("is-open") || !landingVisible || schedulingVisible;
+  }
+  window.setCRARALandingVisible = (visible) => {
+    landingVisible = Boolean(visible);
+    if (!landingVisible && root.classList.contains("is-open")) setOpen(false);
+    updateLauncherVisibility();
+  };
+  window.setCRARASchedulingVisible = (visible) => {
+    schedulingVisible = Boolean(visible);
+    updateLauncherVisibility();
+  };
+  updateLauncherVisibility();
+  // Do not mount the assistant hero at all until authentication succeeds.
+  function showHeader(visible) {
+    if (visible) {
+      if (!header.isConnected) root.insertBefore(header, body);
+      header.hidden = false;
+    } else {
+      header.hidden = true;
+      header.remove();
+    }
+  }
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
-  header.hidden = true;
+  showHeader(false);
   body.hidden = true;
   authPanel.hidden = true;
   function status(text, ready) {
@@ -124,7 +149,7 @@
       const result = await response.json();
       if (result.storage_ready === false) {
         state.user = null; signOut.hidden = true; 
-        header.hidden = true; body.hidden = true; authPanel.hidden = false;
+        showHeader(false); body.hidden = true; authPanel.hidden = false;
         authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
@@ -137,12 +162,12 @@
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
       signOut.hidden = !state.user; 
-      header.hidden = !state.user;
+      showHeader(Boolean(state.user));
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; signOut.hidden = true; header.hidden = true; authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true;
     }
   }
   async function authenticate() {
@@ -156,7 +181,7 @@
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Account request failed.");
       state.user = result.user; state.history = []; state.conversationId = null; 
-      transcript.replaceChildren(); header.hidden = false; authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      transcript.replaceChildren(); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
@@ -167,7 +192,7 @@
   signOut.addEventListener("click", async () => {
     await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
     state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
-    header.hidden = true; body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
+    showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
   });
   async function send(value) {
     const message = String(value || input.value).trim();
@@ -333,7 +358,7 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
-    header.hidden = !open || !state.user; body.hidden = true; authPanel.hidden = !open || Boolean(state.user); launcher.hidden = open;
+    showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user); updateLauncherVisibility();
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }
