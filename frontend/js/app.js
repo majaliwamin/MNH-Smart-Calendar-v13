@@ -111,8 +111,9 @@ function showDialog(id){
   close.addEventListener("click",()=>id==="call-dialog"?stopRing():hideDialog(id));card.prepend(close);
  }
  el.classList.add("open");el.setAttribute("aria-hidden","false");
+ if(id==="module-dialog"&&typeof window.setCRARASchedulingVisible==="function")window.setCRARASchedulingVisible(true);
 }
-function hideDialog(id){if(id==="details-dialog")stopMeetingCountdown();const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}}
+function hideDialog(id){if(id==="details-dialog")stopMeetingCountdown();const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}if(id==="module-dialog"&&typeof window.setCRARASchedulingVisible==="function")window.setCRARASchedulingVisible(false);}
 function contrastColour(hex){
  const n=parseInt(hex.replace("#",""),16);
  const lum=(0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255;
@@ -979,6 +980,7 @@ function showView(name){
   updateRoleNav();
  }
  currentView=name;
+ if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
  // Keep secondary pages completely clear of the shared programme masthead and
  // weekly navigation strip; only the active page content remains in the viewport.
  document.body.classList.toggle("is-content-view",name!=="weekly");
