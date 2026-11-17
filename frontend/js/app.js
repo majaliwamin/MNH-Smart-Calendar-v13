@@ -820,6 +820,7 @@ function refreshAlarmUI(){
 function initAlarms(){
  loadAlarm();refreshAlarmUI();
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
+ document.getElementById("alarm-config-nav").addEventListener("click",()=>{closeMenu();closeBell();refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
  document.getElementById("alarm-toggle").addEventListener("click",()=>{

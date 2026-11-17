@@ -45,6 +45,18 @@ def test_full_navigation_and_pinned_settings_are_present():
     assert 'id="settings" class="menu-nav settings-nav"' in html
 
 
+def test_alarm_system_configurations_navigation_opens_existing_alarm_controls():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    alarm_nav = 'id="alarm-config-nav"'
+    history_nav = 'data-view="history"'
+    assert alarm_nav in html
+    assert html.index(alarm_nav) < html.index(history_nav)
+    assert 'Alarm System Configurations' in html
+    assert 'document.getElementById("alarm-config-nav").addEventListener("click"' in app
+    assert 'refreshAlarmUI();showDialog("alarm-dialog")' in app
+
+
 def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")

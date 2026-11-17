@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.17-v15.04">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.17-v15.07">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.17-v15.04">
+<link rel="manifest" href="/manifest.json?v=2026.11.17-v15.07">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.17-v15.04";</script>
+<script>window.MNH_BUILD="2026.11.17-v15.07";</script>
 <script>
 (function () {
   "use strict";
@@ -89,10 +89,10 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.17-v15.04"></script>
-<script src="/js/api-client.js?v=2026.11.17-v15.04"></script>
+<script src="/js/week-model.js?v=2026.11.17-v15.07"></script>
+<script src="/js/api-client.js?v=2026.11.17-v15.07"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.17-v15.06">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.17-v15.07">
 <link rel="stylesheet" href="/css/class-rep.css?v=7">
 
 </head>
@@ -178,6 +178,7 @@
     <button type="button" class="menu-nav" data-view="examinations"><span>&#9635;</span>Examinations</button>
     <button type="button" class="menu-nav" data-view="analytics"><span>&#9636;</span>Analytics</button>
     <button type="button" class="menu-nav" data-view="communications"><span>&#9993;</span>WhatsApp &amp; Communications</button>
+    <button type="button" class="menu-nav" id="alarm-config-nav" aria-label="Open alarm system configurations"><span aria-hidden="true">&#128276;</span>Alarm System Configurations</button>
     <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
    </div>
    <div class="menu-bottom">
@@ -361,14 +362,14 @@
 
 
 
-<script src="/js/app.js?v=2026.11.17-v15.06" defer></script>
+<script src="/js/app.js?v=2026.11.17-v15.07" defer></script>
 <script src="/js/class-rep.js?v=12" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.17-v15.04";
+  const workerUrl = "/service-worker.js?v=2026.11.17-v15.07";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
