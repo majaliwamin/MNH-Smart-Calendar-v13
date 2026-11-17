@@ -348,3 +348,14 @@ def test_upcoming_announcement_ticker_is_open_ended_and_refresh_control_is_ui_hi
     # The announcement strip has no enclosing frame or rounded ends.
     assert "border:0;" in css and "border-radius:0;" in css
     assert "animation:activity-flow-right 90s linear infinite" in css
+
+
+def test_secondary_pages_hide_shared_masthead_and_use_full_viewport():
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+
+    assert 'document.body.classList.toggle("is-content-view",name!=="weekly")' in app
+    assert "body.is-content-view .site-header" in css
+    assert "body.is-content-view #view-tabs" in css
+    assert "body.is-content-view .upcoming-announcements-row" in css
+    assert "min-height:calc(100dvh - 12px)" in css
