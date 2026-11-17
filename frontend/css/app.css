@@ -2173,3 +2173,12 @@ body[data-theme] .activity-marquee-text .marquee-detail{
 .resource-sheet-table td,.resource-sheet-table th{padding:6px 8px;border:1px solid var(--line);white-space:pre-wrap}
 body.resource-reader-open{overflow:hidden}
 @media(max-width:600px){.resource-reader{padding:0}.resource-reader-panel{width:100%;height:100dvh;border-radius:0}.resource-reader-head{padding:9px}.resource-reader-head h3{font-size:14px}.resource-reader-actions{gap:5px}.resource-reader-download,.resource-reader-close{padding:6px 9px}.resource-folder{padding:8px}}
+
+
+/* Shared back affordance for every non-weekly page opened from navigation. */
+.page-back{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:38px;padding:7px 11px;border:1px solid var(--tab-line);border-radius:9px;background:var(--tab);color:var(--text);font:600 calc(12px * var(--text-scale)) Arial,Helvetica,sans-serif;cursor:pointer;white-space:nowrap}
+.page-back[hidden]{display:none!important}
+.page-back>span:first-child{font-size:20px;line-height:1;color:var(--accent)}
+.page-back:hover{border-color:var(--accent);background:var(--head)}
+.page-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:480px){.page-back{min-height:34px;padding:6px 8px;gap:4px}.page-back>span:last-child{font-size:11px}}
