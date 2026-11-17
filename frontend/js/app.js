@@ -1008,7 +1008,7 @@ const WORKSPACE_META={
  communications:["WhatsApp & Communications","Shared announcements, communication notes and useful links."],
  history:["Activity History","New timetable sessions and shared activities added by Rep or Staff."],
  export:["Export & Sharing","Download the timetable, shared data and printable calendar."],
- settings:["Settings","Application preferences, access and header controls."]
+ settings:["Settings","Configure alarms and reminders."]
 };
 function workspace(title,lead){document.getElementById("workspace-title").textContent=title;document.getElementById("workspace-lead").textContent=lead;const root=document.getElementById("workspace-body");root.textContent="";return root;}
 async function apiRequest(method,path,body){return window.mnhApi.request(method,path,body);}
