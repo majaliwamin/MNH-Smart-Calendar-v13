@@ -1998,3 +1998,31 @@ html,body{
   .upcoming-announcements-row{gap:0;padding-left:0;padding-right:0}
   .upcoming-announcements-row .activity-marquee{padding:7px 0}
 }
+
+
+/* v15.06: secondary pages use the full viewport without the shared app masthead. */
+body.is-content-view .upcoming-announcements-row,
+body.is-content-view .site-header,
+body.is-content-view #view-tabs{
+  display:none!important;
+}
+body.is-content-view main{
+  margin-top:0!important;
+  padding-top:0!important;
+}
+body.is-content-view main>.view:not([hidden]){
+  margin-top:0!important;
+  padding-top:clamp(12px,2vw,24px)!important;
+  min-height:calc(100vh - 12px);
+  min-height:calc(100dvh - 12px);
+}
+body.is-content-view #view-workspace:not([hidden]),
+body.is-content-view #view-analytics:not([hidden]),
+body.is-content-view #view-silver-dashboard:not([hidden]),
+body.is-content-view #view-my-schedule:not([hidden]),
+body.is-content-view #view-modules:not([hidden]),
+body.is-content-view #view-resources:not([hidden]){
+  box-sizing:border-box;
+  width:100%;
+  max-width:none;
+}
