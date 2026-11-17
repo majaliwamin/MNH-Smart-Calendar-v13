@@ -104,13 +104,13 @@ def complete(messages: list[dict]) -> tuple[str, str, str]:
         except ProviderError as exc:
             # Safe diagnostics only: never log tokens, endpoints, prompts or response bodies.
             logger.warning(
-                "CARA provider failure provider=%s category=%s http_status=%s error_codes=%s",
+                "CRARA provider failure provider=%s category=%s http_status=%s error_codes=%s",
                 cfg["provider"], exc.category, exc.status_code,
                 ",".join(exc.error_codes) or "-",
             )
             failures.append(cfg["provider"])
     raise ProviderError(
-        "All configured CARA AI providers are temporarily unavailable (" +
+        "All configured CRARA AI providers are temporarily unavailable (" +
         ", ".join(failures) + "). Please try again later.",
         category="all_providers_failed",
     )
