@@ -962,6 +962,7 @@ function showView(name){
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
  const resourcesMode=name==="resources";
+ document.body.classList.toggle("resources-view",resourcesMode);
  document.querySelector(".hd-title").hidden=resourcesMode;
  document.querySelector(".hd-today").hidden=resourcesMode;
  document.getElementById("view-tabs").hidden=resourcesMode;
