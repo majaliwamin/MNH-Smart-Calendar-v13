@@ -879,15 +879,15 @@ function refreshAlarmUI(){
  const soundChoice=document.getElementById("alarm-sound-option");if(soundChoice)soundChoice.value=String(alarm.sound||0);
  const box=document.getElementById("alarm-next");
  const now=Date.now();let next=null;
- alarmEvents(true).forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ring+90000>now&&(!next||ring<next.ring))next={ev,ring};});
+ alarmEvents(true).forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ev.start.getTime()>now&&(!next||ev.start<next.ev.start))next={ev,ring};});
  if(next){
   const dateLabel=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(next.ev.start);
-  box.innerHTML=`<strong>${alarm.on?"Closest upcoming session":"Next scheduled session · alarms off"}</strong><br>${esc(next.ev.label)}<br>${esc(dateLabel)}${alarm.on?` · rings ${hhmm(new Date(next.ring))}`:""} · starts ${hhmm(next.ev.start)}`;
+  box.innerHTML=`<strong>${alarm.on?"Closest upcoming session":"Next scheduled session · alarms off"}</strong><br>${esc(next.ev.label)}<br>${esc(dateLabel)}${alarm.on?(next.ring>now?` · rings ${hhmm(new Date(next.ring))}`:" · reminder time has passed"):""} · starts ${hhmm(next.ev.start)}`;
  }else box.textContent="No upcoming sessions are scheduled in the timetable.";
 }
 function initAlarms(){
  loadAlarm();refreshAlarmUI();
- loadRows("recurring").then(rows=>{recurringRecords=rows;alarmEventsCacheAt=0;alarmEventsCacheAt=0;refreshAlarmUI();}).catch(()=>{});
+ loadRows("recurring").then(rows=>{recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();}).catch(()=>{});
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
@@ -1265,7 +1265,7 @@ async function renderManaged(collection){const [title,lead]=WORKSPACE_META[colle
    for(const [id,data] of defaults)await saveRow("recurring",id,data);
    rows=await loadRows("recurring");
   }
-  recurringRecords=rows;
+  recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();
   const list=el("div","cards");
   rows.filter(row=>row.data?.enabled!==false).forEach(row=>{
    const data=row.data||{},card=el("div","card");
@@ -1276,7 +1276,7 @@ async function renderManaged(collection){const [title,lead]=WORKSPACE_META[colle
    presenterLabel.appendChild(presenter);card.appendChild(presenterLabel);
    const actions=el("div","dialog-actions");
    const save=el("button","primary","Save presenter");save.type="button";
-   save.addEventListener("click",async()=>{try{await saveRow("recurring",row.id,{...data,presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   save.addEventListener("click",async()=>{try{await saveRow("recurring",row.id,{...data,presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
    const remove=el("button","res-del","Remove activity");remove.type="button";
    remove.addEventListener("click",async()=>{if(!confirm("Remove this recurring activity from the timetable?"))return;try{await saveRow("recurring",row.id,{...data,enabled:false});rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
    actions.append(save,remove);card.appendChild(actions);list.appendChild(card);
