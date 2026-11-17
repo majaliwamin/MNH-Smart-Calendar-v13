@@ -733,12 +733,12 @@ window.addEventListener("mnh:offline-synced",()=>{
 const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
 let WEEK_START=WK.startParts(weekOffset);   // Monday of the academic week currently on screen
 const baseTitle=document.title;
-let alarm={on:false,lead:10},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,titleTimer=null,ringing=null;
+let alarm={on:false,lead:10,voice:true},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,titleTimer=null,ringing=null,alarmUserName="",alarmUserPromise=null;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 function pad2(n){return String(n).padStart(2,"0");}
 function hhmm(d){return WK.timeText(d);}
 function loadAlarm(){
- try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10};}catch(e){}
+ try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10,voice:a.voice!==false};}catch(e){}
  try{fired=JSON.parse(localStorage.getItem(firedKey)||"[]");if(!Array.isArray(fired))fired=[];}catch(e){fired=[];}
 }
 function saveAlarm(){try{localStorage.setItem(alarmKey,JSON.stringify(alarm));}catch(e){}}
@@ -768,6 +768,36 @@ function playCycle(){
  });
  try{if(navigator.vibrate)navigator.vibrate([450,150,450]);}catch(e){}
 }
+async function getAlarmUserName(){
+ if(alarmUserName)return alarmUserName;
+ if(alarmUserPromise)return alarmUserPromise;
+ alarmUserPromise=(async()=>{
+  try{
+   const response=await fetch("/api/class-rep/auth/me",{credentials:"same-origin",cache:"no-store"});
+   if(!response.ok)return "";
+   const result=await response.json();
+   alarmUserName=result&&result.authenticated&&result.user?String(result.user.name||"").trim():"";
+  }catch(e){alarmUserName="";}
+  return alarmUserName;
+ })();
+ return alarmUserPromise;
+}
+async function speakAlarm(ev){
+ if(!alarm.voice||!window.speechSynthesis||!window.SpeechSynthesisUtterance)return;
+ const userName=await getAlarmUserName();
+ if(ringing!==ev)return;
+ const greeting=userName?userName+", ":"";
+ const sessionName=ev.title&&ev.title!==ev.label?ev.label+", "+ev.title:ev.label;
+ const lecturer=ev.facilitator?" The lecturer is "+ev.facilitator+".":"";
+ const time=ev.test?"":" The session starts at "+hhmm(ev.start)+".";
+ const message=ev.test?greeting+"this is a test of your timetable voice reminder.":greeting+"your "+sessionName+" session is about to start."+time+lecturer+" Please get ready.";
+ try{
+  window.speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(message);
+  utterance.lang="en-GB";utterance.rate=0.92;utterance.pitch=1;utterance.volume=1;
+  window.speechSynthesis.speak(utterance);
+ }catch(e){}
+}
 function startRing(ev){
  if(ringing)return;
  ringing=ev;ensureAudio();{const cd=document.getElementById("call-day");if(cd)cd.textContent=WK.localNow().day;}
@@ -777,6 +807,7 @@ function startRing(ev){
  document.getElementById("call-when").textContent=(ev.sub?ev.sub+" · ":"")+when;
  document.getElementById("call-snooze").style.display=ev.test?"none":"inline-block";
  showDialog("call-dialog");
+ void speakAlarm(ev);
  playCycle();ringTimer=setInterval(playCycle,3000);
  ringStopTimer=setTimeout(stopRing,60000);
  let flip=false;titleTimer=setInterval(()=>{flip=!flip;document.title=flip?"📞 "+ev.label:baseTitle;},900);
@@ -785,6 +816,7 @@ function stopRing(){
  clearInterval(ringTimer);clearTimeout(ringStopTimer);clearInterval(titleTimer);ringTimer=ringStopTimer=titleTimer=null;
  if(audioCtx&&ringBus){try{ringBus.disconnect();}catch(e){}ringBus=audioCtx.createGain();ringBus.connect(audioCtx.destination);}
  try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
+ try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
  document.title=baseTitle;hideDialog("call-dialog");ringing=null;
 }
 function alarmTick(){
@@ -804,6 +836,7 @@ function refreshAlarmUI(){
  const commAlarmStatus=document.getElementById("communications-alarm-status");if(commAlarmStatus)commAlarmStatus.textContent=alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.";ab.setAttribute("aria-label",al);ab.parentElement.dataset.label=al;ab.classList.toggle("on",alarm.on);
  document.getElementById("alarm-toggle").textContent=alarm.on?"Turn off":"Turn on";
  document.getElementById("alarm-lead").value=String(alarm.lead);
+ const voiceToggle=document.getElementById("alarm-voice");if(voiceToggle)voiceToggle.checked=alarm.voice!==false;
  const box=document.getElementById("alarm-next");
  if(!alarm.on){box.textContent="Alarms are off.";return;}
  const now=Date.now();let next=null;
@@ -817,6 +850,7 @@ function initAlarms(){
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
+ document.getElementById("alarm-voice").addEventListener("change",e=>{alarm.voice=!!e.target.checked;saveAlarm();if(!alarm.voice&&window.speechSynthesis)window.speechSynthesis.cancel();});
  document.getElementById("alarm-toggle").addEventListener("click",()=>{
   alarm.on=!alarm.on;
   if(alarm.on&&!ensureAudio()){statusEl.className="status error";statusEl.textContent="This browser can’t play alarm sounds. You will still see the call screen.";}
