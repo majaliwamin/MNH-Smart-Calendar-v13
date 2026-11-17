@@ -3,6 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+<script>
+(function () {
+  "use strict";
+  var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  if (!standalone) document.documentElement.classList.add("mnh-install-gate-pending");
+})();
+</script>
+<style>
+html.mnh-install-gate-pending body > *:not(#mnh-install-choice) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+html.mnh-install-gate-pending body > #mnh-install-choice {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
@@ -408,7 +427,7 @@
  window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredPrompt=event;showHeaderInstall();});
  window.addEventListener("appinstalled",()=>{
   deferredPrompt=null;promptOpen=false;hideHeaderInstall();
-  const dialog=document.getElementById("mnh-install-choice");if(dialog)dialog.remove();
+  const dialog=document.getElementById("mnh-install-choice");if(dialog)dialog.remove();document.documentElement.classList.remove("mnh-install-gate-pending");
  });
  const overlay=document.createElement("div");
  overlay.id="mnh-install-choice";overlay.className="mnh-install-choice";overlay.hidden=true;
@@ -417,7 +436,7 @@
  const accept=overlay.querySelector("#mnh-install-accept"),decline=overlay.querySelector("#mnh-install-decline");
  const help=overlay.querySelector("#mnh-install-help"),copy=overlay.querySelector("#mnh-install-copy");
  let instructionsShown=false;
- const close=()=>{overlay.hidden=true;};
+ const close=()=>{overlay.hidden=true;document.documentElement.classList.remove("mnh-install-gate-pending");};
  decline.addEventListener("click",close);
  async function install(){
   if(promptOpen)return;
