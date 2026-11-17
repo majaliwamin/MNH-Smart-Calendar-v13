@@ -324,7 +324,6 @@ tbody th.daycell .date{font-size:calc(11px * var(--text-scale));margin-top:2px}
 .mi button:disabled{pointer-events:none}
 .mic{width:26px;height:26px}
 #alarms.on{box-shadow:inset 0 0 0 2px var(--gold)}
-#tab-settings{gap:0}
 .tip{position:fixed;z-index:1300;pointer-events:none;background:var(--accent);color:var(--on-accent);font:700 calc(13px * var(--text-scale)) Arial,sans-serif;padding:6px 10px;border-radius:8px;box-shadow:0 6px 18px #0007;opacity:0;transition:opacity .15s;white-space:nowrap;max-width:calc(100vw - 16px)}
 .tip.show{opacity:1}
 @media(max-width:720px){.site-header .menu-panel{left:10px;right:auto;top:70px}}
@@ -413,7 +412,7 @@ thead th.corner{width:clamp(56px,10vw,130px);position:static}
 .menu-nav>span{width:20px;flex:0 0 20px;color:var(--accent);font-size:calc(17px * var(--text-scale));text-align:center}
 .menu-nav:hover{background:#ffffff0d;border-color:#ffffff18}.menu-nav.active{background:#d9b25a1c;border-color:#c9a65a66;color:#f6d88e}
 .menu-bottom{position:sticky;bottom:-12px;margin-top:auto;padding:10px 0 2px;background:#091a31;border-top:1px solid #ffffff26}
-.menu-nav.settings-nav{font-weight:700}.menu-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 2px 0}
+.menu-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 2px 0}
 .menu-quick-actions button{display:flex;align-items:center;justify-content:center;gap:6px;font-size:calc(12px * var(--text-scale));padding:9px 7px;border-radius:7px}
 .menu-quick-actions button>span{font-size:calc(14px * var(--text-scale));line-height:1;flex:0 0 auto}
 #bottom-nav{display:none!important}
