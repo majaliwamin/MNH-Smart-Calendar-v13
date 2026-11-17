@@ -416,10 +416,12 @@
  document.body.appendChild(overlay);
  const accept=overlay.querySelector("#mnh-install-accept"),decline=overlay.querySelector("#mnh-install-decline");
  const help=overlay.querySelector("#mnh-install-help"),copy=overlay.querySelector("#mnh-install-copy");
+ let instructionsShown=false;
  const close=()=>{overlay.hidden=true;};
  decline.addEventListener("click",close);
  async function install(){
   if(promptOpen)return;
+  if(instructionsShown){close();return;}
   if(deferredPrompt){
    const promptEvent=deferredPrompt;deferredPrompt=null;promptOpen=true;accept.disabled=true;
    try{
@@ -437,7 +439,8 @@
     ?"Your browser may offer “Install app” or “Add to Home screen” from its menu. Choose that option to install."
     :"Choose “Install app” from your browser’s address bar or menu, if available.";
   help.textContent="When you are ready, close this message and choose the browser’s install option.";
-  accept.textContent="Continue";accept.onclick=close;
+  instructionsShown=true;
+  accept.textContent="Continue";
  }
  accept.addEventListener("click",install);
  window.addEventListener("load",()=>{if(!isStandalone())overlay.hidden=false;},{once:true});
