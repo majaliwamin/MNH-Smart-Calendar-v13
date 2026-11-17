@@ -1023,6 +1023,7 @@ function showView(name){
  if(name==="resources"&&currentView!=="resources")previousNonResourcesView=currentView;
  else if(name!=="resources")previousNonResourcesView=name;
  currentView=name;
+  const pageBack=document.getElementById("page-back");if(pageBack)pageBack.hidden=name==="weekly";
  if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
@@ -1274,7 +1275,7 @@ async function renderManaged(collection){const [title,lead]=WORKSPACE_META[colle
 function renderAlarmManagementCard(root){
  const card=el("div","card res-form");
  card.appendChild(el("h3",null,"Timetable alarms"));
- card.appendChild(el("p","muted","Personal device alarm that rings like an incoming call before scheduled academic activities. It works while this page is open; allow sound after opening the app."));
+ card.appendChild(el("p","muted","Personal reminder for scheduled academic activities. Rings while this page is open."));
  const state=el("p","muted",alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.");
  state.id="communications-alarm-status";
  card.appendChild(state);
@@ -1422,7 +1423,7 @@ function commContactForm(values,onSave,line,cancelBtn){
  return wrap;
 }
 async function renderCommContactsCard(root){
- const card=commCard(root,"Contacts","People who may receive WhatsApp messages or voice calls. Consent is required before anyone is contacted, and consent can be withdrawn at any time.");
+ const card=commCard(root,"Contacts","Manage recipients and consent. Contact people only with permission; consent can be withdrawn at any time.");
  const line=el("p","muted","Loading contacts…");card.appendChild(line);
  let data=null;
  try{data=await apiRequest("GET","/api/comm/contacts");}catch(e){commFail(line,e);return;}
@@ -2364,6 +2365,8 @@ function initHeader(){
 }
 // ---- Hamburger menu ----
 const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
+const pageBackButton=document.getElementById("page-back");
+if(pageBackButton)pageBackButton.addEventListener("click",()=>{closeMenu();closeBell();try{history.replaceState(null,"",location.pathname+location.search+"#weekly");}catch(e){}showView("weekly");});
 function openMenu(){menuPanel.hidden=false;menuBtn.setAttribute("aria-expanded","true");menuBtn.setAttribute("aria-label","Close menu");const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}}
 function closeMenu(){menuPanel.hidden=true;menuBtn.setAttribute("aria-expanded","false");menuBtn.setAttribute("aria-label","Open menu");const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot)craraRoot.hidden=currentView!=="weekly";}
 menuBtn.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
