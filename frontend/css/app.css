@@ -2094,3 +2094,19 @@ body.resources-view #view-tabs{display:none!important}
   .activity-marquee-text .marquee-detail{font-size:12px!important}
   .activity-marquee-text .marquee-when{font-size:11px!important}
 }
+
+
+/* Upcoming sessions: transparent banner; colour the characters only, one tone per complete session. */
+.activity-marquee-shell{background:transparent!important;box-shadow:none!important;border:0!important;border-radius:0!important}
+.activity-marquee{background:transparent!important}
+.activity-marquee-text,.activity-marquee-text .marquee-when,.activity-marquee-text .marquee-title,.activity-marquee-text .marquee-detail{
+ color:inherit!important;background:transparent!important;border:0!important;border-radius:0!important;
+ padding-top:0!important;padding-bottom:0!important;text-shadow:none!important;opacity:1!important;
+}
+.activity-marquee-text.tone-0{color:#7dd3fc!important}
+.activity-marquee-text.tone-1{color:#86efac!important}
+.activity-marquee-text.tone-2{color:#fde047!important}
+.activity-marquee-text.tone-3{color:#f0abfc!important}
+.activity-marquee-text.tone-4{color:#c4b5fd!important}
+.activity-marquee-text.tone-5{color:#fda4af!important}
+.activity-marquee-separator{color:var(--muted)!important}
