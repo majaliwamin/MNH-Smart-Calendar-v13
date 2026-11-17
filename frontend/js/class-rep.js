@@ -89,6 +89,11 @@
   showHeader(false);
   body.hidden = true;
   authPanel.hidden = true;
+  function setAuthPresentation(active) {
+    const enabled = Boolean(active);
+    document.documentElement.classList.toggle("cara-auth-open", enabled);
+    document.body.classList.toggle("cara-auth-open", enabled);
+  }
   function status(text, ready) {
     const node = statusNode;
     node.textContent = text;
@@ -149,7 +154,7 @@
       const result = await response.json();
       if (result.storage_ready === false) {
         state.user = null; signOut.hidden = true; 
-        showHeader(false); body.hidden = true; authPanel.hidden = false;
+        showHeader(false); body.hidden = true; authPanel.hidden = false; setAuthPresentation(root.classList.contains("is-open"));
         authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
@@ -163,11 +168,12 @@
       state.user = result.authenticated ? result.user : null;
       signOut.hidden = !state.user; 
       showHeader(Boolean(state.user));
+      setAuthPresentation(root.classList.contains("is-open") && !state.user);
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true; setAuthPresentation(root.classList.contains("is-open"));
     }
   }
   async function authenticate() {
@@ -181,7 +187,7 @@
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Account request failed.");
       state.user = result.user; state.history = []; state.conversationId = null; 
-      transcript.replaceChildren(); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
@@ -192,7 +198,7 @@
   signOut.addEventListener("click", async () => {
     await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
     state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
-    showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
+    showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthPresentation(root.classList.contains("is-open")); setAuthMode("login");
   });
   async function send(value) {
     const message = String(value || input.value).trim();
@@ -358,6 +364,7 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
+    setAuthPresentation(Boolean(open && !state.user));
     showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user); updateLauncherVisibility();
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
