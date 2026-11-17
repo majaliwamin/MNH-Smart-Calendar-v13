@@ -179,8 +179,12 @@ def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
             break
     if not chunks:
         raise DocumentError("No readable text was found in this document.")
-    vectors = _vectors([item["text"] for item in chunks],
-                       "title: " + filename[:180] + " | text: ")
+    try:
+        vectors = _vectors([item["text"] for item in chunks],
+                           "title: " + filename[:180] + " | text: ")
+    except DocumentError:
+        # Keep uploads usable without an embedding provider; search falls back to keywords.
+        vectors = [[] for _ in chunks]
     doc_id = uuid.uuid4().hex
     now = int(time.time() * 1000)
     digest = hashlib.sha256(content).hexdigest()
