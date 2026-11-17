@@ -224,6 +224,27 @@
     state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
     showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthPresentation(root.classList.contains("is-open")); setAuthMode("login");
   });
+  const waitingPhrases = [
+    "Thinking…",
+    "Looking up…",
+    "Preparing…",
+    "Checking the details…",
+    "Putting this together…",
+    "Working through your request…",
+    "Reviewing the information…",
+    "Finding the relevant details…",
+    "Drafting a helpful response…",
+    "Almost ready…"
+  ];
+  let lastWaitingPhrase = -1;
+  function nextWaitingPhrase() {
+    let index = Math.floor(Math.random() * waitingPhrases.length);
+    if (waitingPhrases.length > 1 && index === lastWaitingPhrase) {
+      index = (index + 1 + Math.floor(Math.random() * (waitingPhrases.length - 1))) % waitingPhrases.length;
+    }
+    lastWaitingPhrase = index;
+    return waitingPhrases[index];
+  }
   async function send(value) {
     const message = String(value || input.value).trim();
     if (!message || state.busy || !state.user) return;
@@ -231,7 +252,7 @@
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = ""; updateComposerAction();
     addMessage("user", message);
-    const pending = addMessage("assistant", "Preparing a response…");
+    const pending = addMessage("assistant", nextWaitingPhrase());
     state.busy = true; input.disabled = true;
     try {
       if (state.ready) {
