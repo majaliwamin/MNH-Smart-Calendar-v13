@@ -1,7 +1,7 @@
 from app.class_rep.providers import _extract_chat_content
 
 
-def test_extracts_openai_compatible_chat_content():
+def test_extracts_standard_chat_completion_chat_content():
     payload = {
         "choices": [
             {"message": {"role": "assistant", "content": "CRARA is ready."}}
