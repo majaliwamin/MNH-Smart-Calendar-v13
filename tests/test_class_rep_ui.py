@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=13' in html
-    assert '/css/class-rep.css?v=8' in html
+    assert '/js/class-rep.js?v=14' in html
+    assert '/css/class-rep.css?v=9' in html
 
 
 def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
@@ -84,8 +84,11 @@ def test_main_header_stays_frozen_and_install_icon_is_available():
 def test_crara_login_hides_assistant_header_and_uses_full_viewport():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
-    assert "header.hidden = !open || !state.user" in js
-    assert "header.hidden = !state.user" in js
-    assert "header.hidden = true; body.hidden = true; authPanel.hidden = false" in js
+    assert "function showHeader(visible)" in js
+    assert "root.append(launcher, body, authPanel)" in js
+    assert "root.insertBefore(header, body)" in js
+    assert "header.remove()" in js
+    assert "showHeader(false); body.hidden = true; authPanel.hidden = false" in js
+    assert "showHeader(Boolean(open && state.user))" in js
     assert ".cr-auth-panel{position:fixed;z-index:25;top:0;right:0;bottom:0;left:0;" in css
     assert "@media(max-width:760px){.cr-auth-panel{top:0;bottom:0;" in css
