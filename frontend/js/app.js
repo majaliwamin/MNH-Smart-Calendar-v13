@@ -99,8 +99,7 @@ function setEditing(_enabled){
  editingUnlocked=true;
  updateRoleNav();
  ["save","backup","import","edit-header"].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
- document.getElementById("settings").disabled=false;
- statusEl.className="status ok";
+  statusEl.className="status ok";
  statusEl.textContent="Open access enabled. Changes can be made and shared.";
 }
 function showDialog(id){
@@ -406,7 +405,6 @@ themeSelect.addEventListener("change",e=>{
  themePickerButton.focus();
 });
 syncThemeChoices();
-document.getElementById("settings").addEventListener("click",()=>showView("settings"));
 function requestEditing(action){
  if(typeof action==="function")action();
 }
@@ -834,7 +832,7 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","resources","settings"];
+const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","resources"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly",previousNonResourcesView="weekly";
@@ -969,7 +967,7 @@ function showView(name){
  document.querySelector(".hd-today").hidden=resourcesMode;
  document.getElementById("view-tabs").hidden=resourcesMode;
 
- workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
+ workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
  renderView(name);
@@ -987,7 +985,6 @@ function renderView(name){
  else if(name==="history")renderHistoryPage();
  else if(name==="export")renderExportPage();
  else if(name==="resources")renderResources();
- else if(name==="settings")renderSettingsPage();
 }
 const WORKSPACE_META={
  monthly:["Monthly Calendar","Browse the current academic month and its scheduled sessions."],
@@ -998,7 +995,6 @@ const WORKSPACE_META={
  communications:["WhatsApp & Communications","Shared announcements, communication notes and useful links."],
  history:["Activity History","New timetable sessions and shared activities added by Rep or Staff."],
  export:["Export & Sharing","Download the timetable, shared data and printable calendar."],
- settings:["Settings","Application preferences, access and header controls."]
 };
 function workspace(title,lead){document.getElementById("workspace-title").textContent=title;document.getElementById("workspace-lead").textContent=lead;const root=document.getElementById("workspace-body");root.textContent="";return root;}
 async function apiRequest(method,path,body){return window.mnhApi.request(method,path,body);}
@@ -1710,10 +1706,6 @@ async function downloadTimetableImage(mime){
  }catch(error){console.error(error);status.className="status error";status.textContent="The timetable image could not be created: "+error.message;}finally{weekly.hidden=wasHidden;}
 }
 window.downloadTimetableImage=downloadTimetableImage;
-function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme;sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
- const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted","Open access is enabled. Anyone with the website link can view, edit, replace and restore shared programme records, and view Analytics."));const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=false;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
- const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
- const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}
 function itemButton(x){
  const b=el("button","item");b.type="button";
  b.appendChild(el("span","it",x.timeLabel));
