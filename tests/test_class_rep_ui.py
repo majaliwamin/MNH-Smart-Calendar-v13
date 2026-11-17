@@ -104,5 +104,5 @@ def test_crara_is_sticky_in_landing_navigation_and_hidden_during_scheduling():
     assert 'window.setCRARALandingVisible(name==="weekly")' in app
     assert 'window.setCRARASchedulingVisible(true)' in app
     assert 'window.setCRARASchedulingVisible(false)' in app
-    assert '.view-tabs .cara-launcher{position:sticky' in css
+    assert '.view-tabs .cara-launcher{position:fixed;left:14px;right:auto;bottom:14px' in css
     assert '.cara-widget{position:static' in css
