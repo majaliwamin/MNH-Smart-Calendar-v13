@@ -8,8 +8,11 @@ from contextlib import contextmanager
 from functools import wraps
 from datetime import date, timedelta
 from io import BytesIO
-from fastapi import APIRouter, Body, Cookie, HTTPException
-from fastapi.responses import StreamingResponse
+from pathlib import Path
+from uuid import uuid4
+from fastapi import APIRouter, Body, Cookie, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse, FileResponse
+from app.config import DATA_DIR
 from app.database.connection import database, DB_LOCK
 from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups, make_backup
@@ -99,6 +102,73 @@ def current_session(mnh_session: str | None = None):
 def require_editor(mnh_session: str | None = None):
     """Legacy write guard; shared workspace writes are open."""
     return {"role": "public"}
+
+
+RESOURCE_UPLOAD_DIR = DATA_DIR / "resource_uploads"
+RESOURCE_FILE_TYPES = {
+    ".pdf": "application/pdf", ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".csv": "text/csv", ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp",
+}
+MAX_RESOURCE_FILE_BYTES = 25 * 1024 * 1024
+
+
+@router.post("/resources/upload")
+async def upload_resource_file(file: UploadFile = File(...)):
+    require_editor()
+    original_name = Path(file.filename or "resource").name
+    extension = Path(original_name).suffix.lower()
+    if extension not in RESOURCE_FILE_TYPES:
+        raise HTTPException(415, "Choose a PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG or WEBP file.")
+    RESOURCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    file_id = uuid4().hex
+    destination = RESOURCE_UPLOAD_DIR / (file_id + extension)
+    size = 0
+    try:
+        with destination.open("wb") as output:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk: break
+                size += len(chunk)
+                if size > MAX_RESOURCE_FILE_BYTES: raise HTTPException(413, "The maximum file size is 25 MB.")
+                output.write(chunk)
+        if size == 0: raise HTTPException(400, "The selected file is empty.")
+    except HTTPException:
+        destination.unlink(missing_ok=True); raise
+    except OSError as exc:
+        destination.unlink(missing_ok=True)
+        logger.exception("Resource file upload failed")
+        raise HTTPException(500, "The file could not be saved.") from exc
+    finally:
+        await file.close()
+    return {"id": file_id, "url": "/api/resources/files/" + file_id,
+            "filename": original_name, "size": size, "contentType": RESOURCE_FILE_TYPES[extension]}
+
+
+@router.get("/resources/files/{file_id}")
+def get_resource_file(file_id: str, name: str | None = None):
+    if not re.fullmatch(r"[a-f0-9]{32}", file_id): raise HTTPException(404, "Resource file not found.")
+    for extension, content_type in RESOURCE_FILE_TYPES.items():
+        candidate = RESOURCE_UPLOAD_DIR / (file_id + extension)
+        if candidate.is_file():
+            download_name = Path(name or candidate.name).name
+            if Path(download_name).suffix.lower() != extension: download_name = candidate.name
+            return FileResponse(candidate, media_type=content_type, filename=download_name, content_disposition_type="inline")
+    raise HTTPException(404, "Resource file not found.")
+
+
+@router.delete("/resources/files/{file_id}")
+def delete_resource_file(file_id: str):
+    require_editor()
+    if not re.fullmatch(r"[a-f0-9]{32}", file_id): raise HTTPException(404, "Resource file not found.")
+    for extension in RESOURCE_FILE_TYPES:
+        candidate = RESOURCE_UPLOAD_DIR / (file_id + extension)
+        if candidate.is_file():
+            candidate.unlink()
+            return {"ok": True}
+    raise HTTPException(404, "Resource file not found.")
 
 
 @router.get("/ping")
