@@ -124,7 +124,7 @@
       const result = await response.json();
       if (result.storage_ready === false) {
         state.user = null; signOut.hidden = true; 
-        body.hidden = true; authPanel.hidden = false;
+        header.hidden = true; body.hidden = true; authPanel.hidden = false;
         authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
@@ -137,11 +137,12 @@
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
       signOut.hidden = !state.user; 
+      header.hidden = !state.user;
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; signOut.hidden = true;  authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true; header.hidden = true; authPanel.hidden = false; body.hidden = true;
     }
   }
   async function authenticate() {
@@ -155,7 +156,7 @@
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Account request failed.");
       state.user = result.user; state.history = []; state.conversationId = null; 
-      transcript.replaceChildren(); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      transcript.replaceChildren(); header.hidden = false; authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
@@ -166,7 +167,7 @@
   signOut.addEventListener("click", async () => {
     await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
     state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
-    body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
+    header.hidden = true; body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
   });
   async function send(value) {
     const message = String(value || input.value).trim();
@@ -332,7 +333,7 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
-    header.hidden = !open; body.hidden = true; authPanel.hidden = !open; launcher.hidden = open;
+    header.hidden = !open || !state.user; body.hidden = true; authPanel.hidden = !open || Boolean(state.user); launcher.hidden = open;
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }

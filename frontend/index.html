@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.17-v15.07">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.17-v15.08">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.17-v15.07">
+<link rel="manifest" href="/manifest.json?v=2026.11.17-v15.08">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.17-v15.07";</script>
+<script>window.MNH_BUILD="2026.11.17-v15.08";</script>
 <script>
 (function () {
   "use strict";
@@ -89,11 +89,11 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.17-v15.07"></script>
-<script src="/js/api-client.js?v=2026.11.17-v15.07"></script>
+<script src="/js/week-model.js?v=2026.11.17-v15.08"></script>
+<script src="/js/api-client.js?v=2026.11.17-v15.08"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.17-v15.07">
-<link rel="stylesheet" href="/css/class-rep.css?v=7">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.17-v15.08">
+<link rel="stylesheet" href="/css/class-rep.css?v=8">
 
 </head>
 <body data-theme="dark">
@@ -172,6 +172,7 @@
   <div class="menu-panel" id="menu-panel" role="navigation" aria-label="Calendar navigation" hidden>
    <div class="menu-heading"><strong>MNH Calendar</strong><span>Navigation</span></div>
    <div class="menu-links">
+    <button type="button" class="menu-nav menu-back-nav" data-view="weekly" aria-label="Back to weekly timetable"><span aria-hidden="true">&#8592;</span>Back to timetable</button>
     <button type="button" class="menu-nav" data-view="monthly"><span>&#9638;</span>Monthly Calendar</button>
     <button type="button" class="menu-nav" data-view="modules"><span>&#9636;</span>Modules</button>
     <button type="button" class="menu-nav" data-view="facilitators"><span class="facilitator-nav-avatar"><svg viewBox="0 0 24 24" role="img" aria-label="Person avatar" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5" fill="currentColor" stroke="none"/><path d="M4.8 20c.7-3.8 3.2-5.8 7.2-5.8s6.5 2 7.2 5.8" fill="currentColor" stroke="none"/></svg></span>Facilitators</button>
@@ -362,14 +363,14 @@
 
 
 
-<script src="/js/app.js?v=2026.11.17-v15.07" defer></script>
-<script src="/js/class-rep.js?v=12" defer></script>
+<script src="/js/app.js?v=2026.11.17-v15.08" defer></script>
+<script src="/js/class-rep.js?v=13" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.17-v15.07";
+  const workerUrl = "/service-worker.js?v=2026.11.17-v15.08";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();

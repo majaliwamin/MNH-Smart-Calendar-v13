@@ -371,3 +371,17 @@ def test_secondary_pages_hide_shared_masthead_and_use_full_viewport():
     assert "body.is-content-view #view-tabs" in css
     assert "body.is-content-view .upcoming-announcements-row" in css
     assert "min-height:calc(100dvh - 12px)" in css
+
+
+def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    assert 'class="menu-nav menu-back-nav" data-view="weekly"' in html
+    assert "Back to timetable" in html
+    assert ".site-header .menu-panel{height:auto;" in css
+    assert "max-height:calc(100dvh - 90px - env(safe-area-inset-top,0px))" in css
+    assert "overscroll-behavior:contain" in css
+    assert "touch-action:manipulation" in css
+    assert 'document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]")' in app
+    assert 'window.addEventListener("hashchange",()=>showView(location.hash.slice(1)))' in app
