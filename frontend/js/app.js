@@ -2199,7 +2199,7 @@ function meetingProviderMark(url,large=false){
  }
  mark.appendChild(svg);return mark;
 }
-function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),createdAt:+(v&&v.createdAt)||0,fileId:String(v&&v.fileId||"").slice(0,64),fileName:String(v&&v.fileName||"").slice(0,255),fileSize:+(v&&v.fileSize)||0};}
+function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),category:["Lecture Notes","Books","Others"].includes(v&&v.category)?v.category:"Others",createdAt:+(v&&v.createdAt)||0,fileId:String(v&&v.fileId||"").slice(0,64),fileName:String(v&&v.fileName||"").slice(0,255),fileSize:+(v&&v.fileSize)||0};}
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
 function loadResources(){try{const r=JSON.parse(localStorage.getItem(resKey)||"[]");if(Array.isArray(r))resources=r.map(x=>({id:String(x.id||""),...cleanRes(x)})).filter(x=>x.id&&x.title&&x.url);}catch(e){}}
 async function uploadResourceFile(file){
@@ -2209,22 +2209,22 @@ async function uploadResourceFile(file){
  if(!response.ok)throw new Error(result.detail||result.error||"The file could not be uploaded.");
  return result;
 }
-async function addResource(t,u,n,file=null){
+async function addResource(t,u,n,file=null,category="Others"){
  const title=String(t||"").trim();
  if(!title){statusEl.className="status error";statusEl.textContent="Enter a resource name.";return false;}
  let uploaded=null,rec;
  if(file){
   if(file.size>25*1024*1024){statusEl.className="status error";statusEl.textContent="The selected file is larger than 25 MB.";return false;}
   statusEl.className="status";statusEl.textContent="Uploading file…";
-  try{uploaded=await uploadResourceFile(file);rec=cleanRes({title,url:window.location.origin+uploaded.url,note:n,createdAt:Date.now(),fileId:uploaded.id,fileName:file.name,fileSize:uploaded.size});}
+  try{uploaded=await uploadResourceFile(file);rec=cleanRes({title,url:window.location.origin+uploaded.url,note:n,category,createdAt:Date.now(),fileId:uploaded.id,fileName:file.name,fileSize:uploaded.size});}
   catch(e){statusEl.className="status error";statusEl.textContent=e.message||"File upload failed.";return false;}
  }else{
-  rec=cleanRes({title,url:u,note:n,createdAt:Date.now()});
+  rec=cleanRes({title,url:u,note:n,category,createdAt:Date.now()});
   if(!rec.url){statusEl.className="status error";statusEl.textContent="Enter a valid web address or choose a file.";return false;}
  }
  const r={id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),...rec};
  try{
-  const data={title:r.title,url:r.url,note:r.note,createdAt:r.createdAt,fileId:r.fileId,fileName:r.fileName,fileSize:r.fileSize};
+  const data={title:r.title,url:r.url,note:r.note,category:r.category,createdAt:r.createdAt,fileId:r.fileId,fileName:r.fileName,fileSize:r.fileSize};
   if(cloud)await cloud.doc("resources/"+r.id).set(data);
   else await window.mnhApi.request("PUT","/api/doc/resources/"+encodeURIComponent(r.id),data);
   resources.push(r);cacheResources();renderResources();
