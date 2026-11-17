@@ -193,8 +193,12 @@
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
-    } catch (_) {
+    } catch (error) {
       state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true; setAuthPresentation(root.classList.contains("is-open"));
+      authTitle.textContent = "Your private CRARA account";
+      authIntro.textContent = "We could not verify your session. Check your connection, then sign in or try again.";
+      authFeedback.textContent = error.message || "CRARA could not reach the account service.";
+      authSubmit.disabled = false; authSwitch.disabled = false;
     }
   }
   async function authenticate() {
