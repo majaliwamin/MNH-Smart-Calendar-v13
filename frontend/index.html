@@ -401,7 +401,6 @@
  let promptOpen=false;
  const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
- const markInstalled=()=>{};
  const showInstallIcon=()=>{if(!isStandalone())installButton.hidden=false;};
  const hideInstallIcon=()=>{installButton.hidden=true;};
  async function installFromIcon(){
@@ -425,7 +424,6 @@
    await promptEvent.prompt();
    const choice=await promptEvent.userChoice;
    if(choice&&choice.outcome==="accepted"){
-    markInstalled();
     hideInstallIcon();
    }
   }catch(error){
@@ -435,7 +433,6 @@
   }
  }
  if(isStandalone()){
-  markInstalled();
   hideInstallIcon();
   return;
  }
@@ -449,7 +446,6 @@
  window.addEventListener("appinstalled",()=>{
   deferredPrompt=null;
   promptOpen=false;
-  markInstalled();
   hideInstallIcon();
  });
 })();
