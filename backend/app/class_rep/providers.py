@@ -77,7 +77,7 @@ def _post_json(endpoint: str, api_key: str, payload: dict, timeout: int,
 
 
 def _extract_chat_content(result: dict) -> str | None:
-    """Read standard OpenAI-compatible chat-completion content."""
+    """Read standard chat-completion content."""
     try:
         content = result["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError):
@@ -97,7 +97,7 @@ def _extract_chat_content(result: dict) -> str | None:
 def _complete_one(cfg: dict, messages: list[dict]) -> str:
     provider = cfg["provider"]
     if provider == "cloudflare":
-        # Cloudflare's supported OpenAI-compatible Workers AI REST endpoint.
+        # Cloudflare's supported Workers AI chat-completions REST endpoint.
         endpoint = ("https://api.cloudflare.com/client/v4/accounts/"
                     + cfg["account_id"] + "/ai/v1/chat/completions")
         result = _post_json(endpoint, cfg["api_key"], {
