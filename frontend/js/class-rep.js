@@ -13,15 +13,15 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
-  const launcher = el("button", "cara-launcher", "CARA");
+  const launcher = el("button", "cara-launcher", "CRARA");
   launcher.type = "button";
-  launcher.setAttribute("aria-label", "Open CARA, your intelligent academic relations assistant");
+  launcher.setAttribute("aria-label", "Open CRARA, your intelligent academic relations assistant");
   launcher.setAttribute("aria-expanded", "false");
   const header = el("div", "cr-head");
   const identity = el("div", "cr-identity");
-  identity.append(el("strong", "cr-title", "CARA (Classroom and Academic Relations Assistant)"));
+  identity.append(el("strong", "cr-title", "CRARA (Classroom Representative & Academic Relations Assistant)"));
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
-  const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
+  const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CRARA"); toggle.setAttribute("aria-expanded", "true");
   const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;
   header.append(identity, signOut, toggle);
   const body = el("div", "cr-body");
@@ -32,7 +32,7 @@
   const paperclip = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   paperclip.setAttribute("viewBox", "0 0 24 24"); paperclip.setAttribute("width", "22"); paperclip.setAttribute("height", "22"); paperclip.setAttribute("fill", "none"); paperclip.setAttribute("stroke", "currentColor"); paperclip.setAttribute("stroke-width", "2"); paperclip.setAttribute("stroke-linecap", "round"); paperclip.setAttribute("stroke-linejoin", "round"); paperclip.setAttribute("aria-hidden", "true");
   const paperclipPath = document.createElementNS("http://www.w3.org/2000/svg", "path"); paperclipPath.setAttribute("d", "m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"); paperclip.append(paperclipPath); attachButton.append(paperclip);
-  const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CARA…"; input.setAttribute("aria-label", "Message CARA");
+  const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CRARA…"; input.setAttribute("aria-label", "Message CRARA");
   const recordButton = el("button", "cr-icon-button cr-record"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
   const micIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   micIcon.setAttribute("viewBox", "0 0 24 24"); micIcon.setAttribute("width", "22"); micIcon.setAttribute("height", "22"); micIcon.setAttribute("fill", "none"); micIcon.setAttribute("stroke", "currentColor"); micIcon.setAttribute("stroke-width", "2"); micIcon.setAttribute("stroke-linecap", "round"); micIcon.setAttribute("stroke-linejoin", "round"); micIcon.setAttribute("aria-hidden", "true");
@@ -47,7 +47,7 @@
   form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
   const authPanel = el("section", "cr-auth-panel");
   const authCard = el("div", "cr-auth-card");
-  const authTitle = el("strong", "cr-auth-title", "Your private CARA account");
+  const authTitle = el("strong", "cr-auth-title", "Your private CRARA account");
   const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved academic work.");
   const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
   const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
@@ -126,13 +126,13 @@
       if (result.storage_ready === false) {
         state.user = null; signOut.hidden = true; 
         body.hidden = true; authPanel.hidden = false;
-        authTitle.textContent = "Your private CARA account is being prepared";
+        authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
         authSubmit.disabled = true; authSwitch.disabled = true;
         return;
       }
-      authTitle.textContent = "Your private CARA account";
+      authTitle.textContent = "Your private CRARA account";
       authIntro.textContent = "Sign in to continue your conversations and access your saved tasks and memories.";
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
@@ -250,7 +250,7 @@
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Upload failed");
-      status("Indexed " + result.title + " · " + result.chunks + " passages", true); addMessage("assistant", "File indexed successfully: " + result.title + ".");
+      // Successful indexing is silent; the document is available to CRARA without a toast or transcript message.
     } catch (error) { status(error.message || "Document indexing failed", false); }
     finally { attachButton.disabled = !state.uploads; }
   });
@@ -299,7 +299,22 @@
     window.visualViewport.addEventListener("scroll", syncVisualViewport, { passive: true });
     window.addEventListener("orientationchange", syncVisualViewport, { passive: true });
   }
+  let caraBackStateActive = false;
+  function closeCRARA() {
+    if (caraBackStateActive) window.history.back();
+    else setOpen(false);
+  }
+  window.addEventListener("popstate", () => {
+    if (root.classList.contains("is-open")) {
+      caraBackStateActive = false;
+      setOpen(false);
+    }
+  });
   function setOpen(open) {
+    if (open && !root.classList.contains("is-open")) {
+      window.history.pushState({ ...(window.history.state || {}), caraAssistantOpen: true }, "", window.location.href);
+      caraBackStateActive = true;
+    }
     if (open) {
       state.previousBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -319,6 +334,6 @@
   }
   setAuthMode("login");
   launcher.addEventListener("click", () => setOpen(true));
-  toggle.addEventListener("click", () => setOpen(false));
+  toggle.addEventListener("click", closeCRARA);
   checkStatus();
 })();

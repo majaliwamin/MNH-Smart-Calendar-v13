@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=9' in html
-    assert '/css/class-rep.css?v=6' in html
+    assert '/js/class-rep.js?v=10' in html
+    assert '/css/class-rep.css?v=7' in html
 
 
 def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
@@ -22,8 +22,8 @@ def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
 
 def test_cara_starts_closed_and_has_requested_identity():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
-    assert 'el("button", "cara-launcher", "CARA")' in js
-    assert 'CARA (Classroom and Academic Relations Assistant)' in js
+    assert 'el("button", "cara-launcher", "CRARA")' in js
+    assert 'CRARA (Classroom Representative & Academic Relations Assistant)' in js
     assert '"/api/class-rep/auth/" + authMode' in js
     assert "memory" not in js.lower()
     assert 'Your intelligent academic relations assistant' in js
@@ -53,3 +53,18 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     assert 'paperclipPath' in js
     assert '".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg' in js
     assert '.cr-record svg,.cr-attach svg' in css
+
+
+def test_cara_upload_success_is_silent_and_mobile_back_closes_assistant():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert "File indexed successfully" not in js
+    assert "caraAssistantOpen: true" in js
+    assert 'window.addEventListener("popstate"' in js
+    assert "function closeCRARA()" in js
+
+
+def test_cara_header_and_composer_controls_have_no_button_shapes():
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert ".cr-toggle,.cr-account,.cr-icon-button{border:0!important" in css
+    assert "background:transparent!important" in css
+    assert "border-radius:0!important" in css

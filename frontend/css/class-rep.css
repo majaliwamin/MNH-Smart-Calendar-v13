@@ -43,3 +43,13 @@ html.cara-open,body.cara-open{overflow:hidden!important;overscroll-behavior:none
 .cr-memory-delete{flex:0 0 auto;border:0;background:transparent;color:#d78b8b;font-size:12px;cursor:pointer}
 .cr-memory-item{margin:0;padding:8px;border:1px solid var(--line);border-radius:9px;color:var(--text);font-size:12px;line-height:1.45}
 @media(max-width:760px){.cr-memory-panel{top:calc(env(safe-area-inset-top,0px) + 88px);width:100%;padding:14px;border-left:0}}
+
+/* CARA controls are deliberately plain: no circles, pills, borders or filled button shapes. */
+.cr-toggle,.cr-account,.cr-icon-button{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;}
+.cr-toggle{width:44px;height:44px;flex:0 0 44px;padding:0;color:#fff;font-size:30px;line-height:1;}
+.cr-account{padding:8px 4px;color:#ddd;font-size:12px;}
+.cr-icon-button{width:42px;height:42px;flex:0 0 42px;padding:0;color:var(--text);}
+.cr-record{color:var(--text)!important;}
+.cr-toggle:hover,.cr-icon-button:hover,.cr-account:hover{border-color:transparent!important;background:transparent!important;opacity:.78;}
+.cr-icon-button:focus-visible,.cr-toggle:focus-visible,.cr-account:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+@media(max-width:760px){.cr-icon-button{width:40px;height:40px;flex-basis:40px;}.cr-toggle{width:44px;height:44px;flex-basis:44px;}}
