@@ -878,16 +878,16 @@ function refreshAlarmUI(){
  const voiceChoice=document.getElementById("alarm-voice-option");if(voiceChoice)voiceChoice.value=String(alarm.voiceOption||0);
  const soundChoice=document.getElementById("alarm-sound-option");if(soundChoice)soundChoice.value=String(alarm.sound||0);
  const box=document.getElementById("alarm-next");
- if(!alarm.on){box.textContent="Alarms are off.";return;}
  const now=Date.now();let next=null;
  alarmEvents(true).forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ring+90000>now&&(!next||ring<next.ring))next={ev,ring};});
  if(next){
   const dateLabel=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(next.ev.start);
-  box.innerHTML=`<strong>Closest upcoming session</strong><br>${esc(next.ev.label)}<br>${esc(dateLabel)} · rings ${hhmm(new Date(next.ring))}, starts ${hhmm(next.ev.start)}`;
+  box.innerHTML=`<strong>${alarm.on?"Closest upcoming session":"Next scheduled session · alarms off"}</strong><br>${esc(next.ev.label)}<br>${esc(dateLabel)}${alarm.on?` · rings ${hhmm(new Date(next.ring))}`:""} · starts ${hhmm(next.ev.start)}`;
  }else box.textContent="No upcoming sessions are scheduled in the timetable.";
 }
 function initAlarms(){
  loadAlarm();refreshAlarmUI();
+ loadRows("recurring").then(rows=>{recurringRecords=rows;alarmEventsCacheAt=0;alarmEventsCacheAt=0;refreshAlarmUI();}).catch(()=>{});
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
@@ -1867,7 +1867,7 @@ function renderModules(){
     }
     if(recurring){
      if(!window.confirm("Permanently delete the recurring activity “"+code+"” from the shared timetable? This will remove it for everyone."))return;
-     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
+     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));alarmEventsCacheAt=0;build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
      catch(error){writeFailed(error);}
      return;
     }
