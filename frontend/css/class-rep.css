@@ -14,6 +14,11 @@
 .cara-widget.is-open .cr-head{transform:none!important;transition:none!important;}
 .cara-widget.is-open .cr-body{transform:none!important;transition:none!important;}
 .cara-widget.is-open .cr-transcript{overscroll-behavior-y:contain;}
+/* Lock the page behind CARA; the transcript remains the only scrolling region. */
+html.cara-open,body.cara-open{overflow:hidden!important;overscroll-behavior:none!important;}
+.cara-widget.is-open .cr-head{position:fixed!important;top:env(safe-area-inset-top,0px)!important;transform:none!important;transition:none!important;}
+.cara-widget.is-open .cr-body{position:fixed!important;transform:none!important;transition:none!important;}
+.cara-widget.is-open .cr-transcript{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 
 .cr-account{flex:0 0 auto;padding:7px 11px;border:1px solid #555;border-radius:999px;background:#242424;color:#ddd;font-size:12px;cursor:pointer}
 .cr-auth-panel{position:fixed;z-index:15;top:calc(env(safe-area-inset-top,0px) + 76px);right:0;bottom:env(safe-area-inset-bottom,0px);left:0;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--panel);color:var(--text);box-sizing:border-box;overflow-y:auto}
