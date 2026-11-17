@@ -962,6 +962,11 @@ function syncCurrentAcademicWeek(){
 }
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
+ const craraRoot=document.getElementById("class-rep-assistant");
+ if(craraRoot){
+  if(name!=="weekly"&&typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();
+  craraRoot.hidden=name!=="weekly";
+ }
  if(name==="analytics"&&!analyticsUnlocked){
   const entered=window.prompt("Analytics access required. Enter the MNH password:");
   if(String(entered||"").trim().toLowerCase()!=="mnh"){
@@ -1715,10 +1720,16 @@ async function downloadTimetableImage(mime){
  }catch(error){console.error(error);status.className="status error";status.textContent="The timetable image could not be created: "+error.message;}finally{weekly.hidden=wasHidden;}
 }
 window.downloadTimetableImage=downloadTimetableImage;
-function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme;sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
- const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted","Open access is enabled. Anyone with the website link can view, edit, replace and restore shared programme records. Analytics requires the shared MNH password."));const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=false;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
- const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
- const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}
+function renderSettingsPage(){
+ const root=workspace(...WORKSPACE_META.settings);
+ const alarm=el("div","card res-form");
+ alarm.appendChild(el("h3",null,"Alarm configuration"));
+ const alarmBtn=el("button",null,"Configure alarms and reminders");
+ alarmBtn.type="button";
+ alarmBtn.onclick=()=>document.getElementById("alarms").click();
+ alarm.appendChild(alarmBtn);
+ root.appendChild(alarm);
+}
 function itemButton(x){
  const b=el("button","item");b.type="button";
  b.appendChild(el("span","it",x.timeLabel));
@@ -2254,8 +2265,16 @@ function initHeader(){
 }
 // ---- Hamburger menu ----
 const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
-function openMenu(){menuPanel.hidden=false;menuBtn.setAttribute("aria-expanded","true");menuBtn.setAttribute("aria-label","Close menu");}
-function closeMenu(){menuPanel.hidden=true;menuBtn.setAttribute("aria-expanded","false");menuBtn.setAttribute("aria-label","Open menu");}
+function openMenu(){
+ menuPanel.hidden=false;menuBtn.setAttribute("aria-expanded","true");menuBtn.setAttribute("aria-label","Close menu");
+ const craraRoot=document.getElementById("class-rep-assistant");
+ if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}
+}
+function closeMenu(){
+ menuPanel.hidden=true;menuBtn.setAttribute("aria-expanded","false");menuBtn.setAttribute("aria-label","Open menu");
+ const craraRoot=document.getElementById("class-rep-assistant");
+ if(craraRoot)craraRoot.hidden=currentView!=="weekly";
+}
 menuBtn.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
 menuPanel.addEventListener("click",e=>{e.stopPropagation();if(e.target.closest("button:not([data-keep])"))closeMenu();});
 document.addEventListener("click",()=>{if(!menuPanel.hidden)closeMenu();});
