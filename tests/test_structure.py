@@ -332,3 +332,19 @@ def test_shared_writes_are_serialised_across_devices_and_restore():
     assert "pg_advisory_xact_lock(20261116, 1500)" in routes
     assert "with DB_LOCK:" in routes
     assert routes.count("@serialised_shared_write") >= 3
+
+
+def test_upcoming_announcement_ticker_is_open_ended_and_refresh_control_is_ui_hidden():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # Keep the refresh control and its existing handler, but remove it visually.
+    assert 'id="mnh-refresh-btn"' in html
+    assert 'getElementById("mnh-refresh-btn")' in app
+    assert 'button.addEventListener("click",async function(){' in app
+    assert ".upcoming-announcements-row #mnh-refresh-btn{display:none!important}" in css
+
+    # The announcement strip has no enclosing frame or rounded ends.
+    assert "border:0;" in css and "border-radius:0;" in css
+    assert "animation:activity-flow-right 90s linear infinite" in css
