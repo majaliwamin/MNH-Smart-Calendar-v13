@@ -751,7 +751,21 @@ function ensureAudio(){
   return audioCtx;
  }catch(e){return null;}
 }
-function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries(WK.currentOffset()).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
+function scheduledSessionEvents(horizonWeeks=52){
+ const now=Date.now(),firstOffset=WK.currentOffset(),items=[];
+ for(let offset=firstOffset;offset<=firstOffset+horizonWeeks;offset++){
+  const ws=WK.startParts(offset);
+  getSessionEntries(offset).forEach(entry=>{
+   const outcome=String(entry.data?.status||"scheduled").toLowerCase();
+   if(outcome==="completed"||outcome==="missed")return;
+   const [h,m]=entry.startTime.split(":").map(Number);
+   const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+entry.dayIndex,h,m);
+   if(start.getTime()>now)items.push({...entry,start,weekOffset:offset});
+  });
+ }
+ return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
+}
+function alarmEvents(){return scheduledSessionEvents(52);}
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
@@ -846,7 +860,7 @@ function alarmTick(){
  const now=Date.now();
  for(const s of snoozed){if(!s.done&&now>=s.at){s.done=true;startRing(s.ev);return;}}
  for(const ev of alarmEvents()){
-  const ring=ev.start.getTime()-alarm.lead*60000,id=ev.id+"|"+alarm.lead;
+  const ring=ev.start.getTime()-alarm.lead*60000,id=ev.id+"|"+ev.start.getTime()+"|"+alarm.lead;
   if(now>=ring&&now<ring+90000&&!fired.includes(id)){
    fired.push(id);try{localStorage.setItem(firedKey,JSON.stringify(fired.slice(-100)));}catch(e){}
    startRing(ev);return;
@@ -865,9 +879,10 @@ function refreshAlarmUI(){
  if(!alarm.on){box.textContent="Alarms are off.";return;}
  const now=Date.now();let next=null;
  alarmEvents().forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ring+90000>now&&(!next||ring<next.ring))next={ev,ring};});
- box.innerHTML=next
-  ?`<strong>Next alarm</strong><br>${esc(next.ev.label)}<br>${days[next.ev.c]} ${dates[next.ev.c]} · rings ${hhmm(new Date(next.ring))}, starts ${hhmm(next.ev.start)}`
-  :"No more activities this week.";
+ if(next){
+  const dateLabel=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(next.ev.start);
+  box.innerHTML=`<strong>Closest upcoming session</strong><br>${esc(next.ev.label)}<br>${esc(dateLabel)} · rings ${hhmm(new Date(next.ring))}, starts ${hhmm(next.ev.start)}`;
+ }else box.textContent="No upcoming sessions are scheduled in the timetable.";
 }
 function initAlarms(){
  loadAlarm();refreshAlarmUI();
@@ -1124,13 +1139,10 @@ function upcomingItemButton(item){
 }
 async function getFutureActivities(){
  const now=Date.now(),local=WK.localNow(),items=[];
- // Weekly timetable entries are dated against the current Malawi-local academic week.
- for(let day=0;day<5;day++){
-  dayEntries(day,WK.currentOffset()).forEach(session=>{
-   if(session.data?.recurring)return; // Recurring activities are sourced once from the shared recurring collection.
-   if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
-  });
- }
+ // Scan dated timetable entries across the next academic year; do not stop at the currently visible week.
+ scheduledSessionEvents(52).forEach(session=>{
+  items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
+ });
  const [exams,storedRecurring]=await Promise.all([
   loadRows("examinations").catch(()=>[]),
   loadRows("recurring").catch(()=>[])
@@ -2228,10 +2240,20 @@ function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
 function loadResources(){try{const r=JSON.parse(localStorage.getItem(resKey)||"[]");if(Array.isArray(r))resources=r.map(x=>({id:String(x.id||""),...cleanRes(x)})).filter(x=>x.id&&x.title&&x.url);}catch(e){}}
 async function uploadResourceFile(file){
+ if(!file||!file.name)throw new Error("Choose a file before uploading.");
  const body=new FormData();body.append("file",file,file.name);
- const response=await fetch("/api/resources/upload",{method:"POST",body,credentials:"same-origin"});
- let result={};try{result=await response.json();}catch(e){}
- if(!response.ok)throw new Error(result.detail||result.error||"The file could not be uploaded.");
+ let response;
+ try{response=await fetch("/api/resources/upload",{method:"POST",body,credentials:"same-origin"});}
+ catch(error){throw new Error("The upload could not reach the calendar server. Check your connection and try again.");}
+ const raw=await response.text();let result={};
+ try{result=raw?JSON.parse(raw):{};}catch(error){result={message:raw.slice(0,240)};}
+ if(!response.ok){
+  const detail=Array.isArray(result.detail)?result.detail.map(x=>x.msg||String(x)).join("; "):result.detail||result.error||result.message;
+  if(response.status===413)throw new Error("The server rejected this file because it is too large. Try a file under 25 MB.");
+  if(response.status===404)throw new Error("The upload service is not available on this deployment. The calendar needs its latest backend update.");
+  throw new Error(detail||("Upload failed (HTTP "+response.status+")."));
+ }
+ if(!result.id||!result.url)throw new Error("The server received the file but did not return a valid saved-file reference.");
  return result;
 }
 async function addResource(t,u,n,file=null,category="Others"){
@@ -2310,7 +2332,7 @@ function renderResources(){
  });
  form.textContent="";if(editingUnlocked){const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));const mk=(p,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=p;i.maxLength=max;i.setAttribute("aria-label",p);return i;};
  const t=mk("Title",120),u=mk("Web address (optional when attaching a file)",300),n=mk("Short note (optional)",200),label=el("label","muted","Save in folder"),category=document.createElement("select");category.setAttribute("aria-label","Resource folder");["Lecture Notes","Books","Others"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;category.appendChild(o);});
- const fileLabel=el("label","muted","Attach a PDF, Word, CSV, Excel or photo file"),file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
+ const fileLabel=el("label","muted","Attach a PDF, Word, CSV, Excel or photo file"),file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.ppt,.pptx,.csv,.xls,.xlsx,.txt,.rtf,.odt,.ods,.odp,.md,.json,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
  file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\.[^.]+$/,"");if(chosen)u.value="";});const b=el("button","primary","Add resource");b.type="button";
  b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0],category.value)){t.value=u.value=n.value="";file.value="";category.value="Others";}}finally{b.disabled=false;}});f.append(t,u,n,label,category,fileLabel,file,b);form.appendChild(f);}
 }
