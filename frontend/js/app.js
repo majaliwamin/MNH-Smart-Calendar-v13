@@ -778,6 +778,7 @@ async function getAlarmUserName(){
    const result=await response.json();
    alarmUserName=result&&result.authenticated&&result.user?String(result.user.name||"").trim():"";
   }catch(e){alarmUserName="";}
+  if(!alarmUserName)alarmUserPromise=null;
   return alarmUserName;
  })();
  return alarmUserPromise;
@@ -787,7 +788,7 @@ async function speakAlarm(ev){
  const userName=await getAlarmUserName();
  if(ringing!==ev)return;
  const greeting=userName?userName+", ":"";
- const sessionName=ev.title&&ev.title!==ev.label?ev.label+", "+ev.title:ev.label;
+ const sessionName=[ev.label,ev.sub].filter(Boolean).join(", ");
  const lecturer=ev.facilitator?" The lecturer is "+ev.facilitator+".":"";
  const time=ev.test?"":" The session starts at "+hhmm(ev.start)+".";
  const message=ev.test?greeting+"this is a test of your timetable voice reminder.":greeting+"your "+sessionName+" session is about to start."+time+lecturer+" Please get ready.";
