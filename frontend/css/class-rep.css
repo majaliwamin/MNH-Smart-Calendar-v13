@@ -85,3 +85,29 @@ body.cara-auth-open #class-rep-assistant .cr-body{display:none!important;}
 .mnh-install-decline{border:1px solid var(--line);background:transparent;color:var(--text);}
 .mnh-install-actions button:disabled{opacity:.6;cursor:wait;}
 @media(max-width:480px){.mnh-install-card{padding:22px 18px;border-radius:17px;}.mnh-install-actions{flex-direction:column;}}
+
+
+/* CRARA is a full-screen workspace: never show the underlying calendar chrome.
+   Apply to the authenticated chart/conversation view as well as the login view,
+   across desktop browsers, installed PWA windows and mobile browsers. */
+html.cara-open,
+body.cara-open{overflow:hidden!important;overscroll-behavior:none!important;}
+body.cara-open .upcoming-announcements-row,
+body.cara-open #site-header,
+body.cara-open .site-header,
+body.cara-open #view-tabs,
+body.cara-open .view-tabs,
+body.cara-open #status,
+body.cara-open .status,
+body.cara-open #bottom-nav,
+body.cara-open .bottom-nav{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+body.cara-open #class-rep-assistant.cara-widget.is-open{
+ position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;
+ max-width:none!important;margin:0!important;z-index:2147483000!important;
+}
+@supports(padding:max(0px)){
+ body.cara-open #class-rep-assistant.cara-widget.is-open{padding:0!important;}
+}
+@media(max-width:760px){
+ body.cara-open #class-rep-assistant.cara-widget.is-open{inset:0!important;width:100%!important;height:100vh!important;height:100dvh!important;}
+}
