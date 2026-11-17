@@ -2181,9 +2181,7 @@ function renderResources(){
  if(!resources.length)list.appendChild(el("p","muted","No resources have been added yet."));
  resources.forEach(r=>{
   const card=el("div","card res");
-  const a=el("a","res-link",r.title);a.href=r.url;a.target="_blank";a.rel="noopener noreferrer";card.appendChild(a);
-  if(r.note)card.appendChild(el("div","muted",r.note));
-  card.appendChild(el("div","res-url muted",r.url));
+  const a=el("a","res-link",r.title);a.href=r.url;a.target="_blank";a.rel="noopener noreferrer";a.setAttribute("aria-label","Open resource: "+r.title);card.appendChild(a);
   if(editingUnlocked){const d=el("button","res-del","Remove");d.type="button";d.addEventListener("click",()=>removeResource(r.id));card.appendChild(d);}
   list.appendChild(card);
  });
