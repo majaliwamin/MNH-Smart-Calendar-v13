@@ -18,7 +18,7 @@ def test_cloudflare_provider_parses_workers_ai_response(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *args): return False
         def read(self):
-            return json.dumps({"success": True, "result": {"response": "  Hello class  "}}).encode()
+            return json.dumps({"choices": [{"message": {"role": "assistant", "content": "  Hello class  "}}]}).encode()
 
     monkeypatch.setattr(providers, "provider_configs", lambda: [{
         "provider": "cloudflare", "account_id": "account-test",
@@ -29,12 +29,16 @@ def test_cloudflare_provider_parses_workers_ai_response(monkeypatch):
     def fake_urlopen(request, timeout):
         seen["url"] = request.full_url
         seen["authorization"] = request.get_header("Authorization")
+        seen["payload"] = json.loads(request.data.decode())
         return FakeResponse()
     monkeypatch.setattr(providers, "urlopen", fake_urlopen)
     result = providers.complete([{"role": "user", "content": "hello"}])
     assert result == ("Hello class", "cloudflare", "@cf/qwen/test")
-    assert "/accounts/account-test/ai/run/@cf/qwen/test" in seen["url"]
+    assert seen["url"] == "https://api.cloudflare.com/client/v4/accounts/account-test/ai/v1/chat/completions"
     assert seen["authorization"] == "Bearer test-secret"
+    assert seen["payload"]["model"] == "@cf/qwen/test"
+    assert seen["payload"]["messages"] == [{"role": "user", "content": "hello"}]
+    assert seen["payload"]["stream"] is False
 
 
 def test_provider_falls_back_in_priority_order(monkeypatch):
