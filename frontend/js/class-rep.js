@@ -99,6 +99,28 @@
     node.textContent = text;
     node.dataset.state = ready ? "ready" : "unavailable";
   }
+  async function requestJson(path, options = {}) {
+    let response;
+    try {
+      response = await fetch(path, {
+        ...options,
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json", ...(options.headers || {}) }
+      });
+    } catch (_) {
+      throw new Error("Could not connect to CRARA services. Check your internet connection and try again.");
+    }
+    const raw = await response.text();
+    let result = {};
+    if (raw) {
+      try { result = JSON.parse(raw); }
+      catch (_) {
+        if (response.ok) throw new Error("CRARA returned an unreadable response. Please refresh and try again.");
+      }
+    }
+    return { response, result };
+  }
   function addMessage(role, text) { const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"), text); transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble; }
   function demoReply(message) {
     const q = message.toLowerCase();
@@ -111,8 +133,8 @@
   }
   async function checkStatus() {
     try {
-      const response = await fetch("/api/class-rep/status", { cache: "no-store" });
-      const result = await response.json();
+      const { response, result } = await requestJson("/api/class-rep/status");
+      if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       state.ready = Boolean(response.ok && result.ready);
       state.voice = result.voice === "enabled";
       state.uploads = result.document_uploads === "enabled";
@@ -137,9 +159,8 @@
   }
   async function loadPreviousConversation() {
     try {
-      const response = await fetch("/api/class-rep/conversations", { cache: "no-store" });
+      const { response, result: data } = await requestJson("/api/class-rep/conversations");
       if (!response.ok) return;
-      const data = await response.json();
       const latest = (data.conversations || [])[0];
       if (!latest) return;
       state.conversationId = latest.id;
@@ -150,8 +171,8 @@
   }
   async function checkAuth() {
     try {
-      const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
-      const result = await response.json();
+      const { response, result } = await requestJson("/api/class-rep/auth/me");
+      if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       if (result.storage_ready === false) {
         state.user = null; signOut.hidden = true; 
         showHeader(false); body.hidden = true; authPanel.hidden = false; setAuthPresentation(root.classList.contains("is-open"));
@@ -181,11 +202,10 @@
     try {
       const payload = { email: authEmail.value.trim(), password: authPassword.value };
       if (authMode === "register") payload.name = authName.value.trim();
-      const response = await fetch("/api/class-rep/auth/" + authMode, {
+      const { response, result } = await requestJson("/api/class-rep/auth/" + authMode, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || "Account request failed.");
+      if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
       state.user = result.user; state.history = []; state.conversationId = null; 
       transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
@@ -196,7 +216,7 @@
   authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
   signOut.addEventListener("click", async () => {
-    await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
+    await requestJson("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
     state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
     showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthPresentation(root.classList.contains("is-open")); setAuthMode("login");
   });
