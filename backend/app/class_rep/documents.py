@@ -1,5 +1,7 @@
 """CARA document ingestion and retrieval with Cloudflare embeddings."""
 import hashlib
+import csv
+import xml.etree.ElementTree as ET
 import json
 import math
 import os
@@ -67,6 +69,54 @@ def _extract(filename: str, content: bytes) -> list[tuple[int | None, str]]:
             return [(None, "\n".join(paragraphs))]
         except Exception as exc:
             raise DocumentError("The Word document could not be read.") from exc
+    if lower.endswith(".pptx"):
+        try:
+            from pptx import Presentation
+            presentation = Presentation(BytesIO(content))
+            slides = []
+            for index, slide in enumerate(presentation.slides, 1):
+                parts = []
+                for shape in slide.shapes:
+                    if getattr(shape, "has_text_frame", False) and shape.text.strip():
+                        parts.append(shape.text.strip())
+                    if getattr(shape, "has_table", False):
+                        for row in shape.table.rows:
+                            parts.append(" | ".join(cell.text for cell in row.cells))
+                if parts:
+                    slides.append((index, "\\n".join(parts)))
+            return slides
+        except Exception as exc:
+            raise DocumentError("The PowerPoint presentation could not be read.") from exc
+    if lower.endswith(".xlsx"):
+        try:
+            from openpyxl import load_workbook
+            workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
+            sheets = []
+            for sheet in workbook.worksheets:
+                rows = []
+                for row in sheet.iter_rows(values_only=True):
+                    values = [str(value).strip() for value in row if value is not None and str(value).strip()]
+                    if values:
+                        rows.append(" | ".join(values))
+                if rows:
+                    sheets.append((None, "Sheet: " + sheet.title + "\\n" + "\\n".join(rows)))
+            workbook.close()
+            return sheets
+        except Exception as exc:
+            raise DocumentError("The Excel workbook could not be read.") from exc
+    if lower.endswith(".csv"):
+        try:
+            rows = list(csv.reader(content.decode("utf-8-sig").splitlines()))
+            return [(None, "\\n".join(" | ".join(cell.strip() for cell in row) for row in rows if any(cell.strip() for cell in row)))]
+        except (UnicodeDecodeError, csv.Error) as exc:
+            raise DocumentError("The CSV file could not be read as UTF-8.") from exc
+    if lower.endswith(".svg"):
+        try:
+            root = ET.fromstring(content)
+            parts = [value.strip() for value in root.itertext() if value.strip()]
+            return [(1, "\\n".join(parts))]
+        except ET.ParseError as exc:
+            raise DocumentError("The SVG image is invalid or damaged.") from exc
     if lower.endswith(".txt") or lower.endswith(".md"):
         try:
             return [(None, content.decode("utf-8-sig"))]
@@ -77,7 +127,7 @@ def _extract(filename: str, content: bytes) -> list[tuple[int | None, str]]:
             return [(1, extract_image(content))]
         except OCRDocumentError as exc:
             raise DocumentError(str(exc)) from exc
-    raise DocumentError("Supported formats are PDF, DOCX, TXT, Markdown and PNG, JPG, TIFF, BMP or WEBP images.")
+    raise DocumentError("This file type is not supported. Use PDF, DOCX, PPTX, XLSX, CSV, SVG, TXT, Markdown, PNG, JPG, TIFF, BMP or WEBP.")
 
 
 def _split(text: str) -> list[str]:
