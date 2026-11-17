@@ -3,8 +3,6 @@
   const root = document.getElementById("class-rep-assistant");
   if (!root || root.dataset.ready === "1") return;
   root.dataset.ready = "1";
-  // Keep the full-screen assistant outside app header/transform stacking contexts.
-  if (root.parentElement !== document.body) document.body.appendChild(root);
 
   const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null };
   const el = (tag, cls, text) => {
@@ -57,7 +55,24 @@
   const authFeedback = el("p", "cr-auth-feedback", "");
   authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback);
   authPanel.append(authCard);
-  root.append(launcher, body, authPanel);
+  root.append(body, authPanel);
+  const landingNav = document.getElementById("view-tabs");
+  if (landingNav) landingNav.appendChild(launcher);
+  let landingVisible = true;
+  let schedulingVisible = false;
+  function updateLauncherVisibility() {
+    launcher.hidden = root.classList.contains("is-open") || !landingVisible || schedulingVisible;
+  }
+  window.setCRARALandingVisible = (visible) => {
+    landingVisible = Boolean(visible);
+    if (!landingVisible && root.classList.contains("is-open")) setOpen(false);
+    updateLauncherVisibility();
+  };
+  window.setCRARASchedulingVisible = (visible) => {
+    schedulingVisible = Boolean(visible);
+    updateLauncherVisibility();
+  };
+  updateLauncherVisibility();
   // Do not mount the assistant hero at all until authentication succeeds.
   function showHeader(visible) {
     if (visible) {
@@ -343,7 +358,7 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
-    showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user); launcher.hidden = open;
+    showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user); updateLauncherVisibility();
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }
