@@ -2031,6 +2031,5 @@ body.is-content-view #view-resources:not([hidden]){
 }
 
 /* Resources screen: remove programme title, today badge and calendar week navigation. */
-body.resources-view .hd-title,
-body.resources-view .hd-today,
+body.resources-view .site-header,
 body.resources-view #view-tabs{display:none!important}
