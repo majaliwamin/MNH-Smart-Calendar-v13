@@ -2222,7 +2222,7 @@ function renderResources(){
   const fileHint=el("p","muted","PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG or WEBP · Maximum 25 MB");
   const b=el("button","primary","Add resource");b.type="button";
   b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0])){t.value=u.value=n.value="";file.value="";}}finally{b.disabled=false;}});
-  f.append(t,u,fileLabel,file,fileHint,n,b);form.appendChild(f);  f.append(t,u,n,b);form.appendChild(f);
+  f.append(t,u,fileLabel,file,fileHint,n,b);form.appendChild(f);
  }
 }
 function subscribeExtras(db){
