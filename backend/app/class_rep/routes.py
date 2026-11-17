@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
 from app.class_rep.assistant import reply
-from app.class_rep.providers import ProviderError
+from app.class_rep.providers import ProviderError, cloudflare_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
@@ -115,13 +115,31 @@ def me(request: Request):
     return {"authenticated": bool(user), "user": user, "storage_ready": True}
 
 
+@router.get("/diagnostics/provider")
+def provider_diagnostics(request: Request):
+    """Authenticated, one-shot Cloudflare token and Workers AI smoke test."""
+    user = _user(request)
+    _rate("provider-diagnostics:" + user["id"], 5)
+    result = cloudflare_diagnostic()
+    logger.info(
+        "CRARA provider diagnostic user_id=%s configured=%s token_valid=%s token_http_status=%s "
+        "inference_success=%s inference_http_status=%s token_error_codes=%s inference_error_codes=%s",
+        user["id"], result.get("configured"), result.get("token_valid"),
+        result.get("token_http_status"), result.get("inference_success"),
+        result.get("inference_http_status"), ",".join(result.get("token_error_codes", [])) or "-",
+        ",".join(result.get("inference_error_codes", [])) or "-",
+    )
+    return result
+
+
 @router.get("/status")
 def status():
     cfg, configured = provider_config(), provider_configs()
     cloudflare = bool(os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip() and os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip())
     stt = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "").strip()
     return {"ready": bool(configured), "provider": cfg["provider"], "model": cfg["model"],
-            "secret_configured": bool(configured), "fallbacks": [p["provider"] for p in configured[1:]],
+            "secret_configured": bool(configured), "connection": "not_tested",
+            "fallbacks": [p["provider"] for p in configured[1:]],
             "provider_priority": ["cloudflare", "huggingface", "groq"],
             "knowledge_sources": ["timetable", "modules", "facilitators", "examinations", "recurring_activities",
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
