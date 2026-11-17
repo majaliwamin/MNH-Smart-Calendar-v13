@@ -358,6 +358,7 @@ function load(){
  build();setEditing(true);
 }
 function saveState(){
+ alarmEventsCacheAt=0;
  state.theme=document.getElementById("theme").value;state.version=3;state.stamp=Date.now();
  localStorage.setItem(key,JSON.stringify(state));
 }
@@ -734,12 +735,12 @@ window.addEventListener("mnh:offline-synced",()=>{
 const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
 let WEEK_START=WK.startParts(weekOffset);   // Monday of the academic week currently on screen
 const baseTitle=document.title;
-let alarm={on:false,lead:10,voice:true,voiceOption:0,sound:0},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,speechTimer=null,titleTimer=null,ringing=null,alarmUserName="",alarmUserPromise=null;
+let alarm={on:false,lead:10},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,titleTimer=null,ringing=null;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 function pad2(n){return String(n).padStart(2,"0");}
 function hhmm(d){return WK.timeText(d);}
 function loadAlarm(){
- try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10,voice:a.voice!==false,voiceOption:Math.max(0,Math.min(4,Number(a.voiceOption)||0)),sound:Math.max(0,Math.min(4,Number(a.sound)||0))};}catch(e){}
+ try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10};}catch(e){}
  try{fired=JSON.parse(localStorage.getItem(firedKey)||"[]");if(!Array.isArray(fired))fired=[];}catch(e){fired=[];}
 }
 function saveAlarm(){try{localStorage.setItem(alarmKey,JSON.stringify(alarm));}catch(e){}}
@@ -751,74 +752,38 @@ function ensureAudio(){
   return audioCtx;
  }catch(e){return null;}
 }
-function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries(WK.currentOffset()).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
+function scheduledSessionEvents(horizonWeeks=52){
+ const now=Date.now(),firstOffset=WK.currentOffset(),items=[];
+ for(let offset=firstOffset;offset<=firstOffset+horizonWeeks;offset++){
+  const ws=WK.startParts(offset);
+  getSessionEntries(offset).forEach(entry=>{
+   const outcome=String(entry.data?.status||"scheduled").toLowerCase();
+   if(outcome==="completed"||outcome==="missed")return;
+   const [h,m]=entry.startTime.split(":").map(Number);
+   const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+entry.dayIndex,h,m);
+   if(start.getTime()>now)items.push({...entry,start,weekOffset:offset});
+  });
+ }
+ return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
+}
+let alarmEventsCache=[],alarmEventsCacheAt=0;
+function alarmEvents(force=false){if(force||Date.now()-alarmEventsCacheAt>15000){alarmEventsCache=scheduledSessionEvents(52);alarmEventsCacheAt=Date.now();}return alarmEventsCache;}
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
- const patterns=[
-  {notes:[523,659],wave:"sine",gap:0.48,duration:0.34},
-  {notes:[659,784,659],wave:"sine",gap:0.28,duration:0.24},
-  {notes:[587,740],wave:"triangle",gap:0.52,duration:0.42},
-  {notes:[440,554,659],wave:"sine",gap:0.22,duration:0.2},
-  {notes:[494,622],wave:"triangle",gap:0.62,duration:0.38}
- ];
- const p=patterns[alarm.sound]||patterns[0],start=ctx.currentTime+0.025;
- p.notes.forEach((hz,i)=>{
-  const osc=ctx.createOscillator(),gain=ctx.createGain(),at=start+i*p.gap,end=at+p.duration;
-  osc.type=p.wave;osc.frequency.setValueAtTime(hz,at);
-  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.16,at+0.035);
-  gain.gain.setValueAtTime(0.16,end-0.05);gain.gain.linearRampToValueAtTime(0,end);
-  osc.connect(gain);gain.connect(ringBus);osc.start(at);osc.stop(end+0.02);
+ const t0=ctx.currentTime+0.02;
+ [0,0.6].forEach(off=>{
+  const env=ctx.createGain(),trem=ctx.createGain(),lg=ctx.createGain();
+  const lfo=ctx.createOscillator(),o1=ctx.createOscillator(),o2=ctx.createOscillator();
+  o1.frequency.value=440;o2.frequency.value=480;lfo.frequency.value=20;
+  trem.gain.value=0.5;lg.gain.value=0.5;
+  lfo.connect(lg);lg.connect(trem.gain);o1.connect(trem);o2.connect(trem);trem.connect(env);env.connect(ringBus);
+  const s=t0+off,e=s+0.45;
+  env.gain.setValueAtTime(0,s);env.gain.linearRampToValueAtTime(0.35,s+0.03);
+  env.gain.setValueAtTime(0.35,e-0.04);env.gain.linearRampToValueAtTime(0,e);
+  [o1,o2,lfo].forEach(o=>{o.start(s);o.stop(e+0.05);});
  });
- try{if(navigator.vibrate)navigator.vibrate([240,180,240]);}catch(e){}
-}
-async function getAlarmUserName(){
- if(alarmUserName)return alarmUserName;
- if(alarmUserPromise)return alarmUserPromise;
- alarmUserPromise=(async()=>{
-  try{
-   const response=await fetch("/api/class-rep/auth/me",{credentials:"same-origin",cache:"no-store"});
-   if(!response.ok)return "";
-   const result=await response.json();
-   alarmUserName=result&&result.authenticated&&result.user?String(result.user.name||"").trim():"";
-  }catch(e){alarmUserName="";}
-  if(!alarmUserName)alarmUserPromise=null;
-  return alarmUserName;
- })();
- return alarmUserPromise;
-}
-function availableAlarmVoices(){
- if(!window.speechSynthesis)return [];
- const all=window.speechSynthesis.getVoices()||[];
- const english=all.filter(v=>/^en(-|_)/i.test(v.lang||""));
- return (english.length?english:all).slice(0,5);
-}
-function refreshAlarmVoiceOptions(){
- const select=document.getElementById("alarm-voice-option");if(!select)return;
- const voices=availableAlarmVoices(),labels=["Gentle voice 1","Gentle voice 2","Gentle voice 3","Gentle voice 4","Gentle voice 5"];
- select.innerHTML=labels.map((label,i)=>'<option value="'+i+'">'+esc(voices[i]?label+" · "+voices[i].name:label)+'</option>').join("");
- select.value=String(alarm.voiceOption||0);
-}
-async function speakAlarm(ev){
- if(!alarm.voice||!window.speechSynthesis||!window.SpeechSynthesisUtterance)return;
- const userName=await getAlarmUserName();
- if(ringing!==ev||!alarm.voice)return;
- const greeting=userName?userName+", ":"";
- const sessionName=[ev.label,ev.sub].filter(Boolean).join(", ");
- const lecturer=ev.facilitator?" The lecturer is "+ev.facilitator+".":"";
- const time=ev.test?"":" The session starts at "+hhmm(ev.start)+".";
- const message=ev.test?greeting+"This is a gentle test of your timetable reminder.":greeting+"your "+sessionName+" session is about to start."+time+lecturer+" Please get ready.";
- try{
-  window.speechSynthesis.cancel();
-  const voices=availableAlarmVoices(),choice=Math.max(0,Math.min(4,Number(alarm.voiceOption)||0));
-  const utterance=new SpeechSynthesisUtterance(message);
-  if(voices.length)utterance.voice=voices[choice%voices.length];
-  utterance.lang=(utterance.voice&&utterance.voice.lang)||"en-GB";
-  utterance.rate=[0.88,0.9,0.86,0.92,0.89][choice];
-  utterance.pitch=[1.02,0.92,1.08,0.98,1.14][choice];
-  utterance.volume=0.76;
-  window.speechSynthesis.speak(utterance);
- }catch(e){}
+ try{if(navigator.vibrate)navigator.vibrate([450,150,450]);}catch(e){}
 }
 function startRing(ev){
  if(ringing)return;
@@ -829,16 +794,14 @@ function startRing(ev){
  document.getElementById("call-when").textContent=(ev.sub?ev.sub+" · ":"")+when;
  document.getElementById("call-snooze").style.display=ev.test?"none":"inline-block";
  showDialog("call-dialog");
- void speakAlarm(ev);speechTimer=setInterval(()=>{if(ringing===ev&&alarm.voice)void speakAlarm(ev);},5000);
  playCycle();ringTimer=setInterval(playCycle,3000);
  ringStopTimer=setTimeout(stopRing,300000);
  let flip=false;titleTimer=setInterval(()=>{flip=!flip;document.title=flip?"📞 "+ev.label:baseTitle;},900);
 }
 function stopRing(){
- clearInterval(ringTimer);clearTimeout(ringStopTimer);clearInterval(speechTimer);clearInterval(titleTimer);ringTimer=ringStopTimer=speechTimer=titleTimer=null;
+ clearInterval(ringTimer);clearTimeout(ringStopTimer);clearInterval(titleTimer);ringTimer=ringStopTimer=titleTimer=null;
  if(audioCtx&&ringBus){try{ringBus.disconnect();}catch(e){}ringBus=audioCtx.createGain();ringBus.connect(audioCtx.destination);}
  try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
- try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
  document.title=baseTitle;hideDialog("call-dialog");ringing=null;
 }
 function alarmTick(){
@@ -846,7 +809,7 @@ function alarmTick(){
  const now=Date.now();
  for(const s of snoozed){if(!s.done&&now>=s.at){s.done=true;startRing(s.ev);return;}}
  for(const ev of alarmEvents()){
-  const ring=ev.start.getTime()-alarm.lead*60000,id=ev.id+"|"+alarm.lead;
+  const ring=ev.start.getTime()-alarm.lead*60000,id=ev.id+"|"+ev.start.getTime()+"|"+alarm.lead;
   if(now>=ring&&now<ring+90000&&!fired.includes(id)){
    fired.push(id);try{localStorage.setItem(firedKey,JSON.stringify(fired.slice(-100)));}catch(e){}
    startRing(ev);return;
@@ -858,26 +821,20 @@ function refreshAlarmUI(){
  const commAlarmStatus=document.getElementById("communications-alarm-status");if(commAlarmStatus)commAlarmStatus.textContent=alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.";ab.setAttribute("aria-label",al);ab.parentElement.dataset.label=al;ab.classList.toggle("on",alarm.on);
  document.getElementById("alarm-toggle").textContent=alarm.on?"Turn off":"Turn on";
  document.getElementById("alarm-lead").value=String(alarm.lead);
- const voiceToggle=document.getElementById("alarm-voice");if(voiceToggle)voiceToggle.checked=alarm.voice!==false;
- const voiceChoice=document.getElementById("alarm-voice-option");if(voiceChoice)voiceChoice.value=String(alarm.voiceOption||0);
- const soundChoice=document.getElementById("alarm-sound-option");if(soundChoice)soundChoice.value=String(alarm.sound||0);
  const box=document.getElementById("alarm-next");
- if(!alarm.on){box.textContent="Alarms are off.";return;}
  const now=Date.now();let next=null;
- alarmEvents().forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ring+90000>now&&(!next||ring<next.ring))next={ev,ring};});
- box.innerHTML=next
-  ?`<strong>Next alarm</strong><br>${esc(next.ev.label)}<br>${days[next.ev.c]} ${dates[next.ev.c]} · rings ${hhmm(new Date(next.ring))}, starts ${hhmm(next.ev.start)}`
-  :"No more activities this week.";
+ alarmEvents(true).forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ev.start.getTime()>now&&(!next||ev.start<next.ev.start))next={ev,ring};});
+ if(next){
+  const dateLabel=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(next.ev.start);
+  box.innerHTML=`<strong>${alarm.on?"Closest upcoming session":"Next scheduled session · alarms off"}</strong><br>${esc(next.ev.label)}<br>${esc(dateLabel)}${alarm.on?(next.ring>now?` · rings ${hhmm(new Date(next.ring))}`:" · reminder time has passed"):""} · starts ${hhmm(next.ev.start)}`;
+ }else box.textContent="No upcoming sessions are scheduled in the timetable.";
 }
 function initAlarms(){
  loadAlarm();refreshAlarmUI();
+ loadRows("recurring").then(rows=>{recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();}).catch(()=>{});
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
- document.getElementById("alarm-voice").addEventListener("change",e=>{alarm.voice=!!e.target.checked;saveAlarm();if(!alarm.voice&&window.speechSynthesis)window.speechSynthesis.cancel();});
- document.getElementById("alarm-voice-option").addEventListener("change",e=>{alarm.voiceOption=+e.target.value;saveAlarm();});
- document.getElementById("alarm-sound-option").addEventListener("change",e=>{alarm.sound=+e.target.value;saveAlarm();});
- refreshAlarmVoiceOptions();if(window.speechSynthesis)window.speechSynthesis.addEventListener("voiceschanged",refreshAlarmVoiceOptions);
  document.getElementById("alarm-toggle").addEventListener("click",()=>{
   alarm.on=!alarm.on;
   if(alarm.on&&!ensureAudio()){statusEl.className="status error";statusEl.textContent="This browser can’t play alarm sounds. You will still see the call screen.";}
@@ -1124,13 +1081,10 @@ function upcomingItemButton(item){
 }
 async function getFutureActivities(){
  const now=Date.now(),local=WK.localNow(),items=[];
- // Weekly timetable entries are dated against the current Malawi-local academic week.
- for(let day=0;day<5;day++){
-  dayEntries(day,WK.currentOffset()).forEach(session=>{
-   if(session.data?.recurring)return; // Recurring activities are sourced once from the shared recurring collection.
-   if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
-  });
- }
+ // Scan dated timetable entries across the next academic year; do not stop at the currently visible week.
+ scheduledSessionEvents(52).filter(session=>!session.data?.recurring).forEach(session=>{
+  items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
+ });
  const [exams,storedRecurring]=await Promise.all([
   loadRows("examinations").catch(()=>[]),
   loadRows("recurring").catch(()=>[])
@@ -1251,7 +1205,7 @@ async function renderManaged(collection){const [title,lead]=WORKSPACE_META[colle
    for(const [id,data] of defaults)await saveRow("recurring",id,data);
    rows=await loadRows("recurring");
   }
-  recurringRecords=rows;
+  recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();
   const list=el("div","cards");
   rows.filter(row=>row.data?.enabled!==false).forEach(row=>{
    const data=row.data||{},card=el("div","card");
@@ -1262,9 +1216,9 @@ async function renderManaged(collection){const [title,lead]=WORKSPACE_META[colle
    presenterLabel.appendChild(presenter);card.appendChild(presenterLabel);
    const actions=el("div","dialog-actions");
    const save=el("button","primary","Save presenter");save.type="button";
-   save.addEventListener("click",async()=>{try{await saveRow("recurring",row.id,{...data,presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   save.addEventListener("click",async()=>{try{await saveRow("recurring",row.id,{...data,presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
    const remove=el("button","res-del","Remove activity");remove.type="button";
-   remove.addEventListener("click",async()=>{if(!confirm("Remove this recurring activity from the timetable?"))return;try{await saveRow("recurring",row.id,{...data,enabled:false});rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   remove.addEventListener("click",async()=>{if(!confirm("Remove this recurring activity from the timetable?"))return;try{await saveRow("recurring",row.id,{...data,enabled:false});rows=await loadRows("recurring");recurringRecords=rows;alarmEventsCacheAt=0;refreshAlarmUI();build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
    actions.append(save,remove);card.appendChild(actions);list.appendChild(card);
   });
   if(!list.children.length)list.appendChild(el("p","muted","No recurring activities are active."));
@@ -1853,7 +1807,7 @@ function renderModules(){
     }
     if(recurring){
      if(!window.confirm("Permanently delete the recurring activity “"+code+"” from the shared timetable? This will remove it for everyone."))return;
-     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
+     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));alarmEventsCacheAt=0;build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
      catch(error){writeFailed(error);}
      return;
     }
@@ -2228,10 +2182,20 @@ function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
 function loadResources(){try{const r=JSON.parse(localStorage.getItem(resKey)||"[]");if(Array.isArray(r))resources=r.map(x=>({id:String(x.id||""),...cleanRes(x)})).filter(x=>x.id&&x.title&&x.url);}catch(e){}}
 async function uploadResourceFile(file){
+ if(!file||!file.name)throw new Error("Choose a file before uploading.");
  const body=new FormData();body.append("file",file,file.name);
- const response=await fetch("/api/resources/upload",{method:"POST",body,credentials:"same-origin"});
- let result={};try{result=await response.json();}catch(e){}
- if(!response.ok)throw new Error(result.detail||result.error||"The file could not be uploaded.");
+ let response;
+ try{response=await fetch("/api/resources/upload",{method:"POST",body,credentials:"same-origin"});}
+ catch(error){throw new Error("The upload could not reach the calendar server. Check your connection and try again.");}
+ const raw=await response.text();let result={};
+ try{result=raw?JSON.parse(raw):{};}catch(error){result={message:raw.slice(0,240)};}
+ if(!response.ok){
+  const detail=Array.isArray(result.detail)?result.detail.map(x=>x.msg||String(x)).join("; "):result.detail||result.error||result.message;
+  if(response.status===413)throw new Error("The server rejected this file because it is too large. Try a file under 50 MB.");
+  if(response.status===404)throw new Error("The upload service is not available on this deployment. The calendar needs its latest backend update.");
+  throw new Error(detail||("Upload failed (HTTP "+response.status+")."));
+ }
+ if(!result.id||!result.url)throw new Error("The server received the file but did not return a valid saved-file reference.");
  return result;
 }
 async function addResource(t,u,n,file=null,category="Others"){
@@ -2239,7 +2203,7 @@ async function addResource(t,u,n,file=null,category="Others"){
  if(!title){statusEl.className="status error";statusEl.textContent="Enter a resource name.";return false;}
  let uploaded=null,rec;
  if(file){
-  if(file.size>25*1024*1024){statusEl.className="status error";statusEl.textContent="The selected file is larger than 25 MB.";return false;}
+  if(file.size>50*1024*1024){statusEl.className="status error";statusEl.textContent="The selected file is larger than 50 MB.";return false;}
   statusEl.className="status";statusEl.textContent="Uploading file…";
   try{uploaded=await uploadResourceFile(file);rec=cleanRes({title,url:window.location.origin+uploaded.url,note:n,category,createdAt:Date.now(),fileId:uploaded.id,fileName:file.name,fileSize:uploaded.size});}
   catch(e){statusEl.className="status error";statusEl.textContent=e.message||"File upload failed.";return false;}
@@ -2310,7 +2274,7 @@ function renderResources(){
  });
  form.textContent="";if(editingUnlocked){const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));const mk=(p,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=p;i.maxLength=max;i.setAttribute("aria-label",p);return i;};
  const t=mk("Title",120),u=mk("Web address (optional when attaching a file)",300),n=mk("Short note (optional)",200),label=el("label","muted","Save in folder"),category=document.createElement("select");category.setAttribute("aria-label","Resource folder");["Lecture Notes","Books","Others"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;category.appendChild(o);});
- const fileLabel=el("label","muted","Attach a PDF, Word, CSV, Excel or photo file"),file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
+ const fileLabel=el("label","muted","Attach an academic document, spreadsheet, presentation, text file or image · up to 50 MB"),file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.ppt,.pptx,.csv,.xls,.xlsx,.txt,.rtf,.odt,.ods,.odp,.md,.json,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
  file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\.[^.]+$/,"");if(chosen)u.value="";});const b=el("button","primary","Add resource");b.type="button";
  b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0],category.value)){t.value=u.value=n.value="";file.value="";category.value="Others";}}finally{b.disabled=false;}});f.append(t,u,n,label,category,fileLabel,file,b);form.appendChild(f);}
 }
@@ -2322,6 +2286,7 @@ function subscribeExtras(db){
  },()=>{});
  db.collection("recurring").onSnapshot(snap=>{
   recurringRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}}));
+  alarmEventsCacheAt=0;
   build();if(currentView==="recurring")renderManaged("recurring");
   if(currentView==="weekly")renderAnimatedFutureStrip();
  },()=>{});
@@ -2526,42 +2491,5 @@ load();initCloud();initAlarms();initHeader();
   if(item.dataset.fmt==="pdf")saveServerExport("/api/export/timetable.pdf","pdf").catch(error=>status(error.message||"PDF export could not be created.","error"));
   else if(item.dataset.fmt==="xlsx")chooseModules("xlsx",modules=>saveServerExport("/api/export/timetable.xlsx","xlsx",modules));
   else if(item.dataset.fmt==="image")chooseImageFormat();
- });
-})();
-
-
-// v14.92: manual refresh checks for a new service worker before reloading the app shell.
-(function(){
- "use strict";
- const button=document.getElementById("mnh-refresh-btn");
- if(!button)return;
- let refreshing=false;
- button.addEventListener("click",async function(){
-  if(refreshing)return;
-  refreshing=true;
-  button.disabled=true;
-  button.classList.add("is-refreshing");
-  button.setAttribute("aria-label","Refreshing calendar");
-  try{
-   if("serviceWorker" in navigator){
-    const registration=await navigator.serviceWorker.getRegistration();
-    if(registration){
-     await registration.update().catch(()=>{});
-     const worker=registration.installing;
-     if(worker){
-      await Promise.race([
-       new Promise(resolve=>{
-        if(worker.state==="activated"||worker.state==="redundant")return resolve();
-        const changed=()=>{if(worker.state==="activated"||worker.state==="redundant"){worker.removeEventListener("statechange",changed);resolve();}};
-        worker.addEventListener("statechange",changed);
-       }),
-       new Promise(resolve=>setTimeout(resolve,3500))
-      ]);
-     }
-     if(registration.waiting)registration.waiting.postMessage("SKIP_WAITING");
-    }
-   }
-  }catch(error){console.warn("MNH Calendar refresh check failed; reloading the current app shell.",error);}
-  window.location.reload();
  });
 })();

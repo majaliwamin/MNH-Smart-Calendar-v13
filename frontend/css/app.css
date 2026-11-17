@@ -1840,37 +1840,10 @@ body{overflow-x:clip}
   min-width:0;
 }
 .week-nav-row .week-nav{flex:0 0 auto;width:auto;max-width:none;margin:0}
-.mnh-refresh-btn{
-  appearance:none;
-  -webkit-appearance:none;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  flex:0 0 40px;
-  width:40px;
-  height:40px;
-  min-height:40px;
-  margin:0;
-  padding:8px;
-  border:1px solid var(--tab-line);
-  border-radius:9px;
-  background:var(--tab);
-  color:var(--text);
-  cursor:pointer;
-  touch-action:manipulation;
-  transition:background .18s ease,border-color .18s ease;
-}
-.mnh-refresh-btn svg{display:block;width:22px;height:22px}
-.mnh-refresh-btn:hover{background:var(--field);border-color:var(--accent)}
-.mnh-refresh-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.mnh-refresh-btn.is-refreshing svg{animation:mnh-refresh-spin .8s linear infinite}
-@keyframes mnh-refresh-spin{to{transform:rotate(360deg)}}
 @media(max-width:560px){
   .week-nav-row{gap:4px}
   .week-nav-row .install-app-notice{max-width:34vw;padding:4px 0}
-  .week-nav-row .mnh-refresh-btn{flex-basis:34px;width:34px;height:34px;min-height:34px;padding:6px}
 }
-@media(prefers-reduced-motion:reduce){.mnh-refresh-btn.is-refreshing svg{animation:none}}
 
 
 /* v14.95: keep embedded email browsers at the same readable text sizing as the full browser. */
@@ -1911,15 +1884,10 @@ html,body{
 .upcoming-announcements-row .activity-marquee{
  padding:9px 0;
 }
-.upcoming-announcements-row .mnh-refresh-btn{
- flex:0 0 40px;
- margin-left:auto;
-}
 @media(max-width:560px){
  .upcoming-announcements-row{gap:6px;padding:6px 8px}
  .upcoming-announcements-row .activity-marquee{padding:7px 0}
- .upcoming-announcements-row .mnh-refresh-btn{flex-basis:36px;width:36px;height:36px;min-height:36px;padding:6px}
-}
+ }
 
 
 /* v15.04: keep the programme masthead fixed in the scroll flow on desktop and mobile. */
@@ -1994,8 +1962,6 @@ html,body{
   border-radius:0;
   background:transparent;
 }
-/* Keep the control in the DOM so its existing refresh listener and logic remain intact. */
-.upcoming-announcements-row #mnh-refresh-btn{display:none!important}
 @media(max-width:560px){
   .upcoming-announcements-row{gap:0;padding-left:0;padding-right:0}
   .upcoming-announcements-row .activity-marquee{padding:7px 0}

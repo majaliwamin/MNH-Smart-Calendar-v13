@@ -106,13 +106,30 @@ def require_editor(mnh_session: str | None = None):
 
 RESOURCE_UPLOAD_DIR = DATA_DIR / "resource_uploads"
 RESOURCE_FILE_TYPES = {
-    ".pdf": "application/pdf", ".doc": "application/msword",
+    ".pdf": "application/pdf",
+    ".doc": "application/msword",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".csv": "text/csv", ".xls": "application/vnd.ms-excel",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".csv": "text/csv",
+    ".xls": "application/vnd.ms-excel",
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp",
+    ".txt": "text/plain",
+    ".rtf": "application/rtf",
+    ".odt": "application/vnd.oasis.opendocument.text",
+    ".ods": "application/vnd.oasis.opendocument.spreadsheet",
+    ".odp": "application/vnd.oasis.opendocument.presentation",
+    ".md": "text/markdown",
+    ".json": "application/json",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".tif": "image/tiff",
+    ".tiff": "image/tiff",
 }
-MAX_RESOURCE_FILE_BYTES = 25 * 1024 * 1024
+MAX_RESOURCE_FILE_BYTES = 50 * 1024 * 1024
 
 
 @router.post("/resources/upload")
@@ -121,18 +138,18 @@ async def upload_resource_file(file: UploadFile = File(...)):
     original_name = Path(file.filename or "resource").name
     extension = Path(original_name).suffix.lower()
     if extension not in RESOURCE_FILE_TYPES:
-        raise HTTPException(415, "Choose a PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG or WEBP file.")
-    RESOURCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        raise HTTPException(415, "Choose a PDF, Word, PowerPoint, Excel, CSV, text, OpenDocument or image file.")
     file_id = uuid4().hex
     destination = RESOURCE_UPLOAD_DIR / (file_id + extension)
     size = 0
     try:
+        RESOURCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         with destination.open("wb") as output:
             while True:
                 chunk = await file.read(1024 * 1024)
                 if not chunk: break
                 size += len(chunk)
-                if size > MAX_RESOURCE_FILE_BYTES: raise HTTPException(413, "The maximum file size is 25 MB.")
+                if size > MAX_RESOURCE_FILE_BYTES: raise HTTPException(413, "The maximum file size is 50 MB.")
                 output.write(chunk)
         if size == 0: raise HTTPException(400, "The selected file is empty.")
     except HTTPException:
