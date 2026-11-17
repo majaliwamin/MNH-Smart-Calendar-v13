@@ -41,7 +41,7 @@
   micIcon.append(micBody, micStand); recordButton.append(micIcon);
   const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
   function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
-  const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
+  const fileInput = el("input", "cr-file-input"); fileInput.type = "file"; fileInput.hidden = false; fileInput.tabIndex = -1; fileInput.setAttribute("aria-hidden", "true"); fileInput.style.cssText = "display:block;position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;";
   fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
   form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
@@ -88,11 +88,10 @@
       state.uploads = result.document_uploads === "enabled";
       status(state.ready ? "AI connected · " + result.provider + (result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
       recordButton.disabled = !state.voice; root.dataset.documentSearch = result.document_search || "unavailable";
-      attachButton.disabled = !state.uploads; if (!state.uploads) attachButton.title = "File uploads are not configured by the server.";
     } catch (_) {
       state.ready = false; state.voice = false; state.uploads = false;
       status("Services unavailable", false);
-      recordButton.disabled = true; attachButton.disabled = true;
+      recordButton.disabled = true;
     }
   }
   let authMode = "login";
@@ -236,13 +235,12 @@
       state.busy = false; input.disabled = false; input.focus();
     }
   }
-  attachButton.addEventListener("click", () => fileInput.click());
+  attachButton.addEventListener("click", () => { try { if (fileInput.showPicker) fileInput.showPicker(); else fileInput.click(); } catch (_) { fileInput.click(); } });
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = "";
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { status("Files must be 10 MB or smaller", false); return; }
-    attachButton.disabled = true;
     try {
       const data = new FormData(); data.append("file", file);
       const response = await fetch("/api/class-rep/documents", {
@@ -252,7 +250,7 @@
       if (!response.ok) throw new Error(result.detail || "Upload failed");
       // Successful indexing is silent; the document is available to CRARA without a toast or transcript message.
     } catch (error) { status(error.message || "Document indexing failed", false); }
-    finally { attachButton.disabled = !state.uploads; }
+    finally { attachButton.disabled = false; }
   });
   recordButton.addEventListener("click", async () => {
     if (state.recording && state.recorder) { state.recorder.stop(); return; }
