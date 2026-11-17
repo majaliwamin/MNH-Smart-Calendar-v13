@@ -978,6 +978,9 @@ function showView(name){
   updateRoleNav();
  }
  currentView=name;
+ // Keep secondary pages completely clear of the shared programme masthead and
+ // weekly navigation strip; only the active page content remains in the viewport.
+ document.body.classList.toggle("is-content-view",name!=="weekly");
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
