@@ -185,7 +185,7 @@
           const password = state.analyticsPassword || prompt("Management analytics are restricted. Enter the HOD, coordinator or executive dean password:");
           if (!password) { pending.textContent = "Management analytics access was cancelled. No restricted information was retrieved."; return; }
           state.analyticsPassword = password;
-          headers["X-CRARA-Analytics-Password"] = password;
+          headers["X-CARA-Analytics-Password"] = password;
         }
         const response = await fetch("/api/class-rep/chat", {
           method: "POST", headers,
