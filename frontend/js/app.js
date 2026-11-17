@@ -2219,10 +2219,9 @@ function renderResources(){
   const file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/jpeg,image/png,image/webp";file.setAttribute("aria-label","Choose PDF, Word, CSV, Excel or photo file");
   file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
   file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\\.[^.]+$/,"");if(chosen)u.value="";});
-  const fileHint=el("p","muted","PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG or WEBP · Maximum 25 MB");
   const b=el("button","primary","Add resource");b.type="button";
   b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0])){t.value=u.value=n.value="";file.value="";}}finally{b.disabled=false;}});
-  f.append(t,u,fileLabel,file,fileHint,n,b);form.appendChild(f);
+  f.append(t,u,fileLabel,file,n,b);form.appendChild(f);
  }
 }
 function subscribeExtras(db){
