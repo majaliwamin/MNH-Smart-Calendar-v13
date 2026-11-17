@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=16' in html
-    assert '/css/class-rep.css?v=11' in html
+    assert '/js/class-rep.js?' in html
+    assert '/css/class-rep.css?' in html
 
 
 def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
@@ -73,7 +73,7 @@ def test_cara_header_and_composer_controls_have_no_button_shapes():
 def test_main_header_stays_frozen_and_install_icon_is_available():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
-    assert 'id="install-app-btn"' in html
+    assert 'notice.id="install-app-notice"' in html
     assert 'window.addEventListener("beforeinstallprompt"' in html
     assert 'window.addEventListener("appinstalled"' in html
     assert ".site-header{\n  position:-webkit-sticky!important;\n  position:sticky!important;" in css

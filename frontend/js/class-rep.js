@@ -138,7 +138,7 @@
       state.ready = Boolean(response.ok && result.ready);
       state.voice = result.voice === "enabled";
       state.uploads = result.document_uploads === "enabled";
-      status(state.ready ? "AI connected · " + result.provider + (result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
+      status(state.ready ? "AI configured · " + result.provider + (result.connection === "not_tested" ? " · connection not tested" : result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
       recordButton.disabled = !state.voice; root.dataset.documentSearch = result.document_search || "unavailable";
     } catch (_) {
       state.ready = false; state.voice = false; state.uploads = false;
@@ -268,7 +268,7 @@
           cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId })
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error("Request could not be completed");
+        if (!response.ok) throw new Error(result.detail || result.error || `CRARA request failed (HTTP ${response.status}).`);
         pending.textContent = result.reply;
         state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
@@ -294,7 +294,7 @@
         state.analyticsPassword = "";
         pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
       } else {
-        pending.textContent = "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+        pending.textContent = detail && !/request could not be completed/i.test(detail) ? "CRARA service error: " + detail : "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
       }
       if (!restrictedAnalytics && state.user) {
         const saved = await fetch("/api/class-rep/conversation/turn", {
