@@ -200,3 +200,18 @@ def test_production_cara_accounts_are_blocked_without_durable_storage(monkeypatc
             "name": "No Storage", "email": "nostorage@example.org", "password": "safe-password-123"
         })
         assert register.status_code == 503
+
+
+
+def test_cara_password_minimum_is_four_characters(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    from app.class_rep import memory
+
+    created = memory.create_account("Four Character Password", "four@example.org", "abcd")
+    assert created["email"] == "four@example.org"
+    try:
+        memory.create_account("Too Short", "short@example.org", "abc")
+    except memory.MemoryError as exc:
+        assert "4 and 256 characters" in str(exc)
+    else:
+        raise AssertionError("Three-character passwords must be rejected")
