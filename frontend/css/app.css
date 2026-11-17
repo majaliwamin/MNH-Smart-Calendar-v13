@@ -1965,3 +1965,36 @@ html,body{
   .hd-install-btn{width:36px;height:36px;padding:7px}
   .hd-install-btn svg{width:22px;height:22px}
 }
+
+
+/* v15.05: open-ended announcement ticker; hide only the manual refresh control. */
+.upcoming-announcements-row{
+  gap:0;
+  padding-left:0;
+  padding-right:0;
+  border-bottom:0;
+  background:transparent;
+}
+.upcoming-announcements-row .activity-marquee-shell{
+  flex:1 1 100%;
+  width:100%;
+  min-width:0;
+  margin:0;
+  overflow:hidden;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.upcoming-announcements-row .activity-marquee{
+  overflow:hidden;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+/* Keep the control in the DOM so its existing refresh listener and logic remain intact. */
+.upcoming-announcements-row #mnh-refresh-btn{display:none!important}
+@media(max-width:560px){
+  .upcoming-announcements-row{gap:0;padding-left:0;padding-right:0}
+  .upcoming-announcements-row .activity-marquee{padding:7px 0}
+}
