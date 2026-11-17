@@ -2033,3 +2033,64 @@ body.is-content-view #view-resources:not([hidden]){
 /* Resources screen: remove programme title, today badge and calendar week navigation. */
 body.resources-view .site-header,
 body.resources-view #view-tabs{display:none!important}
+
+
+/* v15.07: app-wide animated upcoming events banner, positioned above the app header. */
+.activity-marquee-shell{
+  order:-1;
+  flex:0 0 auto;
+  width:100%;
+  margin:0;
+  border:0;
+  border-bottom:2px solid #f2c14e;
+  border-radius:0;
+  background:linear-gradient(100deg,#071a32 0%,#122d50 48%,#21163f 100%);
+  box-shadow:0 3px 12px rgba(0,0,0,.24);
+}
+.activity-marquee{
+  padding:12px 0;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+.activity-marquee-track{backface-visibility:hidden}
+.activity-marquee-text,
+.activity-marquee-text .marquee-when,
+.activity-marquee-text .marquee-title,
+.activity-marquee-text .marquee-detail{
+  opacity:1!important;
+  filter:none!important;
+  text-shadow:none!important;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+.activity-marquee-text{
+  font:700 15px/1.55 Arial,Helvetica,sans-serif!important;
+  letter-spacing:.01em;
+}
+.activity-marquee-text .marquee-when{
+  display:inline-block;
+  margin-right:5px;
+  padding:2px 7px;
+  border-radius:5px;
+  background:#f2c14e;
+  color:#172235!important;
+  font-size:12px!important;
+  font-weight:800!important;
+}
+.activity-marquee-text .marquee-title{font-size:15px!important;font-weight:800!important}
+.activity-marquee-text .marquee-detail{font-size:13px!important;font-weight:700!important;color:#fff!important}
+.activity-marquee-text.tone-0{color:#7dd3fc!important}
+.activity-marquee-text.tone-1{color:#86efac!important}
+.activity-marquee-text.tone-2{color:#fde047!important}
+.activity-marquee-text.tone-3{color:#f0abfc!important}
+.activity-marquee-text.tone-4{color:#c4b5fd!important}
+.activity-marquee-text.tone-5{color:#fda4af!important}
+.activity-marquee-separator{color:#fff!important;padding:0 12px}
+.activity-marquee-empty{color:#fff!important;font-size:14px;font-weight:800}
+@media(max-width:720px){
+  .activity-marquee{padding:10px 0}
+  .activity-marquee-text{font-size:14px!important;line-height:1.5}
+  .activity-marquee-text .marquee-title{font-size:14px!important}
+  .activity-marquee-text .marquee-detail{font-size:12px!important}
+  .activity-marquee-text .marquee-when{font-size:11px!important}
+}
