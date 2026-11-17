@@ -294,7 +294,7 @@
         state.analyticsPassword = "";
         pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
       } else {
-        pending.textContent = "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+        pending.textContent = detail && !/request could not be completed/i.test(detail) ? "CRARA service error: " + detail : "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
       }
       if (!restrictedAnalytics && state.user) {
         const saved = await fetch("/api/class-rep/conversation/turn", {
