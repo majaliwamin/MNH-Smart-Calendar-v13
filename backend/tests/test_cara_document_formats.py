@@ -42,3 +42,38 @@ def test_unsupported_legacy_office_format_is_rejected_clearly():
         assert "not supported" in str(exc)
     else:
         raise AssertionError("Legacy binary DOC files must not be silently accepted")
+
+
+
+def test_ingest_falls_back_to_keyword_index_when_embeddings_are_unavailable(monkeypatch):
+    from contextlib import contextmanager
+    from app.class_rep import documents
+
+    statements = []
+
+    class FakeConnection:
+        def execute(self, statement, parameters=()):
+            statements.append((statement, parameters))
+
+    @contextmanager
+    def fake_database():
+        yield FakeConnection()
+
+    def unavailable_embeddings(*args, **kwargs):
+        raise DocumentError("Embedding service unavailable")
+
+    monkeypatch.setattr(documents, "database", fake_database)
+    monkeypatch.setattr(documents, "_vectors", unavailable_embeddings)
+    result = documents.ingest("notes.txt", b"Placental malaria research notes", owner_id="test-user")
+    assert result["chunks"] == 1
+    assert len(statements) == 2
+
+
+def test_document_uploads_remain_enabled_without_embedding_credentials(monkeypatch):
+    from app.class_rep.routes import status
+
+    monkeypatch.delenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", raising=False)
+    monkeypatch.delenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", raising=False)
+    result = status()
+    assert result["document_uploads"] == "enabled"
+    assert result["document_search"] == "keyword_only"
