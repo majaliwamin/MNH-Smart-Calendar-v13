@@ -135,3 +135,13 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
   border-radius:50%!important;
  }
 }
+
+
+/* CRARA assistant waiting state: one calm label with animated dots. */
+.cr-thinking{display:inline-flex;align-items:baseline;gap:4px;min-width:92px;color:var(--muted);font-size:14px;}
+.cr-thinking-dots{display:inline-flex;align-items:baseline;gap:2px;}
+.cr-thinking-dots span{display:inline-block;animation:cr-thinking-bounce 1.15s infinite ease-in-out;opacity:.35;font-size:20px;line-height:1;}
+.cr-thinking-dots span:nth-child(2){animation-delay:.16s;}
+.cr-thinking-dots span:nth-child(3){animation-delay:.32s;}
+@keyframes cr-thinking-bounce{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+@media(prefers-reduced-motion:reduce){.cr-thinking-dots span{animation:none;opacity:1;}}
