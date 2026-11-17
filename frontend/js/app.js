@@ -2248,31 +2248,45 @@ async function removeResource(id){
   statusEl.className="status ok";statusEl.textContent="Removed for everyone.";
  }catch(e){writeFailed(e);}
 }
+function resourceUrl(r){return r.fileId?r.url+"?name="+encodeURIComponent(r.fileName||r.title):r.url;}
+function resourceExt(r){return String(r.fileName||r.url||"").split(/[?#]/)[0].split(".").pop().toLowerCase();}
+function resourceModal(){
+ let m=document.getElementById("resource-reader");if(m)return m;
+ m=el("div","resource-reader");m.id="resource-reader";m.hidden=true;m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
+ const p=el("section","resource-reader-panel"),h=el("header","resource-reader-head"),t=el("h3",null,"Resource preview");t.id="resource-reader-title";
+ const actions=el("div","resource-reader-actions"),d=el("a","resource-reader-download","Download"),c=el("button","resource-reader-close","Close");c.type="button";c.addEventListener("click",()=>{m.hidden=true;document.body.classList.remove("resource-reader-open");const b=document.getElementById("resource-reader-body");if(b)b.textContent="";});
+ actions.append(d,c);h.append(t,actions);const b=el("div","resource-reader-body");b.id="resource-reader-body";p.append(h,b);m.appendChild(p);
+ m.addEventListener("click",e=>{if(e.target===m){m.hidden=true;document.body.classList.remove("resource-reader-open");b.textContent="";}});document.body.appendChild(m);return m;
+}
+async function resourceScript(src,ready){if(ready())return;await new Promise((ok,bad)=>{const x=document.createElement("script");x.src=src;x.onload=ok;x.onerror=()=>bad(new Error("Preview library could not load. Check your internet connection."));document.head.appendChild(x);});}
+function csvTable(text,root){const rows=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean).slice(0,1500);const table=el("table","resource-preview-table"),tb=document.createElement("tbody");rows.forEach((line,i)=>{const tr=document.createElement("tr");let vals=line.split(",");vals.forEach(v=>{const cell=document.createElement(i===0?"th":"td");cell.textContent=v.replace(/^"|"$/g,"").replace(/""/g,'"');tr.appendChild(cell);});tb.appendChild(tr);});table.appendChild(tb);root.appendChild(table);}
+async function previewResource(r){
+ const m=resourceModal(),body=document.getElementById("resource-reader-body"),ext=resourceExt(r);m.hidden=false;document.body.classList.add("resource-reader-open");
+ document.getElementById("resource-reader-title").textContent=r.title;m.querySelector(".resource-reader-download").href=resourceUrl(r);m.querySelector(".resource-reader-download").download=r.fileName||r.title;body.textContent="Loading preview…";
+ try{const response=await fetch(resourceUrl(r),{credentials:"same-origin"});if(!response.ok)throw new Error("File request failed: "+response.status);const blob=await response.blob();body.textContent="";
+ if(ext==="pdf"){const frame=document.createElement("iframe");frame.className="resource-pdf-frame";frame.src=URL.createObjectURL(blob);frame.title=r.title;body.appendChild(frame);}
+ else if(["jpg","jpeg","png","webp"].includes(ext)){const img=document.createElement("img");img.className="resource-image-preview";img.src=URL.createObjectURL(blob);img.alt=r.title;body.appendChild(img);}
+ else if(ext==="csv"){csvTable(await blob.text(),body);}
+ else if(ext==="docx"){await resourceScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js",()=>!!window.mammoth);const result=await window.mammoth.convertToHtml({arrayBuffer:await blob.arrayBuffer()});const article=el("article","resource-docx-preview");article.innerHTML=result.value;body.appendChild(article);}
+ else if(ext==="xlsx"||ext==="xls"){await resourceScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",()=>!!window.XLSX);const wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});const tabs=el("div","resource-sheet-tabs"),sheet=el("div","resource-sheet-content");wb.SheetNames.forEach((name,i)=>{const btn=el("button",i===0?"active":"",name);btn.type="button";btn.addEventListener("click",()=>{tabs.querySelectorAll("button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");sheet.innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[name]);});tabs.appendChild(btn);});body.append(tabs,sheet);if(wb.SheetNames.length)sheet.innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]]);}
+ else if(ext==="doc"){body.appendChild(el("p","muted","Legacy DOC files cannot be previewed reliably in a browser. Download and open in Word or LibreOffice, or convert to DOCX for an in-app preview."));}
+ else{body.appendChild(el("p","muted","Preview is not available for this file type. Download the original file to read it."));}
+ }catch(e){body.textContent=e.message||"Unable to read this resource.";body.appendChild(el("p","muted","Use Download to open the original file."));}
+}
 function renderResources(){
- const list=document.getElementById("res-list"),form=document.getElementById("res-form-wrap");
- let back=document.getElementById("resources-back");
+ const list=document.getElementById("res-list"),form=document.getElementById("res-form-wrap");let back=document.getElementById("resources-back");
  if(!back){back=el("button","resources-back","← Back");back.id="resources-back";back.type="button";back.addEventListener("click",()=>showView(previousNonResourcesView||"weekly"));const heading=document.querySelector("#view-resources h2");if(heading)heading.before(back);}
- list.textContent="";
- if(!resources.length)list.appendChild(el("p","muted","No resources have been added yet."));
- resources.forEach(r=>{
-  const card=el("div","card res");
-  const a=el("a","res-link",r.title);a.href=r.fileId?r.url+"?name="+encodeURIComponent(r.fileName||r.title):r.url;a.target="_blank";a.rel="noopener noreferrer";a.setAttribute("aria-label","Open resource: "+r.title);card.appendChild(a);
-  if(editingUnlocked){const d=el("button","res-del","Remove");d.type="button";d.addEventListener("click",()=>removeResource(r.id));card.appendChild(d);}
-  list.appendChild(card);
+ list.textContent="";["Lecture Notes","Books","Others"].forEach(category=>{
+ const items=resources.filter(r=>(r.category||"Others")===category),folder=el("section","resource-folder"),toggle=el("button","resource-folder-toggle",category+" ("+items.length+")"),content=el("div","resource-folder-content");toggle.type="button";toggle.setAttribute("aria-expanded","true");
+ toggle.addEventListener("click",()=>{const open=toggle.getAttribute("aria-expanded")==="true";toggle.setAttribute("aria-expanded",String(!open));content.hidden=open;});folder.append(toggle,content);
+ if(!items.length)content.appendChild(el("p","muted","No resources in this folder yet."));
+ items.forEach(r=>{const card=el("article","card res");card.appendChild(el("strong","resource-title",r.title));if(r.note)card.appendChild(el("p","muted",r.note));const actions=el("div","resource-card-actions"),read=el("button","primary","Read / Preview");read.type="button";read.addEventListener("click",()=>previewResource(r));actions.appendChild(read);const dl=el("a","res-link","Download");dl.href=resourceUrl(r);dl.download=r.fileName||r.title;actions.appendChild(dl);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.addEventListener("click",()=>removeResource(r.id));actions.appendChild(del);}card.appendChild(actions);content.appendChild(card);});list.appendChild(folder);
  });
- form.textContent="";
- if(editingUnlocked){
-  const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));
-  const mk=(ph,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=ph;i.maxLength=max;i.setAttribute("aria-label",ph);return i;};
-  const t=mk("Title",120),u=mk("Web address (https://…) — optional when attaching a file",300),n=mk("Short note (optional)",200);
-  const fileLabel=el("label","muted","Attach a file (optional)");
-  const file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/jpeg,image/png,image/webp";file.setAttribute("aria-label","Choose PDF, Word, CSV, Excel or photo file");
-  file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
-  file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\\.[^.]+$/,"");if(chosen)u.value="";});
-  const b=el("button","primary","Add resource");b.type="button";
-  b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0])){t.value=u.value=n.value="";file.value="";}}finally{b.disabled=false;}});
-  f.append(t,u,fileLabel,file,n,b);form.appendChild(f);
- }
+ form.textContent="";if(editingUnlocked){const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));const mk=(p,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=p;i.maxLength=max;i.setAttribute("aria-label",p);return i;};
+ const t=mk("Title",120),u=mk("Web address (optional when attaching a file)",300),n=mk("Short note (optional)",200),label=el("label","muted","Save in folder"),category=document.createElement("select");category.setAttribute("aria-label","Resource folder");["Lecture Notes","Books","Others"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;category.appendChild(o);});
+ const fileLabel=el("label","muted","Attach a PDF, Word, CSV, Excel or photo file"),file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
+ file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\.[^.]+$/,"");if(chosen)u.value="";});const b=el("button","primary","Add resource");b.type="button";
+ b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0],category.value)){t.value=u.value=n.value="";file.value="";category.value="Others";}}finally{b.disabled=false;}});f.append(t,u,n,label,category,fileLabel,file,b);form.appendChild(f);}
 }
 function subscribeExtras(db){
  db.collection("settings").onSnapshot(snap=>{snap.docs.forEach(d=>{if(d.id==="header"){const v=d.data();applyHeader({title:v.title,subtitle:v.subtitle});}});},()=>{});
