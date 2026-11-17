@@ -23,13 +23,15 @@
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
   const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;
-  const memoryButton = el("button", "cr-account", "Memory"); memoryButton.type = "button"; memoryButton.hidden = true;
-  header.append(identity, memoryButton, signOut, toggle);
+  header.append(identity, signOut, toggle);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
   const form = el("form", "cr-form");
-  const attachButton = el("button", "cr-icon-button cr-attach", "+"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a programme file"); attachButton.title = "Attach file";
+  const attachButton = el("button", "cr-icon-button cr-attach"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a file"); attachButton.title = "Attach file";
+  const paperclip = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  paperclip.setAttribute("viewBox", "0 0 24 24"); paperclip.setAttribute("width", "22"); paperclip.setAttribute("height", "22"); paperclip.setAttribute("fill", "none"); paperclip.setAttribute("stroke", "currentColor"); paperclip.setAttribute("stroke-width", "2"); paperclip.setAttribute("stroke-linecap", "round"); paperclip.setAttribute("stroke-linejoin", "round"); paperclip.setAttribute("aria-hidden", "true");
+  const paperclipPath = document.createElementNS("http://www.w3.org/2000/svg", "path"); paperclipPath.setAttribute("d", "m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"); paperclip.append(paperclipPath); attachButton.append(paperclip);
   const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CARA…"; input.setAttribute("aria-label", "Message CARA");
   const recordButton = el("button", "cr-icon-button cr-record"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
   const micIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -40,13 +42,13 @@
   const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
   function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
-  fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp"; fileInput.hidden = true;
+  fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
   form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
   const authPanel = el("section", "cr-auth-panel");
   const authCard = el("div", "cr-auth-card");
   const authTitle = el("strong", "cr-auth-title", "Your private CARA account");
-  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved tasks and memories.");
+  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved academic work.");
   const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
   const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
   const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.minLength = 4; authPassword.maxLength = 256; authPassword.placeholder = "Password (at least 4 characters)"; authPassword.autocomplete = "current-password";
@@ -72,7 +74,7 @@
     el("strong", "cr-memory-section", "Projects"), projectItems,
     el("strong", "cr-memory-section", "Tasks"), taskItems,
     el("strong", "cr-memory-section", "Reminders"), reminderItems);
-  root.append(launcher, header, body, authPanel, memoryPanel);
+  root.append(launcher, header, body, authPanel);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
@@ -193,7 +195,6 @@
     }
     if (!(rData.reminders || []).length) reminderItems.append(el("p", "cr-memory-intro", "No reminders yet."));
   }
-  memoryButton.addEventListener("click", async () => { memoryPanel.hidden = false; await loadMemoryPanel(); });
   memoryClose.addEventListener("click", () => { memoryPanel.hidden = true; });
   memorySave.addEventListener("click", async () => {
     const text = memoryEditor.value.trim(); if (!text) return;
@@ -230,7 +231,7 @@
       const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
       const result = await response.json();
       if (result.storage_ready === false) {
-        state.user = null; signOut.hidden = true; memoryButton.hidden = true;
+        state.user = null; signOut.hidden = true; 
         body.hidden = true; authPanel.hidden = false;
         authTitle.textContent = "Private CARA memory is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
@@ -243,12 +244,12 @@
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
-      signOut.hidden = !state.user; memoryButton.hidden = !state.user;
+      signOut.hidden = !state.user; 
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; signOut.hidden = true; memoryButton.hidden = true; authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true;  authPanel.hidden = false; body.hidden = true;
     }
   }
   async function authenticate() {
@@ -261,7 +262,7 @@
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Account request failed.");
-      state.user = result.user; state.history = []; state.conversationId = null; memoryButton.hidden = false;
+      state.user = result.user; state.history = []; state.conversationId = null; 
       transcript.replaceChildren(); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
       authPassword.value = ""; status("Signed in · private memory enabled", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
@@ -272,7 +273,7 @@
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
   signOut.addEventListener("click", async () => {
     await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
-    state.user = null; state.history = []; state.conversationId = null; memoryButton.hidden = true; memoryPanel.hidden = true; transcript.replaceChildren();
+    state.user = null; state.history = []; state.conversationId = null;  memoryPanel.hidden = true; transcript.replaceChildren();
     body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
   });
   async function send(value) {
