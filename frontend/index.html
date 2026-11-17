@@ -93,7 +93,7 @@
 <script src="/js/api-client.js?v=2026.11.17-v15.08"></script>
 
   <link rel="stylesheet" href="/css/app.css?v=2026.11.17-v15.08">
-<link rel="stylesheet" href="/css/class-rep.css?v=11">
+<link rel="stylesheet" href="/css/class-rep.css?v=12">
 
 </head>
 <body data-theme="dark">
@@ -364,7 +364,7 @@
 
 
 <script src="/js/app.js?v=2026.11.17-v15.08" defer></script>
-<script src="/js/class-rep.js?v=16" defer></script>
+<script src="/js/class-rep.js?v=17" defer></script>
 <script>
 (function () {
   "use strict";
@@ -398,58 +398,50 @@
 (function(){
  "use strict";
  const installButton=document.getElementById("install-app-btn");
- if(!installButton)return;
- let deferredPrompt=null;
- let promptOpen=false;
+ let deferredPrompt=null,promptOpen=false;
  const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
- const showInstallIcon=()=>{if(!isStandalone())installButton.hidden=false;};
- const hideInstallIcon=()=>{installButton.hidden=true;};
- async function installFromIcon(){
-  if(isStandalone()||promptOpen)return;
-  if(!deferredPrompt){
-   const ua=navigator.userAgent||"";
-   const isAppleMobile=/iPhone|iPad|iPod/i.test(ua);
-   const isAndroid=/Android/i.test(ua);
-   const instructions=isAppleMobile
-    ?"To install on iPhone or iPad: open the Share menu in Safari, then choose “Add to Home Screen”."
-    :isAndroid
-     ?"To install on Android: open your browser menu, then choose “Install app” or “Add to Home screen”."
-     :"To install MNH Calendar: use your browser’s Install app option in the address bar or browser menu.";
-   window.alert(instructions);
+ const hideHeaderInstall=()=>{if(installButton)installButton.hidden=true;};
+ const showHeaderInstall=()=>{if(installButton&&!isStandalone())installButton.hidden=false;};
+ if(isStandalone()){hideHeaderInstall();return;}
+ showHeaderInstall();
+ window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredPrompt=event;showHeaderInstall();});
+ window.addEventListener("appinstalled",()=>{
+  deferredPrompt=null;promptOpen=false;hideHeaderInstall();
+  const dialog=document.getElementById("mnh-install-choice");if(dialog)dialog.remove();
+ });
+ const overlay=document.createElement("div");
+ overlay.id="mnh-install-choice";overlay.className="mnh-install-choice";overlay.hidden=true;
+ overlay.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-labelledby="mnh-install-title" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><h2 id="mnh-install-title">Install MNH Calendar?</h2><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Decline</button></div></section>';
+ document.body.appendChild(overlay);
+ const accept=overlay.querySelector("#mnh-install-accept"),decline=overlay.querySelector("#mnh-install-decline");
+ const help=overlay.querySelector("#mnh-install-help"),copy=overlay.querySelector("#mnh-install-copy");
+ const close=()=>{overlay.hidden=true;};
+ decline.addEventListener("click",close);
+ async function install(){
+  if(promptOpen)return;
+  if(deferredPrompt){
+   const promptEvent=deferredPrompt;deferredPrompt=null;promptOpen=true;accept.disabled=true;
+   try{
+    await promptEvent.prompt();const choice=await promptEvent.userChoice;
+    if(choice&&choice.outcome==="accepted"){close();hideHeaderInstall();}
+    else{help.textContent="Installation was not completed. You can install later using the install icon or your browser menu.";}
+   }catch(error){help.textContent="Your browser could not open the installation prompt. Use the browser menu to install the app.";console.warn("MNH Calendar install prompt failed:",error);}
+   finally{promptOpen=false;accept.disabled=false;}
    return;
   }
-  const promptEvent=deferredPrompt;
-  deferredPrompt=null;
-  promptOpen=true;
-  try{
-   await promptEvent.prompt();
-   const choice=await promptEvent.userChoice;
-   if(choice&&choice.outcome==="accepted"){
-    hideInstallIcon();
-   }
-  }catch(error){
-   console.warn("MNH Calendar install prompt failed:",error);
-  }finally{
-   promptOpen=false;
-  }
+  const ua=navigator.userAgent||"",apple=/iPhone|iPad|iPod/i.test(ua),android=/Android/i.test(ua);
+  copy.textContent=apple
+   ?"To install on iPhone or iPad, open this page in Safari, tap Share, then choose “Add to Home Screen”."
+   :android
+    ?"Your browser may offer “Install app” or “Add to Home screen” from its menu. Choose that option to install."
+    :"Choose “Install app” from your browser’s address bar or menu, if available.";
+  help.textContent="When you are ready, close this message and choose the browser’s install option.";
+  accept.textContent="Continue";accept.onclick=close;
  }
- if(isStandalone()){
-  hideInstallIcon();
-  return;
- }
- showInstallIcon();
- installButton.addEventListener("click",installFromIcon);
- window.addEventListener("beforeinstallprompt",event=>{
-  event.preventDefault();
-  deferredPrompt=event;
-  showInstallIcon();
- });
- window.addEventListener("appinstalled",()=>{
-  deferredPrompt=null;
-  promptOpen=false;
-  hideInstallIcon();
- });
+ accept.addEventListener("click",install);
+ window.addEventListener("load",()=>{if(!isStandalone())overlay.hidden=false;},{once:true});
+ if(document.readyState==="complete"&&!isStandalone())overlay.hidden=false;
 })();
 </script>
 
