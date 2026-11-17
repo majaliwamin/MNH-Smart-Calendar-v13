@@ -112,11 +112,11 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
  body.cara-open #class-rep-assistant.cara-widget.is-open{inset:0!important;width:100%!important;height:100vh!important;height:100dvh!important;}
 }
 
-/* CRARA launcher: circular and flush to the lower-left viewport edge. */
+/* CRARA launcher: circular and flush to the lower-right viewport edge. */
 .view-tabs .cara-launcher{
  position:fixed!important;
- left:0!important;
- right:auto!important;
+ left:auto!important;
+ right:0!important;
  bottom:0!important;
  width:58px!important;
  min-width:58px!important;
@@ -129,7 +129,7 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 }
 @media(max-width:760px){
  .view-tabs .cara-launcher{
-  left:0!important;bottom:0!important;
+  left:auto!important;right:0!important;bottom:0!important;
   width:54px!important;min-width:54px!important;height:54px!important;
   padding:0!important;
   border-radius:50%!important;
