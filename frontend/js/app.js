@@ -800,7 +800,8 @@ function alarmTick(){
  }
 }
 function refreshAlarmUI(){
- const ab=document.getElementById("alarms"),al=alarm.on?`Alarms on (${alarm.lead?alarm.lead+" min before":"at start"})`:"Alarms off";ab.setAttribute("aria-label",al);ab.parentElement.dataset.label=al;ab.classList.toggle("on",alarm.on);
+ const ab=document.getElementById("alarms"),al=alarm.on?`Alarms on (${alarm.lead?alarm.lead+" min before":"at start"})`:"Alarms off";
+ const commAlarmStatus=document.getElementById("communications-alarm-status");if(commAlarmStatus)commAlarmStatus.textContent=alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.";ab.setAttribute("aria-label",al);ab.parentElement.dataset.label=al;ab.classList.toggle("on",alarm.on);
  document.getElementById("alarm-toggle").textContent=alarm.on?"Turn off":"Turn on";
  document.getElementById("alarm-lead").value=String(alarm.lead);
  const box=document.getElementById("alarm-next");
