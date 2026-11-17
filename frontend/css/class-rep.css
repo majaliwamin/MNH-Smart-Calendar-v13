@@ -53,3 +53,19 @@ html.cara-open,body.cara-open{overflow:hidden!important;overscroll-behavior:none
 .cr-toggle:hover,.cr-icon-button:hover,.cr-account:hover{border-color:transparent!important;background:transparent!important;opacity:.78;}
 .cr-icon-button:focus-visible,.cr-toggle:focus-visible,.cr-account:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
 @media(max-width:760px){.cr-icon-button{width:40px;height:40px;flex-basis:40px;}.cr-toggle{width:44px;height:44px;flex-basis:44px;}}
+
+
+/* Authentication is a clean, isolated screen: show only the private CRARA account form. */
+html.cara-auth-open,body.cara-auth-open{overflow:hidden!important;background:var(--panel)!important;}
+body.cara-auth-open .upcoming-announcements-row,
+body.cara-auth-open .site-header,
+body.cara-auth-open .view-tabs,
+body.cara-auth-open .status,
+body.cara-auth-open .bottom-nav{display:none!important;}
+body.cara-auth-open #view-weekly> :not(#class-rep-assistant){display:none!important;}
+body.cara-auth-open #class-rep-assistant{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;z-index:2147483000!important;}
+body.cara-auth-open #class-rep-assistant .cr-auth-panel{position:fixed!important;inset:0!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;z-index:2147483001!important;}
+body.cara-auth-open #class-rep-assistant .cr-auth-card{width:min(100%,420px)!important;margin:auto!important;}
+body.cara-auth-open #class-rep-assistant .cr-head,
+body.cara-auth-open #class-rep-assistant .cr-body{display:none!important;}
+@media(max-width:760px){body.cara-auth-open #class-rep-assistant .cr-auth-panel{padding:18px!important;}body.cara-auth-open #class-rep-assistant .cr-auth-card{width:min(100%,420px)!important;}}

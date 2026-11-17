@@ -89,10 +89,37 @@
   showHeader(false);
   body.hidden = true;
   authPanel.hidden = true;
+  function setAuthPresentation(active) {
+    const enabled = Boolean(active);
+    document.documentElement.classList.toggle("cara-auth-open", enabled);
+    document.body.classList.toggle("cara-auth-open", enabled);
+  }
   function status(text, ready) {
     const node = statusNode;
     node.textContent = text;
     node.dataset.state = ready ? "ready" : "unavailable";
+  }
+  async function requestJson(path, options = {}) {
+    let response;
+    try {
+      response = await fetch(path, {
+        ...options,
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json", ...(options.headers || {}) }
+      });
+    } catch (_) {
+      throw new Error("Could not connect to CRARA services. Check your internet connection and try again.");
+    }
+    const raw = await response.text();
+    let result = {};
+    if (raw) {
+      try { result = JSON.parse(raw); }
+      catch (_) {
+        if (response.ok) throw new Error("CRARA returned an unreadable response. Please refresh and try again.");
+      }
+    }
+    return { response, result };
   }
   function addMessage(role, text) { const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"), text); transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble; }
   function demoReply(message) {
@@ -106,8 +133,8 @@
   }
   async function checkStatus() {
     try {
-      const response = await fetch("/api/class-rep/status", { cache: "no-store" });
-      const result = await response.json();
+      const { response, result } = await requestJson("/api/class-rep/status");
+      if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       state.ready = Boolean(response.ok && result.ready);
       state.voice = result.voice === "enabled";
       state.uploads = result.document_uploads === "enabled";
@@ -132,9 +159,8 @@
   }
   async function loadPreviousConversation() {
     try {
-      const response = await fetch("/api/class-rep/conversations", { cache: "no-store" });
+      const { response, result: data } = await requestJson("/api/class-rep/conversations");
       if (!response.ok) return;
-      const data = await response.json();
       const latest = (data.conversations || [])[0];
       if (!latest) return;
       state.conversationId = latest.id;
@@ -145,11 +171,11 @@
   }
   async function checkAuth() {
     try {
-      const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
-      const result = await response.json();
+      const { response, result } = await requestJson("/api/class-rep/auth/me");
+      if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       if (result.storage_ready === false) {
         state.user = null; signOut.hidden = true; 
-        showHeader(false); body.hidden = true; authPanel.hidden = false;
+        showHeader(false); body.hidden = true; authPanel.hidden = false; setAuthPresentation(root.classList.contains("is-open"));
         authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
@@ -163,11 +189,12 @@
       state.user = result.authenticated ? result.user : null;
       signOut.hidden = !state.user; 
       showHeader(Boolean(state.user));
+      setAuthPresentation(root.classList.contains("is-open") && !state.user);
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true; setAuthPresentation(root.classList.contains("is-open"));
     }
   }
   async function authenticate() {
@@ -175,13 +202,12 @@
     try {
       const payload = { email: authEmail.value.trim(), password: authPassword.value };
       if (authMode === "register") payload.name = authName.value.trim();
-      const response = await fetch("/api/class-rep/auth/" + authMode, {
+      const { response, result } = await requestJson("/api/class-rep/auth/" + authMode, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || "Account request failed.");
+      if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
       state.user = result.user; state.history = []; state.conversationId = null; 
-      transcript.replaceChildren(); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
@@ -190,9 +216,9 @@
   authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
   signOut.addEventListener("click", async () => {
-    await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
+    await requestJson("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
     state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
-    showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
+    showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthPresentation(root.classList.contains("is-open")); setAuthMode("login");
   });
   async function send(value) {
     const message = String(value || input.value).trim();
@@ -358,6 +384,7 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
+    setAuthPresentation(Boolean(open && !state.user));
     showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user); updateLauncherVisibility();
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
