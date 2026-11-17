@@ -735,12 +735,12 @@ window.addEventListener("mnh:offline-synced",()=>{
 const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
 let WEEK_START=WK.startParts(weekOffset);   // Monday of the academic week currently on screen
 const baseTitle=document.title;
-let alarm={on:false,lead:10,voice:true,voiceOption:0,sound:0},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,speechTimer=null,titleTimer=null,ringing=null,alarmUserName="",alarmUserPromise=null;
+let alarm={on:false,lead:10},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,titleTimer=null,ringing=null;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 function pad2(n){return String(n).padStart(2,"0");}
 function hhmm(d){return WK.timeText(d);}
 function loadAlarm(){
- try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10,voice:a.voice!==false,voiceOption:Math.max(0,Math.min(4,Number(a.voiceOption)||0)),sound:Math.max(0,Math.min(4,Number(a.sound)||0))};}catch(e){}
+ try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10};}catch(e){}
  try{fired=JSON.parse(localStorage.getItem(firedKey)||"[]");if(!Array.isArray(fired))fired=[];}catch(e){fired=[];}
 }
 function saveAlarm(){try{localStorage.setItem(alarmKey,JSON.stringify(alarm));}catch(e){}}
@@ -771,70 +771,19 @@ function alarmEvents(force=false){if(force||Date.now()-alarmEventsCacheAt>15000)
 function playCycle(){
  const ctx=audioCtx;if(!ctx)return;
  if(ctx.state==="suspended")ctx.resume();
- const patterns=[
-  {notes:[523,659],wave:"sine",gap:0.48,duration:0.34},
-  {notes:[659,784,659],wave:"sine",gap:0.28,duration:0.24},
-  {notes:[587,740],wave:"triangle",gap:0.52,duration:0.42},
-  {notes:[440,554,659],wave:"sine",gap:0.22,duration:0.2},
-  {notes:[494,622],wave:"triangle",gap:0.62,duration:0.38}
- ];
- const p=patterns[alarm.sound]||patterns[0],start=ctx.currentTime+0.025;
- p.notes.forEach((hz,i)=>{
-  const osc=ctx.createOscillator(),gain=ctx.createGain(),at=start+i*p.gap,end=at+p.duration;
-  osc.type=p.wave;osc.frequency.setValueAtTime(hz,at);
-  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.16,at+0.035);
-  gain.gain.setValueAtTime(0.16,end-0.05);gain.gain.linearRampToValueAtTime(0,end);
-  osc.connect(gain);gain.connect(ringBus);osc.start(at);osc.stop(end+0.02);
+ const t0=ctx.currentTime+0.02;
+ [0,0.6].forEach(off=>{
+  const env=ctx.createGain(),trem=ctx.createGain(),lg=ctx.createGain();
+  const lfo=ctx.createOscillator(),o1=ctx.createOscillator(),o2=ctx.createOscillator();
+  o1.frequency.value=440;o2.frequency.value=480;lfo.frequency.value=20;
+  trem.gain.value=0.5;lg.gain.value=0.5;
+  lfo.connect(lg);lg.connect(trem.gain);o1.connect(trem);o2.connect(trem);trem.connect(env);env.connect(ringBus);
+  const s=t0+off,e=s+0.45;
+  env.gain.setValueAtTime(0,s);env.gain.linearRampToValueAtTime(0.35,s+0.03);
+  env.gain.setValueAtTime(0.35,e-0.04);env.gain.linearRampToValueAtTime(0,e);
+  [o1,o2,lfo].forEach(o=>{o.start(s);o.stop(e+0.05);});
  });
- try{if(navigator.vibrate)navigator.vibrate([240,180,240]);}catch(e){}
-}
-async function getAlarmUserName(){
- if(alarmUserName)return alarmUserName;
- if(alarmUserPromise)return alarmUserPromise;
- alarmUserPromise=(async()=>{
-  try{
-   const response=await fetch("/api/class-rep/auth/me",{credentials:"same-origin",cache:"no-store"});
-   if(!response.ok)return "";
-   const result=await response.json();
-   alarmUserName=result&&result.authenticated&&result.user?String(result.user.name||"").trim():"";
-  }catch(e){alarmUserName="";}
-  if(!alarmUserName)alarmUserPromise=null;
-  return alarmUserName;
- })();
- return alarmUserPromise;
-}
-function availableAlarmVoices(){
- if(!window.speechSynthesis)return [];
- const all=window.speechSynthesis.getVoices()||[];
- const english=all.filter(v=>/^en(-|_)/i.test(v.lang||""));
- return (english.length?english:all).slice(0,5);
-}
-function refreshAlarmVoiceOptions(){
- const select=document.getElementById("alarm-voice-option");if(!select)return;
- const voices=availableAlarmVoices(),labels=["Gentle voice 1","Gentle voice 2","Gentle voice 3","Gentle voice 4","Gentle voice 5"];
- select.innerHTML=labels.map((label,i)=>'<option value="'+i+'">'+esc(voices[i]?label+" · "+voices[i].name:label)+'</option>').join("");
- select.value=String(alarm.voiceOption||0);
-}
-async function speakAlarm(ev){
- if(!alarm.voice||!window.speechSynthesis||!window.SpeechSynthesisUtterance)return;
- const userName=await getAlarmUserName();
- if(ringing!==ev||!alarm.voice)return;
- const greeting=userName?userName+", ":"";
- const sessionName=[ev.label,ev.sub].filter(Boolean).join(", ");
- const lecturer=ev.facilitator?" The lecturer is "+ev.facilitator+".":"";
- const time=ev.test?"":" The session starts at "+hhmm(ev.start)+".";
- const message=ev.test?greeting+"This is a gentle test of your timetable reminder.":greeting+"your "+sessionName+" session is about to start."+time+lecturer+" Please get ready.";
- try{
-  window.speechSynthesis.cancel();
-  const voices=availableAlarmVoices(),choice=Math.max(0,Math.min(4,Number(alarm.voiceOption)||0));
-  const utterance=new SpeechSynthesisUtterance(message);
-  if(voices.length)utterance.voice=voices[choice%voices.length];
-  utterance.lang=(utterance.voice&&utterance.voice.lang)||"en-GB";
-  utterance.rate=[0.88,0.9,0.86,0.92,0.89][choice];
-  utterance.pitch=[1.02,0.92,1.08,0.98,1.14][choice];
-  utterance.volume=0.76;
-  window.speechSynthesis.speak(utterance);
- }catch(e){}
+ try{if(navigator.vibrate)navigator.vibrate([450,150,450]);}catch(e){}
 }
 function startRing(ev){
  if(ringing)return;
@@ -845,16 +794,14 @@ function startRing(ev){
  document.getElementById("call-when").textContent=(ev.sub?ev.sub+" · ":"")+when;
  document.getElementById("call-snooze").style.display=ev.test?"none":"inline-block";
  showDialog("call-dialog");
- void speakAlarm(ev);speechTimer=setInterval(()=>{if(ringing===ev&&alarm.voice)void speakAlarm(ev);},5000);
  playCycle();ringTimer=setInterval(playCycle,3000);
  ringStopTimer=setTimeout(stopRing,300000);
  let flip=false;titleTimer=setInterval(()=>{flip=!flip;document.title=flip?"📞 "+ev.label:baseTitle;},900);
 }
 function stopRing(){
- clearInterval(ringTimer);clearTimeout(ringStopTimer);clearInterval(speechTimer);clearInterval(titleTimer);ringTimer=ringStopTimer=speechTimer=titleTimer=null;
+ clearInterval(ringTimer);clearTimeout(ringStopTimer);clearInterval(titleTimer);ringTimer=ringStopTimer=titleTimer=null;
  if(audioCtx&&ringBus){try{ringBus.disconnect();}catch(e){}ringBus=audioCtx.createGain();ringBus.connect(audioCtx.destination);}
  try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
- try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
  document.title=baseTitle;hideDialog("call-dialog");ringing=null;
 }
 function alarmTick(){
@@ -874,9 +821,6 @@ function refreshAlarmUI(){
  const commAlarmStatus=document.getElementById("communications-alarm-status");if(commAlarmStatus)commAlarmStatus.textContent=alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.";ab.setAttribute("aria-label",al);ab.parentElement.dataset.label=al;ab.classList.toggle("on",alarm.on);
  document.getElementById("alarm-toggle").textContent=alarm.on?"Turn off":"Turn on";
  document.getElementById("alarm-lead").value=String(alarm.lead);
- const voiceToggle=document.getElementById("alarm-voice");if(voiceToggle)voiceToggle.checked=alarm.voice!==false;
- const voiceChoice=document.getElementById("alarm-voice-option");if(voiceChoice)voiceChoice.value=String(alarm.voiceOption||0);
- const soundChoice=document.getElementById("alarm-sound-option");if(soundChoice)soundChoice.value=String(alarm.sound||0);
  const box=document.getElementById("alarm-next");
  const now=Date.now();let next=null;
  alarmEvents(true).forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ev.start.getTime()>now&&(!next||ev.start<next.ev.start))next={ev,ring};});
@@ -891,10 +835,6 @@ function initAlarms(){
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
- document.getElementById("alarm-voice").addEventListener("change",e=>{alarm.voice=!!e.target.checked;saveAlarm();if(!alarm.voice&&window.speechSynthesis)window.speechSynthesis.cancel();});
- document.getElementById("alarm-voice-option").addEventListener("change",e=>{alarm.voiceOption=+e.target.value;saveAlarm();});
- document.getElementById("alarm-sound-option").addEventListener("change",e=>{alarm.sound=+e.target.value;saveAlarm();});
- refreshAlarmVoiceOptions();if(window.speechSynthesis)window.speechSynthesis.addEventListener("voiceschanged",refreshAlarmVoiceOptions);
  document.getElementById("alarm-toggle").addEventListener("click",()=>{
   alarm.on=!alarm.on;
   if(alarm.on&&!ensureAudio()){statusEl.className="status error";statusEl.textContent="This browser can’t play alarm sounds. You will still see the call screen.";}
