@@ -2131,3 +2131,8 @@ body[data-theme] .activity-marquee-text .marquee-detail{
  padding:0!important;
  text-shadow:none!important;
 }
+
+
+/* Resources page back navigation */
+.resources-back{display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;padding:8px 13px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.resources-back:hover{border-color:var(--accent);}
