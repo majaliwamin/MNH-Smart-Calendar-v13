@@ -2261,6 +2261,7 @@ function resourceModal(){
 async function resourceScript(src,ready){if(ready())return;await new Promise((ok,bad)=>{const x=document.createElement("script");x.src=src;x.onload=ok;x.onerror=()=>bad(new Error("Preview library could not load. Check your internet connection."));document.head.appendChild(x);});}
 function csvTable(text,root){const rows=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean).slice(0,1500);const table=el("table","resource-preview-table"),tb=document.createElement("tbody");rows.forEach((line,i)=>{const tr=document.createElement("tr");let vals=line.split(",");vals.forEach(v=>{const cell=document.createElement(i===0?"th":"td");cell.textContent=v.replace(/^"|"$/g,"").replace(/""/g,'"');tr.appendChild(cell);});tb.appendChild(tr);});table.appendChild(tb);root.appendChild(table);}
 async function previewResource(r){
+ if(!r.fileId){window.open(r.url,"_blank","noopener,noreferrer");return;}
  const m=resourceModal(),body=document.getElementById("resource-reader-body"),ext=resourceExt(r);m.hidden=false;document.body.classList.add("resource-reader-open");
  document.getElementById("resource-reader-title").textContent=r.title;m.querySelector(".resource-reader-download").href=resourceUrl(r);m.querySelector(".resource-reader-download").download=r.fileName||r.title;body.textContent="Loading preview…";
  try{const response=await fetch(resourceUrl(r),{credentials:"same-origin"});if(!response.ok)throw new Error("File request failed: "+response.status);const blob=await response.blob();body.textContent="";
