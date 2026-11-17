@@ -2110,3 +2110,24 @@ body.resources-view #view-tabs{display:none!important}
 .activity-marquee-text.tone-4{color:#c4b5fd!important}
 .activity-marquee-text.tone-5{color:#fda4af!important}
 .activity-marquee-separator{color:var(--muted)!important}
+
+
+/* Keep upcoming-event text unboxed: date, action/title and lecturer/details inherit one colour per session. */
+body[data-theme] .activity-marquee-shell,
+body[data-theme] .activity-marquee,
+body[data-theme] .activity-marquee-text{
+ background:transparent!important;
+ box-shadow:none!important;
+ border:0!important;
+}
+body[data-theme] .activity-marquee-text .marquee-when,
+body[data-theme] .activity-marquee-text .marquee-title,
+body[data-theme] .activity-marquee-text .marquee-detail{
+ color:inherit!important;
+ background:transparent!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+ padding:0!important;
+ text-shadow:none!important;
+}
