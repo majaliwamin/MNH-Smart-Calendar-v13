@@ -6,13 +6,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=15' in html
-    assert '/css/class-rep.css?v=10' in html
+    assert '/js/class-rep.js?v=16' in html
+    assert '/css/class-rep.css?v=11' in html
 
 
 def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
-    assert ".cara-widget{position:fixed" in css
+    assert ".cara-widget{position:static" in css
     assert ".cr-head{position:fixed" in css
     assert ".cr-transcript{flex:1 1 auto;min-height:0" in css
     assert ".cara-launcher" in css
@@ -85,11 +85,19 @@ def test_crara_login_hides_assistant_header_and_uses_full_viewport():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert "function showHeader(visible)" in js
-    assert "root.append(launcher, body, authPanel)" in js
+    assert "root.append(body, authPanel)" in js
     assert "root.insertBefore(header, body)" in js
     assert "header.remove()" in js
     assert "showHeader(false); body.hidden = true; authPanel.hidden = false" in js
     assert "showHeader(Boolean(open && state.user))" in js
+    assert "function setAuthPresentation(active)" in js
+    assert "body.cara-auth-open .site-header" in css
+    assert "body.cara-auth-open .view-tabs" in css
+    assert "body.cara-auth-open .bottom-nav" in css
+    assert "body.cara-auth-open #view-weekly> :not(#class-rep-assistant)" in css
+    assert "async function requestJson(path, options = {})" in js
+    assert 'credentials: "same-origin"' in js
+    assert "Could not connect to CRARA services" in js
     assert ".cr-auth-panel{position:fixed;z-index:25;top:0;right:0;bottom:0;left:0;" in css
     assert "@media(max-width:760px){.cr-auth-panel{top:0;bottom:0;" in css
 
