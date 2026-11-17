@@ -961,6 +961,11 @@ function showView(name){
  currentView=name;
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
+ const resourcesMode=name==="resources";
+ document.querySelector(".hd-title").hidden=resourcesMode;
+ document.querySelector(".hd-today").hidden=resourcesMode;
+ document.getElementById("view-tabs").hidden=resourcesMode;
+
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
