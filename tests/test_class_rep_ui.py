@@ -60,7 +60,7 @@ def test_cara_upload_success_is_silent_and_mobile_back_closes_assistant():
     assert "File indexed successfully" not in js
     assert "caraAssistantOpen: true" in js
     assert 'window.addEventListener("popstate"' in js
-    assert "function closeCARA()" in js
+    assert "function closeCRARA()" in js
 
 
 def test_cara_header_and_composer_controls_have_no_button_shapes():
