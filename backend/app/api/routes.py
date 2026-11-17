@@ -139,11 +139,11 @@ async def upload_resource_file(file: UploadFile = File(...)):
     extension = Path(original_name).suffix.lower()
     if extension not in RESOURCE_FILE_TYPES:
         raise HTTPException(415, "Choose a PDF, Word, PowerPoint, Excel, CSV, text, OpenDocument or image file.")
-    RESOURCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     file_id = uuid4().hex
     destination = RESOURCE_UPLOAD_DIR / (file_id + extension)
     size = 0
     try:
+        RESOURCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         with destination.open("wb") as output:
             while True:
                 chunk = await file.read(1024 * 1024)
