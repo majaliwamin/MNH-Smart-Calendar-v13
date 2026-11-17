@@ -1921,6 +1921,7 @@ html,body{
 
 
 /* v15.04: keep the programme masthead fixed in the scroll flow on desktop and mobile. */
+:root{--mnh-sticky-header-offset:clamp(92px,9vw,150px)}
 .site-header{
   position:-webkit-sticky!important;
   position:sticky!important;
