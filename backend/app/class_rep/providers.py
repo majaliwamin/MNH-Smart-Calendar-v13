@@ -35,8 +35,7 @@ def _cloudflare_error_details(raw: bytes) -> tuple[tuple[str, ...], tuple[str, .
                 codes.append(str(item["code"])[:20])
             message = item.get("message")
             if isinstance(message, str):
-                safe = " ".join(message.split())
-                safe = safe.replace("Bearer ", "[redacted] ")
+                safe = " ".join(message.split()).replace("Bearer ", "[redacted] ")
                 messages.append(safe[:180])
         return tuple(codes), tuple(messages)
     except (ValueError, UnicodeDecodeError, TypeError):
@@ -57,7 +56,11 @@ def _post_json(endpoint: str, api_key: str, payload: dict, timeout: int,
     }, method="POST")
     try:
         with urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
+            parsed = json.loads(response.read().decode("utf-8"))
+            if not isinstance(parsed, dict):
+                raise ProviderError("Provider returned an unsupported response format.",
+                                    category="invalid_response")
+            return parsed
     except HTTPError as exc:
         codes, messages = _cloudflare_error_details(exc.read()) if provider == "cloudflare" else ((), ())
         detail = (" Cloudflare: " + "; ".join(messages)) if messages else ""
@@ -73,38 +76,55 @@ def _post_json(endpoint: str, api_key: str, payload: dict, timeout: int,
                             category="invalid_response") from exc
 
 
+def _extract_chat_content(result: dict) -> str | None:
+    """Read standard OpenAI-compatible chat-completion content."""
+    try:
+        content = result["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        return None
+    if isinstance(content, str):
+        return content
+    # Some compatible providers return content as an array of text parts.
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, dict) and isinstance(part.get("text"), str):
+                parts.append(part["text"])
+        return "".join(parts) if parts else None
+    return None
+
+
 def _complete_one(cfg: dict, messages: list[dict]) -> str:
     provider = cfg["provider"]
     if provider == "cloudflare":
+        # Cloudflare's supported OpenAI-compatible Workers AI REST endpoint.
         endpoint = ("https://api.cloudflare.com/client/v4/accounts/"
-                    + cfg["account_id"] + "/ai/run/" + cfg["model"])
+                    + cfg["account_id"] + "/ai/v1/chat/completions")
         result = _post_json(endpoint, cfg["api_key"], {
-            "messages": messages, "max_tokens": cfg["max_tokens"],
-            "temperature": 0.25,
+            "model": cfg["model"], "messages": messages,
+            "max_tokens": cfg["max_tokens"], "temperature": 0.25,
+            "stream": False,
         }, cfg["timeout"], provider)
         if result.get("success") is False:
-            codes = _cloudflare_error_codes(json.dumps(result).encode("utf-8"))
+            codes, messages_safe = _cloudflare_error_details(
+                json.dumps(result).encode("utf-8"))
             raise ProviderError(
                 "Cloudflare Workers AI did not accept the request.",
                 category="api_rejected", error_codes=codes,
-                error_messages=_cloudflare_error_details(json.dumps(result).encode("utf-8"))[1],
+                error_messages=messages_safe,
             )
-        answer = (result.get("result") or {}).get("response")
+        answer = _extract_chat_content(result)
     else:
         endpoint = cfg["base_url"].rstrip("/") + "/chat/completions"
         result = _post_json(endpoint, cfg["api_key"], {
             "model": cfg["model"], "messages": messages,
             "temperature": 0.25, "max_tokens": cfg["max_tokens"],
         }, cfg["timeout"], provider)
-        try:
-            answer = result["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError):
-            answer = None
+        answer = _extract_chat_content(result)
     if not isinstance(answer, str) or not answer.strip():
         raise ProviderError("Provider returned an empty or unsupported response.",
                             category="empty_response")
     return answer.strip()
-
 
 
 def cloudflare_diagnostic() -> dict:
@@ -125,18 +145,19 @@ def cloudflare_diagnostic() -> dict:
             token_valid = bool(verify_payload.get("success") and
                                (verify_payload.get("result") or {}).get("status") == "active")
             token_status = response.status
-            token_codes, token_messages = (), ()
     except HTTPError as exc:
         token_codes, token_messages = _cloudflare_error_details(exc.read())
         return {"configured": True, "token_valid": False, "token_http_status": exc.code,
                 "token_error_codes": list(token_codes), "token_error_messages": list(token_messages),
                 "inference_success": False, "stage": "token_verification"}
-    except (URLError, TimeoutError, OSError) as exc:
+    except (URLError, TimeoutError, OSError):
         return {"configured": True, "token_valid": None, "inference_success": False,
-                "stage": "token_verification", "message": "Cloudflare token verification endpoint could not be reached."}
-    except (ValueError, UnicodeDecodeError, TypeError):
+                "stage": "token_verification",
+                "message": "Cloudflare token verification endpoint could not be reached."}
+    except (ValueError, UnicodeDecodeError, TypeError, AttributeError):
         return {"configured": True, "token_valid": None, "inference_success": False,
-                "stage": "token_verification", "message": "Cloudflare returned an unreadable token-verification response."}
+                "stage": "token_verification",
+                "message": "Cloudflare returned an unreadable token-verification response."}
 
     if not token_valid:
         return {"configured": True, "token_valid": False, "token_http_status": token_status,
