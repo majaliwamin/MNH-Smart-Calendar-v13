@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=9' in html
-    assert '/css/class-rep.css?v=6' in html
+    assert '/js/class-rep.js?v=10' in html
+    assert '/css/class-rep.css?v=7' in html
 
 
 def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
@@ -22,8 +22,8 @@ def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
 
 def test_cara_starts_closed_and_has_requested_identity():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
-    assert 'el("button", "cara-launcher", "CARA")' in js
-    assert 'CARA (Classroom and Academic Relations Assistant)' in js
+    assert 'el("button", "cara-launcher", "CRARA")' in js
+    assert 'CRARA (Classroom Representative & Academic Relations Assistant)' in js
     assert '"/api/class-rep/auth/" + authMode' in js
     assert "memory" not in js.lower()
     assert 'Your intelligent academic relations assistant' in js
