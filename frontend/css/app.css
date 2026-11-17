@@ -1918,3 +1918,111 @@ html,body{
  .upcoming-announcements-row .activity-marquee{padding:7px 0}
  .upcoming-announcements-row .mnh-refresh-btn{flex-basis:36px;width:36px;height:36px;min-height:36px;padding:6px}
 }
+
+
+/* v15.04: keep the programme masthead fixed in the scroll flow on desktop and mobile. */
+:root{--mnh-sticky-header-offset:clamp(92px,9vw,150px)}
+.site-header{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  top:0!important;
+  z-index:1000!important;
+  isolation:isolate;
+  background:var(--header-surface,var(--head))!important;
+}
+.site-header .hd-band{position:relative;z-index:1}
+.view-tabs{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  top:var(--mnh-sticky-header-offset,150px)!important;
+  z-index:850!important;
+}
+@media(max-width:720px){
+  :root{--mnh-sticky-header-offset:82px}
+  .site-header{top:0!important}
+  .view-tabs{top:var(--mnh-sticky-header-offset)!important}
+}
+
+/* v15.04: restore a dedicated PWA installation icon beside the header actions. */
+.hd-install-btn{
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  padding:8px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--gold,var(--accent));
+  cursor:pointer;
+}
+.hd-install-btn svg{display:block;width:24px;height:24px}
+.hd-install-btn:hover{background:rgba(236,187,76,.12)}
+.hd-install-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.hd-install-btn[hidden]{display:none!important}
+@media(max-width:720px){
+  .hd-install-btn{width:36px;height:36px;padding:7px}
+  .hd-install-btn svg{width:22px;height:22px}
+}
+
+
+/* v15.05: open-ended announcement ticker; hide only the manual refresh control. */
+.upcoming-announcements-row{
+  gap:0;
+  padding-left:0;
+  padding-right:0;
+  border-bottom:0;
+  background:transparent;
+}
+.upcoming-announcements-row .activity-marquee-shell{
+  flex:1 1 100%;
+  width:100%;
+  min-width:0;
+  margin:0;
+  overflow:hidden;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.upcoming-announcements-row .activity-marquee{
+  overflow:hidden;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+/* Keep the control in the DOM so its existing refresh listener and logic remain intact. */
+.upcoming-announcements-row #mnh-refresh-btn{display:none!important}
+@media(max-width:560px){
+  .upcoming-announcements-row{gap:0;padding-left:0;padding-right:0}
+  .upcoming-announcements-row .activity-marquee{padding:7px 0}
+}
+
+
+/* v15.06: secondary pages use the full viewport without the shared app masthead. */
+body.is-content-view .upcoming-announcements-row,
+body.is-content-view .site-header,
+body.is-content-view #view-tabs{
+  display:none!important;
+}
+body.is-content-view main{
+  margin-top:0!important;
+  padding-top:0!important;
+}
+body.is-content-view main>.view:not([hidden]){
+  margin-top:0!important;
+  padding-top:clamp(12px,2vw,24px)!important;
+  min-height:calc(100vh - 12px);
+  min-height:calc(100dvh - 12px);
+}
+body.is-content-view #view-workspace:not([hidden]),
+body.is-content-view #view-analytics:not([hidden]),
+body.is-content-view #view-silver-dashboard:not([hidden]),
+body.is-content-view #view-my-schedule:not([hidden]),
+body.is-content-view #view-modules:not([hidden]),
+body.is-content-view #view-resources:not([hidden]){
+  box-sizing:border-box;
+  width:100%;
+  max-width:none;
+}
