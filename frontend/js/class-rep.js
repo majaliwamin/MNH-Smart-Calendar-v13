@@ -308,6 +308,12 @@
       setOpen(false);
     }
   });
+  window.closeCRARAForNavigation = () => {
+    if (root.classList.contains("is-open")) {
+      caraBackStateActive = false;
+      setOpen(false);
+    }
+  };
   function setOpen(open) {
     if (open && !root.classList.contains("is-open")) {
       window.history.pushState({ ...(window.history.state || {}), caraAssistantOpen: true }, "", window.location.href);
