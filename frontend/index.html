@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.17-v15.08">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v15.00">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.17-v15.08">
+<link rel="manifest" href="/manifest.json?v=2026.11.16-v15.00">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.17-v15.08";</script>
+<script>window.MNH_BUILD="2026.11.16-v15.00";</script>
 <script>
 (function () {
   "use strict";
@@ -89,11 +89,10 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.17-v15.08"></script>
-<script src="/js/api-client.js?v=2026.11.17-v15.08"></script>
+<script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
+<script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.17-v15.08">
-<link rel="stylesheet" href="/css/class-rep.css?v=15">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.16-v15.00">
 
 </head>
 <body data-theme="dark">
@@ -111,11 +110,6 @@
   } catch (error) { /* use the default theme if browser storage is unavailable */ }
 })();
 </script>
-
- <div class="upcoming-announcements-row" aria-label="Upcoming announcements">
-  <div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
-  <button type="button" class="mnh-refresh-btn" id="mnh-refresh-btn" aria-label="Refresh calendar" title="Refresh calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
- </div>
 
 <header class="site-header" id="site-header">
  <div class="hd-band">
@@ -153,9 +147,6 @@
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
    </button>
-   <button type="button" class="hd-install-btn" id="install-app-btn" aria-label="Install MNH Calendar" title="Install MNH Calendar" hidden>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10m-4-4 4 4 4-4"/><path d="M5 16v4h14v-4"/></svg>
-   </button>
    <div class="hd-dl" id="hd-dl">
     <button type="button" class="hd-dlbtn" id="dl-btn" aria-label="Download" title="Download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-menu">
      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10.5l5 5 5-5"/><path d="M4 20h16"/></svg>
@@ -172,15 +163,14 @@
   <div class="menu-panel" id="menu-panel" role="navigation" aria-label="Calendar navigation" hidden>
    <div class="menu-heading"><strong>MNH Calendar</strong><span>Navigation</span></div>
    <div class="menu-links">
-    <button type="button" class="menu-nav menu-back-nav" data-view="weekly" aria-label="Back to weekly timetable"><span aria-hidden="true">&#8592;</span>Back to timetable</button>
     <button type="button" class="menu-nav" data-view="monthly"><span>&#9638;</span>Monthly Calendar</button>
     <button type="button" class="menu-nav" data-view="modules"><span>&#9636;</span>Modules</button>
     <button type="button" class="menu-nav" data-view="facilitators"><span class="facilitator-nav-avatar"><svg viewBox="0 0 24 24" role="img" aria-label="Person avatar" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5" fill="currentColor" stroke="none"/><path d="M4.8 20c.7-3.8 3.2-5.8 7.2-5.8s6.5 2 7.2 5.8" fill="currentColor" stroke="none"/></svg></span>Facilitators</button>
     <button type="button" class="menu-nav" data-view="examinations"><span>&#9635;</span>Examinations</button>
     <button type="button" class="menu-nav" data-view="analytics"><span>&#9636;</span>Analytics</button>
     <button type="button" class="menu-nav" data-view="communications"><span>&#9993;</span>WhatsApp &amp; Communications</button>
-    <button type="button" class="menu-nav" id="alarm-config-nav" aria-label="Open alarm system configurations"><span aria-hidden="true">&#128276;</span>Alarm System Configurations</button>
     <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
+     <button type="button" class="menu-nav" data-view="resources"><span>&#9633;</span>Resources</button>
    </div>
    <div class="menu-bottom">
     <button type="button" id="settings" class="menu-nav settings-nav" data-view="settings"><span>&#9881;</span>Settings</button>
@@ -205,6 +195,7 @@
    </button>
    <button type="button" class="view-tab week-step" id="week-next" aria-label="Next academic week" title="Next academic week">&#8250;</button>
   </div>
+  <button type="button" class="mnh-refresh-btn" id="mnh-refresh-btn" aria-label="Refresh calendar" title="Refresh calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
  </div>
  </nav>
 
@@ -213,11 +204,11 @@
 <section class="view" id="view-weekly" hidden>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
 
+ <div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
 <div class="wrap">
 <table aria-label="Editable Monday to Friday calendar">
 <thead id="calendar-head"></thead><tbody id="calendar-body"></tbody></table>
 </div>
-<div id="class-rep-assistant" class="cara-widget" aria-label="CRARA — Classroom Representative & Academic Relations Assistant"></div>
 </section>
 <section class="view vw" id="view-my-schedule" hidden>
  <h2>My Schedule</h2><p class="lead" id="schedule-lead">Everything planned for the week of 9–13 Nov 2026. Select an item for details.</p>
@@ -230,6 +221,16 @@
 <section class="view vw" id="view-resources" hidden>
  <h2>Resources</h2><p class="lead">Links and materials shared with everyone on the programme.</p>
  <div id="res-list"></div><div id="res-form-wrap"></div>
+ <section class="python-library-section" aria-labelledby="python-library-heading" style="margin-top:24px">
+  <h3 id="python-library-heading">Python &amp; Jupyter Command Library</h3>
+  <p class="lead">Installation guidance, Python commands and Jupyter Notebook reference.</p>
+  <iframe
+   src="/resources/python-command-library.html"
+   title="Python and Jupyter Command Library"
+   loading="lazy"
+   style="display:block;width:100%;height:78vh;min-height:620px;border:1px solid var(--line);border-radius:10px;background:var(--field)">
+  </iframe>
+ </section>
 </section>
 <section class="view vw" id="view-analytics" hidden>
  <div id="analytics-body"></div>
@@ -363,14 +364,13 @@
 
 
 
-<script src="/js/app.js?v=2026.11.17-v15.08" defer></script>
-<script src="/js/class-rep.js?v=17" defer></script>
+<script src="/js/app.js?v=2026.11.16-v15.00" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.17-v15.08";
+  const workerUrl = "/service-worker.js?v=2026.11.16-v15.00";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
@@ -397,55 +397,76 @@
 <script>
 (function(){
  "use strict";
- const installButton=document.getElementById("install-app-btn");
- let deferredPrompt=null,promptOpen=false;
+ let deferredPrompt=null;
+ let promptOpen=false;
+ let notice=null;
+
  const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
- const hideHeaderInstall=()=>{if(installButton)installButton.hidden=true;};
- const showHeaderInstall=()=>{if(installButton&&!isStandalone())installButton.hidden=false;};
- if(isStandalone()){hideHeaderInstall();return;}
- showHeaderInstall();
- window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredPrompt=event;showHeaderInstall();});
- window.addEventListener("appinstalled",()=>{
-  deferredPrompt=null;promptOpen=false;hideHeaderInstall();
-  const dialog=document.getElementById("mnh-install-choice");if(dialog)dialog.remove();
- });
- const overlay=document.createElement("div");
- overlay.id="mnh-install-choice";overlay.className="mnh-install-choice";overlay.hidden=true;
- overlay.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-labelledby="mnh-install-title" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><h2 id="mnh-install-title">Install MNH Calendar?</h2><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Decline</button></div></section>';
- document.body.appendChild(overlay);
- const accept=overlay.querySelector("#mnh-install-accept"),decline=overlay.querySelector("#mnh-install-decline");
- const help=overlay.querySelector("#mnh-install-help"),copy=overlay.querySelector("#mnh-install-copy");
- let instructionsShown=false;
- const close=()=>{overlay.hidden=true;};
- decline.addEventListener("click",close);
- async function install(){
-  if(promptOpen)return;
-  if(instructionsShown){close();return;}
-  if(deferredPrompt){
-   const promptEvent=deferredPrompt;deferredPrompt=null;promptOpen=true;accept.disabled=true;
-   try{
-    await promptEvent.prompt();const choice=await promptEvent.userChoice;
-    if(choice&&choice.outcome==="accepted"){close();hideHeaderInstall();}
-    else{help.textContent="Installation was not completed. You can install later using the install icon or your browser menu.";}
-   }catch(error){help.textContent="Your browser could not open the installation prompt. Use the browser menu to install the app.";console.warn("MNH Calendar install prompt failed:",error);}
-   finally{promptOpen=false;accept.disabled=false;}
-   return;
+ const INSTALL_DONE_KEY="mnh_calendar_install_completed";
+ const hasInstalled=()=>{try{return localStorage.getItem(INSTALL_DONE_KEY)==="1";}catch(e){return false;}};
+ const markInstalled=()=>{try{localStorage.setItem(INSTALL_DONE_KEY,"1");}catch(e){}};
+ const hideInstallNotice=()=>{if(notice)notice.classList.remove("is-visible","is-action");};
+ const showInstallNotice=(message)=>{
+  if(!notice){
+   notice=document.createElement("a");
+   notice.id="install-app-notice";
+   notice.className="install-app-notice";
+   notice.setAttribute("href",window.location.origin+window.location.pathname);
+   notice.setAttribute("aria-label","tap here to install");
+   const tabs=document.getElementById("view-tabs");
+   const weekNav=tabs&&tabs.querySelector(".week-nav");
+   if(weekNav)weekNav.insertAdjacentElement("afterend",notice);
+   else (document.querySelector(".hd-band")||document.querySelector(".site-header")||document.body).appendChild(notice);
+   notice.addEventListener("click",event=>{event.preventDefault();installFromNotice();});
   }
-  const ua=navigator.userAgent||"",apple=/iPhone|iPad|iPod/i.test(ua),android=/Android/i.test(ua);
-  copy.textContent=apple
-   ?"To install on iPhone or iPad, open this page in Safari, tap Share, then choose “Add to Home Screen”."
-   :android
-    ?"Your browser may offer “Install app” or “Add to Home screen” from its menu. Choose that option to install."
-    :"Choose “Install app” from your browser’s address bar or menu, if available.";
-  help.textContent="When you are ready, close this message and choose the browser’s install option.";
-  instructionsShown=true;
-  accept.textContent="Continue";
+  notice.textContent=message;
+  notice.classList.add("is-action","is-visible");
+ };
+
+ async function installFromNotice(){
+  if(isStandalone()||promptOpen)return;
+  if(!deferredPrompt)return;
+  const promptEvent=deferredPrompt;
+  deferredPrompt=null;
+  promptOpen=true;
+  try{
+   await promptEvent.prompt();
+   const choice=await promptEvent.userChoice;
+   if(choice&&choice.outcome==="accepted"){
+    markInstalled();
+    hideInstallNotice();
+   }else{
+    showInstallNotice("tap here to install");
+   }
+  }catch(error){
+   console.warn("MNH Calendar install prompt failed:",error);
+   showInstallNotice("tap here to install");
+  }finally{
+   promptOpen=false;
+  }
  }
- accept.addEventListener("click",install);
- window.addEventListener("load",()=>{if(!isStandalone())overlay.hidden=false;},{once:true});
- if(document.readyState==="complete"&&!isStandalone())overlay.hidden=false;
-})();
+
+ if(isStandalone()){
+  markInstalled();
+  return;
+ }
+ if(hasInstalled())return;
+ showInstallNotice("tap here to install");
+
+ window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  deferredPrompt=event;
+  if(!isStandalone()&&!hasInstalled())showInstallNotice("tap here to install");
+ });
+
+ window.addEventListener("appinstalled",()=>{
+  deferredPrompt=null;
+  promptOpen=false;
+  markInstalled();
+  hideInstallNotice();
+ });
+})();;
 </script>
 
 </body></html>

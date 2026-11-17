@@ -1,0 +1,344 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MNH Python Command Library</title><style>:root{--bg:#fff;--fg:#1b2a3a;--card:#eef5f8;--bd:#cdd8e0;--ac:#0b5d7a}[data-theme=dark]{--bg:#121a21;--fg:#e4edf2;--card:#1d2a35;--bd:#33444f;--ac:#5cc0e0}body{font:15px system-ui;max-width:980px;margin:auto;padding:16px;background:var(--bg);color:var(--fg)}h1,h2{color:var(--ac)}h2{border-bottom:2px solid var(--ac);margin-top:34px}.c{border:1px solid var(--bd);border-radius:8px;margin:16px 0;overflow:hidden}.t{background:var(--card);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-weight:600;gap:8px}pre{margin:0;padding:12px;background:#10202b;color:#e6f1f7;overflow:auto;font:13px Consolas,monospace}pre.o{background:#1c2b22}.m{padding:6px 12px;font-size:13px}button{cursor:pointer;border:1px solid var(--ac);background:var(--bg);color:var(--fg);border-radius:6px;padding:4px 10px;font-size:14px}button.ok{background:#1a7f4b;color:#fff}.w{background:#fff4d6;color:#222;padding:8px 12px;border-radius:6px}nav{position:sticky;top:0;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--bd);display:flex;flex-wrap:wrap;gap:6px;align-items:center}nav a{color:var(--ac);text-decoration:none;font-size:13px;padding:2px 6px;border:1px solid var(--bd);border-radius:4px}input{padding:6px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg)}details{padding:6px 12px}</style></head><body><h1>MNH Python Command Library</h1><div class="w"><b>DECLARATION: All datasets are for simulation and educational purposes only.</b> <b>SCOPE: Windows 10 and 11 laptops only (Command Prompt or PowerShell).</b> Edit lines marked CHANGE. Never overwrite raw data.</div><nav><input id="q" placeholder="Search commands..." oninput="flt()"><button onclick="tg()">Dark/light</button>
+<a href="#ch0">Ch 0</a>
+<a href="#ch1">Ch 1</a>
+<a href="#ch2">Ch 2</a>
+<a href="#ch3">Ch 3</a>
+<a href="#ch4">Ch 4</a>
+<a href="#ch5">Ch 5</a>
+<a href="#ch6">Ch 6</a>
+<a href="#ch7">Ch 7</a>
+<a href="#ch8">Ch 8</a>
+<a href="#ch8B">Ch 8B</a>
+<a href="#ch8C">Ch 8C</a>
+<a href="#ch9">Ch 9</a>
+<a href="#ch10">Ch 10</a>
+<a href="#ch10B">Ch 10B</a>
+<a href="#ch11">Ch 11</a>
+<a href="#ch12">Ch 12</a>
+</nav>
+<section id="ch0" class="s"><h2>Chapter 0: Installing Python and Jupyter on Windows <button onclick="ca('ch0',this)">Copy all Python cells</button></h2><p>Download the current stable 64-bit Python 3 installer from python.org/downloads (choose a release your packages support, such as 3.11 or 3.12). Run it, tick Add python.exe to PATH, choose Install Now (current user) and finish. Verify in Command Prompt. If anything fails, use the troubleshooting cells. This chapter is for understanding and reproducing the setup; you do not need to repeat it.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Demonstrate the three version commands live and ask learners to explain each output.</li><li>Seed a PATH fault in a practice laptop and let pairs diagnose it.</li><li>Have learners write their own install checklist.</li><li>Create a venv per project and compare pip freeze output between two.</li><li>Read pip check output and resolve one conflict.</li><li>Script the folder setup in a .bat file.</li></ul></details>
+<div class="c" data-py="0"><div class="t"><span>Check Python, py and pip</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">python uses whichever Python is first on PATH; py is the Windows launcher that can pick a version; python -m pip runs the pip that belongs to that exact Python. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>python --version
+py --version
+python -m pip --version</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>PATH troubleshooting</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">If python is not recognised, rerun the installer ticking Add to PATH, or add the Python and Scripts folders in Environment Variables. where shows which executable runs. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>where python
+where py
+py -0p
+python -c &quot;import sys; print(sys.executable)&quot;</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>Install Jupyter Notebook and JupyterLab</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Classic Notebook is a single-document interface; JupyterLab adds tabs, a file browser and terminals. Both use the same notebooks. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>python -m pip install --upgrade pip
+python -m pip install notebook jupyterlab</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>Working folder and launch</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Create folders, move into the notebooks folder and start Jupyter; the browser opens at localhost:8888. Close the terminal window to stop the server. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>mkdir D:\MNH_Project\data D:\MNH_Project\notebooks D:\MNH_Project\figures D:\MNH_Project\results
+cd /d D:\MNH_Project\notebooks
+jupyter notebook
+:: or: jupyter lab</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>Windows-only scope and common Windows problems</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">PowerShell may block activation scripts: RemoteSigned for the current user fixes it. If python opens the Microsoft Store, turn off its App execution alias in Settings, Apps, Advanced app settings. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>winver
+python -c &quot;import platform; print(platform.system(), platform.release(), platform.architecture()[0])&quot;
+Get-ExecutionPolicy -List
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+python -m pip install --user --upgrade pip</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>Packages, versions and conflicts</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Install the biomedical stack, record it, check conflicts, and rebuild it on another computer from requirements.txt. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>python -m pip install pandas numpy scipy statsmodels matplotlib seaborn openpyxl lifelines scikit-learn
+python -m pip list
+python -m pip install --upgrade pandas
+python -m pip check
+python -m pip freeze &gt; requirements.txt
+python -m pip install -r requirements.txt</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<p><i>Ex: run the three version commands and write down your Python version. Q: why prefer python -m pip over bare pip?</i></p></section>
+<section id="ch1" class="s"><h2>Chapter 1: Python, Jupyter and your environment <button onclick="ca('ch1',this)">Copy all Python cells</button></h2><p>Python is the language; Jupyter Notebook is a browser interface running Python code in a kernel; packages add features; virtual environments isolate package versions. JupyterLab is the newer interface; Anaconda is a distribution bundling Python, packages and conda.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Teach cell order by deliberately running cells out of order.</li><li>Ask learners to predict a cell&#x27;s output before running it.</li><li>Show Restart and Run All early.</li><li>Use Restart and Run All as your final test before saving.</li><li>Learn Markdown headings to document every decision.</li><li>Explore the Jupyter command palette.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>FIRST NOTEBOOK CELL</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Run once at the top of every notebook. Checks versions and sets display options. Dependencies: pip: pandas numpy scipy statsmodels matplotlib seaborn openpyxl lifelines scikit-learn. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>import sys, platform
+assert platform.system() == &#x27;Windows&#x27;, &#x27;This course supports Windows laptops only&#x27;
+assert platform.architecture()[0] == &#x27;64bit&#x27;, &#x27;Install 64-bit Python&#x27;
+import numpy as np, pandas as pd, scipy, statsmodels
+import matplotlib.pyplot as plt, seaborn as sns
+import scipy.stats as st
+import statsmodels.api as sm, statsmodels.formula.api as smf
+np.random.seed(2026); pd.set_option(&#x27;display.max_columns&#x27;,50)
+print(sys.version); print(platform.system(), platform.release(), platform.architecture()[0])
+for m in (np,pd,scipy,statsmodels): print(m.__name__, m.__version__)</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>Install packages inside the notebook</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Installs into the kernel&#x27;s own Python (preferred over a bare !pip). Dependencies: Internet. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>%pip install pandas numpy scipy statsmodels matplotlib seaborn openpyxl lifelines scikit-learn</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<div class="c" data-py="0"><div class="t"><span>Dedicated kernel and version record</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Run in Command Prompt, not in a cell. Creates a kernel and saves versions for reproducibility. Dependencies: Terminal. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>python -m venv mnh_env
+mnh_env\Scripts\activate
+:: PowerShell instead: .\mnh_env\Scripts\Activate.ps1
+python -m pip install ipykernel
+python -m ipykernel install --user --name mnh_env --display-name &quot;Python (MNH)&quot;
+python -m pip freeze &gt; requirements.txt</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<p><i>Ex: create Biomedical_Data_Analysis_MNH, switch kernel to Python (MNH), run the first cell. Q: why record versions?</i></p></section>
+<section id="ch2" class="s"><h2>Chapter 2: Python fundamentals <button onclick="ca('ch2',this)">Copy all Python cells</button></h2><p>Variables, lists, dictionaries, loops, functions and error handling, illustrated with clinical values.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Use patient-style examples, never abstract foo and bar.</li><li>Let learners break the code on purpose and read the error.</li><li>Pair tasks: one writes, one reviews.</li><li>Write a function with type hints and a docstring.</li><li>Refactor a loop into a list comprehension and compare readability.</li><li>Add a unit check with assert.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Types, lists, dictionaries</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Core containers for clinical values. Dependencies: None. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>hb = [10.2, 11.5, 8.9, 12.1]
+anaemic = [x &lt; 11 for x in hb]
+pt = {&#x27;id&#x27;:&#x27;M0001&#x27;,&#x27;age&#x27;:27,&#x27;parity&#x27;:2}
+print(sum(anaemic), pt[&#x27;age&#x27;], hb[1:3])</pre><details><summary>Expected output</summary><pre class="o">2 27 [11.5, 8.9]</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Function with error handling</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Reusable BMI calculator. Dependencies: None. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>def bmi(kg, m):
+    try:
+        return round(kg/m**2, 1)
+    except ZeroDivisionError:
+        return None
+print(bmi(68, 1.62))</pre><details><summary>Expected output</summary><pre class="o">25.9</pre></details></div>
+<p><i>Ex: write a function classifying birth weight (&lt;2500 g LBW). Q: when use a dictionary instead of a list?</i></p></section>
+<section id="ch3" class="s"><h2>Chapter 3: Importing and managing data <button onclick="ca('ch3',this)">Copy all Python cells</button></h2><p>Always read from a copy of raw data; never overwrite originals. Change the highlighted placeholders.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Ask learners to classify every variable as exposure, outcome or confounder.</li><li>Show a deliberately wrong sheet name and read the error aloud.</li><li>Insist on read-only raw files.</li><li>Build a data dictionary as a DataFrame and export it.</li><li>Use dtype and parse_dates in read_csv.</li><li>Check merges with validate and indicator.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Import CSV and Excel</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">PLACEHOLDER: change path and sheet name. Dependencies: pandas, openpyxl. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from pathlib import Path
+DATA = Path(r&#x27;D:\MNH_Project\datasets&#x27;)   # &lt;-- CHANGE to your Windows folder
+df = pd.read_csv(DATA / &#x27;A_maternal_birth.csv&#x27;)
+xl = pd.read_excel(DATA / &#x27;MNH_simulated_datasets.xlsx&#x27;, sheet_name=None)  # all sheets
+B = xl[&#x27;B_placental_malaria&#x27;]   # &lt;-- sheet name
+df.info(); df.head()</pre><details><summary>Expected output</summary><pre class="o">&lt;class &#x27;pandas.DataFrame&#x27;&gt;
+RangeIndex: 500 entries, 0 to 499
+Data columns (total 13 columns):
+ #   Column             Non-Null Count  Dtype  
+---  ------             --------------  -----  
+ 0   id                 500 non-null    str    
+ 1   maternal_age       500 non-null    float64
+ 2   parity             500 non-null    int64  
+ 3   bmi                480 non-null    float64
+ 4   gest_age_wk        500 non-null    float64
+ 5   hb_gdl             475 non-null    float64
+ 6   sbp                500 non-null    float64
+ 7   dbp                500 non-null    float64
+ 8   placental_malaria  500 non-null    int64  
+ 9   birth_weight_g     500 non-null    float64
+ 10  apgar_5min         500 non-null    int64  </pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Export results safely</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Writes to a new folder, never the raw one. Dependencies: None. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>import os; os.makedirs(&#x27;results&#x27;, exist_ok=True)
+df.to_csv(&#x27;results/A_clean.csv&#x27;, index=False)
+df.to_excel(&#x27;results/A_clean.xlsx&#x27;, index=False)</pre></div>
+<p><i>Ex: import all four sheets and list variable types. Q: which variables are exposures, outcomes, confounders?</i></p></section>
+<section id="ch4" class="s"><h2>Chapter 4: Cleaning and quality assurance <button onclick="ca('ch4',this)">Copy all Python cells</button></h2><p>Inspect, then check duplicates, missingness, implausible values and logic. Complete-case analysis loses power and can bias; mean/median imputation shrinks variance; multiple imputation (e.g. statsmodels MICE) propagates uncertainty and is preferred when data are missing at random.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Plant a known error in a copy of the data and have learners find it.</li><li>Compare complete-case and imputed results side by side.</li><li>Require a written cleaning log.</li><li>Visualise missingness patterns by group.</li><li>Test whether missingness depends on observed variables.</li><li>Compare MICE results across five imputations.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Inspect and missingness</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Counts and percentage missing. Dependencies: pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>print(df.shape); print(df.dtypes)
+print(df.duplicated(&#x27;id&#x27;).sum())
+m = df.isna().mean().mul(100).round(1); print(m[m&gt;0])</pre><details><summary>Expected output</summary><pre class="o">(500, 13)
+id                       str
+maternal_age         float64
+parity                 int64
+bmi                  float64
+gest_age_wk          float64
+hb_gdl               float64
+sbp                  float64
+dbp                  float64
+placental_malaria      int64
+birth_weight_g       float64
+apgar_5min             int64
+preterm                int64
+lbw                    int64
+dtype: object
+0</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Plausibility checks and imputation</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Flags implausible values; median imputation shown with its limits. Dependencies: pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>bad = df[(df.hb_gdl&lt;4)|(df.hb_gdl&gt;18)|(df.gest_age_wk&lt;20)|(df.gest_age_wk&gt;44)]
+print(len(bad), &#x27;implausible rows&#x27;)
+df[&#x27;hb_imp&#x27;] = df.hb_gdl.fillna(df.hb_gdl.median())   # keeps original column</pre><details><summary>Expected output</summary><pre class="o">0 implausible rows</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Multiple imputation (MICE)</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Pooled regression across imputed datasets. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from statsmodels.imputation.mice import MICEData, MICE
+imp = MICEData(df[[&#x27;hb_gdl&#x27;,&#x27;bmi&#x27;,&#x27;gest_age_wk&#x27;,&#x27;birth_weight_g&#x27;]])
+fit = MICE(&#x27;birth_weight_g ~ hb_gdl + bmi + gest_age_wk&#x27;, sm.OLS, imp).fit(10,10)
+print(fit.summary())</pre><div class="m"><i>Part not executed here: No module named &#x27;statsmodels&#x27;. Run it in your own notebook.</i></div></div>
+<p><i>Ex: compare mean Hb under complete-case vs median imputation. Q: when is MAR plausible?</i></p></section>
+<section id="ch5" class="s"><h2>Chapter 5: Transformation <button onclick="ca('ch5',this)">Copy all Python cells</button></h2><p>Create analysis variables and reshape.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Have learners derive variables by code, never by hand.</li><li>Check every recode with a crosstab.</li><li>Draw the wide and long layouts on paper first.</li><li>Use pd.cut with right=False and explain the edge effect.</li><li>Reshape with melt and stack and compare.</li><li>Build a reusable derive function.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>New variables</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Categories and outcome flags. Dependencies: pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>df[&#x27;bw_cat&#x27;] = pd.cut(df.birth_weight_g,[0,1500,2500,4000,9999],labels=[&#x27;VLBW&#x27;,&#x27;LBW&#x27;,&#x27;Normal&#x27;,&#x27;Macrosomia&#x27;])
+df[&#x27;anaemia&#x27;] = (df.hb_gdl&lt;11).astype(int)
+df[&#x27;htn&#x27;] = ((df.sbp&gt;=140)|(df.dbp&gt;=90)).astype(int)</pre></div>
+<div class="c" data-py="1"><div class="t"><span>Merge and reshape</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Merge on id; long to wide. Dependencies: pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>m = df.merge(B[[&#x27;id&#x27;,&#x27;IL6_pgml&#x27;]], on=&#x27;id&#x27;, how=&#x27;left&#x27;, validate=&#x27;1:1&#x27;)
+C = pd.read_csv(DATA / &#x27;C_repeated_measures.csv&#x27;)
+wide = C.pivot(index=&#x27;id&#x27;, columns=&#x27;visit&#x27;, values=&#x27;biomarker&#x27;)</pre></div>
+<p><i>Ex: build a composite adverse-outcome variable. Q: why validate=&#x27;1:1&#x27;?</i></p></section>
+<section id="ch6" class="s"><h2>Chapter 6: Descriptive statistics <button onclick="ca('ch6',this)">Copy all Python cells</button></h2><p>Mean/SD for symmetric data; median/IQR for skewed; proportions with confidence intervals for binary outcomes. Prevalence is existing cases/population; incidence is new cases over time at risk.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Ask which summary suits each variable before computing.</li><li>Show the same data with mean and median when skewed.</li><li>Link every statistic to a clinical sentence.</li><li>Bootstrap a median confidence interval.</li><li>Compare Wilson and exact intervals.</li><li>Standardise rates for age structure.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Summaries and CI</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Numeric, categorical and Wilson CI. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>print(df[[&#x27;maternal_age&#x27;,&#x27;hb_gdl&#x27;,&#x27;birth_weight_g&#x27;]].describe())
+print(df.birth_weight_g.skew(), df.birth_weight_g.kurt())
+from statsmodels.stats.proportion import proportion_confint
+k=df.lbw.sum(); print(k/len(df), proportion_confint(k,len(df),method=&#x27;wilson&#x27;))
+print(pd.crosstab(df.placental_malaria, df.lbw, normalize=&#x27;index&#x27;))</pre><details><summary>Expected output</summary><pre class="o">       maternal_age      hb_gdl  birth_weight_g
+count    500.000000  475.000000      500.000000
+mean      26.290000   10.923789     3028.268000
+std        6.086706    1.625081      677.771094
+min       15.000000    5.700000      915.000000
+25%       22.000000    9.800000     2548.750000
+50%       26.000000   11.000000     3025.500000
+75%       30.000000   12.100000     3515.250000
+max       44.000000   15.400000     4644.000000
+-0.13451573902622962 -0.24284545050257522</pre></details><div class="m"><i>Part not executed here: No module named &#x27;statsmodels&#x27;. Run it in your own notebook.</i></div></div>
+<div class="c" data-py="1"><div class="t"><span>Normality</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Shapiro-Wilk plus Q-Q plot. Dependencies: scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>print(st.shapiro(df.birth_weight_g.dropna()))
+sm.qqplot(df.birth_weight_g.dropna(), line=&#x27;s&#x27;); plt.show()</pre><details><summary>Expected output</summary><pre class="o">ShapiroResult(statistic=np.float64(0.9957145331617769), pvalue=np.float64(0.18964417950200751))</pre></details><div class="m"><i>Not executed here: needs statsmodels, which was unavailable in the preparation environment. Run it in your own notebook.</i></div></div>
+<p><i>Ex: describe Hb by malaria status. Q: mean or median for parasite density?</i></p></section>
+<section id="ch7" class="s"><h2>Chapter 7: Visualisation <button onclick="ca('ch7',this)">Copy all Python cells</button></h2><p>Label axes with units; export at 300 dpi.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Critique a poor figure together before building a good one.</li><li>Insist on units, legends and captions.</li><li>Test figures in grey-scale.</li><li>Build a multi-panel publication figure with shared axes.</li><li>Set a house style with rcParams.</li><li>Export vector PDF and 300 dpi PNG.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Core plots</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Histogram, boxplot, scatter with fit. Dependencies: seaborn. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>fig,ax=plt.subplots(1,3,figsize=(14,4))
+sns.histplot(df.birth_weight_g,kde=True,ax=ax[0]); ax[0].set_xlabel(&#x27;Birth weight (g)&#x27;)
+sns.boxplot(x=&#x27;placental_malaria&#x27;,y=&#x27;birth_weight_g&#x27;,data=df,ax=ax[1])
+sns.regplot(x=&#x27;hb_gdl&#x27;,y=&#x27;birth_weight_g&#x27;,data=df,ax=ax[2])
+plt.tight_layout(); plt.savefig(&#x27;fig1.png&#x27;,dpi=300); plt.show()</pre></div>
+<div class="c" data-py="1"><div class="t"><span>Correlation heatmap</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Spearman matrix. Dependencies: seaborn. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>sns.heatmap(df[[&#x27;hb_gdl&#x27;,&#x27;bmi&#x27;,&#x27;gest_age_wk&#x27;,&#x27;birth_weight_g&#x27;]].corr(&#x27;spearman&#x27;),annot=True,cmap=&#x27;vlag&#x27;,vmin=-1,vmax=1); plt.show()</pre></div>
+<div class="c" data-py="1"><div class="t"><span>Kaplan-Meier</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Survival curve (needs lifelines). Dependencies: lifelines. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>E=pd.read_csv(DATA / &#x27;E_survival.csv&#x27;)
+from lifelines import KaplanMeierFitter
+km=KaplanMeierFitter()
+for g,lab in [(0,&#x27;No placental malaria&#x27;),(1,&#x27;Placental malaria&#x27;)]:
+    s=E[E.placental_malaria==g]; km.fit(s.time_days, s.event, label=lab); km.plot_survival_function()
+plt.xlabel(&#x27;Days&#x27;); plt.ylabel(&#x27;Event-free probability&#x27;); plt.show()</pre><div class="m"><i>Part not executed here: No module named &#x27;lifelines&#x27;. Run it in your own notebook.</i></div></div>
+<p><i>Ex: reproduce Fig 1 for IL-6 by malaria status. Q: why log-scale cytokines?</i></p></section>
+<section id="ch8" class="s"><h2>Chapter 8: Hypothesis tests <button onclick="ca('ch8',this)">Copy all Python cells</button></h2><p>A p-value is the probability of data at least as extreme as observed if the null is true; it is not the probability the null is true and says nothing about effect size. Always report estimate, CI and clinical meaning. Choose: 2 groups continuous normal -&gt; t-test/Welch; non-normal -&gt; Mann-Whitney; &gt;2 groups -&gt; ANOVA/Kruskal-Wallis; categorical -&gt; chi-square/Fisher; paired -&gt; paired t/Wilcoxon/McNemar.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Explain p-values with a coin-flip simulation.</li><li>Ask learners to restate a p-value in plain words.</li><li>Contrast statistical and clinical significance with real effect sizes.</li><li>Run a power calculation before a study.</li><li>Simulate Type I error inflation from repeated testing.</li><li>Compare Bonferroni and FDR.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Group comparisons</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Welch t, Mann-Whitney, ANOVA, Kruskal. Dependencies: scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>a=df[df.placental_malaria==1].birth_weight_g.dropna(); b=df[df.placental_malaria==0].birth_weight_g.dropna()
+print(st.ttest_ind(a,b,equal_var=False)); print(st.mannwhitneyu(a,b))
+d=(a.mean()-b.mean())/np.sqrt((a.var()+b.var())/2); print(&#x27;Cohen d&#x27;,round(d,2))
+g=[x.birth_weight_g.dropna() for _,x in df.groupby(&#x27;bw_cat&#x27;,observed=True)]
+print(st.f_oneway(*g), st.kruskal(*g))</pre><details><summary>Expected output</summary><pre class="o">TtestResult(statistic=np.float64(-7.51055644318237), pvalue=np.float64(1.7219272770604976e-12), df=n
+MannwhitneyuResult(statistic=np.float64(13772.5), pvalue=np.float64(4.102368060533076e-13))
+Cohen d -0.78
+F_onewayResult(statistic=np.float64(455.40106361804555), pvalue=np.float64(4.9675286017001894e-142))</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Categorical tests</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Chi-square, Fisher, McNemar. Dependencies: scipy, statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>t=pd.crosstab(df.placental_malaria,df.lbw)
+print(st.chi2_contingency(t)); print(st.fisher_exact(t))
+from statsmodels.stats.contingency_tables import mcnemar
+print(mcnemar([[30,10],[4,56]],exact=True))</pre><details><summary>Expected output</summary><pre class="o">Chi2ContingencyResult(statistic=np.float64(38.466821075516734), pvalue=np.float64(5.569248755422604e
+       [100.1,  29.9]]))
+SignificanceResult(statistic=np.float64(3.98900595510765), pvalue=np.float64(1.3730694584948392e-09)</pre></details><div class="m"><i>Part not executed here: No module named &#x27;statsmodels&#x27;. Run it in your own notebook.</i></div></div>
+<div class="c" data-py="1"><div class="t"><span>Multiple testing</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Benjamini-Hochberg FDR. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from statsmodels.stats.multitest import multipletests
+print(multipletests([0.001,0.02,0.04,0.3],method=&#x27;fdr_bh&#x27;)[1])</pre><div class="m"><i>Part not executed here: No module named &#x27;statsmodels&#x27;. Run it in your own notebook.</i></div></div>
+<p><i>Ex: compare Hb across parity groups. Q: significant but tiny effect - clinically important?</i></p></section>
+<section id="ch8B" class="s"><h2>Chapter 8B: Statistical tests I: comparing means and ranks <button onclick="ca('ch8B',this)">Copy all Python cells</button></h2><p>Each test below lists purpose, hypotheses, assumptions and APA reporting; the code runs on the simulated data.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Use a decision tree on the wall and place each dataset on it.</li><li>Run parametric and non-parametric tests together and discuss differences.</li><li>Practise one APA sentence per test.</li><li>Check normality of differences, not raw values, for paired tests.</li><li>Add post-hoc tests with correction after ANOVA.</li><li>Report effect sizes with intervals.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>One-sample, paired t-test and Wilcoxon</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Hb against 11 g/dL; biomarker at visit 4 against visit 1 (same women). Dependencies: scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>hbv=df.hb_gdl.dropna(); print(st.ttest_1samp(hbv,11.0))
+w=C.pivot(index=&#x27;id&#x27;,columns=&#x27;visit&#x27;,values=&#x27;biomarker&#x27;)
+print(st.ttest_rel(w[4],w[1])); print(st.wilcoxon(w[4],w[1]))</pre><details><summary>Expected output</summary><pre class="o">TtestResult(statistic=np.float64(-1.022084324904316), pvalue=np.float64(0.30726234470510533), df=np.
+TtestResult(statistic=np.float64(20.603077207858085), pvalue=np.float64(1.8677825599200566e-45), df=
+WilcoxonResult(statistic=np.float64(124.0), pvalue=np.float64(2.708230716223452e-25))</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Kruskal-Wallis and repeated-measures ANOVA</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">IL-6 across parasite-density tertiles; biomarker across four visits. Dependencies: scipy, statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>B[&#x27;pd_grp&#x27;]=pd.qcut(B.parasite_density.rank(method=&#x27;first&#x27;),3,labels=[&#x27;low&#x27;,&#x27;mid&#x27;,&#x27;high&#x27;])
+print(st.kruskal(*[x.IL6_pgml for _,x in B.groupby(&#x27;pd_grp&#x27;,observed=True)]))
+from statsmodels.stats.anova import AnovaRM
+print(AnovaRM(C,&#x27;biomarker&#x27;,&#x27;id&#x27;,within=[&#x27;visit&#x27;]).fit())</pre><details><summary>Expected output</summary><pre class="o">KruskalResult(statistic=np.float64(76.73042864600255), pvalue=np.float64(2.1787084735196798e-17))</pre></details><div class="m"><i>Part not executed here: No module named &#x27;statsmodels&#x27;. Run it in your own notebook.</i></div></div>
+<p><i>Ex: run a paired t-test and a Wilcoxon test on the same data. Q: when do they disagree?</i></p></section>
+<section id="ch8C" class="s"><h2>Chapter 8C: Statistical tests II: categories, correlation and counts <button onclick="ca('ch8C',this)">Copy all Python cells</button></h2><p>Chi-square, Fisher, McNemar, correlation and count models, with the code to run each on the simulated data.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Build 2 by 2 tables by hand before using code.</li><li>Show how small expected counts change the choice of test.</li><li>Contrast Pearson and Spearman on skewed data.</li><li>Compute Cramer V and an odds ratio interval.</li><li>Compare Poisson and negative binomial AIC.</li><li>Use exact tests for small samples.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Chi-square goodness-of-fit</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Tests whether low Apgar (below 7) is 10% against the observed split. Dependencies: scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>obs=df.apgar_5min.ge(7).value_counts().sort_index().values
+print(obs, st.chisquare(obs,[len(df)*0.1,len(df)*0.9]))</pre><details><summary>Expected output</summary><pre class="o">[ 34 466] Power_divergenceResult(statistic=np.float64(5.688888888888889), pvalue=np.float64(0.017072</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Pearson with confidence interval</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Fisher z interval for the Hb and birth weight correlation, then Spearman. Dependencies: scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>x=df[[&#x27;hb_gdl&#x27;,&#x27;birth_weight_g&#x27;]].dropna(); r,p=st.pearsonr(x.hb_gdl,x.birth_weight_g); z=np.arctanh(r); se=1/np.sqrt(len(x)-3)
+print(round(r,3),round(p,4),np.tanh([z-1.96*se,z+1.96*se]).round(3)); print(st.spearmanr(x.hb_gdl,x.birth_weight_g))</pre><details><summary>Expected output</summary><pre class="o">0.254 0.0 [0.168 0.337]
+SignificanceResult(statistic=np.float64(0.2595990818235478), pvalue=np.float64(9.375890658737808e-09</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Poisson or negative binomial</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Check over-dispersion first: variance much larger than the mean favours negative binomial. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>print(&#x27;mean&#x27;,round(df.parity.mean(),2),&#x27;variance&#x27;,round(df.parity.var(),2),&#x27;dispersion&#x27;,round(df.parity.var()/df.parity.mean(),2))
+import statsmodels.api as sm
+nb=sm.GLM(df.parity,sm.add_constant(df[[&#x27;maternal_age&#x27;]]),family=sm.families.NegativeBinomial()).fit(); print(nb.summary())</pre><details><summary>Expected output</summary><pre class="o">mean 1.87 variance 2.06 dispersion 1.1</pre></details><div class="m"><i>Part not executed here: No module named &#x27;statsmodels&#x27;. Run it in your own notebook.</i></div></div>
+<p><i>Ex: test whether anaemia and low birth weight are associated. Q: when use Fisher instead of chi-square?</i></p></section>
+<section id="ch9" class="s"><h2>Chapter 9: Correlation and regression <button onclick="ca('ch9',this)">Copy all Python cells</button></h2><p>Pearson assumes linearity and approximate normality; Spearman is rank-based. Check residuals, VIF, interactions; adjust for confounders; beware overfitting.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Start with a scatterplot before any model.</li><li>Read coefficients aloud in units.</li><li>Show an influential point and refit without it.</li><li>Compare crude and adjusted odds ratios.</li><li>Test an interaction and plot it.</li><li>Use a calibration plot for a logistic model.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Correlation</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Pearson and Spearman. Dependencies: scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>x=df[[&#x27;hb_gdl&#x27;,&#x27;birth_weight_g&#x27;]].dropna()
+print(st.pearsonr(x.hb_gdl,x.birth_weight_g)); print(st.spearmanr(x.hb_gdl,x.birth_weight_g))
+y=B[[&#x27;IL6_pgml&#x27;,&#x27;TNFa_pgml&#x27;]]; print(st.spearmanr(y.IL6_pgml,y.TNFa_pgml))</pre><details><summary>Expected output</summary><pre class="o">PearsonRResult(statistic=np.float64(0.25426300269661717), pvalue=np.float64(1.9145617250396368e-08))
+SignificanceResult(statistic=np.float64(0.2595990818235478), pvalue=np.float64(9.375890658737808e-09
+SignificanceResult(statistic=np.float64(0.22413257067359266), pvalue=np.float64(4.110313916129038e-0</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Linear regression and diagnostics</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Adjusted model, VIF, residual plots. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>mod=smf.ols(&#x27;birth_weight_g ~ hb_gdl + gest_age_wk + placental_malaria + bmi + maternal_age&#x27;,data=df).fit()
+print(mod.summary())
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+X=sm.add_constant(df[[&#x27;hb_gdl&#x27;,&#x27;gest_age_wk&#x27;,&#x27;bmi&#x27;]].dropna()); print([round(vif(X.values,i),2) for i in range(1,X.shape[1])])
+plt.scatter(mod.fittedvalues,mod.resid); plt.axhline(0); plt.show()</pre><div class="m"><i>Not executed here: needs statsmodels, which was unavailable in the preparation environment. Run it in your own notebook.</i></div></div>
+<div class="c" data-py="1"><div class="t"><span>Logistic, Poisson, NegBin</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Adjusted odds ratios with CI. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>lg=smf.logit(&#x27;lbw ~ placental_malaria + hb_gdl + maternal_age + bmi&#x27;,data=df).fit()
+or_=np.exp(pd.concat([lg.params,lg.conf_int()],axis=1)); or_.columns=[&#x27;OR&#x27;,&#x27;2.5%&#x27;,&#x27;97.5%&#x27;]; print(or_.round(2))
+po=smf.glm(&#x27;parity ~ maternal_age + bmi&#x27;,data=df,family=sm.families.Poisson()).fit()
+nb=smf.glm(&#x27;parity ~ maternal_age + bmi&#x27;,data=df,family=sm.families.NegativeBinomial()).fit()
+print(po.aic, nb.aic)</pre><div class="m"><i>Not executed here: needs statsmodels, which was unavailable in the preparation environment. Run it in your own notebook.</i></div></div>
+<p><i>Ex: add malaria x Hb interaction. Q: interpret the adjusted OR for malaria.</i></p></section>
+<section id="ch10" class="s"><h2>Chapter 10: Advanced methods <button onclick="ca('ch10',this)">Copy all Python cells</button></h2><p>Longitudinal data need models respecting within-person correlation. ROC analysis evaluates a biomarker; bootstrap and cross-validation quantify uncertainty and overfitting.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Plot individual trajectories before fitting mixed models.</li><li>Draw the ROC curve by hand for a tiny dataset.</li><li>Ask which cut-off suits screening and which suits confirmation.</li><li>Compare random-intercept and random-slope models.</li><li>Add a bootstrap interval to the AUC.</li><li>Fit Cox with a time-varying check.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Mixed model and GEE</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Random intercept and GEE. Dependencies: statsmodels. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>mm=smf.mixedlm(&#x27;biomarker ~ gest_wk*group&#x27;,C,groups=C[&#x27;id&#x27;]).fit(); print(mm.summary())
+gee=smf.gee(&#x27;biomarker ~ gest_wk*group&#x27;,groups=&#x27;id&#x27;,data=C,cov_struct=sm.cov_struct.Exchangeable()).fit(); print(gee.summary())</pre><div class="m"><i>Not executed here: needs statsmodels, which was unavailable in the preparation environment. Run it in your own notebook.</i></div></div>
+<div class="c" data-py="1"><div class="t"><span>ROC, AUC, Youden threshold</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Dataset D. Dependencies: scikit-learn. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from sklearn.metrics import roc_curve, roc_auc_score
+D=pd.read_csv(DATA / &#x27;D_diagnostic.csv&#x27;)
+fpr,tpr,th=roc_curve(D.adverse_outcome,D.biomarker); print(&#x27;AUC&#x27;,roc_auc_score(D.adverse_outcome,D.biomarker))
+j=(tpr-fpr).argmax(); print(&#x27;cut-off&#x27;,th[j],&#x27;sens&#x27;,tpr[j],&#x27;spec&#x27;,1-fpr[j])
+plt.plot(fpr,tpr); plt.plot([0,1],[0,1],&#x27;--&#x27;); plt.show()</pre><details><summary>Expected output</summary><pre class="o">AUC 0.844680344323092
+cut-off 1.39 sens 0.845360824742268 spec 0.7062706270627063</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Cox regression</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Needs time/event columns. Dependencies: lifelines. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from lifelines import CoxPHFitter
+E=pd.read_csv(DATA / &#x27;E_survival.csv&#x27;).dropna()
+cph=CoxPHFitter().fit(E[[&#x27;time_days&#x27;,&#x27;event&#x27;,&#x27;maternal_age&#x27;,&#x27;hb_gdl&#x27;,&#x27;placental_malaria&#x27;]],&#x27;time_days&#x27;,&#x27;event&#x27;)
+cph.print_summary()</pre><div class="m"><i>Part not executed here: No module named &#x27;lifelines&#x27;. Run it in your own notebook.</i></div></div>
+<div class="c" data-py="1"><div class="t"><span>Bootstrap CI</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">95% CI for mean difference. Dependencies: numpy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>r=np.random.default_rng(1)
+diffs=[r.choice(a,len(a)).mean()-r.choice(b,len(b)).mean() for _ in range(5000)]
+print(np.percentile(diffs,[2.5,97.5]))</pre><details><summary>Expected output</summary><pre class="o">[-647.34309771 -378.2350052 ]</pre></details></div>
+<p><i>Ex: choose a cut-off prioritising sensitivity. Q: why GEE vs mixed model?</i></p></section>
+<section id="ch10B" class="s"><h2>Chapter 10B: Advanced methods II: mediation, modification, sensitivity and validation <button onclick="ca('ch10B',this)">Copy all Python cells</button></h2><p>Specialist methods written in numpy, scipy and scikit-learn so they run in the standard environment.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>State the causal assumptions before mediation.</li><li>Compare stratum estimates with the interaction test.</li><li>Show how delta adjustment changes conclusions.</li><li>Run mediation with a bootstrap and a confounder.</li><li>Use repeated cross-validation.</li><li>Draw a decision curve for a model.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Mediation: malaria, gestation and birth weight</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Product-of-coefficients indirect effect with a bootstrap interval. Dependencies: numpy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>def ols(X,y): X=np.column_stack([np.ones(len(X)),X]); return np.linalg.lstsq(X,y,rcond=None)[0]
+d=df[[&#x27;placental_malaria&#x27;,&#x27;gest_age_wk&#x27;,&#x27;birth_weight_g&#x27;]].dropna()
+x=d.placental_malaria.values; m=d.gest_age_wk.values; y=d.birth_weight_g.values
+r=np.random.default_rng(1); ind=[]
+for _ in range(1000):
+    i=r.integers(0,len(d),len(d)); ind.append(ols(x[i],m[i])[1]*ols(np.column_stack([x[i],m[i]]),y[i])[2])
+print(&#x27;indirect&#x27;,round(ols(x,m)[1]*ols(np.column_stack([x,m]),y)[2],1),&#x27;g; 95% CI&#x27;,np.percentile(ind,[2.5,97.5]).round(1),&#x27;; total&#x27;,round(ols(x,y)[1],1),&#x27;g&#x27;)</pre><details><summary>Expected output</summary><pre class="o">indirect -318.2 g; 95% CI [-427.7 -205.8] ; total -514.6 g</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Effect modification and forest plot</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Stratified odds ratios for low birth weight with 95% intervals. Dependencies: numpy, matplotlib. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>rows=[]
+for lab,g in [(&#x27;Hb&lt;11&#x27;,df[df.hb_gdl&lt;11]),(&#x27;Hb&gt;=11&#x27;,df[df.hb_gdl&gt;=11]),(&#x27;Age&lt;25&#x27;,df[df.maternal_age&lt;25]),(&#x27;Age&gt;=25&#x27;,df[df.maternal_age&gt;=25])]:
+    t=pd.crosstab(g.placental_malaria,g.lbw).reindex(index=[0,1],columns=[0,1],fill_value=0)+0.5
+    o=(t.loc[1,1]*t.loc[0,0])/(t.loc[1,0]*t.loc[0,1]); se=np.sqrt((1/t.values).sum()); rows.append((lab,o,o*np.exp(-1.96*se),o*np.exp(1.96*se)))
+f=pd.DataFrame(rows,columns=[&#x27;stratum&#x27;,&#x27;OR&#x27;,&#x27;lo&#x27;,&#x27;hi&#x27;]); print(f.round(2))
+plt.errorbar(f.OR,range(len(f)),xerr=[f.OR-f.lo,f.hi-f.OR],fmt=&#x27;s&#x27;); plt.axvline(1,ls=&#x27;--&#x27;); plt.yticks(range(len(f)),f.stratum); plt.xscale(&#x27;log&#x27;)
+plt.xlabel(&#x27;Odds ratio for low birth weight (95% CI, log scale)&#x27;); plt.savefig(&#x27;forest.png&#x27;,dpi=300); plt.show()</pre><details><summary>Expected output</summary><pre class="o">   stratum    OR    lo    hi
+0    Hb&lt;11  4.64  2.49  8.64
+1   Hb&gt;=11  3.71  1.89  7.28
+2   Age&lt;25  3.67  1.82  7.38
+3  Age&gt;=25  4.28  2.41  7.61</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Missing-data sensitivity (delta adjustment)</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Shifts imputed Hb downward to see whether the correlation with birth weight is stable. Dependencies: numpy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>base=df.hb_gdl.copy()
+for delta in [0,-0.5,-1.0,-1.5]:
+    h=base.fillna(base.mean()+delta); print(&#x27;delta&#x27;,delta,&#x27;mean Hb&#x27;,round(h.mean(),2),&#x27;r(Hb,BW)&#x27;,round(np.corrcoef(h,df.birth_weight_g)[0,1],3))</pre><details><summary>Expected output</summary><pre class="o">delta 0 mean Hb 10.92 r(Hb,BW) 0.247
+delta -0.5 mean Hb 10.9 r(Hb,BW) 0.246
+delta -1.0 mean Hb 10.87 r(Hb,BW) 0.244
+delta -1.5 mean Hb 10.85 r(Hb,BW) 0.241</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Cross-validation</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Five-fold cross-validated AUC for a logistic model of low birth weight. Dependencies: scikit-learn. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+d=df[[&#x27;lbw&#x27;,&#x27;placental_malaria&#x27;,&#x27;hb_gdl&#x27;,&#x27;maternal_age&#x27;,&#x27;bmi&#x27;]].dropna()
+s=cross_val_score(LogisticRegression(max_iter=1000),d.drop(columns=&#x27;lbw&#x27;),d.lbw,cv=StratifiedKFold(5,shuffle=True,random_state=2026),scoring=&#x27;roc_auc&#x27;); print(s.round(3),&#x27;mean AUC&#x27;,s.mean().round(3))</pre><details><summary>Expected output</summary><pre class="o">[0.825 0.712 0.733 0.558 0.737] mean AUC 0.713</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Predictive values and regression diagnostics</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">PPV and NPV at a cut-off of 1.5; residual and Q-Q plots for a linear model. Dependencies: scikit-learn, scipy. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>from sklearn.metrics import confusion_matrix
+D=pd.read_csv(DATA / &#x27;D_diagnostic.csv&#x27;); tn,fp,fn,tp=confusion_matrix(D.adverse_outcome,(D.biomarker&gt;=1.5).astype(int)).ravel()
+print(&#x27;Sens&#x27;,round(tp/(tp+fn),2),&#x27;Spec&#x27;,round(tn/(tn+fp),2),&#x27;PPV&#x27;,round(tp/(tp+fp),2),&#x27;NPV&#x27;,round(tn/(tn+fn),2))
+d=df[[&#x27;birth_weight_g&#x27;,&#x27;hb_gdl&#x27;,&#x27;gest_age_wk&#x27;,&#x27;bmi&#x27;]].dropna(); X=np.column_stack([np.ones(len(d)),d.hb_gdl,d.gest_age_wk,d.bmi]); y=d.birth_weight_g.values
+b=np.linalg.lstsq(X,y,rcond=None)[0]; res=y-X@b; print(b.round(1),&#x27;R2&#x27;,round(1-res.var()/y.var(),3))
+fig,ax=plt.subplots(1,2,figsize=(10,4)); ax[0].scatter(X@b,res,s=8); ax[0].axhline(0); ax[0].set_xlabel(&#x27;Fitted (g)&#x27;); ax[0].set_ylabel(&#x27;Residual (g)&#x27;); st.probplot(res,plot=ax[1]); plt.savefig(&#x27;diagnostics.png&#x27;,dpi=300); plt.show()</pre><details><summary>Expected output</summary><pre class="o">Sens 0.78 Spec 0.75 PPV 0.5 NPV 0.92
+[-8.8445e+03  6.0500e+01  2.9330e+02 -5.9000e+00] R2 0.776</pre></details></div>
+<p><i>Ex: change the mediation outcome to Apgar score. Q: why is mediation analysis sensitive to confounding?</i></p></section>
+<section id="ch11" class="s"><h2>Chapter 11: Reporting, reproducibility and ethics <button onclick="ca('ch11',this)">Copy all Python cells</button></h2><p>Report effect, 95% CI, exact p and clinical relevance. Example: &#x27;Women with placental malaria delivered infants 210 g lighter (95% CI -290 to -130; Welch t-test p&lt;0.001) after adjustment for gestational age and Hb.&#x27; Keep raw data read-only, remove direct identifiers, store data securely, document every cleaning decision, fix random seeds and record package versions. Simulated data must never be interpreted as real findings.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Have learners write a results paragraph, then peer-review it.</li><li>Check every paragraph for estimate, interval and meaning.</li><li>Audit a dataset for direct identifiers.</li><li>Create an analysis log with package versions.</li><li>Use a data-sharing checklist.</li><li>Write a limitations paragraph on simulated data.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Reproducibility footer</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Save versions and de-identify. Dependencies: pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>import importlib.metadata as md
+open(&#x27;versions.txt&#x27;,&#x27;w&#x27;).write(&#x27;\n&#x27;.join(f&#x27;{p}=={md.version(p)}&#x27; for p in [&#x27;pandas&#x27;,&#x27;numpy&#x27;,&#x27;scipy&#x27;,&#x27;statsmodels&#x27;]))
+safe=df.drop(columns=[&#x27;id&#x27;])   # drop direct identifiers before sharing</pre><div class="m"><i>Part not executed here: No package metadata was found for statsmodels. Run it in your own notebook.</i></div></div>
+<p><i>Final project: import A, clean, derive LBW, test malaria effect, fit adjusted logistic model, plot, write a results paragraph.</i></p></section>
+<section id="ch12" class="s"><h2>Chapter 12: Advanced pathway: pipelines, reusable functions and optional packages <button onclick="ca('ch12',this)">Copy all Python cells</button></h2><p>Habits that move you from running examples to building reproducible analyses on a Windows laptop.</p><details><summary>Teaching and advanced learning clues</summary><ul><li>Set a final mini-project with a rubric.</li><li>Review one learner&#x27;s function in class.</li><li>Ask learners to teach one chapter back.</li><li>Package your functions into a small module file.</li><li>Write tests for each function.</li><li>Document the project in a README.</li></ul></details>
+<div class="c" data-py="1"><div class="t"><span>Cleaning pipeline with checks</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Chain small functions with pipe and add assertions so errors stop the analysis. Dependencies: pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>def clean(d):
+    d=d.copy(); d[&#x27;hb_gdl&#x27;]=d.hb_gdl.where(d.hb_gdl.between(4,18)); return d
+def derive(d): return d.assign(anaemia=d.hb_gdl.lt(11).astype(int), lbw=(d.birth_weight_g&lt;2500).astype(int))
+out=df.pipe(clean).pipe(derive); assert out.id.is_unique
+print(out[[&#x27;anaemia&#x27;,&#x27;lbw&#x27;]].mean().round(3))</pre><details><summary>Expected output</summary><pre class="o">anaemia    0.464
+lbw        0.230
+dtype: float64</pre></details></div>
+<div class="c" data-py="1"><div class="t"><span>Reusable comparison function</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">One function builds a results table for many outcomes, ready for a manuscript. Dependencies: scipy, pandas. Common error: wrong file path, column name or package not installed in this kernel.</div><pre>def compare(g,col):
+    a=g[g.placental_malaria==1][col].dropna(); b=g[g.placental_malaria==0][col].dropna(); t=st.ttest_ind(a,b,equal_var=False)
+    return dict(variable=col,n_malaria=len(a),n_none=len(b),difference=round(a.mean()-b.mean(),2),p=round(t.pvalue,4))
+print(pd.DataFrame([compare(df,c) for c in [&#x27;birth_weight_g&#x27;,&#x27;gest_age_wk&#x27;,&#x27;hb_gdl&#x27;,&#x27;apgar_5min&#x27;]]))</pre><details><summary>Expected output</summary><pre class="o">         variable  n_malaria  n_none  difference       p
+0  birth_weight_g        130     370     -514.58  0.0000
+1     gest_age_wk        130     370       -1.12  0.0000
+2          hb_gdl        128     347       -0.28  0.0900
+3      apgar_5min        130     370       -0.23  0.0656</pre></details></div>
+<div class="c" data-py="0"><div class="t"><span>Optional advanced packages</span><button onclick="cp(this)" title="Copy code">&#128203; Copy</button></div><div class="m">Install only when needed; all have Windows wheels. pingouin gives effect sizes and ICC, scikit-posthocs gives corrected pairwise tests, missingno plots missingness. Dependencies: Terminal (Command Prompt or PowerShell). Common error: wrong file path, column name or package not installed in this kernel.</div><pre>python -m pip install pingouin scikit-posthocs missingno
+python -m pip check</pre><div class="m"><i>Output depends on your own computer.</i></div></div>
+<p><i>Ex: turn your Chapter 4 cleaning steps into one function. Q: what should an assertion protect against?</i></p></section>
+<section id="sol"><h2>Worked solutions</h2>
+<div class="c" data-py="1"><div class="t"><span>Chapter 2: Classify birth weight</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>def bw_class(g):
+    return &#x27;LBW&#x27; if g &lt; 2500 else &#x27;Normal&#x27;
+print([bw_class(x) for x in [1800, 2499, 2500, 3400]])</pre><details><summary>Output</summary><pre class="o">[&#x27;LBW&#x27;, &#x27;LBW&#x27;, &#x27;Normal&#x27;, &#x27;Normal&#x27;]</pre></details><div class="m">A weight of exactly 2500 g is classified Normal because LBW is defined as below 2500 g.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 3: Sheet shapes</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>print({k:v.shape for k,v in xl.items()})</pre><details><summary>Output</summary><pre class="o">{&#x27;DECLARATION&#x27;: (0, 1), &#x27;A_maternal_birth&#x27;: (500, 13), &#x27;B_placental_malaria&#x27;: (500, 11), &#x27;C_repeated</pre></details><div class="m">Each sheet has the same rows as its CSV; checking shapes confirms the import.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 4: Complete-case versus median imputation</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>h=df.hb_gdl.fillna(df.hb_gdl.median())
+print(&#x27;mean&#x27;,round(df.hb_gdl.mean(),3),round(h.mean(),3),&#x27;SD&#x27;,round(df.hb_gdl.std(),3),round(h.std(),3))</pre><details><summary>Output</summary><pre class="o">mean 10.924 10.928 SD 1.625 1.584</pre></details><div class="m">The mean barely changes but the SD shrinks: median imputation understates uncertainty.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 5: Composite adverse outcome</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>df[&#x27;adverse&#x27;]=((df.lbw==1)|(df.preterm==1)|(df.apgar_5min&lt;7)).astype(int); print(round(df.adverse.mean(),3))</pre><details><summary>Output</summary><pre class="o">0.3</pre></details><div class="m">Composite outcomes count a baby once even if several criteria are met.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 6: Hb by malaria status</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>print(df.groupby(&#x27;placental_malaria&#x27;).hb_gdl.describe().round(2))</pre><details><summary>Output</summary><pre class="o">                   count   mean   std  min   25%    50%   75%   max
+placental_malaria                                                  
+0                  347.0  11.00  1.64  7.0  9.80  11.10  12.2  15.4
+1                  128.0  10.72  1.57  5.7  9.67  10.95  11.8  14.9</pre></details><div class="m">Compare the means and SDs between groups; a difference is descriptive until tested.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 7: Log-scale IL-6 boxplot</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>sns.boxplot(x=&#x27;placental_malaria&#x27;,y=&#x27;IL6_pgml&#x27;,data=B); plt.yscale(&#x27;log&#x27;); plt.ylabel(&#x27;IL-6 (pg/mL, log scale)&#x27;); plt.xlabel(&#x27;Placental malaria (0 = no, 1 = yes)&#x27;); plt.show()</pre><details><summary>Output</summary><pre class="o"></pre></details><div class="m">A log axis shows skewed IL-6 values without letting outliers dominate.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 8: Hb across parity groups</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>df[&#x27;par_grp&#x27;]=pd.cut(df.parity,[-1,0,2,20],labels=[&#x27;0&#x27;,&#x27;1-2&#x27;,&#x27;3+&#x27;])
+print(st.f_oneway(*[x.hb_gdl.dropna() for _,x in df.groupby(&#x27;par_grp&#x27;,observed=True)]))</pre><details><summary>Output</summary><pre class="o">F_onewayResult(statistic=np.float64(1.836537764854656), pvalue=np.float64(0.16050523670884784))</pre></details><div class="m">A small p-value would indicate that mean Hb differs across parity groups; report F, df and p.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 9: Malaria by Hb interaction (odds ratios)</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>from sklearn.linear_model import LogisticRegression
+d=df[[&#x27;lbw&#x27;,&#x27;placental_malaria&#x27;,&#x27;hb_gdl&#x27;]].dropna(); d[&#x27;int&#x27;]=d.placental_malaria*d.hb_gdl
+m=LogisticRegression(C=1e6,max_iter=1000).fit(d[[&#x27;placental_malaria&#x27;,&#x27;hb_gdl&#x27;,&#x27;int&#x27;]],d.lbw)
+print(dict(zip([&#x27;malaria&#x27;,&#x27;hb&#x27;,&#x27;malaria x hb&#x27;],np.exp(m.coef_[0]).round(2))))</pre><details><summary>Output</summary><pre class="o">{&#x27;malaria&#x27;: np.float64(1.09), &#x27;hb&#x27;: np.float64(0.75), &#x27;malaria x hb&#x27;: np.float64(1.13)}</pre></details><div class="m">Odds ratios above 1 raise the odds of low birth weight; the interaction term shows whether Hb changes the malaria effect.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 10: Cut-off with sensitivity of at least 0.90</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>from sklearn.metrics import roc_curve
+fpr,tpr,th=roc_curve(D.adverse_outcome,D.biomarker); i=np.where(tpr&gt;=0.90)[0][0]
+print(&#x27;cut-off&#x27;,th[i],&#x27;sens&#x27;,round(tpr[i],2),&#x27;spec&#x27;,round(1-fpr[i],2))</pre><details><summary>Output</summary><pre class="o">cut-off 1.01 sens 0.91 spec 0.52</pre></details><div class="m">Choosing a high-sensitivity cut-off lowers specificity; state the trade-off.</div></div>
+<div class="c" data-py="1"><div class="t"><span>Chapter 11: Integrated project: malaria and birth weight</span><button onclick="cp(this)">&#128203; Copy</button></div><pre>d=pd.read_csv(DATA / &#x27;A_maternal_birth.csv&#x27;).dropna(subset=[&#x27;hb_gdl&#x27;])
+a=d[d.placental_malaria==1].birth_weight_g; b=d[d.placental_malaria==0].birth_weight_g
+diff=a.mean()-b.mean(); se=np.sqrt(a.var()/len(a)+b.var()/len(b)); t=st.ttest_ind(a,b,equal_var=False)
+print(f&#x27;Mean difference {diff:.0f} g, 95% CI {diff-1.96*se:.0f} to {diff+1.96*se:.0f}, Welch p = {t.pvalue:.4g}&#x27;)
+tab=pd.crosstab(d.placental_malaria,d.lbw); print(tab); print(st.fisher_exact(tab))
+print(&#x27;Report: women with placental malaria had a mean birth weight&#x27;, f&#x27;{abs(diff):.0f} g&#x27;, &#x27;lower&#x27; if diff&lt;0 else &#x27;higher&#x27;, &#x27;than those without (simulated data).&#x27;)</pre><details><summary>Output</summary><pre class="o">Mean difference -517 g, 95% CI -654 to -381, Welch p = 2.975e-12
+lbw                  0   1
+placental_malaria         
+0                  294  53
+1                   73  55
+SignificanceResult(statistic=np.float64(4.179374515378651), pvalue=np.float64(1.1246040149845053e-09
+Report: women with placental malaria had a mean birth weight 517 g lower than those without (simulat</pre></details><div class="m">Report the difference, its 95% CI and p-value, and note that the data are simulated.</div></div>
+</section><script>function ok(b){const o=b.innerHTML;b.textContent="\u2713 Copied";b.classList.add("ok");setTimeout(()=>{b.innerHTML=o;b.classList.remove("ok")},1500)}
+function wr(t,b){if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(()=>ok(b),()=>fb(t,b));else fb(t,b)}
+function fb(t,b){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();ok(b)}
+function cp(b){wr(b.closest(".c").querySelector("pre").textContent,b)}
+function ca(id,b){wr([...document.querySelectorAll("#"+id+" .c[data-py='1'] > pre")].map(p=>p.textContent).join("\n\n# ----------------\n\n"),b)}
+function flt(){const q=document.getElementById("q").value.toLowerCase();document.querySelectorAll(".c").forEach(c=>c.style.display=c.textContent.toLowerCase().includes(q)?"":"none")}
+function tg(){const d=document.documentElement;d.dataset.theme=d.dataset.theme==="dark"?"light":"dark"}
+if(matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.dataset.theme="dark"</script></body></html>

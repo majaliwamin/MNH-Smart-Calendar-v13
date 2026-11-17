@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../services/api_service.dart';
 import '../services/meeting_alarm_service.dart';
 
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   };
   List<dynamic> history = [];
   Timer? _clockTimer;
+  late final WebViewController _resourceController;
 
   // Malawi civil time is UTC+2 year-round, even if the handset timezone differs.
   DateTime get _malawiNow => DateTime.now().toUtc().add(const Duration(hours: 2));
@@ -62,7 +64,8 @@ class _HomeScreenState extends State<HomeScreen> {
     'Analytics Dashboard',
     'Activity History',
     'Export & Sharing',
-    'Settings'
+    'Settings',
+    'Resources'
   ];
   static const _icons = [
     Icons.dashboard_outlined,
@@ -77,7 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
     Icons.query_stats_outlined,
     Icons.history,
     Icons.ios_share_outlined,
-    Icons.settings_outlined
+    Icons.settings_outlined,
+    Icons.library_books_outlined
   ];
   static const _fields = {
     'modules': ['code', 'title', 'facilitator'],
@@ -90,6 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _resourceController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadFlutterAsset("assets/MNH_Python_Command_Library.html");
     _clockTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) setState(() {});
     });
@@ -666,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
               for (var i = 2; i < _labels.length - 1; i++)
-                if (i != 3 && i != 9)
+                if (i != 3 && i != 9 && i != 12)
                   ListTile(
                       selected: selected == i,
                       leading: Icon(_icons[i]),
@@ -675,6 +682,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       dense: true,
                       minLeadingWidth: 24),
             ])),
+        ListTile(
+            selected: selected == 13,
+            leading: Icon(_icons[13]),
+            title: const Text("Resources"),
+            onTap: () => selectPage(13)),
         const Divider(height: 1),
         ListTile(
             selected: selected == 12,
@@ -772,10 +784,22 @@ class _HomeScreenState extends State<HomeScreen> {
         return _exports();
       case 12:
         return _settings();
+      case 13:
+        return _resources();
       default:
         return _dashboard();
     }
   }
+
+  List<Widget> _resources() => [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.72,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: WebViewWidget(controller: _resourceController),
+          ),
+        ),
+      ];
 
   List<Widget> _dashboard() => [
         Text('Shared academic workspace',

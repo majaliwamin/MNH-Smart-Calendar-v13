@@ -21,7 +21,7 @@ let moduleUnsubscribe=null;
 let state={theme:"dark",cells:{}};
 let recurringRecords=[];
 let editingUnlocked=true;
-let analyticsUnlocked=false;
+let analyticsUnlocked=true;
 let activeCell=null;
 let selectedTime=-1;
 
@@ -30,7 +30,6 @@ function isJournal(r,c){return r===2&&c===1;}
 function parseClock(value){const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||""));if(!m)return null;const h=+m[1],n=+m[2];return h<24&&n<60?h*60+n:null;}
 function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
 function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
-function sessionEndTimestamp(entry){const parts=WK.startParts(weekOffset),[hour,minute]=String(entry?.endTime||"").split(":").map(Number);if(!Number.isInteger(hour)||!Number.isInteger(minute))return 0;return WK.makeZonedDate(parts[0],parts[1],parts[2]+Number(entry.dayIndex||0),hour,minute).getTime();}
 function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
 function facilitatorFor(code){
  const configured=String(modules[code]?.facilitator||"").trim();
@@ -111,9 +110,8 @@ function showDialog(id){
   close.addEventListener("click",()=>id==="call-dialog"?stopRing():hideDialog(id));card.prepend(close);
  }
  el.classList.add("open");el.setAttribute("aria-hidden","false");
- if(id==="module-dialog"&&typeof window.setCRARASchedulingVisible==="function")window.setCRARASchedulingVisible(true);
 }
-function hideDialog(id){if(id==="details-dialog")stopMeetingCountdown();const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}if(id==="module-dialog"&&typeof window.setCRARASchedulingVisible==="function")window.setCRARASchedulingVisible(false);}
+function hideDialog(id){if(id==="details-dialog")stopMeetingCountdown();const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}}
 function contrastColour(hex){
  const n=parseInt(hex.replace("#",""),16);
  const lum=(0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255;
@@ -236,11 +234,7 @@ function showSessionDetails(entry){
  const detailDates=WK.dateLabels(detailWeekOffset),detailDate=WK.dateList(detailWeekOffset)[entry.dayIndex];
  const dateText=`${days[entry.dayIndex]} ${detailDates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
  const details=document.getElementById("details-content");details.textContent="";
- const addedAt=Number(entry.data?.createdAt);
- const addedText=Number.isFinite(addedAt)&&addedAt>0
-  ? "Added to timetable: "+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(addedAt))
-  : "Added to timetable: date not recorded for this older session";
- const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,addedText,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
+ const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
  const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){
   const linkRow=document.createElement("div");linkRow.className="session-meeting-link";
@@ -300,7 +294,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){const sessionEnd=sessionEndTimestamp(entry);if(sessionEnd>Date.now()){meetingMark.classList.add("meeting-provider-cell");meetingMark.dataset.sessionEnd=String(sessionEnd);area.appendChild(meetingMark);}}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -311,7 +305,6 @@ function build(){
 function refreshLiveTimetable(){
  const currentOffset=WK.currentOffset(),currentDay=WK.currentDayIndex(weekOffset);
  const now=WK.localNow(),minute=now.hour*60+now.minute;
- tbody.querySelectorAll(".meeting-provider-cell[data-session-end]").forEach(mark=>{if(Number(mark.dataset.sessionEnd)<=Date.now())mark.remove();});
  thead.querySelectorAll("th.daycell").forEach(th=>th.classList.toggle("today-day",weekOffset===currentOffset&&Number(th.dataset.dayIndex)===currentDay&&currentDay>=0));
  tbody.querySelectorAll("tr[data-start-time]").forEach(tr=>{
   const start=parseClock(tr.dataset.startTime),end=parseClock(tr.dataset.endTime);
@@ -418,6 +411,8 @@ function requestEditing(action){
  if(typeof action==="function")action();
 }
 function requestAnalytics(){
+ analyticsUnlocked=true;
+ updateRoleNav();
  showView("analytics");
 }
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
@@ -448,7 +443,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const chosenColour=document.getElementById("module-colour").value;
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,createdAt:Number(previous.createdAt)>0?Number(previous.createdAt):Date.now(),weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
+ const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
@@ -605,7 +600,7 @@ const themeKey="phd_mnh_theme";
 const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
 function setSync(t){if(syncEl)syncEl.textContent=t;}
-function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;if(Number.isFinite(Number(v?.createdAt))&&Number(v.createdAt)>0)o.createdAt=Number(v.createdAt);return o;}
+function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
 function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<5)||/^session-[A-Za-z0-9-]+$/.test(k);}
 function writeFailed(e){
  try{saveState();}catch(x){}
@@ -821,7 +816,6 @@ function refreshAlarmUI(){
 function initAlarms(){
  loadAlarm();refreshAlarmUI();
  document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
- document.getElementById("alarm-config-nav").addEventListener("click",()=>{closeMenu();closeBell();refreshAlarmUI();showDialog("alarm-dialog");});
  document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
  document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
  document.getElementById("alarm-toggle").addEventListener("click",()=>{
@@ -840,8 +834,8 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","settings"];
-function updateRoleNav(){document.querySelectorAll('[data-view="analytics"]').forEach(x=>{x.title="Password required to open Analytics";});}
+const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","resources","settings"];
+function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
@@ -964,28 +958,9 @@ function syncCurrentAcademicWeek(){
 }
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
- const craraRoot=document.getElementById("class-rep-assistant");
- if(craraRoot){
-  if(name!=="weekly"&&typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();
-  craraRoot.hidden=name!=="weekly";
- }
- if(name==="analytics"&&!analyticsUnlocked){
-  const entered=window.prompt("Analytics access required. Enter the MNH password:");
-  if(String(entered||"").trim().toLowerCase()!=="mnh"){
-   const fallback=VIEWS.includes(currentView)&&currentView!=="analytics"?currentView:"weekly";
-   try{history.replaceState(null,"",location.pathname+location.search+(fallback==="weekly"?"":"#"+fallback));}catch(e){}
-   return;
-  }
-  analyticsUnlocked=true;
-  updateRoleNav();
- }
  currentView=name;
- if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
- // Keep secondary pages completely clear of the shared programme masthead and
- // weekly navigation strip; only the active page content remains in the viewport.
- document.body.classList.toggle("is-content-view",name!=="weekly");
- const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard");
- weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";
+ const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
+ weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export","settings"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
@@ -1003,6 +978,7 @@ function renderView(name){
  else if(name==="communications")renderCommunications();
  else if(name==="history")renderHistoryPage();
  else if(name==="export")renderExportPage();
+ else if(name==="resources")renderResources();
  else if(name==="settings")renderSettingsPage();
 }
 const WORKSPACE_META={
@@ -1014,7 +990,7 @@ const WORKSPACE_META={
  communications:["WhatsApp & Communications","Shared announcements, communication notes and useful links."],
  history:["Activity History","New timetable sessions and shared activities added by Rep or Staff."],
  export:["Export & Sharing","Download the timetable, shared data and printable calendar."],
- settings:["Settings","Configure alarms and reminders."]
+ settings:["Settings","Application preferences, access and header controls."]
 };
 function workspace(title,lead){document.getElementById("workspace-title").textContent=title;document.getElementById("workspace-lead").textContent=lead;const root=document.getElementById("workspace-body");root.textContent="";return root;}
 async function apiRequest(method,path,body){return window.mnhApi.request(method,path,body);}
@@ -1726,16 +1702,10 @@ async function downloadTimetableImage(mime){
  }catch(error){console.error(error);status.className="status error";status.textContent="The timetable image could not be created: "+error.message;}finally{weekly.hidden=wasHidden;}
 }
 window.downloadTimetableImage=downloadTimetableImage;
-function renderSettingsPage(){
- const root=workspace(...WORKSPACE_META.settings);
- const alarm=el("div","card res-form");
- alarm.appendChild(el("h3",null,"Alarm configuration"));
- const alarmBtn=el("button",null,"Configure alarms and reminders");
- alarmBtn.type="button";
- alarmBtn.onclick=()=>document.getElementById("alarms").click();
- alarm.appendChild(alarmBtn);
- root.appendChild(alarm);
-}
+function renderSettingsPage(){const root=workspace(...WORKSPACE_META.settings);const card=el("div","card res-form");card.appendChild(el("h3",null,"Appearance"));const label=el("label",null,"Dashboard theme");const sel=document.getElementById("theme").cloneNode(true);sel.id="theme-visible";sel.hidden=false;sel.style.cssText="padding:10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:7px";sel.value=state.theme;sel.onchange=()=>{document.getElementById("theme").value=sel.value;document.getElementById("theme").dispatchEvent(new Event("change"));};card.append(label,sel);root.appendChild(card);
+ const access=el("div","card res-form");access.appendChild(el("h3",null,"Access and security"));access.appendChild(el("p","muted","Open access is enabled. Anyone with the website link can view, edit, replace and restore shared programme records, and view Analytics."));const hdr=el("button",null,"Edit calendar title and subtitle");hdr.type="button";hdr.disabled=false;hdr.onclick=()=>document.getElementById("edit-header").click();access.appendChild(hdr);root.appendChild(access);
+ const alarm=el("div","card res-form");alarm.appendChild(el("h3",null,"Alarms and reminders"));const alarmBtn=el("button",null,"Manage alarms and reminders");alarmBtn.type="button";alarmBtn.onclick=()=>document.getElementById("alarms").click();alarm.appendChild(alarmBtn);root.appendChild(alarm);
+ const data=el("div","card res-form");data.appendChild(el("h3",null,"Data and backups"));[["Save changes for everyone",()=>document.getElementById("save").click(),true],["Download shared JSON backup",()=>window.downloadSharedBackup(),true],["Restore from JSON backup",()=>document.getElementById("import").click(),true],["Download PDF",()=>document.getElementById("print").click(),false]].forEach(([label,action,locked])=>{const x=el("button",null,label);x.type="button";x.disabled=locked&&!editingUnlocked;x.onclick=action;data.appendChild(x);});root.appendChild(data);}
 function itemButton(x){
  const b=el("button","item");b.type="button";
  b.appendChild(el("span","it",x.timeLabel));
@@ -2271,16 +2241,8 @@ function initHeader(){
 }
 // ---- Hamburger menu ----
 const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
-function openMenu(){
- menuPanel.hidden=false;menuBtn.setAttribute("aria-expanded","true");menuBtn.setAttribute("aria-label","Close menu");
- const craraRoot=document.getElementById("class-rep-assistant");
- if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}
-}
-function closeMenu(){
- menuPanel.hidden=true;menuBtn.setAttribute("aria-expanded","false");menuBtn.setAttribute("aria-label","Open menu");
- const craraRoot=document.getElementById("class-rep-assistant");
- if(craraRoot)craraRoot.hidden=currentView!=="weekly";
-}
+function openMenu(){menuPanel.hidden=false;menuBtn.setAttribute("aria-expanded","true");menuBtn.setAttribute("aria-label","Close menu");}
+function closeMenu(){menuPanel.hidden=true;menuBtn.setAttribute("aria-expanded","false");menuBtn.setAttribute("aria-label","Open menu");}
 menuBtn.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
 menuPanel.addEventListener("click",e=>{e.stopPropagation();if(e.target.closest("button:not([data-keep])"))closeMenu();});
 document.addEventListener("click",()=>{if(!menuPanel.hidden)closeMenu();});
