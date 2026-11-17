@@ -401,10 +401,8 @@
  let promptOpen=false;
  const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
- const INSTALL_DONE_KEY="mnh_calendar_install_completed";
- const hasInstalled=()=>{try{return localStorage.getItem(INSTALL_DONE_KEY)==="1";}catch(e){return false;}};
- const markInstalled=()=>{try{localStorage.setItem(INSTALL_DONE_KEY,"1");}catch(e){}};
- const showInstallIcon=()=>{if(!isStandalone()&&!hasInstalled())installButton.hidden=false;};
+ const markInstalled=()=>{};
+ const showInstallIcon=()=>{if(!isStandalone())installButton.hidden=false;};
  const hideInstallIcon=()=>{installButton.hidden=true;};
  async function installFromIcon(){
   if(isStandalone()||promptOpen)return;
@@ -438,10 +436,6 @@
  }
  if(isStandalone()){
   markInstalled();
-  hideInstallIcon();
-  return;
- }
- if(hasInstalled()){
   hideInstallIcon();
   return;
  }
