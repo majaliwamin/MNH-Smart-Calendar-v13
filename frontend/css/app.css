@@ -422,8 +422,11 @@ thead th.corner{width:clamp(56px,10vw,130px);position:static}
 @media(max-width:720px){.site-header .menu-panel{top:68px;right:8px;max-height:calc(100dvh - 82px);width:min(340px,calc(100vw - 16px))}.menu-nav{min-height:43px;font-size:calc(13px * var(--text-scale))}}
 
 .month-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:12px}.month-dow{text-align:center;color:var(--gold);font-size:calc(12px * var(--text-scale));font-weight:700;padding:6px 2px}.month-empty{min-height:66px}.month-day{min-height:74px;border:1px solid var(--line);border-radius:7px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:0}.month-day>strong{font-size:calc(13px * var(--text-scale))}.month-event{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(10px * var(--text-scale));color:var(--gold);background:var(--head);border-radius:4px;padding:3px 4px}@media(max-width:520px){.month-day{min-height:56px;padding:3px}.month-event{font-size:calc(9px * var(--text-scale))}.month-dow{font-size:calc(10px * var(--text-scale))}}
-.site-header .menu-panel{height:min(78vh,720px)}
-@media(max-width:720px){.site-header .menu-panel{height:calc(100dvh - 82px)}}
+.site-header .menu-panel{height:auto;max-height:min(78dvh,560px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;align-items:stretch;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.menu-bottom{position:static;bottom:auto;margin-top:4px;padding:8px 0 0}
+.menu-nav{min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.menu-back-nav{border-bottom:1px solid #ffffff20;border-radius:0 0 7px 7px;margin-bottom:3px;font-weight:700}
+@media(max-width:720px){.site-header .menu-panel{height:auto;max-height:calc(100dvh - 90px - env(safe-area-inset-top,0px));width:min(340px,calc(100vw - 16px));padding:9px}.menu-nav{min-height:44px;padding:10px 11px}}
 
 /* Flexible Monday–Friday session rows and consistent modal close controls. */
 .weekly-actions{display:flex;justify-content:flex-end;max-width:800px;margin:0 auto 10px;padding:0 8px}
