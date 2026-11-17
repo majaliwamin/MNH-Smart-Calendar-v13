@@ -49,7 +49,7 @@
   const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved tasks and memories.");
   const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
   const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
-  const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.placeholder = "Password (at least 12 characters)"; authPassword.autocomplete = "current-password";
+  const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.minLength = 4; authPassword.maxLength = 256; authPassword.placeholder = "Password (at least 4 characters)"; authPassword.autocomplete = "current-password";
   const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
   const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
   const authFeedback = el("p", "cr-auth-feedback", "");
@@ -206,6 +206,8 @@
     authMode = mode;
     authName.hidden = mode !== "register";
     authPassword.autocomplete = mode === "register" ? "new-password" : "current-password";
+    authPassword.minLength = mode === "register" ? 4 : 0;
+    authPassword.placeholder = mode === "register" ? "Password (at least 4 characters)" : "Password";
     authSubmit.textContent = mode === "register" ? "Create account" : "Sign in";
     authSwitch.textContent = mode === "register" ? "I already have an account" : "Create a new account";
     authFeedback.textContent = "";
@@ -408,10 +410,12 @@
       state.previousBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       document.documentElement.classList.add("cara-open");
+      document.body.classList.add("cara-open");
       syncVisualViewport();
     } else {
       document.body.style.overflow = state.previousBodyOverflow;
       document.documentElement.classList.remove("cara-open");
+      document.body.classList.remove("cara-open");
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);

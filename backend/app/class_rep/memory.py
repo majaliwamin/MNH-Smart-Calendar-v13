@@ -96,8 +96,8 @@ def create_account(name: str, email: str, password: str) -> dict:
     password = str(password or "")
     if not name or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
         raise MemoryError("Enter your name and a valid email address.")
-    if len(password) < 12 or len(password) > 256:
-        raise MemoryError("Use a password between 12 and 256 characters.")
+    if len(password) < 4 or len(password) > 256:
+        raise MemoryError("Use a password between 4 and 256 characters.")
     user_id = _email_id(email)
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ROUNDS)
