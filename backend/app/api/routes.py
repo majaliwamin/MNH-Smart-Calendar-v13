@@ -149,7 +149,7 @@ async def upload_resource_file(file: UploadFile = File(...)):
                 chunk = await file.read(1024 * 1024)
                 if not chunk: break
                 size += len(chunk)
-                if size > MAX_RESOURCE_FILE_BYTES: raise HTTPException(413, "The maximum file size is 25 MB.")
+                if size > MAX_RESOURCE_FILE_BYTES: raise HTTPException(413, "The maximum file size is 50 MB.")
                 output.write(chunk)
         if size == 0: raise HTTPException(400, "The selected file is empty.")
     except HTTPException:
