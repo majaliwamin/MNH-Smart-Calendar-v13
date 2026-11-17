@@ -2151,27 +2151,52 @@ function meetingProviderMark(url,large=false){
  }
  mark.appendChild(svg);return mark;
 }
-function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),createdAt:+(v&&v.createdAt)||0};}
+function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),createdAt:+(v&&v.createdAt)||0,fileId:String(v&&v.fileId||"").slice(0,64),fileName:String(v&&v.fileName||"").slice(0,255),fileSize:+(v&&v.fileSize)||0};}
 function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
 function loadResources(){try{const r=JSON.parse(localStorage.getItem(resKey)||"[]");if(Array.isArray(r))resources=r.map(x=>({id:String(x.id||""),...cleanRes(x)})).filter(x=>x.id&&x.title&&x.url);}catch(e){}}
-async function addResource(t,u,n){
- const rec=cleanRes({title:t,url:u,note:n,createdAt:Date.now()});
- if(!rec.title||!rec.url){statusEl.className="status error";statusEl.textContent="Enter a title and a valid web address.";return false;}
+async function uploadResourceFile(file){
+ const body=new FormData();body.append("file",file,file.name);
+ const response=await fetch("/api/resources/upload",{method:"POST",body,credentials:"same-origin"});
+ let result={};try{result=await response.json();}catch(e){}
+ if(!response.ok)throw new Error(result.detail||result.error||"The file could not be uploaded.");
+ return result;
+}
+async function addResource(t,u,n,file=null){
+ const title=String(t||"").trim();
+ if(!title){statusEl.className="status error";statusEl.textContent="Enter a resource name.";return false;}
+ let uploaded=null,rec;
+ if(file){
+  if(file.size>25*1024*1024){statusEl.className="status error";statusEl.textContent="The selected file is larger than 25 MB.";return false;}
+  statusEl.className="status";statusEl.textContent="Uploading file…";
+  try{uploaded=await uploadResourceFile(file);rec=cleanRes({title,url:window.location.origin+uploaded.url,note:n,createdAt:Date.now(),fileId:uploaded.id,fileName:file.name,fileSize:uploaded.size});}
+  catch(e){statusEl.className="status error";statusEl.textContent=e.message||"File upload failed.";return false;}
+ }else{
+  rec=cleanRes({title,url:u,note:n,createdAt:Date.now()});
+  if(!rec.url){statusEl.className="status error";statusEl.textContent="Enter a valid web address or choose a file.";return false;}
+ }
  const r={id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),...rec};
- resources.push(r);cacheResources();renderResources();
  try{
-  const data={title:r.title,url:r.url,note:r.note,createdAt:r.createdAt};
+  const data={title:r.title,url:r.url,note:r.note,createdAt:r.createdAt,fileId:r.fileId,fileName:r.fileName,fileSize:r.fileSize};
   if(cloud)await cloud.doc("resources/"+r.id).set(data);
   else await window.mnhApi.request("PUT","/api/doc/resources/"+encodeURIComponent(r.id),data);
+  resources.push(r);cacheResources();renderResources();
   statusEl.className="status ok";statusEl.textContent="Saved for everyone.";
- }catch(e){writeFailed(e);}
+ }catch(e){
+  if(uploaded&&uploaded.id){try{await fetch("/api/resources/files/"+encodeURIComponent(uploaded.id),{method:"DELETE",credentials:"same-origin"});}catch(cleanupError){}}
+  writeFailed(e);return false;
+ }
  return true;
 }
 async function removeResource(id){
- resources=resources.filter(x=>x.id!==id);cacheResources();renderResources();
+ const existing=resources.find(x=>x.id===id);
  try{
   if(cloud)await cloud.doc("resources/"+id).delete();
   else await window.mnhApi.request("DELETE","/api/doc/resources/"+encodeURIComponent(id));
+  if(existing&&existing.fileId){
+   const response=await fetch("/api/resources/files/"+encodeURIComponent(existing.fileId),{method:"DELETE",credentials:"same-origin"});
+   if(!response.ok)throw new Error("The resource entry was removed, but its stored file could not be deleted.");
+  }
+  resources=resources.filter(x=>x.id!==id);cacheResources();renderResources();
   statusEl.className="status ok";statusEl.textContent="Removed for everyone.";
  }catch(e){writeFailed(e);}
 }
@@ -2181,7 +2206,7 @@ function renderResources(){
  if(!resources.length)list.appendChild(el("p","muted","No resources have been added yet."));
  resources.forEach(r=>{
   const card=el("div","card res");
-  const a=el("a","res-link",r.title);a.href=r.url;a.target="_blank";a.rel="noopener noreferrer";a.setAttribute("aria-label","Open resource: "+r.title);card.appendChild(a);
+  const a=el("a","res-link",r.title);a.href=r.fileId?r.url+"?name="+encodeURIComponent(r.fileName||r.title):r.url;a.target="_blank";a.rel="noopener noreferrer";a.setAttribute("aria-label","Open resource: "+r.title);card.appendChild(a);
   if(editingUnlocked){const d=el("button","res-del","Remove");d.type="button";d.addEventListener("click",()=>removeResource(r.id));card.appendChild(d);}
   list.appendChild(card);
  });
@@ -2189,10 +2214,15 @@ function renderResources(){
  if(editingUnlocked){
   const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));
   const mk=(ph,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=ph;i.maxLength=max;i.setAttribute("aria-label",ph);return i;};
-  const t=mk("Title",120),u=mk("Web address (https://…)",300),n=mk("Short note (optional)",200);
+  const t=mk("Title",120),u=mk("Web address (https://…) — optional when attaching a file",300),n=mk("Short note (optional)",200);
+  const fileLabel=el("label","muted","Attach a file (optional)");
+  const file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/jpeg,image/png,image/webp";file.setAttribute("aria-label","Choose PDF, Word, CSV, Excel or photo file");
+  file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
+  file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\\.[^.]+$/,"");if(chosen)u.value="";});
+  const fileHint=el("p","muted","PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG or WEBP · Maximum 25 MB");
   const b=el("button","primary","Add resource");b.type="button";
-  b.addEventListener("click",async()=>{if(await addResource(t.value,u.value,n.value)){t.value=u.value=n.value="";}});
-  f.append(t,u,n,b);form.appendChild(f);
+  b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0])){t.value=u.value=n.value="";file.value="";}}finally{b.disabled=false;}});
+  f.append(t,u,fileLabel,file,fileHint,n,b);form.appendChild(f);  f.append(t,u,n,b);form.appendChild(f);
  }
 }
 function subscribeExtras(db){
