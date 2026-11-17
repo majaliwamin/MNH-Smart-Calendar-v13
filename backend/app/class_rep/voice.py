@@ -1,4 +1,4 @@
-"""CARA voice services backed by Cloudflare Workers AI."""
+"""CRARA voice services backed by Cloudflare Workers AI."""
 import base64
 import json
 import os
@@ -14,7 +14,7 @@ def _run(model: str, payload: dict, timeout: int = 60) -> dict:
     account = os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip()
     key = os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
     if not account or not key:
-        raise VoiceError("Cloudflare Workers AI is not configured for CARA voice.")
+        raise VoiceError("Cloudflare Workers AI is not configured for CRARA voice.")
     url = f"https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/{model}"
     request = Request(url, data=json.dumps(payload).encode(),
                       headers={"Authorization": "Bearer " + key,
@@ -38,7 +38,7 @@ def transcribe(audio: bytes, content_type: str) -> str:
         raise VoiceError("Please record or upload a supported audio format.")
     model = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "").strip()
     if not model:
-        raise VoiceError("Speech-to-text is not configured for CARA.")
+        raise VoiceError("Speech-to-text is not configured for CRARA.")
     result = _run(model, {"audio": base64.b64encode(audio).decode("ascii"),
                           "task": "transcribe", "language": "en"})
     text = result.get("text", "")
