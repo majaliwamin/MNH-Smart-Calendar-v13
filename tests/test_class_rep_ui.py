@@ -53,3 +53,18 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     assert 'paperclipPath' in js
     assert '".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg' in js
     assert '.cr-record svg,.cr-attach svg' in css
+
+
+def test_cara_upload_success_is_silent_and_mobile_back_closes_assistant():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert "File indexed successfully" not in js
+    assert "caraAssistantOpen: true" in js
+    assert 'window.addEventListener("popstate"' in js
+    assert "function closeCARA()" in js
+
+
+def test_cara_header_and_composer_controls_have_no_button_shapes():
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert ".cr-toggle,.cr-account,.cr-icon-button{border:0!important" in css
+    assert "background:transparent!important" in css
+    assert "border-radius:0!important" in css
