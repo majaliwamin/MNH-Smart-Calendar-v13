@@ -2251,7 +2251,7 @@ async function uploadResourceFile(file){
  try{result=raw?JSON.parse(raw):{};}catch(error){result={message:raw.slice(0,240)};}
  if(!response.ok){
   const detail=Array.isArray(result.detail)?result.detail.map(x=>x.msg||String(x)).join("; "):result.detail||result.error||result.message;
-  if(response.status===413)throw new Error("The server rejected this file because it is too large. Try a file under 25 MB.");
+  if(response.status===413)throw new Error("The server rejected this file because it is too large. Try a file under 50 MB.");
   if(response.status===404)throw new Error("The upload service is not available on this deployment. The calendar needs its latest backend update.");
   throw new Error(detail||("Upload failed (HTTP "+response.status+")."));
  }
