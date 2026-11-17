@@ -250,7 +250,7 @@
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Upload failed");
-      status("Indexed " + result.title + " · " + result.chunks + " passages", true); addMessage("assistant", "File indexed successfully: " + result.title + ".");
+      // Successful indexing is silent; the document is available to CARA without a toast or transcript message.
     } catch (error) { status(error.message || "Document indexing failed", false); }
     finally { attachButton.disabled = !state.uploads; }
   });
@@ -299,7 +299,22 @@
     window.visualViewport.addEventListener("scroll", syncVisualViewport, { passive: true });
     window.addEventListener("orientationchange", syncVisualViewport, { passive: true });
   }
+  let caraBackStateActive = false;
+  function closeCARA() {
+    if (caraBackStateActive) window.history.back();
+    else setOpen(false);
+  }
+  window.addEventListener("popstate", () => {
+    if (root.classList.contains("is-open")) {
+      caraBackStateActive = false;
+      setOpen(false);
+    }
+  });
   function setOpen(open) {
+    if (open && !root.classList.contains("is-open")) {
+      window.history.pushState({ ...(window.history.state || {}), caraAssistantOpen: true }, "", window.location.href);
+      caraBackStateActive = true;
+    }
     if (open) {
       state.previousBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -319,6 +334,6 @@
   }
   setAuthMode("login");
   launcher.addEventListener("click", () => setOpen(true));
-  toggle.addEventListener("click", () => setOpen(false));
+  toggle.addEventListener("click", closeCARA);
   checkStatus();
 })();
