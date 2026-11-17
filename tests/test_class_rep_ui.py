@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_cara_floating_assistant_is_mounted_with_launcher():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'id="class-rep-assistant"' in html
-    assert '/js/class-rep.js?v=8' in html
-    assert '/css/class-rep.css?v=5' in html
+    assert '/js/class-rep.js?v=9' in html
+    assert '/css/class-rep.css?v=6' in html
 
 
 def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
@@ -25,7 +25,7 @@ def test_cara_starts_closed_and_has_requested_identity():
     assert 'el("button", "cara-launcher", "CARA")' in js
     assert 'CARA (Classroom and Academic Relations Assistant)' in js
     assert '"/api/class-rep/auth/" + authMode' in js
-    assert '/api/class-rep/memories' in js
+    assert "memory" not in js.lower()
     assert 'Your intelligent academic relations assistant' in js
     assert 'root.classList.remove("is-open")' in js
     assert 'function demoReply(message)' in js
@@ -41,3 +41,15 @@ def test_cara_signup_advertises_four_character_password_minimum_and_page_lock():
     assert "authPassword.minLength = mode === \"register\" ? 4 : 0" in js
     assert 'document.body.classList.add("cara-open")' in js
     assert "html.cara-open,body.cara-open{overflow:hidden!important" in css
+
+
+
+def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert 'cr-account", "Memory"' not in js
+    assert 'header.append(identity, signOut, toggle)' in js
+    assert 'setAttribute("aria-label", "Attach a file")' in js
+    assert 'paperclipPath' in js
+    assert '".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg' in js
+    assert '.cr-record svg,.cr-attach svg' in css

@@ -23,13 +23,15 @@
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CARA"); toggle.setAttribute("aria-expanded", "true");
   const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;
-  const memoryButton = el("button", "cr-account", "Memory"); memoryButton.type = "button"; memoryButton.hidden = true;
-  header.append(identity, memoryButton, signOut, toggle);
+  header.append(identity, signOut, toggle);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
   const form = el("form", "cr-form");
-  const attachButton = el("button", "cr-icon-button cr-attach", "+"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a programme file"); attachButton.title = "Attach file";
+  const attachButton = el("button", "cr-icon-button cr-attach"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a file"); attachButton.title = "Attach file";
+  const paperclip = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  paperclip.setAttribute("viewBox", "0 0 24 24"); paperclip.setAttribute("width", "22"); paperclip.setAttribute("height", "22"); paperclip.setAttribute("fill", "none"); paperclip.setAttribute("stroke", "currentColor"); paperclip.setAttribute("stroke-width", "2"); paperclip.setAttribute("stroke-linecap", "round"); paperclip.setAttribute("stroke-linejoin", "round"); paperclip.setAttribute("aria-hidden", "true");
+  const paperclipPath = document.createElementNS("http://www.w3.org/2000/svg", "path"); paperclipPath.setAttribute("d", "m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"); paperclip.append(paperclipPath); attachButton.append(paperclip);
   const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CARA…"; input.setAttribute("aria-label", "Message CARA");
   const recordButton = el("button", "cr-icon-button cr-record"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
   const micIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -40,13 +42,13 @@
   const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
   function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file";
-  fileInput.accept = ".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/png,image/jpeg,image/tiff,image/bmp,image/webp"; fileInput.hidden = true;
+  fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
   form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
   const authPanel = el("section", "cr-auth-panel");
   const authCard = el("div", "cr-auth-card");
   const authTitle = el("strong", "cr-auth-title", "Your private CARA account");
-  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved tasks and memories.");
+  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved academic work.");
   const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
   const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
   const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.minLength = 4; authPassword.maxLength = 256; authPassword.placeholder = "Password (at least 4 characters)"; authPassword.autocomplete = "current-password";
@@ -55,31 +57,13 @@
   const authFeedback = el("p", "cr-auth-feedback", "");
   authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback);
   authPanel.append(authCard);
-  const memoryPanel = el("section", "cr-memory-panel"); memoryPanel.hidden = true;
-  const memoryHead = el("div", "cr-memory-head");
-  memoryHead.append(el("strong", "", "Your saved CARA memory"));
-  const memoryClose = el("button", "cr-toggle", "×"); memoryClose.type = "button"; memoryClose.setAttribute("aria-label", "Close memory");
-  memoryHead.append(memoryClose);
-  const memoryIntro = el("p", "cr-memory-intro", "Review or correct saved notes. Select a note to edit it, or delete it.");
-  const memoryEditor = el("textarea", "cr-memory-editor"); memoryEditor.placeholder = "Add a useful project decision, preference or note…";
-  const memorySave = el("button", "cr-auth-submit", "Save memory"); memorySave.type = "button";
-  const memoryItems = el("div", "cr-memory-items");
-  const projectItems = el("div", "cr-memory-items");
-  const taskItems = el("div", "cr-memory-items");
-  const reminderItems = el("div", "cr-memory-items");
-  memoryPanel.append(memoryHead, memoryIntro, memoryEditor, memorySave,
-    el("strong", "cr-memory-section", "Saved memories"), memoryItems,
-    el("strong", "cr-memory-section", "Projects"), projectItems,
-    el("strong", "cr-memory-section", "Tasks"), taskItems,
-    el("strong", "cr-memory-section", "Reminders"), reminderItems);
-  root.append(launcher, header, body, authPanel, memoryPanel);
+  root.append(launcher, header, body, authPanel);
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
   header.hidden = true;
   body.hidden = true;
   authPanel.hidden = true;
-  memoryPanel.hidden = true;
   function status(text, ready) {
     const node = statusNode;
     node.textContent = text;
@@ -112,96 +96,6 @@
     }
   }
   let authMode = "login";
-  let editingMemoryId = null;
-  async function loadMemoryPanel() {
-    memoryItems.replaceChildren(); projectItems.replaceChildren(); taskItems.replaceChildren(); reminderItems.replaceChildren();
-    const [mRes, pRes, tRes, rRes] = await Promise.all([
-      fetch("/api/class-rep/memories"), fetch("/api/class-rep/projects"), fetch("/api/class-rep/tasks"), fetch("/api/class-rep/reminders")
-    ]);
-    const [mData, pData, tData, rData] = await Promise.all([mRes.json(), pRes.json(), tRes.json(), rRes.json()]);
-    for (const item of (mData.memories || [])) {
-      const row = el("div", "cr-memory-row");
-      const edit = el("button", "cr-memory-edit", item.content); edit.type = "button";
-      edit.addEventListener("click", () => { editingMemoryId = item.id; memoryEditor.value = item.content; memorySave.textContent = "Update memory"; memoryEditor.focus(); });
-      const del = el("button", "cr-memory-delete", "Delete"); del.type = "button";
-      del.addEventListener("click", async () => { await fetch("/api/class-rep/memories/" + encodeURIComponent(item.id), { method: "DELETE" }); await loadMemoryPanel(); });
-      row.append(edit, del); memoryItems.append(row);
-    }
-    if (!(mData.memories || []).length) memoryItems.append(el("p", "cr-memory-intro", "No saved memories yet."));
-    for (const project of (pData.projects || [])) {
-      projectItems.append(el("p", "cr-memory-item", project.title + " · " + project.status));
-    }
-    if (!(pData.projects || []).length) projectItems.append(el("p", "cr-memory-intro", "No projects tracked yet."));
-    for (const task of (tData.tasks || [])) {
-      const row = el("div", "cr-memory-row");
-      row.append(el("p", "cr-memory-item", task.title + " · " + task.status));
-      if (task.status !== "completed" && task.status !== "cancelled") {
-        const done = el("button", "cr-memory-delete", "Complete"); done.type = "button";
-        done.addEventListener("click", async () => {
-          await fetch("/api/class-rep/tasks/" + encodeURIComponent(task.id), {
-            method: "PUT", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: task.title, description: task.description, project: task.project, priority: task.priority, due_at: task.due_at, timezone: task.timezone, next_action: task.next_action, decisions: task.decisions, status: "completed" })
-          });
-          await loadMemoryPanel();
-        });
-        row.append(done);
-      }
-      taskItems.append(row);
-    }
-    if (!(tData.tasks || []).length) taskItems.append(el("p", "cr-memory-intro", "No tracked tasks yet."));
-    for (const reminder of (rData.reminders || [])) {
-      const row = el("div", "cr-memory-row");
-      row.append(el("p", "cr-memory-item", reminder.message + " · " + reminder.status + " · " + new Date(reminder.scheduled_at * 1000).toLocaleString()));
-      if (["scheduled", "due"].includes(reminder.status)) {
-        const cancel = el("button", "cr-memory-delete", "Cancel"); cancel.type = "button";
-        cancel.addEventListener("click", async () => {
-          await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
-            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" })
-          });
-          await loadMemoryPanel();
-        });
-        const complete = el("button", "cr-memory-delete", "Complete"); complete.type = "button";
-        complete.addEventListener("click", async () => {
-          await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
-            method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" })
-          });
-          await loadMemoryPanel();
-        });
-        const reschedule = el("button", "cr-memory-delete", "Reschedule"); reschedule.type = "button";
-        reschedule.addEventListener("click", () => {
-          const editor = el("input", "cr-auth-input"); editor.type = "datetime-local";
-          const localDate = new Date(reminder.scheduled_at * 1000 - new Date().getTimezoneOffset() * 60000);
-          editor.value = localDate.toISOString().slice(0, 16);
-          const save = el("button", "cr-memory-edit", "Save new time"); save.type = "button";
-          save.addEventListener("click", async () => {
-            const timestamp = Math.floor(new Date(editor.value).getTime() / 1000);
-            if (!Number.isFinite(timestamp) || timestamp <= Math.floor(Date.now() / 1000)) {
-              status("Choose a future reminder time.", false); return;
-            }
-            const response = await fetch("/api/class-rep/reminders/" + encodeURIComponent(reminder.id), {
-              method: "PATCH", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ scheduled_at: timestamp })
-            });
-            if (!response.ok) { status("The reminder could not be rescheduled.", false); return; }
-            await loadMemoryPanel();
-          });
-          row.append(editor, save);
-        });
-        row.append(complete, reschedule, cancel);
-      }
-      reminderItems.append(row);
-    }
-    if (!(rData.reminders || []).length) reminderItems.append(el("p", "cr-memory-intro", "No reminders yet."));
-  }
-  memoryButton.addEventListener("click", async () => { memoryPanel.hidden = false; await loadMemoryPanel(); });
-  memoryClose.addEventListener("click", () => { memoryPanel.hidden = true; });
-  memorySave.addEventListener("click", async () => {
-    const text = memoryEditor.value.trim(); if (!text) return;
-    const response = await fetch("/api/class-rep/memories", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: editingMemoryId, content: text, kind: "user_note" }) });
-    if (!response.ok) { status("Memory could not be saved.", false); return; }
-    editingMemoryId = null; memoryEditor.value = ""; memorySave.textContent = "Save memory"; await loadMemoryPanel();
-  });
   function setAuthMode(mode) {
     authMode = mode;
     authName.hidden = mode !== "register";
@@ -230,9 +124,9 @@
       const response = await fetch("/api/class-rep/auth/me", { cache: "no-store" });
       const result = await response.json();
       if (result.storage_ready === false) {
-        state.user = null; signOut.hidden = true; memoryButton.hidden = true;
+        state.user = null; signOut.hidden = true; 
         body.hidden = true; authPanel.hidden = false;
-        authTitle.textContent = "Private CARA memory is being prepared";
+        authTitle.textContent = "Your private CARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
         authSubmit.disabled = true; authSwitch.disabled = true;
@@ -243,12 +137,12 @@
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
-      signOut.hidden = !state.user; memoryButton.hidden = !state.user;
+      signOut.hidden = !state.user; 
       authPanel.hidden = Boolean(state.user);
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (_) {
-      state.user = null; signOut.hidden = true; memoryButton.hidden = true; authPanel.hidden = false; body.hidden = true;
+      state.user = null; signOut.hidden = true;  authPanel.hidden = false; body.hidden = true;
     }
   }
   async function authenticate() {
@@ -261,9 +155,9 @@
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || "Account request failed.");
-      state.user = result.user; state.history = []; state.conversationId = null; memoryButton.hidden = false;
+      state.user = result.user; state.history = []; state.conversationId = null; 
       transcript.replaceChildren(); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
-      authPassword.value = ""; status("Signed in · private memory enabled", true);
+      authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
   }
@@ -272,7 +166,7 @@
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
   signOut.addEventListener("click", async () => {
     await fetch("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
-    state.user = null; state.history = []; state.conversationId = null; memoryButton.hidden = true; memoryPanel.hidden = true; transcript.replaceChildren();
+    state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
     body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthMode("login");
   });
   async function send(value) {
@@ -419,7 +313,7 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
-    header.hidden = !open; body.hidden = true; authPanel.hidden = !open; memoryPanel.hidden = true; launcher.hidden = open;
+    header.hidden = !open; body.hidden = true; authPanel.hidden = !open; launcher.hidden = open;
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }
