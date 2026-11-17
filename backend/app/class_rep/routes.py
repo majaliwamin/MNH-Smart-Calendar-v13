@@ -1,4 +1,4 @@
-"""CARA API: authenticated chat, private memory, tasks and reminders."""
+"""CRARA API: authenticated chat, private memory, tasks and reminders."""
 import logging, os, re, threading, time, uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -17,7 +17,7 @@ from app.class_rep import memory
 from app.services.authentication import role_for_password
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/class-rep", tags=["CARA"])
+router = APIRouter(prefix="/api/class-rep", tags=["CRARA"])
 _RATE_LOCK = threading.Lock()
 _RATE_BUCKETS: dict[str, deque] = {}
 _RATE_WINDOW_SECONDS, _RATE_LIMIT = 60, 30
@@ -47,7 +47,7 @@ def _require_durable_storage():
     if not _durable_storage_ready():
         raise HTTPException(
             503,
-            "Private CARA memory is temporarily unavailable because durable storage is not configured. "
+            "Private CRARA memory is temporarily unavailable because durable storage is not configured. "
             "Do not create an account yet; the current free web-service filesystem is temporary."
         )
 
@@ -56,7 +56,7 @@ def _user(request: Request):
     _require_durable_storage()
     user = memory.resolve_session(request.cookies.get("cara_session"))
     if not user:
-        raise HTTPException(401, "Sign in to your CARA account to use private conversations and memory.")
+        raise HTTPException(401, "Sign in to your CRARA account to use private conversations and memory.")
     return user
 
 
@@ -110,7 +110,7 @@ def logout(request: Request, response: Response):
 def me(request: Request):
     if not _durable_storage_ready():
         return {"authenticated": False, "user": None, "storage_ready": False,
-                "message": "Private CARA memory is waiting for a persistent database or an attached persistent disk."}
+                "message": "Private CRARA memory is waiting for a persistent database or an attached persistent disk."}
     user = memory.resolve_session(request.cookies.get("cara_session"))
     return {"authenticated": bool(user), "user": user, "storage_ready": True}
 
@@ -236,22 +236,22 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
     try:
         project_created = _explicit_project(user["id"], payload.message.strip(), conversation_id)
         if project_created:
-            confirmation = "I have saved the project '" + project_created["title"] + "' to your CARA project records."
+            confirmation = "I have saved the project '" + project_created["title"] + "' to your CRARA project records."
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
-            return ChatResponse(reply=confirmation, provider="CARA project memory",
+            return ChatResponse(reply=confirmation, provider="CRARA project memory",
                                 model="persistent project record", conversation_id=conversation_id)
         task_created = _explicit_task(user["id"], payload.message.strip(), conversation_id)
         if task_created:
-            confirmation = "I have saved the task “" + task_created["title"] + "” to your CARA task list as not started."
+            confirmation = "I have saved the task “" + task_created["title"] + "” to your CRARA task list as not started."
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
-            return ChatResponse(reply=confirmation, provider="CARA task engine",
+            return ChatResponse(reply=confirmation, provider="CRARA task engine",
                                 model="persistent task memory", conversation_id=conversation_id)
         reminder_created = _explicit_reminder(user["id"], payload.message.strip())
         if reminder_created:
             reminder, scheduled_for = reminder_created
-            confirmation = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CARA when you return; no SMS, email or push notification channel is configured."
+            confirmation = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CRARA when you return; no SMS, email or push notification channel is configured."
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
-            return ChatResponse(reply=confirmation, provider="CARA reminder engine",
+            return ChatResponse(reply=confirmation, provider="CRARA reminder engine",
                                 model="persistent in-app reminder", conversation_id=conversation_id)
         retrieved = memory.retrieve_context(user["id"], payload.message.strip(), conversation_id)
         answer, provider, model, updated = reply(payload.message.strip(),
@@ -263,8 +263,8 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
     except ProviderError as exc:
         raise HTTPException(503, str(exc)) from exc
     except Exception as exc:
-        logger.exception("CARA request failed")
-        raise HTTPException(503, "CARA is temporarily unavailable. Please try again later.") from exc
+        logger.exception("CRARA request failed")
+        raise HTTPException(503, "CRARA is temporarily unavailable. Please try again later.") from exc
 
 
 @router.post("/conversation/turn")
@@ -277,14 +277,14 @@ def conversation_turn(request: Request, payload: dict):
         raise HTTPException(400, "A user message and assistant response are required.")
     project = _explicit_project(user["id"], message, conversation_id)
     if project:
-        answer = "I have saved the project '" + project["title"] + "' to your CARA project records."
+        answer = "I have saved the project '" + project["title"] + "' to your CRARA project records."
     task = None if project else _explicit_task(user["id"], message, conversation_id)
     if task:
-        answer = "I have saved the task “" + task["title"] + "” to your CARA task list as not started."
+        answer = "I have saved the task “" + task["title"] + "” to your CRARA task list as not started."
     reminder_result = _explicit_reminder(user["id"], message)
     if reminder_result:
         reminder, scheduled_for = reminder_result
-        answer = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CARA when you return; no SMS, email or push notification channel is configured."
+        answer = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CRARA when you return; no SMS, email or push notification channel is configured."
     memory.save_turn(user["id"], conversation_id, message, answer)
     return {"saved": True, "conversation_id": conversation_id, "reply": answer}
 
