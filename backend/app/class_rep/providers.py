@@ -106,6 +106,54 @@ def _complete_one(cfg: dict, messages: list[dict]) -> str:
     return answer.strip()
 
 
+
+def cloudflare_diagnostic() -> dict:
+    """Verify the token independently, then run one minimal Workers AI inference."""
+    cfg = next((item for item in provider_configs() if item["provider"] == "cloudflare"), None)
+    if not cfg:
+        return {"configured": False, "token_valid": False, "inference_success": False,
+                "message": "Cloudflare is not configured."}
+
+    verify_request = Request(
+        "https://api.cloudflare.com/client/v4/user/tokens/verify",
+        headers={"Authorization": "Bearer " + cfg["api_key"], "Accept": "application/json"},
+        method="GET",
+    )
+    try:
+        with urlopen(verify_request, timeout=min(cfg["timeout"], 12)) as response:
+            verify_payload = json.loads(response.read().decode("utf-8"))
+            token_valid = bool(verify_payload.get("success") and
+                               (verify_payload.get("result") or {}).get("status") == "active")
+            token_status = response.status
+            token_codes, token_messages = (), ()
+    except HTTPError as exc:
+        token_codes, token_messages = _cloudflare_error_details(exc.read())
+        return {"configured": True, "token_valid": False, "token_http_status": exc.code,
+                "token_error_codes": list(token_codes), "token_error_messages": list(token_messages),
+                "inference_success": False, "stage": "token_verification"}
+    except (URLError, TimeoutError, OSError) as exc:
+        return {"configured": True, "token_valid": None, "inference_success": False,
+                "stage": "token_verification", "message": "Cloudflare token verification endpoint could not be reached."}
+    except (ValueError, UnicodeDecodeError, TypeError):
+        return {"configured": True, "token_valid": None, "inference_success": False,
+                "stage": "token_verification", "message": "Cloudflare returned an unreadable token-verification response."}
+
+    if not token_valid:
+        return {"configured": True, "token_valid": False, "token_http_status": token_status,
+                "token_error_codes": [], "token_error_messages": ["Cloudflare did not report this token as active."],
+                "inference_success": False, "stage": "token_verification"}
+
+    try:
+        _complete_one(cfg, [{"role": "user", "content": "Reply with exactly: CRARA diagnostic successful."}])
+        return {"configured": True, "token_valid": True, "token_http_status": token_status,
+                "inference_success": True, "stage": "complete"}
+    except ProviderError as exc:
+        return {"configured": True, "token_valid": True, "token_http_status": token_status,
+                "inference_success": False, "stage": "workers_ai_inference",
+                "inference_http_status": exc.status_code, "inference_error_codes": list(exc.error_codes),
+                "inference_error_messages": list(exc.error_messages), "message": str(exc)[:300]}
+
+
 def complete(messages: list[dict]) -> tuple[str, str, str]:
     """Try configured providers in priority order."""
     configured = provider_configs()
