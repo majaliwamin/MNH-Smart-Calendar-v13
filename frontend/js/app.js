@@ -837,7 +837,7 @@ const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh
 const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","resources","settings"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly";
+let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly",previousNonResourcesView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
 function fmtH(m){const h=Math.floor(m/60),mm=m%60;return mm?(h?h+"h "+mm+"m":mm+"m"):h+"h";}
 function todayIndexFor(offset){return WK.currentDayIndex(offset==null?weekOffset:offset);}
@@ -958,6 +958,8 @@ function syncCurrentAcademicWeek(){
 }
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
+ if(name==="resources"&&currentView!=="resources")previousNonResourcesView=currentView;
+ else if(name!=="resources")previousNonResourcesView=name;
  currentView=name;
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
@@ -2202,6 +2204,8 @@ async function removeResource(id){
 }
 function renderResources(){
  const list=document.getElementById("res-list"),form=document.getElementById("res-form-wrap");
+ let back=document.getElementById("resources-back");
+ if(!back){back=el("button","resources-back","← Back");back.id="resources-back";back.type="button";back.addEventListener("click",()=>showView(previousNonResourcesView||"weekly"));const heading=document.querySelector("#view-resources h2");if(heading)heading.before(back);}
  list.textContent="";
  if(!resources.length)list.appendChild(el("p","muted","No resources have been added yet."));
  resources.forEach(r=>{
