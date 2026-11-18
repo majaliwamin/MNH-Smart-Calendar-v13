@@ -244,6 +244,32 @@ def delete_document(doc_id: str, owner_id: str = 'shared') -> bool:
 
 
 
+
+def ensure_resource_indexed(file_id: str, filename: str) -> dict:
+    """Backfill a main Resources file into CRARA's shared index, idempotently."""
+    if not re.fullmatch(r"[a-f0-9]{32}", str(file_id or "")):
+        raise DocumentError("The resource file identifier is invalid.")
+    with database() as connection:
+        rows = connection.execute(
+            "SELECT id,data FROM docs WHERE col='cara_document_index'"
+        ).fetchall()
+    for row in rows:
+        try:
+            metadata = json.loads(row["data"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if metadata.get("source_id") == file_id:
+            return {"id": row["id"], "title": metadata.get("title") or filename,
+                    "chunks": metadata.get("chunks", 0), "already_indexed": True}
+    from pathlib import Path
+    from app.config import DATA_DIR
+    directory = DATA_DIR / "resource_uploads"
+    for candidate in directory.glob(file_id + ".*"):
+        if candidate.is_file():
+            return ingest(filename or candidate.name, candidate.read_bytes(),
+                          owner_id="shared", source_id=file_id)
+    raise DocumentError("The original resource file is not present in persistent storage.")
+
 def delete_source_documents(source_id: str) -> int:
     """Delete CRARA indexes linked to a main-application resource file."""
     if not source_id:
