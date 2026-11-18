@@ -2173,3 +2173,10 @@ body[data-theme] .activity-marquee-text .marquee-detail{
 .resource-sheet-table td,.resource-sheet-table th{padding:6px 8px;border:1px solid var(--line);white-space:pre-wrap}
 body.resource-reader-open{overflow:hidden}
 @media(max-width:600px){.resource-reader{padding:0}.resource-reader-panel{width:100%;height:100dvh;border-radius:0}.resource-reader-head{padding:9px}.resource-reader-head h3{font-size:14px}.resource-reader-actions{gap:5px}.resource-reader-download,.resource-reader-close{padding:6px 9px}.resource-folder{padding:8px}}
+
+
+/* Hide the weekly day/date and academic-week strip outside the weekly timetable. */
+body:not(.weekly-view) #view-tabs .weekly-date-tab,
+body:not(.weekly-view) #view-tabs .week-nav-row{
+  display:none!important;
+}
