@@ -288,20 +288,20 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
         conv = _read(COL_CONVERSATIONS, _doc_id(user_id, conversation_id))
         if conv:
             blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(conv.get("messages", [])[-12:], ensure_ascii=False))
-    conversations = _list(COL_CONVERSATIONS, user_id, 20)
+    conversations = _list(COL_CONVERSATIONS, user_id, 8)
     if conversations:
         ranked = []
         for conv in conversations:
             messages = conv.get("messages", [])
-            text = " ".join(m.get("content", "") for m in messages[-20:])
+            text = " ".join(m.get("content", "") for m in messages[-12:])
             words = set(WORD_PATTERN.findall(text.lower()))
             score = len(terms & words)
             if score:
-                ranked.append((score, conv.get("updated_at", 0), messages[-8:]))
+                ranked.append((score, conv.get("updated_at", 0), messages[-6:]))
         ranked.sort(key=lambda x: (x[0], x[1]), reverse=True)
         if ranked:
-            blocks.append("RELEVANT PREVIOUS CONVERSATIONS:\\n" + json.dumps([x[2] for x in ranked[:2]], ensure_ascii=False))
-    memories = _list(COL_MEMORIES, user_id, 100)
+            blocks.append("RELEVANT PREVIOUS CONVERSATIONS:\\n" + json.dumps([x[2] for x in ranked[:1]], ensure_ascii=False))
+    memories = _list(COL_MEMORIES, user_id, 40)
     relevant_memories = []
     for item in memories:
         if item.get("superseded_by"):
@@ -311,8 +311,8 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             relevant_memories.append((score, item.get("updated_at", 0), item))
     relevant_memories.sort(key=lambda x: (x[0], x[1]), reverse=True)
     if relevant_memories:
-        blocks.append("PERSISTENT USER MEMORIES:\\n" + json.dumps([x[2] for x in relevant_memories[:8]], ensure_ascii=False))
-    projects = _list(COL_PROJECTS, user_id, 100)
+        blocks.append("PERSISTENT USER MEMORIES:\\n" + json.dumps([x[2] for x in relevant_memories[:4]], ensure_ascii=False))
+    projects = _list(COL_PROJECTS, user_id, 40)
     project_matches = []
     for project in projects:
         score = len(terms & set(WORD_PATTERN.findall((project.get("title", "") + " " + project.get("description", "")).lower())))
@@ -320,8 +320,8 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             project_matches.append((score, project.get("updated_at", 0), project))
     project_matches.sort(key=lambda x: (x[0], x[1]), reverse=True)
     if project_matches:
-        blocks.append("PROJECT RECORDS:\\n" + json.dumps([x[2] for x in project_matches[:6]], ensure_ascii=False))
-    tasks = _list(COL_TASKS, user_id, 100)
+        blocks.append("PROJECT RECORDS:\\n" + json.dumps([x[2] for x in project_matches[:3]], ensure_ascii=False))
+    tasks = _list(COL_TASKS, user_id, 40)
     task_matches = []
     for task in tasks:
         score = len(terms & set(WORD_PATTERN.findall((task.get("title", "") + " " + task.get("description", "") + " " + task.get("project", "")).lower())))
@@ -329,11 +329,11 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             task_matches.append((score, task.get("updated_at", 0), task))
     task_matches.sort(key=lambda x: (x[0], x[1]), reverse=True)
     if task_matches:
-        blocks.append("PROJECT AND TASK STATE:\\n" + json.dumps([x[2] for x in task_matches[:8]], ensure_ascii=False))
+        blocks.append("PROJECT AND TASK STATE:\\n" + json.dumps([x[2] for x in task_matches[:4]], ensure_ascii=False))
     reminders = [r for r in list_reminders(user_id) if r.get("status") in ("scheduled", "due")]
     if reminders:
-        blocks.append("UPCOMING OR DUE REMINDERS:\\n" + json.dumps(reminders[:8], ensure_ascii=False))
-    return "\\n\\n".join(blocks)[:14000] if blocks else "No relevant saved user memory or task history was found."
+        blocks.append("UPCOMING OR DUE REMINDERS:\\n" + json.dumps(reminders[:4], ensure_ascii=False))
+    return "\\n\\n".join(blocks)[:5000] if blocks else "No relevant saved user memory or task history was found."
 
 def list_memories(user_id: str) -> list[dict]:
     return _list(COL_MEMORIES, user_id, 200)
