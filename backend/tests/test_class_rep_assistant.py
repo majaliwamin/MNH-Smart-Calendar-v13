@@ -284,7 +284,7 @@ def test_document_keyword_match_skips_remote_embedding(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *args): return False
         def execute(self, query, params=()):
-            return [{"data": json.dumps(record)}]
+            return type("Rows", (), {"fetchall": lambda self: [{"data": json.dumps(record)}]})()
 
     monkeypatch.setattr(documents, "database", lambda: FakeConnection())
     monkeypatch.setattr(
