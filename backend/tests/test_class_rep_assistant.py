@@ -356,3 +356,49 @@ def test_calendar_context_includes_timetable_records_for_schedule_questions(monk
     assert data["context_scope"] == "timetable"
     assert "cells" in calls[0][1]
     assert "communications" not in calls[0][1]
+
+
+def test_resource_inventory_query_includes_shared_resources(monkeypatch):
+    from app.class_rep import context
+
+    seen = {}
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            seen["query"] = query
+            return type("Rows", (), {"fetchall": lambda self: [
+                {"col": "resources", "id": "lecture-1",
+                 "data": json.dumps({"title": "MNH lecture notes", "filename": "MNH-notes.pdf"}),
+                 "updated_at": 1795000000000}
+            ]})()
+    monkeypatch.setattr(context, "database", lambda: FakeConnection())
+    payload, _ = context.build_calendar_context("Do we have any notes uploaded?")
+    data = json.loads(payload)
+    assert "resources" in seen["query"]
+    assert data["records"]["resources"][0]["filename"] == "MNH-notes.pdf"
+    assert data["context_scope"] == "resources"
+
+
+def test_document_search_uses_semantic_fallback_when_keywords_miss(monkeypatch):
+    from app.class_rep import documents
+
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            if "LIMIT ?" in query:
+                return type("Rows", (), {"fetchall": lambda self: []})()
+            return type("Rows", (), {"fetchall": lambda self: [
+                {"data": json.dumps({"title": "Placental immunology notes", "page": 4,
+                                     "text": "Maternal immune tolerance at the placenta.",
+                                     "owner_id": "shared", "embedding": [1.0, 0.0]})}
+            ]})()
+    monkeypatch.setattr(documents, "database", lambda: FakeConnection())
+    monkeypatch.setattr(documents, "_vectors",
+                        lambda texts, prefix, timeout=45: [[1.0, 0.0]])
+    results = documents.search_documents("maternal immune adaptation", limit=3)
+    assert results
+    assert results[0]["title"] == "Placental immunology notes"
+    assert results[0]["retrieval"] == "semantic"
+    assert results[0]["page"] == 4
