@@ -121,7 +121,82 @@
     }
     return { response, result };
   }
-  function addMessage(role, text) { const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"), text); transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble; }
+
+  function renderInline(parent, value) {
+    const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+    let cursor = 0;
+    for (const match of value.matchAll(pattern)) {
+      if (match.index > cursor) parent.append(document.createTextNode(value.slice(cursor, match.index)));
+      const token = match[0];
+      const node = document.createElement(token.startsWith("**") ? "strong" : "em");
+      node.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
+      parent.append(node);
+      cursor = match.index + token.length;
+    }
+    if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
+  }
+  function renderMarkdown(bubble, value) {
+    bubble.replaceChildren();
+    const lines = String(value || "").replace(/\r/g, "").split("\n");
+    let paragraph = [];
+    let list = null;
+    let listType = "";
+    const flushParagraph = () => {
+      if (!paragraph.length) return;
+      const p = document.createElement("p");
+      renderInline(p, paragraph.join(" "));
+      bubble.append(p);
+      paragraph = [];
+    };
+    const closeList = () => { list = null; listType = ""; };
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) { flushParagraph(); closeList(); continue; }
+      const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+      const bullet = /^(?:[-•]|\*)\s+(.+)$/.exec(line);
+      const numbered = /^\d+[.)]\s+(.+)$/.exec(line);
+      if (heading) {
+        flushParagraph(); closeList();
+        const h = document.createElement(heading[1].length === 1 ? "h3" : "h4");
+        renderInline(h, heading[2]); bubble.append(h);
+      } else if (bullet || numbered) {
+        flushParagraph();
+        const type = bullet ? "ul" : "ol";
+        if (!list || listType !== type) {
+          closeList(); list = document.createElement(type); listType = type; bubble.append(list);
+        }
+        const item = document.createElement("li");
+        renderInline(item, (bullet || numbered)[1]); list.append(item);
+      } else if (/^>\s?/.test(line)) {
+        flushParagraph(); closeList();
+        const quote = document.createElement("blockquote");
+        renderInline(quote, line.replace(/^>\s?/, "")); bubble.append(quote);
+      } else {
+        closeList(); paragraph.push(line);
+      }
+    }
+    flushParagraph();
+    transcript.scrollTop = transcript.scrollHeight;
+  }
+  function addMessage(role, text) {
+    const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"));
+    if (role === "assistant") renderMarkdown(bubble, text);
+    else bubble.textContent = text;
+    transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble;
+  }
+  async function typeReply(bubble, value) {
+    const answer = String(value || "");
+    bubble.textContent = "";
+    const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion || answer.length < 90) { renderMarkdown(bubble, answer); return; }
+    const step = answer.length > 1400 ? 10 : answer.length > 700 ? 7 : 4;
+    for (let index = 0; index < answer.length; index += step) {
+      bubble.textContent = answer.slice(0, index + step);
+      transcript.scrollTop = transcript.scrollHeight;
+      await new Promise(resolve => window.setTimeout(resolve, 16));
+    }
+    renderMarkdown(bubble, answer);
+  }
   function demoReply(message) {
     const q = message.toLowerCase();
     if (/hello|hi|hey/.test(q)) return "Hello! I’m here to support the MNH class representative with clear academic communication. What would you like help with?";
@@ -269,20 +344,20 @@
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detail || result.error || `CRARA request failed (HTTP ${response.status}).`);
-        pending.textContent = result.reply;
+        await typeReply(pending, result.reply);
         state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
         status("AI connected · " + result.provider, true);
       } else {
-        pending.textContent = demoReply(message);
+        await typeReply(pending, demoReply(message));
         const saved = await fetch("/api/class-rep/conversation/turn", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
         }).then(r => r.ok ? r.json() : null).catch(() => null);
         if (saved) {
           state.conversationId = saved.conversation_id;
-          pending.textContent = saved.reply;
+          await typeReply(pending, saved.reply);
           state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
           state.history = state.history.slice(-12);
         }

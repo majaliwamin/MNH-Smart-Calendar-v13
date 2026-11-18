@@ -114,3 +114,14 @@ def test_crara_is_sticky_in_landing_navigation_and_hidden_during_scheduling():
     assert 'window.setCRARASchedulingVisible(false)' in app
     assert '.view-tabs .cara-launcher{position:fixed;left:14px;right:auto;bottom:14px' in css
     assert '.cara-widget{position:static' in css
+
+
+def test_crara_formats_markdown_and_reveals_answers_progressively():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert "function renderMarkdown(bubble, value)" in js
+    assert 'token.startsWith("**") ? "strong" : "em"' in js
+    assert 'const type = bullet ? "ul" : "ol"' in js
+    assert "async function typeReply(bubble, value)" in js
+    assert "await typeReply(pending, result.reply)" in js
+    assert ".cr-message ul,.cr-message ol" in css

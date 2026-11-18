@@ -269,3 +269,29 @@ def test_cloudflare_http_failures_log_status_and_error_code_without_secrets(monk
     assert "error_codes=10000" in caplog.text
     assert "never-log-this-token" not in caplog.text
     assert "private prompt" not in caplog.text
+
+
+def test_document_keyword_match_skips_remote_embedding(monkeypatch):
+    from app.class_rep import documents
+
+    record = {
+        "owner_id": "student-1", "title": "MNH Lipid Profile Notes",
+        "page": 2, "text": "Dyslipidaemia is an abnormal lipid profile.",
+        "embedding": [],
+    }
+
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            return type("Rows", (), {"fetchall": lambda self: [{"data": json.dumps(record)}]})()
+
+    monkeypatch.setattr(documents, "database", lambda: FakeConnection())
+    monkeypatch.setattr(
+        documents, "_vectors",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("remote embedding should be skipped")),
+    )
+    result = documents.search_documents("What is dyslipidaemia?", owner_id="student-1")
+    assert len(result) == 1
+    assert result[0]["retrieval"] == "keyword"
+    assert "abnormal lipid profile" in result[0]["text"]
