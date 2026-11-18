@@ -222,6 +222,7 @@
     }
   }
   let authMode = "login";
+  // A temporary network/API failure is not proof that the saved session expired.
   let retrySessionCheck = false;
   function setAuthMode(mode) {
     authMode = mode;
