@@ -30,6 +30,15 @@ def test_cara_account_memory_is_persistent_and_isolated(monkeypatch, tmp_path):
         })
         assert created.status_code == 200
         assert created.json()["authenticated"] is True
+        # The saved HttpOnly session survives a fresh auth check and its
+        # persistent cookie expiry is renewed on return visits.
+        session_cookie = client.cookies.get("cara_session")
+        assert session_cookie
+        checked = client.get("/api/class-rep/auth/me")
+        assert checked.status_code == 200
+        assert checked.json()["authenticated"] is True
+        assert client.cookies.get("cara_session") == session_cookie
+        assert "Max-Age=2592000" in checked.headers.get("set-cookie", "")
         chat = client.post("/api/class-rep/chat", json={"message": "We are preparing the seminar announcement."})
         assert chat.status_code == 200
         assert chat.json()["reply"] == "A real assistant response."
