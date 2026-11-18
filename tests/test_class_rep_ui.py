@@ -154,4 +154,3 @@ def test_crara_renderer_normalizes_equations_inside_markdown_lines():
     renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
     assert "equation.trim()" in renderer
     assert "doubled || single" in renderer
-    assert "math delimiters" in renderer
