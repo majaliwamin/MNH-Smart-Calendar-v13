@@ -121,7 +121,7 @@
     // Marked treats \\[ and \\( as Markdown escapes and strips the backslashes.
     // Shield math delimiters during Markdown parsing, then restore them before KaTeX.
     var mathDelimiters = [];
-    source = source.replace(/\\\\\\[|\\\\\\]|\\\\\\(|\\\\\\)/g, function (delimiter) {
+    source = source.replace(/\\\[|\\\]|\\\(|\\\)/g, function (delimiter) {
       var token = "CRARAMATHDELIMITER" + mathDelimiters.length + "TOKEN";
       mathDelimiters.push({token: token, delimiter: delimiter});
       return token;
