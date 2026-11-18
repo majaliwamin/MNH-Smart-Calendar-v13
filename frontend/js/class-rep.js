@@ -98,6 +98,7 @@
     const node = statusNode;
     node.textContent = text;
     node.dataset.state = ready ? "ready" : "unavailable";
+    node.hidden = !text;
   }
   async function requestJson(path, options = {}) {
     let response;
@@ -123,14 +124,22 @@
   }
 
   function renderInline(parent, value) {
-    const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+    const pattern = /(\[[^\]\n]+\]\(\/api\/(?:class-rep\/documents\/[a-f0-9]{32}\/file|resources\/files\/[a-f0-9]{32}(?:\?name=[A-Za-z0-9%._~-]+)?)\)|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
     let cursor = 0;
     for (const match of value.matchAll(pattern)) {
       if (match.index > cursor) parent.append(document.createTextNode(value.slice(cursor, match.index)));
       const token = match[0];
-      const node = document.createElement(token.startsWith("**") ? "strong" : "em");
-      node.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
-      parent.append(node);
+      if (token.startsWith("[")) {
+        const parsed = /^\[([^\]]+)\]\((\/api\/(?:class-rep\/documents\/[a-f0-9]{32}\/file|resources\/files\/[a-f0-9]{32}(?:\?name=[A-Za-z0-9%._~-]+)?))\)$/.exec(token);
+        if (parsed) {
+          const link = document.createElement("a"); link.textContent = parsed[1]; link.href = parsed[2];
+          link.target = "_blank"; link.rel = "noopener noreferrer"; link.className = "cr-file-open"; parent.append(link);
+        }
+      } else {
+        const node = document.createElement(token.startsWith("**") ? "strong" : "em");
+        node.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
+        parent.append(node);
+      }
       cursor = match.index + token.length;
     }
     if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
@@ -427,21 +436,80 @@
     }
   }
   attachButton.addEventListener("click", () => { try { if (fileInput.showPicker) fileInput.showPicker(); else fileInput.click(); } catch (_) { fileInput.click(); } });
+  function addUploadedFileMessage(file, result) {
+    const bubble = el("div", "cr-message cr-assistant cr-file-attachment");
+    const heading = el("strong", "cr-file-title", "Uploaded: " + result.title);
+    const details = el("p", "cr-file-meta", (file.size / 1024).toFixed(1) + " KB · indexed and available to CRARA");
+    const link = el("a", "cr-file-open", "Open uploaded file");
+    link.href = result.view_url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    bubble.append(heading, details, link);
+    const type = String(result.content_type || file.type || "");
+    if (type === "application/pdf" || (type.startsWith("image/") && type !== "image/svg+xml" && type !== "image/tiff")) {
+      const preview = document.createElement(type.startsWith("image/") ? "img" : "iframe");
+      preview.className = "cr-file-preview";
+      preview.src = result.view_url;
+      if (preview.tagName === "IFRAME") {
+        preview.title = "Preview of " + result.title;
+        preview.loading = "lazy";
+      } else {
+        preview.alt = "Preview of " + result.title;
+        preview.loading = "lazy";
+      }
+      bubble.append(preview);
+    } else {
+      const previewToggle = el("button", "cr-file-preview-toggle", "Show readable document text");
+      previewToggle.type = "button";
+      const preview = el("pre", "cr-file-text-preview");
+      preview.hidden = true;
+      previewToggle.addEventListener("click", async () => {
+        if (!preview.dataset.loaded) {
+          previewToggle.disabled = true;
+          try {
+            const response = await fetch("/api/class-rep/documents/" + encodeURIComponent(result.id) + "/text", { credentials: "same-origin", cache: "no-store" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "Could not load document preview.");
+            preview.textContent = data.text || "No readable text was extracted.";
+            preview.dataset.loaded = "1";
+          } catch (error) {
+            preview.textContent = error.message || "Could not load document preview.";
+            preview.dataset.loaded = "1";
+          } finally { previewToggle.disabled = false; }
+        }
+        preview.hidden = !preview.hidden;
+        previewToggle.textContent = preview.hidden ? "Show readable document text" : "Hide document text";
+      });
+      bubble.append(previewToggle, preview);
+    }
+    transcript.append(bubble);
+    transcript.scrollTop = transcript.scrollHeight;
+  }
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files && fileInput.files[0];
-    fileInput.value = "";
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { status("Files must be 10 MB or smaller", false); return; }
+    fileInput.value = "";
+    if (file.size > 10 * 1024 * 1024) { status("Files must be 10 MB or smaller.", false); return; }
+    attachButton.disabled = true;
+    status("Uploading and indexing " + file.name + "…", false);
     try {
-      const data = new FormData(); data.append("file", file);
+      const data = new FormData(); data.append("file", file, file.name); data.append("conversation_id", state.conversationId || "");
       const response = await fetch("/api/class-rep/documents", {
-        method: "POST", body: data
+        method: "POST", credentials: "same-origin", cache: "no-store", body: data
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || "Upload failed");
-      // Successful indexing is silent; the document is available to CRARA without a toast or transcript message.
-    } catch (error) { status(error.message || "Document indexing failed", false); }
-    finally { attachButton.disabled = false; }
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || "Upload failed (HTTP " + response.status + ").");
+      state.conversationId = result.conversation_id || state.conversationId;
+      const fileLink = "/api/class-rep/documents/" + result.id + "/file";
+      const savedText = "The uploaded file is available in this conversation: [" + result.title + "](" + fileLink + ")";
+      state.history.push({ role: "user", content: "I uploaded a file: " + result.title }, { role: "assistant", content: savedText });
+      state.history = state.history.slice(-12);
+      addUploadedFileMessage(file, result);
+      status("File uploaded successfully · " + result.title, true);
+    } catch (error) {
+      status(error.message || "Document upload failed. Please retry.", false);
+      addMessage("assistant", "I couldn't upload that file. " + (error.message || "Please try again."));
+    } finally { attachButton.disabled = false; }
   });
   recordButton.addEventListener("click", async () => {
     if (state.recording && state.recorder) { state.recorder.stop(); return; }
