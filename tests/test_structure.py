@@ -182,7 +182,7 @@ def test_analytics_does_not_present_timetable_templates_as_semester_attendance()
 
 
 def test_analytics_management_dashboard_keeps_reference_layout_and_honest_states():
-    routes = (ROOT / "backend" / "app" / "api" / routes.py").read_text(encoding="utf-8")
+    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
