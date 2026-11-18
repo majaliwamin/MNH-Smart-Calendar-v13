@@ -271,11 +271,13 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
 
     # Prefer an immediate local keyword match. This avoids a separate remote
     # embedding request on ordinary questions whose terms are already in a source.
-    terms = {word.lower() for word in re.findall(r"[\w-]{3,}", query)}
+    stop_words = {"what", "which", "when", "where", "who", "why", "how", "the", "and", "for", "with", "from", "that", "this", "are", "was", "were", "is", "does", "did", "can", "could", "would", "should", "you", "your", "about", "please", "tell", "explain", "define", "mean", "means", "into", "have", "has", "had", "not", "all", "any", "some", "use", "used", "using", "give", "show", "me"}
+    terms = {word.lower() for word in re.findall(r"[\w-]{3,}", query)} - stop_words
     ranked = []
     for item in records:
         haystack = (item.get("title", "") + " " + item.get("text", "")).lower()
-        score = sum(1 for term in terms if term in haystack)
+        document_terms = set(re.findall(r"[\w-]{3,}", haystack))
+        score = len(terms & document_terms)
         if score:
             ranked.append((score, item))
     ranked.sort(key=lambda pair: pair[0], reverse=True)
