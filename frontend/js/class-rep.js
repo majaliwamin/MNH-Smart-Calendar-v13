@@ -494,12 +494,17 @@
     attachButton.disabled = true;
     status("Uploading and indexing " + file.name + "…", false);
     try {
-      const data = new FormData(); data.append("file", file, file.name);
+      const data = new FormData(); data.append("file", file, file.name); data.append("conversation_id", state.conversationId || "");
       const response = await fetch("/api/class-rep/documents", {
         method: "POST", credentials: "same-origin", cache: "no-store", body: data
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.detail || "Upload failed (HTTP " + response.status + ").");
+      state.conversationId = result.conversation_id || state.conversationId;
+      const fileLink = "/api/class-rep/documents/" + result.id + "/file";
+      const savedText = "The uploaded file is available in this conversation: [" + result.title + "](" + fileLink + ")";
+      state.history.push({ role: "user", content: "I uploaded a file: " + result.title }, { role: "assistant", content: savedText });
+      state.history = state.history.slice(-12);
       addUploadedFileMessage(file, result);
       status("File uploaded successfully · " + result.title, true);
     } catch (error) {
