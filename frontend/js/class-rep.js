@@ -19,9 +19,7 @@
   const identity = el("div", "cr-identity");
   identity.append(el("strong", "cr-title", "CRARA (Classroom Representative & Academic Relations Assistant)"));
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
-  const toggle = el("button", "cr-toggle", "×"); toggle.type = "button"; toggle.setAttribute("aria-label", "Close CRARA"); toggle.setAttribute("aria-expanded", "true");
-  const signOut = el("button", "cr-account", "Sign out"); signOut.type = "button"; signOut.hidden = true;
-  header.append(identity, signOut, toggle);
+  header.append(identity);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -263,7 +261,7 @@
       if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       if (result.storage_ready === false) {
         authCheckComplete = true; authCheckRunning = false;
-        state.user = null; signOut.hidden = true; 
+        state.user = null; 
         showHeader(false); body.hidden = true; authPanel.hidden = !root.classList.contains("is-open"); setAuthPresentation(root.classList.contains("is-open"));
         authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
@@ -280,7 +278,7 @@
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
-      signOut.hidden = !state.user; 
+      
       showHeader(Boolean(root.classList.contains("is-open") && state.user));
       setAuthPresentation(root.classList.contains("is-open") && !state.user);
       authPanel.hidden = !root.classList.contains("is-open") || Boolean(state.user);
@@ -291,7 +289,7 @@
       // expired. Do not show the login form or discard the browser session.
       authCheckComplete = true; authCheckRunning = false;
       retrySessionCheck = true;
-      signOut.hidden = true; showHeader(false); body.hidden = true;
+      showHeader(false); body.hidden = true;
       authPanel.hidden = !root.classList.contains("is-open");
       setAuthPresentation(root.classList.contains("is-open"));
       authTitle.textContent = "Your saved CRARA session is still protected";
@@ -317,7 +315,7 @@
       });
       if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
       state.user = result.user; state.history = []; state.conversationId = null; 
-      transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false; signOut.hidden = false;
+      transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
@@ -325,11 +323,6 @@
   authSubmit.addEventListener("click", authenticate);
   authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
-  signOut.addEventListener("click", async () => {
-    await requestJson("/api/class-rep/auth/logout", { method: "POST" }).catch(() => {});
-    state.user = null; state.history = []; state.conversationId = null; transcript.replaceChildren();
-    showHeader(false); body.hidden = true; authPanel.hidden = false; signOut.hidden = true; setAuthPresentation(root.classList.contains("is-open")); setAuthMode("login");
-  });
   const waitingPhrases = [
     "Thinking…",
     "Looking up…",
@@ -541,12 +534,11 @@
     root.classList.toggle("is-open", open);
     setAuthPresentation(Boolean(open && !state.user));
     showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user) || !authCheckComplete; updateLauncherVisibility();
-    launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
+    launcher.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }
   setAuthMode("login");
   launcher.addEventListener("click", () => setOpen(true));
-  toggle.addEventListener("click", closeCRARA);
   // Restore a saved account as soon as the app loads, not only after the user opens CRARA.
   // Keep the login panel hidden while the saved session is being checked.
   void checkAuth();
