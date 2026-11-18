@@ -48,7 +48,10 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'cr-account", "Memory"' not in js
-    assert 'header.append(identity, signOut, toggle)' in js
+    assert 'header.append(identity)' in js
+    assert 'cr-toggle' not in js
+    assert 'Sign out' not in js
+    assert 'Close CRARA' not in js
     assert 'setAttribute("aria-label", "Attach a file")' in js
     assert 'paperclipPath' in js
     assert '".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg' in js
@@ -88,7 +91,8 @@ def test_crara_login_hides_assistant_header_and_uses_full_viewport():
     assert "root.append(body, authPanel)" in js
     assert "root.insertBefore(header, body)" in js
     assert "header.remove()" in js
-    assert "showHeader(false); body.hidden = true; authPanel.hidden = false" in js
+    assert "showHeader(false); body.hidden = true;" in js
+    assert "authPanel.hidden = !root.classList.contains(\"is-open\")" in js
     assert "showHeader(Boolean(open && state.user))" in js
     assert "function setAuthPresentation(active)" in js
     assert "body.cara-auth-open .site-header" in css
