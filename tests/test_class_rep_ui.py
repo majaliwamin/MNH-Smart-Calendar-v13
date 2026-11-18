@@ -134,3 +134,13 @@ def test_crara_keeps_login_form_hidden_when_saved_session_cannot_be_verified():
     assert 'authSubmit.textContent = "Retry connection"' in js
     assert "if (retrySessionCheck)" in js
     assert 'authName.hidden = true; authEmail.hidden = true; authPassword.hidden = true;' in js
+
+
+
+def test_crara_restores_saved_session_on_app_start_without_flashing_login_form():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert "let authCheckComplete = false" in js
+    assert "let authCheckRunning = false" in js
+    assert "void checkAuth();" in js
+    assert "|| !authCheckComplete" in js
+    assert "authPanel.hidden = !root.classList.contains(\"is-open\") || Boolean(state.user);" in js
