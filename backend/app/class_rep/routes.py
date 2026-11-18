@@ -107,11 +107,16 @@ def logout(request: Request, response: Response):
 
 
 @router.get("/auth/me")
-def me(request: Request):
+def me(request: Request, response: Response):
     if not _durable_storage_ready():
         return {"authenticated": False, "user": None, "storage_ready": False,
                 "message": "Private CRARA memory is waiting for a persistent database or an attached persistent disk."}
-    user = memory.resolve_session(request.cookies.get("cara_session"))
+    token = request.cookies.get("cara_session")
+    user = memory.resolve_session(token)
+    if user and token:
+        # Keep the browser's persistent cookie expiry aligned with the sliding
+        # server-side session expiry, so returning users are not asked to sign in.
+        _cookie(response, token)
     return {"authenticated": bool(user), "user": user, "storage_ready": True}
 
 
