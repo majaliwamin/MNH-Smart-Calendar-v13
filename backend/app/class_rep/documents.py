@@ -1,4 +1,4 @@
-"""CARA document ingestion and retrieval with Cloudflare embeddings."""
+"""CRARA document ingestion, local retrieval and owner-scoped file storage."""
 import hashlib
 import base64
 import mimetypes
