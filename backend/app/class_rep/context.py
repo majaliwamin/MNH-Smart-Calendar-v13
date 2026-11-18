@@ -47,10 +47,9 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         "updated", "who changed", "audit",
     ))
     schedule_query = schedule_query or query is None
-    selected = COLLECTIONS if history_query else (
-        ("cells", "modules", "facilitators", "examinations", "recurring")
-        if schedule_query else ()
-    )
+    # CRARA receives a bounded snapshot across every user-facing knowledge section.
+    # This deliberately excludes source code, repository files and implementation internals.
+    selected = COLLECTIONS
     with database() as connection:
         if selected:
             rows = connection.execute(
