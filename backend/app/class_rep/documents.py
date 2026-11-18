@@ -16,7 +16,7 @@ from docx import Document
 from io import BytesIO
 from app.database.connection import database
 
-MAX_FILE_BYTES = 10 * 1024 * 1024
+MAX_FILE_BYTES = 25 * 1024 * 1024
 MAX_CHUNKS = 300
 CHUNK_CHARS = 1800
 OVERLAP_CHARS = 220
@@ -165,7 +165,7 @@ def _vectors(texts: list[str], prefix: str, timeout: int = 45) -> list[list[floa
     return clean
 
 
-def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
+def ingest(filename: str, content: bytes, owner_id: str = 'shared', source_id: str | None = None) -> dict:
     if len(content) > MAX_FILE_BYTES:
         raise DocumentError("Files must be 10 MB or smaller.")
     pages = _extract(filename, content)
@@ -191,7 +191,7 @@ def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
     with database() as connection:
         for index, (item, vector) in enumerate(zip(chunks, vectors)):
             record = {
-                "document_id": doc_id, "owner_id": owner_id, "title": filename[:180],
+                "document_id": doc_id, "owner_id": owner_id, "title": filename[:180], "source_id": source_id,
                 "page": item["page"], "text": item["text"],
                 "embedding": vector, "sha256": digest,
                 "created_at": now,
@@ -204,10 +204,10 @@ def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
         connection.execute(
             "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("cara_document_index", doc_id,
-             json.dumps({"title": filename[:180], "owner_id": owner_id, "chunks": len(chunks),
+             json.dumps({"title": filename[:180], "owner_id": owner_id, "source_id": source_id, "chunks": len(chunks),
                          "sha256": digest, "created_at": now}, ensure_ascii=False), now),
         )
-    return {"id": doc_id, "title": filename[:180], "chunks": len(chunks),
+    return {"id": doc_id, "title": filename[:180], "chunks": len(chunks), "source_id": source_id,
             "pages": len(pages), "sha256": digest}
 
 
@@ -242,6 +242,28 @@ def delete_document(doc_id: str, owner_id: str = 'shared') -> bool:
         connection.execute("DELETE FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,))
     return True
 
+
+
+def delete_source_documents(source_id: str) -> int:
+    """Delete CRARA indexes linked to a main-application resource file."""
+    if not source_id:
+        return 0
+    with database() as connection:
+        rows = connection.execute(
+            "SELECT id,data FROM docs WHERE col='cara_document_index'"
+        ).fetchall()
+        ids = []
+        for row in rows:
+            try:
+                metadata = json.loads(row["data"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if metadata.get("source_id") == source_id:
+                ids.append(str(row["id"]))
+        for doc_id in ids:
+            connection.execute("DELETE FROM docs WHERE col='cara_documents' AND id LIKE ?", (doc_id + ":%",))
+            connection.execute("DELETE FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,))
+    return len(ids)
 
 def _cosine(left: list[float], right: list[float]) -> float:
     if len(left) != len(right):
@@ -282,12 +304,42 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
         if score:
             ranked.append((score, item))
     ranked.sort(key=lambda pair: pair[0], reverse=True)
+
+    # Semantic fallback is used when keyword retrieval finds no passages.
+    # This preserves fast exact-match retrieval while supporting synonyms.
+    if not ranked:
+        try:
+            query_vector = _vectors([query], "query: ", timeout=12)[0]
+            with database() as connection:
+                vector_rows = connection.execute(
+                    "SELECT data FROM docs WHERE col='cara_documents' ORDER BY updated_at DESC LIMIT 5000"
+                ).fetchall()
+            semantic_ranked = []
+            for row in vector_rows:
+                try:
+                    item = json.loads(row["data"])
+                except (TypeError, json.JSONDecodeError):
+                    continue
+                if item.get("owner_id", "shared") not in ("shared", owner_id):
+                    continue
+                vector = item.get("embedding")
+                if isinstance(vector, list) and vector:
+                    score = _cosine(query_vector, vector)
+                    if score > 0:
+                        semantic_ranked.append((score, item))
+            semantic_ranked.sort(key=lambda pair: pair[0], reverse=True)
+            if semantic_ranked:
+                return [{"title": item.get("title"), "page": item.get("page"),
+                         "text": item.get("text", "")[:1800], "score": round(score, 4),
+                         "retrieval": "semantic"}
+                        for score, item in semantic_ranked[:limit]]
+        except DocumentError:
+            pass
+
     if ranked:
         return [{"title": item.get("title"), "page": item.get("page"),
                  "text": item.get("text", "")[:1800], "score": score,
                  "retrieval": "keyword"}
                 for score, item in ranked[:limit]]
 
-    # Keep chat retrieval local: a remote embedding round-trip on every question
-    # adds avoidable latency. Keyword retrieval still returns exact source passages.
     return []
