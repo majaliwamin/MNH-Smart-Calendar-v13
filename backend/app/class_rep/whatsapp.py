@@ -1,4 +1,4 @@
-"""CRARA -> WhatsApp sending: bridge-first, with optional Twilio and a link fallback.
+"""CRARA -> WhatsApp sending: bridge-first, with Twilio selectable and a link fallback.
 
 CRARA is advisory and drafts messages (see ``docs/communications-deployment.md``).
 This module adds the single narrow exception: send one plain-text WhatsApp
@@ -9,16 +9,20 @@ Delivery modes:
 
   **bridge**  A paired WhatsApp session on the Asterisk/VPS host, reached through
               ``app/services/wa_bridge.py`` (WAHA, ``POST /api/sendText``).
-              This is the default. Asterisk itself cannot carry WhatsApp: it is a
-              SIP/RTP PBX with no WhatsApp channel, so the WhatsApp session runs
-              as a separate container on the same VPS and Asterisk is untouched.
+              Asterisk itself cannot carry WhatsApp: it is a SIP/RTP PBX with no
+              WhatsApp channel, so the WhatsApp session runs as a separate
+              container on the same VPS and Asterisk is untouched.
               Needs ``MNH_WA_BRIDGE_URL``.
 
-  **twilio**  Official Twilio WhatsApp sandbox or sender, used only when
-              explicitly selected. Needs ``MNH_TWILIO_ACCOUNT_SID`` and
-              ``MNH_TWILIO_AUTH_TOKEN``. Caveat: free-form text is accepted only
-              inside the 24-hour window opened by the recipient's last message;
-              outside it Twilio returns error 63016 and a template is required.
+  **twilio**  Official Twilio WhatsApp sandbox or sender. Needs
+              ``MNH_TWILIO_ACCOUNT_SID``, ``MNH_TWILIO_AUTH_TOKEN`` and the
+              matching ``MNH_TWILIO_WHATSAPP_FROM`` (defaults to the shared
+              sandbox number). A trial account needs no card, and the sandbox
+              needs no WhatsApp Business Account, but the recipient must first
+              join the sandbox from their own phone. Free-form text is accepted
+              only inside the 24-hour window that the recipient's last message
+              opens; outside it Twilio returns error 63016 and a pre-approved
+              template is required.
 
   **link**    Nothing configured: return an official click-to-chat link
               (``https://wa.me/<number>?text=...``). Free, no account, but the
@@ -148,6 +152,16 @@ def mode() -> str:
     return "link"
 
 
+def ready() -> bool:
+    """True when the selected mode can actually deliver a message."""
+    current = mode()
+    if current == "twilio":
+        return twilio_configured()
+    if current == "bridge":
+        return wa_bridge.configured()
+    return False
+
+
 def build_link(digits: str, text: str) -> str:
     """Official click-to-chat link. Digits only, no '+', URL-encoded text."""
     return "https://wa.me/{}?text={}".format(
@@ -220,6 +234,7 @@ def status() -> dict:
         "enabled": enabled(),
         "transport": transport(),
         "mode": current,
+        "ready": ready(),
         "twilioConfigured": twilio_configured(),
         "bridgeConfigured": wa_bridge.configured(),
         "allowedRecipients": len(allowed_numbers()),
@@ -323,6 +338,20 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
                 "send."
             ),
         }
+
+    # Fail with a clear message instead of sending a malformed request to a
+    # provider whose credentials were never supplied.
+    if current == "twilio" and not twilio_configured():
+        raise SendError(
+            "Twilio is selected (MNH_CLASSREP_WHATSAPP_TRANSPORT=twilio) but "
+            "MNH_TWILIO_ACCOUNT_SID and MNH_TWILIO_AUTH_TOKEN are not both set.",
+            503,
+        )
+    if current == "bridge" and not wa_bridge.configured():
+        raise SendError(
+            "The WhatsApp bridge is selected but MNH_WA_BRIDGE_URL is not set.",
+            503,
+        )
 
     try:
         if current == "twilio":
