@@ -24,7 +24,9 @@ def test_cara_starts_closed_and_has_requested_identity():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     assert 'el("button", "cara-launcher", "CRARA")' in js
     assert 'Class Rep & Academic Relations Assistant' in js
-    assert 'MNH Smart Calendar' in js
+    assert 'Back to Home' in js
+    assert 'homeNav.click()' in js
+    assert 'cr-home-back' in js
     assert 'cr-brand-mark' in js
     assert '"/api/class-rep/auth/" + authMode' in js
     assert "memory" not in js.lower()
@@ -51,7 +53,7 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'cr-account", "Memory"' not in js
     assert 'brand.append(brandMark, identity)' in js
-    assert 'header.append(brand, productLabel)' in js
+    assert 'header.append(brand, homeBack)' in js
     assert 'cr-toggle' not in js
     assert 'Sign out' not in js
     assert 'Close CRARA' not in js
