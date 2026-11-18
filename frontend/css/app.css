@@ -1935,12 +1935,25 @@ html,body{
 }
 
 
-/* v15.04: keep the programme masthead fixed in the scroll flow on desktop and mobile. */
-:root{--mnh-sticky-header-offset:clamp(92px,9vw,150px)}
-.site-header{
+/* v15.07: pin the upcoming-schedules ticker and masthead together on every screen. */
+:root{
+  --mnh-sticky-header-offset:clamp(92px,9vw,150px);
+  --mnh-announcement-sticky-height:40px;
+}
+.activity-marquee-shell[aria-label="Future academic events"]{
   position:-webkit-sticky!important;
   position:sticky!important;
   top:0!important;
+  z-index:1001!important;
+  min-height:var(--mnh-announcement-sticky-height);
+  box-sizing:border-box;
+  background:var(--header-surface,var(--head));
+  isolation:isolate;
+}
+.site-header{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  top:var(--mnh-announcement-sticky-height)!important;
   z-index:1000!important;
   isolation:isolate;
   background:var(--header-surface,var(--head))!important;
@@ -1949,13 +1962,14 @@ html,body{
 .view-tabs{
   position:-webkit-sticky!important;
   position:sticky!important;
-  top:var(--mnh-sticky-header-offset,150px)!important;
+  top:calc(var(--mnh-sticky-header-offset,150px) + var(--mnh-announcement-sticky-height))!important;
   z-index:850!important;
 }
 @media(max-width:720px){
-  :root{--mnh-sticky-header-offset:82px}
-  .site-header{top:0!important}
-  .view-tabs{top:var(--mnh-sticky-header-offset)!important}
+  :root{
+    --mnh-sticky-header-offset:82px;
+    --mnh-announcement-sticky-height:34px;
+  }
 }
 
 /* v15.04: restore a dedicated PWA installation icon beside the header actions. */
