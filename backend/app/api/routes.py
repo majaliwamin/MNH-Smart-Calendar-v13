@@ -18,6 +18,7 @@ from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups, make_backup
 from app.class_rep.documents import ingest as ingest_crara_resource, delete_source_documents as delete_crara_resource_index
 from app.class_rep.documents import DocumentError as CRARADocumentError
+from app.class_rep.documents import ensure_resource_indexed as ensure_crara_resource_indexed
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,60 @@ async def upload_resource_file(file: UploadFile = File(...)):
             "filename": original_name, "size": size, "contentType": RESOURCE_FILE_TYPES[extension],
             "crara_indexing": index_status, "crara_document_id": crara_index.get("id") if crara_index else None}
 
+
+
+
+@router.post("/resources/sync")
+def sync_resources_for_crara(payload: dict = Body(...)):
+    """Mirror the complete Firestore Resources snapshot into the shared SQL read model.
+
+    This endpoint only upserts supplied records; an empty/offline Firestore snapshot
+    never deletes the existing shared inventory.
+    """
+    items = payload.get("resources")
+    if not isinstance(items, list) or len(items) > 500:
+        raise HTTPException(400, "Provide a resources array containing no more than 500 records.")
+    synced = 0
+    indexed = 0
+    indexing_unavailable = 0
+    now = int(time.time() * 1000)
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id") or "").strip()
+        data = item.get("data")
+        if not NAME.fullmatch(item_id) or not isinstance(data, dict):
+            continue
+        clean = {
+            "title": str(data.get("title") or "")[:180],
+            "url": str(data.get("url") or "")[:1200],
+            "note": str(data.get("note") or "")[:3000],
+            "category": str(data.get("category") or "Others")[:80],
+            "createdAt": int(data.get("createdAt") or 0),
+            "fileId": str(data.get("fileId") or "")[:64],
+            "fileName": str(data.get("fileName") or "")[:255],
+            "fileSize": max(0, int(data.get("fileSize") or 0)),
+        }
+        if not clean["title"] or not clean["url"]:
+            continue
+        with database() as connection:
+            connection.execute(
+                "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
+                "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
+                ("resources", item_id, json.dumps(clean, ensure_ascii=False), now),
+            )
+        synced += 1
+        if clean["fileId"]:
+            try:
+                ensure_crara_resource_indexed(clean["fileId"], clean["fileName"] or clean["title"])
+                indexed += 1
+            except CRARADocumentError as exc:
+                indexing_unavailable += 1
+                logger.warning("CRARA resource backfill unavailable resource_id=%s reason=%s", item_id, str(exc))
+            except Exception:
+                indexing_unavailable += 1
+                logger.exception("CRARA resource backfill failed resource_id=%s", item_id)
+    return {"synced": synced, "indexed": indexed, "indexing_unavailable": indexing_unavailable}
 
 @router.get("/resources/files/{file_id}")
 def get_resource_file(file_id: str, name: str | None = None):
