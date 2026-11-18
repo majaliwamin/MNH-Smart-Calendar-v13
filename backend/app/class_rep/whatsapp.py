@@ -1,16 +1,27 @@
-"""CRARA -> WhatsApp sending: one guarded, explicit send path.
+"""CRARA -> WhatsApp sending: two delivery modes, no Meta credentials needed.
 
-CRARA is advisory and drafts messages; it does not dispatch them (see
-``docs/communications-deployment.md``). This module adds the single narrow
-exception the class rep asked for: send one plain-text WhatsApp message to a
-number on an explicit allowlist, only after the user confirms, and only while
-every Communications Centre safeguard allows it.
+CRARA is advisory and drafts messages (see ``docs/communications-deployment.md``).
+This module adds the single narrow exception: send one plain-text WhatsApp
+message to a number on an explicit allowlist, after the user confirms, and only
+while every Communications Centre safeguard allows it.
 
-Transport is the WAHA bridge in ``app/services/wa_bridge.py``. Meta's WhatsApp
-Cloud API is retired from this app: ``app/services/whatsapp.py`` is kept for
-phone normalisation only and is not used to send.
+Delivery has two modes, chosen automatically:
 
-Safeguards, all enforced server-side, checked in this order:
+  **bridge**  A paired WhatsApp session on the Asterisk VPS, reached through
+              ``app/services/wa_bridge.py`` (WAHA, ``POST /api/sendText``).
+              This is the only mode that delivers without a human tap.
+              It needs ``MNH_WA_BRIDGE_URL``, nothing from Meta.
+
+  **link**    No bridge configured: return an official click-to-chat
+              (``https://wa.me/<number>?text=...``) link instead of failing.
+              WhatsApp opens on the phone with the text prefilled and the human
+              presses send. Works with zero configuration and zero credentials.
+
+Meta's WhatsApp Cloud API is retired from this app and is never used here:
+``app/services/whatsapp.py`` is imported only for its offline phone normaliser.
+No Meta token, phone-number id or Graph API version is read by this module.
+
+Safeguards, all enforced server-side, checked before either mode:
 
   1. ``MNH_CLASSREP_WHATSAPP_ENABLED=0`` switches the feature off outright.
   2. ``confirm`` must be true, so the browser has to ask the user first.
@@ -33,6 +44,7 @@ Until those two lines are added, this module is inert: nothing imports it, so
 importing it here cannot affect the running application.
 """
 import os
+import urllib.parse
 
 from fastapi import APIRouter, Body, Cookie, HTTPException
 
@@ -89,10 +101,24 @@ def _contact_for(digits: str):
     return None
 
 
+def mode() -> str:
+    """'bridge' delivers automatically; 'link' needs one human tap."""
+    return "bridge" if wa_bridge.configured() else "link"
+
+
+def build_link(digits: str, text: str) -> str:
+    """Official click-to-chat link. Digits only, no '+', URL-encoded text."""
+    return "https://wa.me/{}?text={}".format(
+        _digits(digits),
+        urllib.parse.quote(str(text or ""), safe=""),
+    )
+
+
 def status() -> dict:
     """What the class rep UI may know. Numbers are counted, never listed."""
     return {
         "enabled": enabled(),
+        "mode": mode(),
         "bridgeConfigured": wa_bridge.configured(),
         "allowedRecipients": len(allowed_numbers()),
         "emergencyStop": comm_service.emergency_stop(),
@@ -103,6 +129,10 @@ def status() -> dict:
 
 def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
     """Send one WhatsApp text to an allowlisted number.
+
+    With a configured bridge the message is delivered and the bridge's response
+    is returned. Without one, an official click-to-chat link is returned and the
+    message is *not* claimed to have been sent.
 
     Raises ``SendError`` with an HTTP status the route can pass straight on.
     """
@@ -126,10 +156,7 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
         raise SendError(str(error), 400) from error
 
     if wa_bridge.is_group(chat_id):
-        raise SendError(
-            "CRARA sends to one WhatsApp number, not to a group.",
-            400,
-        )
+        raise SendError("CRARA sends to one WhatsApp number, not to a group.", 400)
 
     digits = _digits(chat_id)
     if digits not in allowed_numbers():
@@ -168,23 +195,35 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
             comm_contacts.audit(actor, "crara-whatsapp-blocked", digits, reason)
             raise SendError(f"That contact cannot be messaged: {reason}.", 403)
 
+    clipped = text[:MAX_BODY_LENGTH]
+
+    # No bridge: hand back a click-to-chat link. Nothing is sent, and the result
+    # says so, so the UI never claims delivery.
     if not wa_bridge.configured():
-        raise SendError(
-            "The WhatsApp bridge is not configured on this server. Set "
-            "MNH_WA_BRIDGE_URL (and MNH_WA_BRIDGE_TOKEN if the bridge uses auth).",
-            503,
-        )
+        comm_contacts.audit(actor, "crara-whatsapp-link", digits, clipped[:200])
+        return {
+            "ok": True,
+            "status": "needs_manual_send",
+            "mode": "link",
+            "to": digits,
+            "link": build_link(digits, clipped),
+            "detail": (
+                "No WhatsApp bridge is configured, so this message was not sent. "
+                "Open the link on a phone signed in to WhatsApp and press send."
+            ),
+        }
 
     try:
-        result = wa_bridge.send_text(chat_id, text[:MAX_BODY_LENGTH])
+        result = wa_bridge.send_text(chat_id, clipped)
     except wa_bridge.BridgeError as error:
         comm_contacts.audit(actor, "crara-whatsapp-failed", digits, str(error)[:200])
         raise SendError(str(error), 502) from error
 
-    comm_contacts.audit(actor, "crara-whatsapp-sent", digits, text[:200])
+    comm_contacts.audit(actor, "crara-whatsapp-sent", digits, clipped[:200])
     return {
         "ok": True,
         "status": "sent",
+        "mode": "bridge",
         "to": digits,
         "chatId": chat_id,
         "sender": wa_bridge.profile_name(),
@@ -194,8 +233,24 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
 
 @router.get("/whatsapp/status")
 def whatsapp_status(mnh_session: str | None = Cookie(None)):
-    """Whether CRARA can send right now, and why not."""
+    """Whether CRARA can send right now, in which mode, and why not."""
     return status()
+
+
+@router.post("/whatsapp/link")
+def whatsapp_link(
+    mnh_session: str | None = Cookie(None),
+    data: dict = Body(default={}),
+):
+    """Build a click-to-chat link without sending anything."""
+    digits = _digits(data.get("to") or "")
+    if digits not in allowed_numbers():
+        raise HTTPException(
+            status_code=403,
+            detail="That number is not on the CRARA WhatsApp allowlist.",
+        )
+    text = str(data.get("body") or "").strip()[:MAX_BODY_LENGTH]
+    return {"ok": True, "to": digits, "link": build_link(digits, text)}
 
 
 @router.post("/whatsapp/send")
@@ -203,7 +258,7 @@ def whatsapp_send(
     mnh_session: str | None = Cookie(None),
     data: dict = Body(default={}),
 ):
-    """Send one WhatsApp text. Requires ``confirm: true`` from the UI."""
+    """Send one WhatsApp text, or return a link when no bridge is configured."""
     try:
         return send(
             str(data.get("to") or ""),
