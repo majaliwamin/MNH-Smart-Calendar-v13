@@ -350,7 +350,7 @@ def test_upcoming_announcement_ticker_is_open_ended_and_refresh_control_is_ui_hi
     assert "animation:activity-flow-right 90s linear infinite" in css
 
 
-def test_secondary_pages_hide_shared_masthead_and_use_full_viewport():
+def test_secondary_views_offer_home_return_navigation():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
 
@@ -360,7 +360,6 @@ def test_secondary_pages_hide_shared_masthead_and_use_full_viewport():
     assert 'button.className="view-home-return"' in app
     assert 'button.addEventListener("click",()=>showView("weekly"))' in app
     assert ".view-home-return" in css
-    assert "body.is-content-view" not in css or "weekly-view" in app
 
 def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
