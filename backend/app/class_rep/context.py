@@ -10,7 +10,7 @@ COLLECTIONS = (
     "cells", "modules", "facilitators", "examinations",
     "recurring", "communications", "resources",
 )
-MAX_CONTEXT_CHARS = 30000
+MAX_CONTEXT_CHARS = 9000
 MAX_ACTIVITY_ITEMS = 60
 
 
@@ -30,23 +30,40 @@ def _bounded_value(value, depth: int = 0):
     return str(value)[:300]
 
 
-def build_calendar_context(limit: int = 240) -> tuple[str, str | None]:
+def build_calendar_context(query: str = '', limit: int = 120) -> tuple[str, str | None]:
     """Build a bounded snapshot from live shared records and non-sensitive audit summaries.
 
     This reads the same records used by the timetable UI. It does not write, mutate,
     or infer missing calendar facts. Activity history is limited to action summaries.
     """
+    text = str(query or "").lower()
+    schedule_query = any(term in text for term in (
+        "session", "timetable", "schedule", "class", "lecture", "exam", "examination",
+        "module", "facilitator", "venue", "today", "tomorrow", "this week", "next week",
+        "next class", "upcoming", "recurring",
+    ))
+    history_query = any(term in text for term in (
+        "recent change", "recent update", "what changed", "activity history", "modified",
+        "updated", "who changed", "audit",
+    ))
+    selected = COLLECTIONS if history_query else (
+        ("cells", "modules", "facilitators", "examinations", "recurring")
+        if schedule_query else ()
+    )
     with database() as connection:
-        rows = connection.execute(
-            "SELECT col,id,data,updated_at FROM docs WHERE col IN (" +
-            ",".join("?" for _ in COLLECTIONS) +
-            ") ORDER BY updated_at DESC LIMIT ?",
-            (*COLLECTIONS, limit),
-        ).fetchall()
+        if selected:
+            rows = connection.execute(
+                "SELECT col,id,data,updated_at FROM docs WHERE col IN (" +
+                ",".join("?" for _ in selected) +
+                ") ORDER BY updated_at DESC LIMIT ?",
+                (*selected, limit),
+            ).fetchall()
+        else:
+            rows = []
         try:
             activity_rows = connection.execute(
                 "SELECT at,action,collection,item_id,summary FROM audit "
-                "ORDER BY at DESC LIMIT ?", (MAX_ACTIVITY_ITEMS,)
+                "ORDER BY at DESC LIMIT ?", (MAX_ACTIVITY_ITEMS if history_query else 0,)
             ).fetchall()
         except Exception:
             # Older database deployments may not yet have the audit table.
@@ -87,6 +104,7 @@ def build_calendar_context(limit: int = 240) -> tuple[str, str | None]:
         "records": grouped,
         "recent_activity_history": activity,
         "data_scope": "live shared application records; read-only",
+        "context_scope": "recent activity" if history_query else "timetable" if schedule_query else "not required for this question",
     }
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     # Trim oldest records, then oldest activity, without slicing JSON mid-record.
