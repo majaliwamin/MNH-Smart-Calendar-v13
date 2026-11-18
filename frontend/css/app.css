@@ -1946,10 +1946,15 @@ html,body{
   top:0!important;
   z-index:1001!important;
   min-height:var(--mnh-announcement-sticky-height);
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
   box-sizing:border-box;
   background:var(--header-surface,var(--head));
   isolation:isolate;
 }
+.activity-marquee-shell[aria-label="Future academic events"] .activity-marquee{padding:10px 0}
 .site-header{
   position:-webkit-sticky!important;
   position:sticky!important;
@@ -1970,6 +1975,7 @@ html,body{
     --mnh-sticky-header-offset:82px;
     --mnh-announcement-sticky-height:34px;
   }
+  .activity-marquee-shell[aria-label="Future academic events"] .activity-marquee{padding:7px 0}
 }
 
 /* v15.04: restore a dedicated PWA installation icon beside the header actions. */
