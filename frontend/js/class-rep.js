@@ -446,7 +446,7 @@
     link.rel = "noopener noreferrer";
     bubble.append(heading, details, link);
     const type = String(result.content_type || file.type || "");
-    if (type === "application/pdf" || type.startsWith("image/")) {
+    if (type === "application/pdf" || (type.startsWith("image/") && type !== "image/svg+xml" && type !== "image/tiff")) {
       const preview = document.createElement(type.startsWith("image/") ? "img" : "iframe");
       preview.className = "cr-file-preview";
       preview.src = result.view_url;
