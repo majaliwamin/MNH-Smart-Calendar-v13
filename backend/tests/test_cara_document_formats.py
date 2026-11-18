@@ -68,7 +68,7 @@ def test_ingest_falls_back_to_keyword_index_when_embeddings_are_unavailable(monk
     assert result["chunks"] == 1
     assert result["view_url"].endswith("/file")
     assert len(statements) == 3
-    assert any("cara_document_files" in statement for statement, _ in statements)
+    assert any("cara_document_files" in parameters for _, parameters in statements)
 
 
 def test_document_uploads_remain_enabled_without_embedding_credentials(monkeypatch):
