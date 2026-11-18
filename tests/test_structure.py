@@ -387,6 +387,9 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "mathDelimiters.push({token: token, delimiter: delimiter})" in renderer
     assert "mathDelimiters.forEach(function (item)" in renderer
     assert "window.renderMathInElement(bubble" in renderer
-    assert "2026.11.18-crara-math-complete-v1" in html
-    assert "2026.11.18-crara-math-complete-v1" in worker
-    assert "2026.11.18-crara-math-complete-v1" in backend_config
+    import re
+    build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
+    assert build == "2026.11.18-crara-header-v1"
+    assert f'window.MNH_BUILD="{build}"' in html
+    assert f'const BUILD = "{build}"' in worker
+    assert f'?v={build}' in html
