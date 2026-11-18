@@ -13,7 +13,7 @@
       var normalized = line.replace(/\\\|/g, "|");
       // Repair equations even when embedded inside a Markdown bullet or sentence.
       // Only equation-like bracket content is converted; citations and links are left alone.
-      normalized = normalized.replace(/\[\s*([^[\]]*(?:\\(?:frac|sqrt|sum|text|sigma|mu|bar|alpha|beta|theta|chi|pi|Delta|mathrm|times|cdot|pm|leq|geq)|[=^_])[^[\]]*)\s*\]/g, function (_, equation) {
+      normalized = normalized.replace(/\[\s*([^[\]]*(?:\\[A-Za-z]+|[=^_])[^[\]]*)\s*\]/g, function (_, equation) {
         return "\\[" + equation.trim() + "\\]";
       });
       // Convert model-style ((\mu)), ((s)), ((n-1)) and (\sigma^2) into inline math.
@@ -118,6 +118,14 @@
   function render(bubble, value, transcript) {
     var source = normalize(value);
     if (!window.marked || !window.DOMPurify) { bubble.textContent = source; return; }
+    // Marked treats \\[ and \\( as Markdown escapes and strips the backslashes.
+    // Shield math delimiters during Markdown parsing, then restore them before KaTeX.
+    var mathDelimiters = [];
+    source = source.replace(/\\\\\\[|\\\\\\]|\\\\\\(|\\\\\\)/g, function (delimiter) {
+      var token = "CRARAMATHDELIMITER" + mathDelimiters.length + "TOKEN";
+      mathDelimiters.push({token: token, delimiter: delimiter});
+      return token;
+    });
     var charts = [];
     var renderer = new window.marked.Renderer();
     renderer.code = function (token) {
@@ -129,6 +137,9 @@
     };
     var html = window.marked.parse(source, {gfm: true, renderer: renderer});
     bubble.innerHTML = window.DOMPurify.sanitize(html, {USE_PROFILES: {html: true}, ADD_ATTR: ["class","data-chart-slot"]});
+    mathDelimiters.forEach(function (item) {
+      bubble.innerHTML = bubble.innerHTML.split(item.token).join(item.delimiter);
+    });
     bubble.querySelectorAll("[data-chart-slot]").forEach(function (slot) {
       var i = Number(slot.getAttribute("data-chart-slot"));
       if (Number.isInteger(i) && charts[i]) chart(slot, charts[i]);
