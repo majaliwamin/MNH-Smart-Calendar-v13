@@ -287,15 +287,6 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
                  "retrieval": "keyword"}
                 for score, item in ranked[:limit]]
 
-    # Semantic retrieval remains available when there is no lexical overlap,
-    # but its timeout is deliberately short so it cannot stall every chat turn.
-    try:
-        query_vector = _vectors([query], "task: search result | query: ", timeout=10)[0]
-        ranked_vectors = [(_cosine(query_vector, item.get("embedding", [])), item)
-                          for item in records]
-        ranked_vectors.sort(key=lambda pair: pair[0], reverse=True)
-        return [{"title": item.get("title"), "page": item.get("page"),
-                 "text": item.get("text", "")[:1800], "score": round(score, 4)}
-                for score, item in ranked_vectors[:limit] if score > 0]
-    except DocumentError:
-        return []
+    # Keep chat retrieval local: a remote embedding round-trip on every question
+    # adds avoidable latency. Keyword retrieval still returns exact source passages.
+    return []
