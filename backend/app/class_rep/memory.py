@@ -282,58 +282,79 @@ def list_reminders(user_id: str) -> list[dict]:
 
 
 def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str:
+    """Fetch account-scoped context with one database connection and bounded row sets."""
     terms = set(WORD_PATTERN.findall(str(query or "").lower()))
+    collections = (COL_CONVERSATIONS, COL_MEMORIES, COL_PROJECTS, COL_TASKS, COL_REMINDERS)
+    grouped = {name: [] for name in collections}
+    # One connection replaces the previous sequence of independent reads/connections.
+    with database() as db:
+        for collection in collections:
+            cap = 12 if collection == COL_CONVERSATIONS else 40
+            rows = db.execute(
+                "SELECT id,data,updated_at FROM docs WHERE col=? AND id LIKE ? "
+                "ORDER BY updated_at DESC LIMIT ?",
+                (collection, user_id + ":%", cap),
+            ).fetchall()
+            for row in rows:
+                try:
+                    item = json.loads(row["data"])
+                except (TypeError, json.JSONDecodeError):
+                    continue
+                item["id"] = str(row["id"]).split(":", 1)[1]
+                item["updated_at"] = row["updated_at"]
+                grouped[collection].append(item)
+
     blocks = []
-    if conversation_id:
-        conv = _read(COL_CONVERSATIONS, _doc_id(user_id, conversation_id))
-        if conv:
-            blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(conv.get("messages", [])[-6:], ensure_ascii=False))
-    conversations = _list(COL_CONVERSATIONS, user_id, 8)
-    if conversations:
-        ranked = []
-        for conv in conversations:
-            messages = conv.get("messages", [])
-            text = " ".join(m.get("content", "") for m in messages[-12:])
-            words = set(WORD_PATTERN.findall(text.lower()))
-            score = len(terms & words)
-            if score:
-                ranked.append((score, conv.get("updated_at", 0), messages[-6:]))
-        ranked.sort(key=lambda x: (x[0], x[1]), reverse=True)
-        if ranked:
-            blocks.append("RELEVANT PREVIOUS CONVERSATIONS:\\n" + json.dumps([x[2] for x in ranked[:1]], ensure_ascii=False))
-    memories = _list(COL_MEMORIES, user_id, 40)
-    relevant_memories = []
-    for item in memories:
-        if item.get("superseded_by"):
+    conversations = grouped[COL_CONVERSATIONS]
+    active = next((item for item in conversations if item.get("id") == conversation_id), None)
+    if active and active.get("messages"):
+        blocks.append("ACTIVE CONVERSATION HISTORY:\n" + json.dumps(active["messages"][-6:], ensure_ascii=False))
+    ranked_conversations = []
+    for conv in conversations:
+        messages = conv.get("messages", [])
+        if not messages or conv is active:
             continue
-        score = len(terms & set(WORD_PATTERN.findall(item.get("content", "").lower())))
+        text = " ".join(str(msg.get("content", "")) for msg in messages[-12:])
+        score = len(terms & set(WORD_PATTERN.findall(text.lower())))
+        if score:
+            ranked_conversations.append((score, conv.get("updated_at", 0), messages[-6:]))
+    ranked_conversations.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    if ranked_conversations:
+        blocks.append("RELEVANT PREVIOUS CONVERSATIONS:\n" + json.dumps([ranked_conversations[0][2]], ensure_ascii=False))
+
+    memories = [item for item in grouped[COL_MEMORIES] if not item.get("superseded_by")]
+    relevant = []
+    for item in memories:
+        score = len(terms & set(WORD_PATTERN.findall(str(item.get("content", "")).lower())))
         if score or item.get("kind") in ("preference", "project"):
-            relevant_memories.append((score, item.get("updated_at", 0), item))
-    relevant_memories.sort(key=lambda x: (x[0], x[1]), reverse=True)
-    if relevant_memories:
-        blocks.append("PERSISTENT USER MEMORIES:\\n" + json.dumps([x[2] for x in relevant_memories[:4]], ensure_ascii=False))
-    projects = _list(COL_PROJECTS, user_id, 40)
-    project_matches = []
-    for project in projects:
-        score = len(terms & set(WORD_PATTERN.findall((project.get("title", "") + " " + project.get("description", "")).lower())))
-        if score or project.get("status") == "active":
-            project_matches.append((score, project.get("updated_at", 0), project))
-    project_matches.sort(key=lambda x: (x[0], x[1]), reverse=True)
-    if project_matches:
-        blocks.append("PROJECT RECORDS:\\n" + json.dumps([x[2] for x in project_matches[:3]], ensure_ascii=False))
-    tasks = _list(COL_TASKS, user_id, 40)
-    task_matches = []
-    for task in tasks:
-        score = len(terms & set(WORD_PATTERN.findall((task.get("title", "") + " " + task.get("description", "") + " " + task.get("project", "")).lower())))
-        if score or task.get("status") in ("in_progress", "waiting", "blocked"):
-            task_matches.append((score, task.get("updated_at", 0), task))
-    task_matches.sort(key=lambda x: (x[0], x[1]), reverse=True)
-    if task_matches:
-        blocks.append("PROJECT AND TASK STATE:\\n" + json.dumps([x[2] for x in task_matches[:4]], ensure_ascii=False))
-    reminders = [r for r in list_reminders(user_id) if r.get("status") in ("scheduled", "due")]
+            relevant.append((score, item.get("updated_at", 0), item))
+    relevant.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    if relevant:
+        blocks.append("PERSISTENT USER MEMORIES:\n" + json.dumps([row[2] for row in relevant[:4]], ensure_ascii=False))
+
+    projects = []
+    for item in grouped[COL_PROJECTS]:
+        score = len(terms & set(WORD_PATTERN.findall((str(item.get("title", "")) + " " + str(item.get("description", ""))).lower())))
+        if score or item.get("status") == "active":
+            projects.append((score, item.get("updated_at", 0), item))
+    projects.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    if projects:
+        blocks.append("PROJECT RECORDS:\n" + json.dumps([row[2] for row in projects[:3]], ensure_ascii=False))
+
+    tasks = []
+    for item in grouped[COL_TASKS]:
+        source = " ".join(str(item.get(key, "")) for key in ("title", "description", "project"))
+        score = len(terms & set(WORD_PATTERN.findall(source.lower())))
+        if score or item.get("status") in ("in_progress", "waiting", "blocked"):
+            tasks.append((score, item.get("updated_at", 0), item))
+    tasks.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    if tasks:
+        blocks.append("PROJECT AND TASK STATE:\n" + json.dumps([row[2] for row in tasks[:4]], ensure_ascii=False))
+
+    reminders = [item for item in grouped[COL_REMINDERS] if item.get("status") in ("scheduled", "due")]
     if reminders:
-        blocks.append("UPCOMING OR DUE REMINDERS:\\n" + json.dumps(reminders[:4], ensure_ascii=False))
-    return "\\n\\n".join(blocks)[:5000] if blocks else "No relevant saved user memory or task history was found."
+        blocks.append("UPCOMING OR DUE REMINDERS:\n" + json.dumps(reminders[:4], ensure_ascii=False))
+    return "\n\n".join(blocks)[:5000] if blocks else "No relevant saved user memory or task history was found."
 
 def list_memories(user_id: str) -> list[dict]:
     return _list(COL_MEMORIES, user_id, 200)

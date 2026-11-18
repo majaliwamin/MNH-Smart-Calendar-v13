@@ -334,7 +334,7 @@ def test_calendar_context_omits_unrelated_records_for_general_questions(monkeypa
     monkeypatch.setattr(context, "database", lambda: FakeConnection())
     payload, _ = context.build_calendar_context("What is dyslipidaemia?")
     data = json.loads(payload)
-    assert data["context_scope"] == "not required for this question"
+    assert data["context_scope"] == "all user-facing application sections"
     assert data["records"] == {name: [] for name in context.COLLECTIONS}
     assert not any("FROM audit" in query for query, _ in calls)
 
@@ -353,6 +353,8 @@ def test_calendar_context_includes_timetable_records_for_schedule_questions(monk
     monkeypatch.setattr(context, "database", lambda: FakeConnection())
     payload, _ = context.build_calendar_context("What is the next session?")
     data = json.loads(payload)
-    assert data["context_scope"] == "timetable"
+    assert data["context_scope"] == "timetable and all user-facing application sections"
     assert "cells" in calls[0][1]
-    assert "communications" not in calls[0][1]
+    assert "communications" in calls[0][1]
+    assert "resources" in calls[0][1]
+    assert "settings" in calls[0][1]
