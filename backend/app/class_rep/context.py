@@ -8,7 +8,7 @@ from app.config import TIMEZONE
 
 COLLECTIONS = (
     "cells", "modules", "facilitators", "examinations",
-    "recurring", "communications", "resources",
+    "recurring", "communications", "resources", "settings",
 )
 MAX_CONTEXT_CHARS = 9000
 MAX_ACTIVITY_ITEMS = 60
@@ -22,7 +22,8 @@ def _bounded_value(value, depth: int = 0):
         return value[:1400]
     if isinstance(value, dict):
         return {str(key)[:100]: _bounded_value(item, depth + 1)
-                for key, item in list(value.items())[:35]}
+                for key, item in list(value.items())[:35]
+                if not any(secret in str(key).lower() for secret in ("password", "token", "secret", "api_key", "apikey", "credential", "authorization"))}
     if isinstance(value, list):
         return [_bounded_value(item, depth + 1) for item in value[:25]]
     if value is None or isinstance(value, (bool, int, float)):
