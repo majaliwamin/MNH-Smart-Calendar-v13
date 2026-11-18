@@ -254,9 +254,17 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
     query = query.strip()[:1000]
     if not query:
         return []
+    # Match meaningful query terms in SQLite before loading document payloads.
+    # This avoids reading/parsing the entire document collection on every chat turn.
+    stop_words = {"what", "which", "when", "where", "who", "why", "how", "the", "and", "for", "with", "from", "that", "this", "are", "was", "were", "is", "does", "did", "can", "could", "would", "should", "you", "your", "about", "please", "tell", "explain", "define", "mean", "means", "into", "have", "has", "had", "not", "all", "any", "some", "use", "used", "using", "give", "show", "me"}
+    terms = sorted({word.lower() for word in re.findall(r"[\w-]{3,}", query)} - stop_words)
+    if not terms:
+        return []
+    clauses = " OR ".join("data LIKE ?" for _ in terms)
     with database() as connection:
         rows = connection.execute(
-            "SELECT data FROM docs WHERE col='cara_documents' ORDER BY updated_at DESC LIMIT 1200"
+            "SELECT data FROM docs WHERE col='cara_documents' AND (" + clauses + ") ORDER BY updated_at DESC LIMIT ?",
+            tuple("%" + term + "%" for term in terms) + (max(limit * 20, 40),),
         ).fetchall()
     records = []
     for row in rows:
@@ -266,13 +274,6 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
                 records.append(record)
         except (TypeError, json.JSONDecodeError):
             continue
-    if not records:
-        return []
-
-    # Prefer an immediate local keyword match. This avoids a separate remote
-    # embedding request on ordinary questions whose terms are already in a source.
-    stop_words = {"what", "which", "when", "where", "who", "why", "how", "the", "and", "for", "with", "from", "that", "this", "are", "was", "were", "is", "does", "did", "can", "could", "would", "should", "you", "your", "about", "please", "tell", "explain", "define", "mean", "means", "into", "have", "has", "had", "not", "all", "any", "some", "use", "used", "using", "give", "show", "me"}
-    terms = {word.lower() for word in re.findall(r"[\w-]{3,}", query)} - stop_words
     ranked = []
     for item in records:
         haystack = (item.get("title", "") + " " + item.get("text", "")).lower()
