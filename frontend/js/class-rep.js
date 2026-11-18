@@ -453,7 +453,6 @@
       if (preview.tagName === "IFRAME") {
         preview.title = "Preview of " + result.title;
         preview.loading = "lazy";
-        preview.setAttribute("sandbox", "allow-same-origin");
       } else {
         preview.alt = "Preview of " + result.title;
         preview.loading = "lazy";
