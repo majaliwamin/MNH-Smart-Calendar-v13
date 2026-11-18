@@ -2223,3 +2223,36 @@ body:not(.weekly-view) #view-tabs .week-nav-row{
   opacity:1!important;
   text-shadow:none!important;
 }
+
+
+/* Keep academic week controls aligned to the Home icon row, flush right on all screens. */
+#view-tabs .week-nav-row{
+  flex:1 1 0!important;
+  width:auto!important;
+  min-width:0!important;
+  margin-left:auto!important;
+  justify-content:flex-end!important;
+}
+#view-tabs .week-nav-row .week-nav{
+  flex:0 0 auto!important;
+  width:auto!important;
+  margin-left:0!important;
+  justify-content:flex-end!important;
+}
+@media(max-width:560px){
+  #view-tabs .week-nav-row{
+    flex:1 1 0!important;
+    width:auto!important;
+    margin-left:auto!important;
+    justify-content:flex-end!important;
+  }
+  #view-tabs .week-nav-row .week-nav{
+    width:auto!important;
+    margin-left:0!important;
+  }
+}
+
+/* When CRARA is open, hide the entire weekly timetable content behind its workspace. */
+body.cara-open #view-weekly > :not(#class-rep-assistant){
+  display:none!important;
+}

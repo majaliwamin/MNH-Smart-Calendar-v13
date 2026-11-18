@@ -210,3 +210,30 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
  .cr-memory-panel{top:calc(env(safe-area-inset-top,0px) + 88px)!important;}
 }
 @media(max-width:390px){.cr-home-back{gap:4px;font-size:11px;}.cr-home-back svg{width:16px;height:16px;}.cr-brand-mark{width:38px;flex-basis:38px;padding-right:6px;}.cr-brand{gap:8px;}.cr-title{font-size:14px!important;}}
+
+/* Compact CRARA composer on desktop only; mobile sizing and touch controls stay unchanged. */
+@media (min-width:761px){
+  .cara-widget.is-open .cr-form{
+    align-items:center!important;
+    gap:8px!important;
+    padding:5px 8px!important;
+  }
+  .cara-widget.is-open .cr-form .cr-icon-button{
+    width:28px!important;
+    height:28px!important;
+    flex-basis:28px!important;
+    font-size:18px!important;
+  }
+  .cara-widget.is-open .cr-form .cr-icon-button svg{
+    width:18px!important;
+    height:18px!important;
+  }
+  .cara-widget.is-open .cr-form .cr-input{
+    min-height:28px!important;
+    max-height:80px!important;
+    padding:3px 8px!important;
+    font-size:14px!important;
+    line-height:1.25!important;
+    resize:vertical;
+  }
+}
