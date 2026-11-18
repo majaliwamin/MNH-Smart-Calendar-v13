@@ -1,27 +1,36 @@
-"""CRARA -> WhatsApp sending: two delivery modes, no Meta credentials needed.
+"""CRARA -> WhatsApp sending: three delivery modes, none needing a credit card.
 
 CRARA is advisory and drafts messages (see ``docs/communications-deployment.md``).
 This module adds the single narrow exception: send one plain-text WhatsApp
 message to a number on an explicit allowlist, after the user confirms, and only
 while every Communications Centre safeguard allows it.
 
-Delivery has two modes, chosen automatically:
+Delivery modes, tried in this order:
+
+  **twilio**  Official Twilio WhatsApp sandbox or sender.
+              ``POST https://api.twilio.com/2010-04-01/Accounts/<sid>/Messages.json``
+              with ``To=whatsapp:+<digits>``. A Twilio trial needs no card, and
+              the sandbox needs no WhatsApp Business Account. The recipient must
+              have joined the sandbox from their own phone. Needs
+              ``MNH_TWILIO_ACCOUNT_SID`` and ``MNH_TWILIO_AUTH_TOKEN``.
+              Caveat: free-form text is only accepted inside the 24-hour window
+              opened by the recipient's last message. Outside it, Twilio returns
+              error 63016 and a pre-approved template is required.
 
   **bridge**  A paired WhatsApp session on the Asterisk VPS, reached through
               ``app/services/wa_bridge.py`` (WAHA, ``POST /api/sendText``).
-              This is the only mode that delivers without a human tap.
-              It needs ``MNH_WA_BRIDGE_URL``, nothing from Meta.
+              Unofficial (Baileys), free and unmetered, but the number can be
+              restricted by WhatsApp. Needs ``MNH_WA_BRIDGE_URL``.
 
-  **link**    No bridge configured: return an official click-to-chat
-              (``https://wa.me/<number>?text=...``) link instead of failing.
-              WhatsApp opens on the phone with the text prefilled and the human
-              presses send. Works with zero configuration and zero credentials.
+  **link**    Nothing configured: return an official click-to-chat link
+              (``https://wa.me/<number>?text=...``). Free forever, no account,
+              but the human presses send.
 
-Meta's WhatsApp Cloud API is retired from this app and is never used here:
+Meta's WhatsApp Cloud API is not implemented here: registering a production
+sender requires a payment method, which this deployment does not have.
 ``app/services/whatsapp.py`` is imported only for its offline phone normaliser.
-No Meta token, phone-number id or Graph API version is read by this module.
 
-Safeguards, all enforced server-side, checked before either mode:
+Safeguards, all enforced server-side, checked before any mode:
 
   1. ``MNH_CLASSREP_WHATSAPP_ENABLED=0`` switches the feature off outright.
   2. ``confirm`` must be true, so the browser has to ask the user first.
@@ -43,8 +52,12 @@ Wiring (two lines in ``backend/app/main.py``):
 Until those two lines are added, this module is inert: nothing imports it, so
 importing it here cannot affect the running application.
 """
+import base64
+import json
 import os
+import urllib.error
 import urllib.parse
+import urllib.request
 
 from fastapi import APIRouter, Body, Cookie, HTTPException
 
@@ -53,11 +66,13 @@ from app.services import comm_contacts, comm_service, wa_bridge
 router = APIRouter(prefix="/api/class-rep")
 
 DEFAULT_ALLOWED_NUMBER = "+265881988156"
+DEFAULT_TWILIO_FROM = "+14155238886"  # Twilio's shared WhatsApp sandbox number
 MAX_BODY_LENGTH = 4000
+TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 
 
 class SendError(RuntimeError):
-    """A send was refused, or the bridge could not deliver it."""
+    """A send was refused, or the provider could not deliver it."""
 
     def __init__(self, message: str, status_code: int = 400) -> None:
         super().__init__(message)
@@ -101,9 +116,17 @@ def _contact_for(digits: str):
     return None
 
 
+def twilio_configured() -> bool:
+    return bool(_env("MNH_TWILIO_ACCOUNT_SID") and _env("MNH_TWILIO_AUTH_TOKEN"))
+
+
 def mode() -> str:
-    """'bridge' delivers automatically; 'link' needs one human tap."""
-    return "bridge" if wa_bridge.configured() else "link"
+    """Which transport a send would use right now."""
+    if twilio_configured():
+        return "twilio"
+    if wa_bridge.configured():
+        return "bridge"
+    return "link"
 
 
 def build_link(digits: str, text: str) -> str:
@@ -114,25 +137,96 @@ def build_link(digits: str, text: str) -> str:
     )
 
 
+def _post_form(url: str, fields: dict, user: str, password: str, timeout: int = 20) -> dict:
+    """POST an application/x-www-form-urlencoded body with HTTP Basic auth."""
+    data = urllib.parse.urlencode(fields).encode("utf-8")
+    token = base64.b64encode(f"{user}:{password}".encode("utf-8")).decode("ascii")
+    request = urllib.request.Request(
+        url,
+        data=data,
+        method="POST",
+        headers={
+            "Authorization": f"Basic {token}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8") or "{}"
+    except urllib.error.HTTPError as error:
+        detail = ""
+        try:
+            failure = json.loads(error.read().decode("utf-8") or "{}")
+            detail = str(failure.get("message") or "")
+            code = failure.get("code")
+            if code:
+                detail = f"{detail} (Twilio error {code})"
+        except (ValueError, AttributeError):
+            detail = ""
+        raise SendError(
+            f"Twilio rejected the message ({error.code}). {detail}".strip(), 502
+        ) from error
+    except urllib.error.URLError as error:
+        raise SendError(f"Twilio could not be reached: {error.reason}", 502) from error
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return {"raw": raw[:200]}
+
+
+def _twilio_send(digits: str, text: str) -> dict:
+    """Send through Twilio's official WhatsApp channel."""
+    sid = _env("MNH_TWILIO_ACCOUNT_SID")
+    token = _env("MNH_TWILIO_AUTH_TOKEN")
+    sender = _env("MNH_TWILIO_WHATSAPP_FROM", DEFAULT_TWILIO_FROM)
+    if not sender.startswith("whatsapp:"):
+        sender = f"whatsapp:{sender}"
+    result = _post_form(
+        TWILIO_API.format(sid=sid),
+        {"To": f"whatsapp:+{digits}", "From": sender, "Body": text},
+        sid,
+        token,
+    )
+    return {
+        "messageId": str(result.get("sid") or ""),
+        "status": str(result.get("status") or "queued"),
+        "provider": "twilio",
+    }
+
+
 def status() -> dict:
     """What the class rep UI may know. Numbers are counted, never listed."""
+    current = mode()
     return {
         "enabled": enabled(),
-        "mode": mode(),
+        "mode": current,
+        "twilioConfigured": twilio_configured(),
         "bridgeConfigured": wa_bridge.configured(),
         "allowedRecipients": len(allowed_numbers()),
         "emergencyStop": comm_service.emergency_stop(),
-        "sender": wa_bridge.profile_name(),
-        "missing": [] if wa_bridge.configured() else ["MNH_WA_BRIDGE_URL"],
+        "sender": _env("MNH_TWILIO_WHATSAPP_FROM", DEFAULT_TWILIO_FROM)
+        if current == "twilio"
+        else wa_bridge.profile_name(),
+        "missing": sorted(
+            [
+                name
+                for name in (
+                    "MNH_TWILIO_ACCOUNT_SID",
+                    "MNH_TWILIO_AUTH_TOKEN",
+                    "MNH_WA_BRIDGE_URL",
+                )
+                if not _env(name)
+            ]
+        ),
+        "autoSend": current in ("twilio", "bridge"),
     }
 
 
 def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
     """Send one WhatsApp text to an allowlisted number.
 
-    With a configured bridge the message is delivered and the bridge's response
-    is returned. Without one, an official click-to-chat link is returned and the
-    message is *not* claimed to have been sent.
+    ``twilio`` and ``bridge`` deliver; ``link`` returns a click-to-chat URL and
+    does not claim delivery.
 
     Raises ``SendError`` with an HTTP status the route can pass straight on.
     """
@@ -142,10 +236,7 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
             403,
         )
     if not confirm:
-        raise SendError(
-            "Confirm the recipient and the message before sending.",
-            400,
-        )
+        raise SendError("Confirm the recipient and the message before sending.", 400)
     text = str(body or "").strip()
     if not text:
         raise SendError("There is nothing to send.", 400)
@@ -196,10 +287,9 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
             raise SendError(f"That contact cannot be messaged: {reason}.", 403)
 
     clipped = text[:MAX_BODY_LENGTH]
+    current = mode()
 
-    # No bridge: hand back a click-to-chat link. Nothing is sent, and the result
-    # says so, so the UI never claims delivery.
-    if not wa_bridge.configured():
+    if current == "link":
         comm_contacts.audit(actor, "crara-whatsapp-link", digits, clipped[:200])
         return {
             "ok": True,
@@ -208,27 +298,38 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
             "to": digits,
             "link": build_link(digits, clipped),
             "detail": (
-                "No WhatsApp bridge is configured, so this message was not sent. "
-                "Open the link on a phone signed in to WhatsApp and press send."
+                "No official WhatsApp sender is configured, so this message was "
+                "not sent. Open the link on a phone signed in to WhatsApp and "
+                "press send."
             ),
         }
 
     try:
-        result = wa_bridge.send_text(chat_id, clipped)
+        if current == "twilio":
+            result = _twilio_send(digits, clipped)
+        else:
+            result = wa_bridge.send_text(chat_id, clipped)
     except wa_bridge.BridgeError as error:
         comm_contacts.audit(actor, "crara-whatsapp-failed", digits, str(error)[:200])
         raise SendError(str(error), 502) from error
+    except SendError as error:
+        comm_contacts.audit(actor, "crara-whatsapp-failed", digits, str(error)[:200])
+        raise
 
     comm_contacts.audit(actor, "crara-whatsapp-sent", digits, clipped[:200])
-    return {
+    response = {
         "ok": True,
         "status": "sent",
-        "mode": "bridge",
+        "mode": current,
         "to": digits,
         "chatId": chat_id,
-        "sender": wa_bridge.profile_name(),
-        "bridgeResponse": result.get("bridgeResponse"),
     }
+    if current == "twilio":
+        response.update(result)
+    else:
+        response["sender"] = wa_bridge.profile_name()
+        response["bridgeResponse"] = result.get("bridgeResponse")
+    return response
 
 
 @router.get("/whatsapp/status")
@@ -258,7 +359,7 @@ def whatsapp_send(
     mnh_session: str | None = Cookie(None),
     data: dict = Body(default={}),
 ):
-    """Send one WhatsApp text, or return a link when no bridge is configured."""
+    """Send one WhatsApp text, or return a link when no sender is configured."""
     try:
         return send(
             str(data.get("to") or ""),
