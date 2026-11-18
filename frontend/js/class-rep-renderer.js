@@ -11,14 +11,15 @@
       if (line.trim().indexOf(fence) === 0 || /^\s*~~~/.test(line)) { fenced = !fenced; return line; }
       if (fenced) return line;
       var normalized = line.replace(/\\\|/g, "|");
-      // Repair bracket-wrapped equations commonly emitted by language models.
-      // Restrict conversion to equation-like lines so citations and Markdown links remain intact.
-      var trimmed = normalized.trim();
-      if (/^\[\s*.+\s*\]$/.test(trimmed) && /(?:\\(?:frac|sqrt|sum|text|sigma|mu|bar|alpha|beta|theta|chi|pi|Delta|mathrm)|[=^_])/.test(trimmed)) {
-        normalized = trimmed.replace(/^\[\s*/, "\\[").replace(/\s*\]$/, "\\]");
-      } else if (/^\[\s*.+(?:=|\\(?:frac|sqrt|sum))/.test(trimmed) && !/\]\s*$/.test(trimmed)) {
-        normalized = trimmed.replace(/^\[\s*/, "\\[") + "\\]";
-      }
+      // Repair equations even when embedded inside a Markdown bullet or sentence.
+      // Only equation-like bracket content is converted; citations and links are left alone.
+      normalized = normalized.replace(/\[\s*([^[\]]*(?:\\(?:frac|sqrt|sum|text|sigma|mu|bar|alpha|beta|theta|chi|pi|Delta|mathrm|times|cdot|pm|leq|geq)|[=^_])[^[\]]*)\s*\]/g, function (_, equation) {
+        return "\\[" + equation.trim() + "\\]";
+      });
+      // Convert model-style ((\mu)) and (\sigma^2) into KaTeX inline delimiters.
+      normalized = normalized.replace(/\(\s*(?:\((\\[^()]+)\)|(\\[^()]+))\s*\)/g, function (_, doubled, single) {
+        return "\\(" + (doubled || single).trim() + "\\)";
+      });
       if (normalized.indexOf("| |") >= 0) normalized = normalized.replace(/\|\s+\|/g, "|\n|");
       return normalized;
     }).join("\n");
