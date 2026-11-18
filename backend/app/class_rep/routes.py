@@ -150,7 +150,7 @@ def status():
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
                                   "account_memories", "account_tasks"],
             "document_uploads": "enabled",
-            "document_search": "semantic" if cloudflare else "keyword_only",
+            "document_search": "keyword_then_semantic_fallback" if cloudflare else "keyword_only",
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
             "voice": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
             "speech_to_text_model": stt or None,
