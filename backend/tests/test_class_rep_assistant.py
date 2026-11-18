@@ -355,4 +355,6 @@ def test_calendar_context_includes_timetable_records_for_schedule_questions(monk
     data = json.loads(payload)
     assert data["context_scope"] == "timetable"
     assert "cells" in calls[0][1]
-    assert "communications" not in calls[0][1]
+    assert "communications" in calls[0][1]
+    assert "resources" in calls[0][1]
+    assert "settings" in calls[0][1]
