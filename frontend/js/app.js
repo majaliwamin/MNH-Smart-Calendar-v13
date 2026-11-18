@@ -2039,7 +2039,10 @@ function buildAnalyticsTrend(d){
  const count=weeks.length||6,xs=[];
  for(let i=0;i<count;i++){
   const x=L+(count===1?plotW/2:plotW*i/(count-1));xs.push(x);
-  svg+='<text x="'+x+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#b9c4d4">Wk '+(i+1)+'</text>';
+  const academicWeekOffset=i-1; // Orientation begins 31 Aug 2026; teaching Week 1 begins 7 Sep.
+  const tickLabel=WK.dateLabels(academicWeekOffset)[0]||"";
+  const tickRange=WK.range(academicWeekOffset);
+  svg+='<text x="'+x+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#b9c4d4"><title>'+esc(tickRange)+'</title>'+esc(tickLabel)+'</text>';
  }
  if(weeks.length){
   const values=weeks.map(item=>{
