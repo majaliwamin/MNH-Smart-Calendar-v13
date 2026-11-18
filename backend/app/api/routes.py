@@ -221,6 +221,17 @@ def sync_resources_for_crara(payload: dict = Body(...)):
                 logger.exception("CRARA resource backfill failed resource_id=%s", item_id)
     return {"synced": synced, "indexed": indexed, "indexing_unavailable": indexing_unavailable}
 
+
+@router.delete("/resources/sync/{resource_id}")
+def remove_synced_resource_for_crara(resource_id: str):
+    """Remove a deleted Firestore resource from CRARA's shared inventory."""
+    if not NAME.fullmatch(resource_id):
+        raise HTTPException(404, "Resource not found.")
+    with database() as connection:
+        connection.execute("DELETE FROM docs WHERE col='resources' AND id=?", (resource_id,))
+    return {"ok": True}
+
+
 @router.get("/resources/files/{file_id}")
 def get_resource_file(file_id: str, name: str | None = None):
     if not re.fullmatch(r"[a-f0-9]{32}", file_id): raise HTTPException(404, "Resource file not found.")
