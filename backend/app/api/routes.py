@@ -16,6 +16,9 @@ from app.config import DATA_DIR
 from app.database.connection import database, DB_LOCK
 from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups, make_backup
+from app.class_rep.documents import ingest as ingest_crara_resource, delete_source_documents as delete_crara_resource_index
+from app.class_rep.documents import DocumentError as CRARADocumentError
+from app.class_rep.documents import ensure_resource_indexed as ensure_crara_resource_indexed
 
 logger = logging.getLogger(__name__)
 
@@ -143,8 +146,90 @@ async def upload_resource_file(file: UploadFile = File(...)):
         raise HTTPException(500, "The file could not be saved.") from exc
     finally:
         await file.close()
+    crara_index = None
+    try:
+        crara_index = ingest_crara_resource(original_name, destination.read_bytes(), owner_id="shared", source_id=file_id)
+        index_status = "indexed"
+    except CRARADocumentError as exc:
+        index_status = "unavailable"
+        logger.warning("CRARA resource indexing skipped file_id=%s filename=%s reason=%s", file_id, original_name, str(exc))
+    except Exception:
+        index_status = "failed"
+        logger.exception("CRARA resource indexing failed file_id=%s filename=%s", file_id, original_name)
     return {"id": file_id, "url": "/api/resources/files/" + file_id,
-            "filename": original_name, "size": size, "contentType": RESOURCE_FILE_TYPES[extension]}
+            "filename": original_name, "size": size, "contentType": RESOURCE_FILE_TYPES[extension],
+            "crara_indexing": index_status, "crara_document_id": crara_index.get("id") if crara_index else None}
+
+
+
+
+@router.post("/resources/sync")
+def sync_resources_for_crara(payload: dict = Body(...)):
+    """Mirror the complete Firestore Resources snapshot into the shared SQL read model.
+
+    This endpoint only upserts supplied records; an empty/offline Firestore snapshot
+    never deletes the existing shared inventory.
+    """
+    items = payload.get("resources")
+    if not isinstance(items, list) or len(items) > 500:
+        raise HTTPException(400, "Provide a resources array containing no more than 500 records.")
+    synced = 0
+    indexed = 0
+    indexing_unavailable = 0
+    now = int(time.time() * 1000)
+
+    def safe_int(value):
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError, OverflowError):
+            return 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id") or "").strip()
+        data = item.get("data")
+        if not NAME.fullmatch(item_id) or not isinstance(data, dict):
+            continue
+        clean = {
+            "title": str(data.get("title") or "")[:180],
+            "url": str(data.get("url") or "")[:1200],
+            "note": str(data.get("note") or "")[:3000],
+            "category": str(data.get("category") or "Others")[:80],
+            "createdAt": safe_int(data.get("createdAt")),
+            "fileId": str(data.get("fileId") or "")[:64],
+            "fileName": str(data.get("fileName") or "")[:255],
+            "fileSize": max(0, safe_int(data.get("fileSize"))),
+        }
+        if not clean["title"] or not clean["url"]:
+            continue
+        with database() as connection:
+            connection.execute(
+                "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
+                "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
+                ("resources", item_id, json.dumps(clean, ensure_ascii=False), now),
+            )
+        synced += 1
+        if clean["fileId"]:
+            try:
+                ensure_crara_resource_indexed(clean["fileId"], clean["fileName"] or clean["title"])
+                indexed += 1
+            except CRARADocumentError as exc:
+                indexing_unavailable += 1
+                logger.warning("CRARA resource backfill unavailable resource_id=%s reason=%s", item_id, str(exc))
+            except Exception:
+                indexing_unavailable += 1
+                logger.exception("CRARA resource backfill failed resource_id=%s", item_id)
+    return {"synced": synced, "indexed": indexed, "indexing_unavailable": indexing_unavailable}
+
+
+@router.delete("/resources/sync/{resource_id}")
+def remove_synced_resource_for_crara(resource_id: str):
+    """Remove a deleted Firestore resource from CRARA's shared inventory."""
+    if not NAME.fullmatch(resource_id):
+        raise HTTPException(404, "Resource not found.")
+    with database() as connection:
+        connection.execute("DELETE FROM docs WHERE col='resources' AND id=?", (resource_id,))
+    return {"ok": True}
 
 
 @router.get("/resources/files/{file_id}")
@@ -167,6 +252,7 @@ def delete_resource_file(file_id: str):
         candidate = RESOURCE_UPLOAD_DIR / (file_id + extension)
         if candidate.is_file():
             candidate.unlink()
+            delete_crara_resource_index(file_id)
             return {"ok": True}
     raise HTTPException(404, "Resource file not found.")
 

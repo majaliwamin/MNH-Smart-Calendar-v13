@@ -64,7 +64,9 @@ def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
     assert 'id="session-day"' in html and 'id="session-start"' in html and 'id="session-end"' in html
     assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday"]' in app
     assert 'dayIndex,startTime,endTime' in app
-    assert 'showView(location.hash.slice(1)||"weekly")' in app
+    assert 'showView("weekly")' in app
+    assert 'history.replaceState(null,"",location.pathname+location.search)' in app
+    assert 'hashchange' not in app
 
 
 def test_scheduling_uses_bounded_date_and_arbitrary_time_pickers():

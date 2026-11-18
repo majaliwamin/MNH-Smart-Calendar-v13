@@ -2279,6 +2279,10 @@ async function removeResource(id){
  try{
   if(cloud)await cloud.doc("resources/"+id).delete();
   else await window.mnhApi.request("DELETE","/api/doc/resources/"+encodeURIComponent(id));
+  if(cloud){
+   const synced=await fetch("/api/resources/sync/"+encodeURIComponent(id),{method:"DELETE",credentials:"same-origin"});
+   if(!synced.ok)throw new Error("The resource was removed from the cloud library but CRARA's shared index could not be synchronised.");
+  }
   if(existing&&existing.fileId){
    const response=await fetch("/api/resources/files/"+encodeURIComponent(existing.fileId),{method:"DELETE",credentials:"same-origin"});
    if(!response.ok)throw new Error("The resource entry was removed, but its stored file could not be deleted.");
@@ -2346,6 +2350,13 @@ function subscribeExtras(db){
   if(!remote.length&&!seen&&resources.length)return;   // first run: keep the local copy until saved
   if(remote.length){try{localStorage.setItem(resCloudKey,"1");}catch(e){}}
   resources=remote;cacheResources();renderResources();
+  // Firestore is the UI source of truth; mirror its complete snapshot to the
+  // backend read model so CRARA can discover the same shared resources.
+  fetch("/api/resources/sync",{method:"POST",headers:{"Content-Type":"application/json"},
+    credentials:"same-origin",body:JSON.stringify({resources:remote.map(x=>({id:x.id,data:{
+      title:x.title,url:x.url,note:x.note,category:x.category,createdAt:x.createdAt,
+      fileId:x.fileId,fileName:x.fileName,fileSize:x.fileSize
+    }}))})}).catch(error=>console.warn("Resource sync for CRARA could not complete",error));
  },()=>{});
 }
 function initHeader(){
