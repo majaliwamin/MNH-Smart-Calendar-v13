@@ -2180,3 +2180,11 @@ body:not(.weekly-view) #view-tabs .weekly-date-tab,
 body:not(.weekly-view) #view-tabs .week-nav-row{
   display:none!important;
 }
+
+/* Keep the current-day label readable in every selected colour theme. */
+.weekly-date-tab #current-day-date{
+  color:var(--text)!important;
+  -webkit-text-fill-color:var(--text)!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
