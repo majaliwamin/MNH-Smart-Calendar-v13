@@ -264,7 +264,7 @@ def test_pwa_install_requirements_are_met():
     assert "beforeinstallprompt" in html
     assert "event.preventDefault()" in html
     assert "installFromNotice()" in html
-    assert ".prompt()" in html and "userChoice" in app
+    assert ".prompt()" in html and "userChoice" in html
     assert "appinstalled" in html
     assert "display-mode: standalone" in html
     assert "promptOpen" in html
