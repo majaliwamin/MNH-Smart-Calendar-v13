@@ -368,6 +368,7 @@ def test_resource_inventory_query_includes_shared_resources(monkeypatch):
         def __exit__(self, *args): return False
         def execute(self, query, params=()):
             seen["query"] = query
+            seen["params"] = params
             return type("Rows", (), {"fetchall": lambda self: [
                 {"col": "resources", "id": "lecture-1",
                  "data": json.dumps({"title": "MNH lecture notes", "filename": "MNH-notes.pdf"}),
@@ -376,7 +377,7 @@ def test_resource_inventory_query_includes_shared_resources(monkeypatch):
     monkeypatch.setattr(context, "database", lambda: FakeConnection())
     payload, _ = context.build_calendar_context("Do we have any notes uploaded?")
     data = json.loads(payload)
-    assert "resources" in seen["query"]
+    assert "resources" in seen["params"]
     assert data["records"]["resources"][0]["filename"] == "MNH-notes.pdf"
     assert data["context_scope"] == "resources"
 
@@ -395,6 +396,8 @@ def test_document_search_uses_semantic_fallback_when_keywords_miss(monkeypatch):
                                      "text": "Maternal immune tolerance at the placenta.",
                                      "owner_id": "shared", "embedding": [1.0, 0.0]})}
             ]})()
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "test-key")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "test-account")
     monkeypatch.setattr(documents, "database", lambda: FakeConnection())
     monkeypatch.setattr(documents, "_vectors",
                         lambda texts, prefix, timeout=45: [[1.0, 0.0]])
