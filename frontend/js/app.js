@@ -1061,8 +1061,9 @@ function showView(name){
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
- ensureHomeReturnButton(name);
  renderView(name);
+ // Add the return control after the destination view has finished rendering.
+ ensureHomeReturnButton(name);
 }
 function renderView(name){
  if(name==="weekly"){build();renderAnimatedFutureStrip();}
