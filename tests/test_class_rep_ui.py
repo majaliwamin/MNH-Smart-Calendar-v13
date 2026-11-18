@@ -148,3 +148,9 @@ def test_crara_restores_saved_session_on_app_start_without_flashing_login_form()
     assert "void checkAuth();" in js
     assert "|| !authCheckComplete" in js
     assert "authPanel.hidden = !root.classList.contains(\"is-open\") || Boolean(state.user);" in js
+
+
+def test_crara_renderer_normalizes_equations_inside_markdown_lines():
+    renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
+    assert "equation.trim()" in renderer
+    assert "doubled || single" in renderer
