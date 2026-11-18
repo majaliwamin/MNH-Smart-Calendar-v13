@@ -102,7 +102,9 @@ def _complete_one(cfg: dict, messages: list[dict]) -> str:
                     + cfg["account_id"] + "/ai/v1/chat/completions")
         result = _post_json(endpoint, cfg["api_key"], {
             "model": cfg["model"], "messages": messages,
-            "max_tokens": cfg["max_tokens"], "temperature": 0.25,
+            "max_completion_tokens": cfg["max_tokens"], "temperature": 0.25,
+            "reasoning_effort": "low",
+            "chat_template_kwargs": {"enable_thinking": False, "preserve_thinking": False},
             "stream": False,
         }, cfg["timeout"], provider)
         if result.get("success") is False:
