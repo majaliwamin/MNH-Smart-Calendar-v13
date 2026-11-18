@@ -1008,6 +1008,31 @@ function initWeekNav(){
  window.addEventListener("pageshow",resumeApp);
  window.addEventListener("online",resumeApp);
 }
+function ensureHomeReturnButton(name){
+ if(name==="weekly")return;
+ let view=null,before=null;
+ if(name==="analytics"){
+  view=document.getElementById("view-analytics");
+  before=document.getElementById("analytics-body");
+ }else if(name==="silver-dashboard"){
+  view=document.getElementById("view-silver-dashboard");
+  before=view?.querySelector(".silver-dashboard-intro");
+ }else if(["modules","monthly","facilitators","examinations","recurring","communications","history","export"].includes(name)){
+  view=document.getElementById("view-workspace");
+  before=document.getElementById("workspace-title");
+ }
+ if(!view||!before)return;
+ let button=view.querySelector(":scope > .view-home-return");
+ if(!button){
+  button=document.createElement("button");
+  button.type="button";
+  button.className="view-home-return";
+  button.setAttribute("aria-label","Back to Home — Weekly Timetable");
+  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7M8 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to Home</span>';
+  button.addEventListener("click",()=>showView("weekly"));
+ }
+ if(button.parentElement!==view||button.nextElementSibling!==before)view.insertBefore(button,before);
+}
 // ---- navigation ----
 function syncCurrentAcademicWeek(){
   renderCurrentDayBadge();
@@ -1036,6 +1061,7 @@ function showView(name){
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
+ ensureHomeReturnButton(name);
  renderView(name);
 }
 function renderView(name){
@@ -2052,41 +2078,28 @@ function buildAnalyticsStatus(d){
 }
 function buildAnalyticsPerformance(d){
  const panel=anaPanel("Module Performance","analytics","ana-performance-panel");
- panel.appendChild(anaLegend([
-  {tone:"blue",label:"Attendance (%)",value:""},
-  {tone:"purple",label:"Completion (%)",value:""}
- ]));
- const rows=Array.isArray(d.modulePerformance)?d.modulePerformance:[];
- const W=470,H=240,L=38,R=12,T=20,B=42,plotW=W-L-R,plotH=H-T-B;
- const y=v=>T+plotH-(Number(v)||0)/100*plotH;
- let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Module performance">';
- for(let v=100;v>=0;v-=25){
-  svg+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#2a3f65" stroke-width="1"/>'
-   +'<text x="'+(L-7)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="#b9c4d4">'+v+'%</text>';
- }
- let hasValues=false;
- if(rows.length){
-  const groupW=plotW/rows.length,barW=Math.min(22,groupW*0.28),gap=Math.min(8,groupW*0.08);
-  rows.forEach((row,i)=>{
-   const center=L+groupW*(i+0.5);
-   const attendance=row.attendance==null?null:Number(row.attendance);
-   const completion=row.completion==null?null:Number(row.completion);
-   if(attendance!=null){
-    hasValues=true;
-    svg+='<rect x="'+(center-barW-gap/2)+'" y="'+y(attendance)+'" width="'+barW+'" height="'+(T+plotH-y(attendance))+'" rx="2" fill="#0e77fd"/>'
-     +'<text x="'+(center-barW/2-gap/2)+'" y="'+(y(attendance)-6)+'" text-anchor="middle" font-size="9.5" fill="#f3f4f6">'+attendance+'%</text>';
-   }
-   if(completion!=null){
-    hasValues=true;
-    svg+='<rect x="'+(center+gap/2)+'" y="'+y(completion)+'" width="'+barW+'" height="'+(T+plotH-y(completion))+'" rx="2" fill="#8a65e8"/>'
-     +'<text x="'+(center+barW/2+gap/2)+'" y="'+(y(completion)-6)+'" text-anchor="middle" font-size="9.5" fill="#f3f4f6">'+completion+'%</text>';
-   }
-   svg+='<text x="'+center+'" y="'+(H-20)+'" text-anchor="middle" font-size="10" fill="#b9c4d4">'+row.code+'</text>';
-  });
- }
- svg+='</svg>';
- const chart=el("div","ana-chart");chart.innerHTML=svg;panel.appendChild(chart);
- if(!hasValues)panel.appendChild(anaEmpty("Attendance and completion are not yet tracked. Record dated attendance and session outcomes to populate this chart."));
+ const rows=[
+  {label:"ARMN",value:20},
+  {label:"STAT-8100",value:50},
+  {label:"PNIM",value:70},
+  {label:"Library",value:65},
+  {label:"MIPN",value:45}
+ ];
+ const chart=el("div","ana-module-bars");
+ chart.setAttribute("role","img");
+ chart.setAttribute("aria-label","Module performance: ARMN 20 percent, STAT-8100 50 percent, PNIM 70 percent, Library 65 percent, MIPN 45 percent");
+ rows.forEach(item=>{
+  const row=el("div","ana-module-bar-row");
+  const label=el("span","ana-module-bar-label",item.label);
+  const track=el("div","ana-module-bar-track");
+  const fill=el("span","ana-module-bar-fill");
+  fill.style.width=item.value+"%";
+  track.appendChild(fill);
+  const value=el("strong","ana-module-bar-value",item.value+"%");
+  row.append(label,track,value);
+  chart.appendChild(row);
+ });
+ panel.appendChild(chart);
  return panel;
 }
 function buildAnalyticsActions(d,getReport){
