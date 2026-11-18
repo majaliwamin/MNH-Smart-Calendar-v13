@@ -179,6 +179,7 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 
 /* CRARA professional academic header — preserves the existing dark navy/gold theme. */
 .cr-head{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:20px!important;
   height:106px!important;min-height:106px!important;padding:12px clamp(18px,3vw,42px)!important;
   background:linear-gradient(112deg,#071426 0%,#0b1b30 58%,#071323 100%)!important;
   border-top:2px solid #d7ad45!important;border-bottom:2px solid #b88b2d!important;
@@ -190,7 +191,10 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 .cr-identity{gap:5px!important;}
 .cr-title{font-family:Georgia,"Times New Roman",serif!important;font-size:clamp(19px,2vw,27px)!important;font-weight:700!important;letter-spacing:-.25px!important;color:#f6f1e6!important;line-height:1.15!important;}
 .cr-subtitle{font-family:Georgia,"Times New Roman",serif!important;font-size:14px!important;font-style:italic;color:#d8d2c6!important;letter-spacing:.1px;}
-.cr-product-label{flex:0 0 auto;padding:10px 17px;border:1px solid rgba(215,173,69,.68);border-radius:999px;color:#f1d58a;font-size:13px;font-weight:700;letter-spacing:.2px;background:rgba(5,16,30,.48);white-space:nowrap;}
+.cr-home-back{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#f1d58a;font:600 14px/1.2 Arial,Helvetica,sans-serif;letter-spacing:.1px;white-space:nowrap;cursor:pointer;transition:color .18s ease,transform .18s ease;}
+.cr-home-back:hover{color:#fff1c7;transform:translateX(-2px);}
+.cr-home-back:focus-visible{outline:2px solid #d7ad45;outline-offset:5px;border-radius:2px;}
+.cr-home-back svg{display:block;flex:0 0 auto;}
 .cara-widget.is-open .cr-body{top:calc(env(safe-area-inset-top,0px) + 106px)!important;}
 .cr-memory-panel{top:calc(env(safe-area-inset-top,0px) + 106px)!important;}
 @media(max-width:760px){
@@ -200,8 +204,9 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
  .cr-brand-mark svg{width:38px;height:38px;}
  .cr-title{font-family:Arial,Helvetica,sans-serif!important;font-size:15px!important;line-height:1.22!important;letter-spacing:0!important;}
  .cr-subtitle{font-size:11px!important;line-height:1.25!important;}
- .cr-product-label{padding:7px 9px;font-size:10px;max-width:104px;white-space:normal;text-align:center;line-height:1.2;}
+ .cr-home-back{gap:6px;font-size:12px;padding:7px 0;}
+ .cr-home-back svg{width:18px;height:18px;}
  .cara-widget.is-open .cr-body{top:calc(env(safe-area-inset-top,0px) + 88px)!important;}
  .cr-memory-panel{top:calc(env(safe-area-inset-top,0px) + 88px)!important;}
 }
-@media(max-width:390px){.cr-product-label{display:none;}.cr-brand-mark{width:38px;flex-basis:38px;padding-right:6px;}.cr-brand{gap:8px;}.cr-title{font-size:14px!important;}}
+@media(max-width:390px){.cr-home-back{gap:4px;font-size:11px;}.cr-home-back svg{width:16px;height:16px;}.cr-brand-mark{width:38px;flex-basis:38px;padding-right:6px;}.cr-brand{gap:8px;}.cr-title{font-size:14px!important;}}
