@@ -129,9 +129,17 @@
     for (const match of value.matchAll(pattern)) {
       if (match.index > cursor) parent.append(document.createTextNode(value.slice(cursor, match.index)));
       const token = match[0];
-      const node = document.createElement(token.startsWith("**") ? "strong" : "em");
-      node.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
-      parent.append(node);
+      if (token.startsWith("[")) {
+        const parsed = /^\\[([^\\]]+)\\]\\((\\/api\\/class-rep\\/documents\\/[a-f0-9]{32}\\/file)\\)$/.exec(token);
+        if (parsed) {
+          const link = document.createElement("a"); link.textContent = parsed[1]; link.href = parsed[2];
+          link.target = "_blank"; link.rel = "noopener noreferrer"; link.className = "cr-file-open"; parent.append(link);
+        }
+      } else {
+        const node = document.createElement(token.startsWith("**") ? "strong" : "em");
+        node.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
+        parent.append(node);
+      }
       cursor = match.index + token.length;
     }
     if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
