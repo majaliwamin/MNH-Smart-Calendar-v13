@@ -137,7 +137,7 @@
   }
   function renderMarkdown(bubble, value) {
     bubble.replaceChildren();
-    const lines = String(value || "").replace(/\r/g, "").split("\n");
+    const lines = String(value || "").replace(/\r/g, "").replace(/\\([*_.#>-])/g, "$1").split("\n");
     let paragraph = [];
     let list = null;
     let listType = "";
