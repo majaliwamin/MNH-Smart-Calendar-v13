@@ -333,7 +333,8 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
 
     # Semantic fallback is used when keyword retrieval finds no passages.
     # This preserves fast exact-match retrieval while supporting synonyms.
-    if not ranked:
+    if (not ranked and os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
+            and os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip()):
         try:
             query_vector = _vectors([query], "query: ", timeout=12)[0]
             with database() as connection:
