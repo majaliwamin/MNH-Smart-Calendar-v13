@@ -1,5 +1,7 @@
 """CARA document ingestion and retrieval with Cloudflare embeddings."""
 import hashlib
+import base64
+import mimetypes
 import csv
 import xml.etree.ElementTree as ET
 import json
@@ -179,15 +181,13 @@ def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
             break
     if not chunks:
         raise DocumentError("No readable text was found in this document.")
-    try:
-        vectors = _vectors([item["text"] for item in chunks],
-                           "title: " + filename[:180] + " | text: ")
-    except DocumentError:
-        # Keep uploads usable without an embedding provider; search falls back to keywords.
-        vectors = [[] for _ in chunks]
+    # Index locally first. Remote embeddings are intentionally not on the upload critical path;
+    # chat currently uses local keyword retrieval, so waiting for unused vectors only delays uploads.
+    vectors = [[] for _ in chunks]
     doc_id = uuid.uuid4().hex
     now = int(time.time() * 1000)
     digest = hashlib.sha256(content).hexdigest()
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     with database() as connection:
         for index, (item, vector) in enumerate(zip(chunks, vectors)):
             record = {
@@ -205,10 +205,19 @@ def ingest(filename: str, content: bytes, owner_id: str = 'shared') -> dict:
             "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("cara_document_index", doc_id,
              json.dumps({"title": filename[:180], "owner_id": owner_id, "chunks": len(chunks),
-                         "sha256": digest, "created_at": now}, ensure_ascii=False), now),
+                         "sha256": digest, "created_at": now, "content_type": content_type,
+                         "size": len(content)}, ensure_ascii=False), now),
+        )
+        connection.execute(
+            "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+            ("cara_document_files", doc_id,
+             json.dumps({"owner_id": owner_id, "filename": filename[:180],
+                         "content_type": content_type,
+                         "content_base64": base64.b64encode(content).decode("ascii")}, ensure_ascii=False), now),
         )
     return {"id": doc_id, "title": filename[:180], "chunks": len(chunks),
-            "pages": len(pages), "sha256": digest}
+            "pages": len(pages), "sha256": digest, "size": len(content),
+            "content_type": content_type, "view_url": "/api/class-rep/documents/" + doc_id + "/file"}
 
 
 def list_documents(owner_id: str = 'shared') -> list[dict]:
@@ -222,7 +231,9 @@ def list_documents(owner_id: str = 'shared') -> list[dict]:
             item = json.loads(row["data"])
             if item.get("owner_id", "shared") in ("shared", owner_id):
                 result.append({"id": row["id"], "title": item.get("title"),
-                               "chunks": item.get("chunks"), "created_at": item.get("created_at")})
+                               "chunks": item.get("chunks"), "created_at": item.get("created_at"),
+                               "size": item.get("size"), "content_type": item.get("content_type"),
+                               "view_url": "/api/class-rep/documents/" + row["id"] + "/file"})
         except (TypeError, json.JSONDecodeError):
             continue
     return result
@@ -239,6 +250,7 @@ def delete_document(doc_id: str, owner_id: str = 'shared') -> bool:
         if metadata.get("owner_id", "shared") != owner_id:
             return False
         connection.execute("DELETE FROM docs WHERE col='cara_documents' AND id LIKE ?", (doc_id + ":%",))
+        connection.execute("DELETE FROM docs WHERE col='cara_document_files' AND id=?", (doc_id,))
         connection.execute("DELETE FROM docs WHERE col='cara_document_index' AND id=?", (doc_id,))
     return True
 
@@ -291,3 +303,46 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
     # Keep chat retrieval local: a remote embedding round-trip on every question
     # adds avoidable latency. Keyword retrieval still returns exact source passages.
     return []
+
+
+def get_document_file(doc_id: str, owner_id: str):
+    """Return original uploaded bytes only to the owning authenticated account."""
+    with database() as connection:
+        row = connection.execute(
+            "SELECT data FROM docs WHERE col='cara_document_files' AND id=?", (doc_id,)
+        ).fetchone()
+    if not row:
+        return None
+    try:
+        item = json.loads(row["data"])
+        if item.get("owner_id") != owner_id:
+            return None
+        content = base64.b64decode(item.get("content_base64", ""), validate=True)
+        return item.get("filename", "document"), item.get("content_type", "application/octet-stream"), content
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def get_document_text(doc_id: str, owner_id: str) -> dict | None:
+    """Return extracted, readable text for an uploaded document to its owner."""
+    with database() as connection:
+        rows = connection.execute(
+            "SELECT data FROM docs WHERE col='cara_documents' AND id LIKE ? ORDER BY id",
+            (doc_id + ":%",),
+        ).fetchall()
+    chunks = []
+    title = ""
+    for row in rows:
+        try:
+            item = json.loads(row["data"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if item.get("owner_id") != owner_id:
+            continue
+        title = item.get("title", title)
+        page = item.get("page")
+        label = ("Page " + str(page) + "\n") if page else ""
+        chunks.append(label + str(item.get("text", "")))
+    if not chunks:
+        return None
+    return {"id": doc_id, "title": title, "text": "\n\n".join(chunks)}
