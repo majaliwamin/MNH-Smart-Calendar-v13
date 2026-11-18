@@ -1925,9 +1925,6 @@ function buildAnalyticsHeader(d){
  left.append(anaIcon("analytics","ana-title-icon"),el("h2","ana-title","Programme Analytics"));
  bar.appendChild(left);
  const tools=el("div","ana-tools");
- const role=el("span","ana-role");
- role.append(anaIcon("user"),el("span",null,"Public access"));
- tools.appendChild(role);
  const year=el("label","ana-year");
  year.append(anaIcon("calendar"));
  const select=document.createElement("select");
