@@ -16,8 +16,8 @@
       normalized = normalized.replace(/\[\s*([^[\]]*(?:\\(?:frac|sqrt|sum|text|sigma|mu|bar|alpha|beta|theta|chi|pi|Delta|mathrm|times|cdot|pm|leq|geq)|[=^_])[^[\]]*)\s*\]/g, function (_, equation) {
         return "\\[" + equation.trim() + "\\]";
       });
-      // Convert model-style ((\mu)) and (\sigma^2) into KaTeX inline delimiters.
-      normalized = normalized.replace(/\(\s*(?:\((\\[^()]+)\)|(\\[^()]+))\s*\)/g, function (_, doubled, single) {
+      // Convert model-style ((\mu)), ((s)), ((n-1)) and (\sigma^2) into inline math.
+      normalized = normalized.replace(/\(\s*(?:\(((?:\\[^()]+|[A-Za-z][A-Za-z0-9_{}^+\-*/= ]*))\)|(\\[^()]+))\s*\)/g, function (_, doubled, single) {
         return "\\(" + (doubled || single).trim() + "\\)";
       });
       if (normalized.indexOf("| |") >= 0) normalized = normalized.replace(/\|\s+\|/g, "|\n|");
