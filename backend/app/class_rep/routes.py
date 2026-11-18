@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from collections import deque
 from hmac import compare_digest
 from io import BytesIO
-from fastapi import APIRouter, File, Header, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
@@ -430,7 +430,7 @@ def documents_list(request: Request):
 
 
 @router.post("/documents")
-async def documents_upload(request: Request, file: UploadFile = File(...)):
+async def documents_upload(request: Request, file: UploadFile = File(...), conversation_id: str = Form(default="")):
     user = _user(request)
     filename = (file.filename or "uploaded-document").replace("\\\\", "/").split("/")[-1][:180]
     content = await file.read(10 * 1024 * 1024 + 1)
@@ -438,7 +438,14 @@ async def documents_upload(request: Request, file: UploadFile = File(...)):
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(413, "Files must be 10 MB or smaller.")
     try:
-        return ingest(filename, content, owner_id=user["id"])
+        result = ingest(filename, content, owner_id=user["id"])
+        safe_conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", conversation_id or "")[:80] or uuid.uuid4().hex
+        file_link = "/api/class-rep/documents/" + result["id"] + "/file"
+        memory.save_turn(user["id"], safe_conversation_id,
+                         "I uploaded a file: " + filename,
+                         "The uploaded file is available in this conversation: [" + filename + "](" + file_link + ")")
+        result["conversation_id"] = safe_conversation_id
+        return result
     except DocumentError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -450,11 +457,18 @@ def documents_file(document_id: str, request: Request):
         raise HTTPException(400, "Invalid document identifier.")
     stored = get_document_file(document_id, user["id"])
     if not stored:
-        raise HTTPException(404, "Uploaded file not found.")
-    filename, content_type, content = stored
+        # Older uploads predate binary retention. Their extracted text remains viewable.
+        extracted = get_document_text(document_id, user["id"])
+        if not extracted:
+            raise HTTPException(404, "Uploaded file not found.")
+        content = extracted["text"].encode("utf-8")
+        filename = extracted["title"] or "document.txt"
+        content_type = "text/plain; charset=utf-8"
+    else:
+        filename, content_type, content = stored
     safe_name = filename.replace('"', "").replace("\\r", "").replace("\\n", "")[:180]
-    inline_types = ("application/pdf", "image/", "text/plain", "text/csv", "image/svg+xml")
-    disposition = "inline" if content_type == "application/pdf" or content_type.startswith("image/") or content_type.startswith("text/") else "attachment"
+    is_svg = filename.lower().endswith(".svg")
+    disposition = "inline" if content_type == "application/pdf" or (content_type.startswith("image/") and not is_svg) or content_type.startswith("text/") else "attachment"
     return StreamingResponse(BytesIO(content), media_type=content_type,
         headers={"Content-Disposition": disposition + '; filename="' + safe_name + '"',
                  "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
