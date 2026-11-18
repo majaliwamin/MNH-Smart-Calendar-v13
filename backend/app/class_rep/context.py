@@ -54,10 +54,12 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
     with database() as connection:
         if selected:
             rows = connection.execute(
-                "SELECT col,id,data,updated_at FROM docs WHERE col IN (" +
-                ",".join("?" for _ in selected) +
-                ") ORDER BY updated_at DESC LIMIT ?",
-                (*selected, limit),
+                "SELECT col,id,data,updated_at FROM ("
+                "SELECT col,id,data,updated_at, "
+                "ROW_NUMBER() OVER (PARTITION BY col ORDER BY updated_at DESC) AS row_num "
+                "FROM docs WHERE col IN (" + ",".join("?" for _ in selected) + ")"
+                ") WHERE row_num <= ? ORDER BY updated_at DESC",
+                (*selected, max(1, min(int(limit), 80))),
             ).fetchall()
         else:
             rows = []
@@ -108,7 +110,9 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         "records": grouped,
         "recent_activity_history": activity,
         "data_scope": "live shared application records; read-only",
-        "context_scope": "recent activity" if history_query else "timetable" if schedule_query else "not required for this question",
+        "context_scope": ("recent activity plus all user-facing application sections" if history_query else
+                          "timetable and all user-facing application sections" if schedule_query else
+                          "all user-facing application sections"),
     }
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     # Trim oldest records, then oldest activity, without slicing JSON mid-record.
