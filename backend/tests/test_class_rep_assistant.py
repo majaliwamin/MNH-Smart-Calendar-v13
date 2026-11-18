@@ -112,7 +112,7 @@ from app.class_rep import assistant
 def test_assistant_uses_live_context_and_limits_history(monkeypatch):
     seen = {}
     monkeypatch.setattr(assistant, "build_calendar_context",
-                        lambda: ('{"records":{"examinations":[]}}', "2026-11-16T10:00"))
+                        lambda query="": ('{"records":{"examinations":[]}}', "2026-11-16T10:00"))
     def fake_complete(messages):
         seen["messages"] = messages
         return "The examination time is not recorded.", "cloudflare", "test-model"
@@ -122,7 +122,7 @@ def test_assistant_uses_live_context_and_limits_history(monkeypatch):
     assert "not recorded" in answer
     assert provider == "cloudflare" and model == "test-model"
     assert updated == "2026-11-16T10:00"
-    assert len(seen["messages"]) == 12
+    assert len(seen["messages"]) == 8
     assert "CURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT" in seen["messages"][0]["content"]
     assert seen["messages"][-1]["content"] == "What time is the exam?"
 
@@ -295,3 +295,64 @@ def test_document_keyword_match_skips_remote_embedding(monkeypatch):
     assert len(result) == 1
     assert result[0]["retrieval"] == "keyword"
     assert "abnormal lipid profile" in result[0]["text"]
+
+
+def test_document_search_does_not_make_remote_embedding_request_for_unmatched_query(monkeypatch):
+    from app.class_rep import documents
+
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            return type("Rows", (), {"fetchall": lambda self: [{
+                "data": json.dumps({
+                    "owner_id": "student-1", "title": "Placental Malaria",
+                    "page": 1, "text": "Placental malaria and pregnancy outcomes.",
+                    "embedding": [0.1, 0.2],
+                })
+            }]})()
+
+    monkeypatch.setattr(documents, "database", lambda: FakeConnection())
+    monkeypatch.setattr(
+        documents, "_vectors",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("chat must not wait for remote embeddings")),
+    )
+    assert documents.search_documents("What time is the next session?", owner_id="student-1") == []
+
+
+def test_calendar_context_omits_unrelated_records_for_general_questions(monkeypatch):
+    from app.class_rep import context
+
+    calls = []
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            calls.append((query, params))
+            return type("Rows", (), {"fetchall": lambda self: []})()
+
+    monkeypatch.setattr(context, "database", lambda: FakeConnection())
+    payload, _ = context.build_calendar_context("What is dyslipidaemia?")
+    data = json.loads(payload)
+    assert data["context_scope"] == "not required for this question"
+    assert data["records"] == {name: [] for name in context.COLLECTIONS}
+    assert not any("FROM audit" in query for query, _ in calls)
+
+
+def test_calendar_context_includes_timetable_records_for_schedule_questions(monkeypatch):
+    from app.class_rep import context
+
+    calls = []
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            calls.append((query, params))
+            return type("Rows", (), {"fetchall": lambda self: []})()
+
+    monkeypatch.setattr(context, "database", lambda: FakeConnection())
+    payload, _ = context.build_calendar_context("What is the next session?")
+    data = json.loads(payload)
+    assert data["context_scope"] == "timetable"
+    assert "cells" in calls[0][1]
+    assert "communications" not in calls[0][1]
