@@ -305,6 +305,45 @@ def test_analytics_reports_module_targets_attendance_and_delivery(monkeypatch, t
         assert client.get("/api/analytics?year=2026").status_code == 200
 
 
+
+def test_analytics_reports_cancelled_rescheduled_and_only_recorded_performance(monkeypatch, tmp_path):
+    configure_test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        monkeypatch.setenv("MNH_HOD_PASSWORD", "hod-analytics-secret")
+        assert client.post("/api/auth", json={"password": "hod-analytics-secret"}).status_code == 200
+        assert client.put("/api/doc/modules/PNIM-TEST", json={
+            "title": "Pregnancy and Neonatal Immunology",
+            "semesterTargetSessions": 12,
+        }).status_code == 200
+        outcomes = ("completed", "missed", "cancelled", "rescheduled")
+        for index, outcome in enumerate(outcomes):
+            response = client.put(f"/api/doc/cells/pnim-session-{index}", json={
+                "weekStart": "2026-11-16",
+                "dayIndex": 0,
+                "startTime": f"{8 + index:02d}:00",
+                "endTime": f"{9 + index:02d}:00",
+                "moduleCode": "PNIM-TEST",
+                "code": "PNIM-TEST",
+                "status": outcome,
+            })
+            assert response.status_code == 200
+
+        dashboard = client.get("/api/analytics").json()["dashboard"]
+        status = next(item for item in dashboard["moduleStatus"] if item["code"] == "PNIM-TEST")
+        assert status["status"] == "at_risk"
+        assert status["missedSessions"] == 1
+        assert status["cancelledSessions"] == 1
+        assert status["rescheduledSessions"] == 1
+
+        performance = next(item for item in dashboard["modulePerformance"] if item["code"] == "PNIM-TEST")
+        assert performance["attendance"] is None
+        assert performance["completion"] is None
+        assert performance["completedSessions"] == 1
+        assert performance["missedSessions"] == 1
+        assert performance["cancelledSessions"] == 1
+        assert performance["rescheduledSessions"] == 1
+
+
 def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path):
     from io import BytesIO
     from openpyxl import load_workbook
