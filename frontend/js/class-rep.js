@@ -24,9 +24,16 @@
   identity.append(el("strong", "cr-title", "Class Rep & Academic Relations Assistant"));
   identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
   brand.append(brandMark, identity);
-  const productLabel = el("div", "cr-product-label", "MNH Smart Calendar");
-  productLabel.setAttribute("aria-label", "MNH Smart Calendar");
-  header.append(brand, productLabel);
+  const homeBack = el("button", "cr-home-back");
+  homeBack.type = "button";
+  homeBack.setAttribute("aria-label", "Back to Home — Weekly Timetable");
+  homeBack.title = "Back to Home";
+  homeBack.innerHTML = '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7M8 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to Home</span>';
+  homeBack.addEventListener("click", () => {
+    const homeNav = document.querySelector('.menu-nav[data-view="weekly"], .view-tab[data-view="weekly"], .hd-tab[data-view="weekly"]');
+    if (homeNav) homeNav.click();
+  });
+  header.append(brand, homeBack);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
