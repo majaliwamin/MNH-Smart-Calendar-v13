@@ -9,7 +9,10 @@
     var fenced = false, fence = String.fromCharCode(96).repeat(3);
     return String(value).split("\n").map(function (line) {
       if (line.trim().indexOf(fence) === 0 || /^\s*~~~/.test(line)) { fenced = !fenced; return line; }
-      return fenced ? line : line.replace(/\\\|/g, "|");
+      if (fenced) return line;
+      var normalized = line.replace(/\\\|/g, "|");
+      if (normalized.indexOf("| |") >= 0) normalized = normalized.replace(/\|\s+\|/g, "|\n|");
+      return normalized;
     }).join("\n");
   }
   function valid(c) {
