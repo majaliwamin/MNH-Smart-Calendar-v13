@@ -518,15 +518,7 @@ def analytics(year: int | None = None):
         },
         "moduleStatus": module_status,
         "modulePerformance": [
-            {
-                "code": item["code"],
-                "attendance": None,
-                "completion": None,
-                "completedSessions": item["completedSessions"],
-                "missedSessions": item["missedSessions"],
-                "cancelledSessions": item["cancelledSessions"],
-                "rescheduledSessions": item["rescheduledSessions"],
-            }
+            {"code": item["code"], "attendance": None, "completion": None}
             for item in dashboard_modules
         ],
         "actions": actions,
