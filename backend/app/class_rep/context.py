@@ -42,10 +42,11 @@ def build_calendar_context(query: str = '', limit: int = 120) -> tuple[str, str 
         "module", "facilitator", "venue", "today", "tomorrow", "this week", "next week",
         "next class", "upcoming", "recurring",
     ))
-    history_query = any(term in text for term in (
+    history_query = query is None or any(term in text for term in (
         "recent change", "recent update", "what changed", "activity history", "modified",
         "updated", "who changed", "audit",
     ))
+    schedule_query = schedule_query or query is None
     selected = COLLECTIONS if history_query else (
         ("cells", "modules", "facilitators", "examinations", "recurring")
         if schedule_query else ()
