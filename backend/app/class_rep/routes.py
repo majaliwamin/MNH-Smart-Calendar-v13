@@ -150,7 +150,7 @@ def status():
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
                                   "account_memories", "account_tasks"],
             "document_uploads": "enabled",
-            "document_search": "semantic" if cloudflare else "keyword_only",
+            "document_search": "keyword_only",
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
             "voice": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
             "speech_to_text_model": stt or None,
@@ -432,7 +432,7 @@ def documents_list(request: Request):
 @router.post("/documents")
 async def documents_upload(request: Request, file: UploadFile = File(...), conversation_id: str = Form(default="")):
     user = _user(request)
-    filename = (file.filename or "uploaded-document").replace("\\\\", "/").split("/")[-1][:180]
+    filename = re.split(r"[/\\\\]", file.filename or "uploaded-document")[-1][:180]
     content = await file.read(10 * 1024 * 1024 + 1)
     await file.close()
     if len(content) > 10 * 1024 * 1024:
