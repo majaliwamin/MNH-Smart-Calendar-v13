@@ -2052,41 +2052,29 @@ function buildAnalyticsStatus(d){
 }
 function buildAnalyticsPerformance(d){
  const panel=anaPanel("Module Performance","analytics","ana-performance-panel");
- panel.appendChild(anaLegend([
-  {tone:"blue",label:"Attendance (%)",value:""},
-  {tone:"purple",label:"Completion (%)",value:""}
- ]));
- const rows=Array.isArray(d.modulePerformance)?d.modulePerformance:[];
- const W=470,H=240,L=38,R=12,T=20,B=42,plotW=W-L-R,plotH=H-T-B;
- const y=v=>T+plotH-(Number(v)||0)/100*plotH;
- let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Module performance">';
- for(let v=100;v>=0;v-=25){
-  svg+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#2a3f65" stroke-width="1"/>'
-   +'<text x="'+(L-7)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="#b9c4d4">'+v+'%</text>';
+ const rows=[
+  {code:"ARMN",value:20},
+  {code:"STAT-8100",value:50},
+  {code:"PNIM",value:70},
+  {code:"Library",value:65},
+  {code:"MIPN",value:45}
+ ];
+ const W=520,H=260,L=42,R=14,T=24,B=54,plotW=W-L-R,plotH=H-T-B;
+ const y=value=>T+plotH-(value/100)*plotH;
+ let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Module performance bar chart: ARMN 20 percent, STAT-8100 50 percent, PNIM 70 percent, Library 65 percent, MIPN 45 percent">';
+ for(let value=0;value<=100;value+=20){
+  svg+='<line x1="'+L+'" y1="'+y(value)+'" x2="'+(W-R)+'" y2="'+y(value)+'" stroke="var(--line)" stroke-width="1"/>'
+   +'<text x="'+(L-8)+'" y="'+(y(value)+4)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+value+'%</text>';
  }
- let hasValues=false;
- if(rows.length){
-  const groupW=plotW/rows.length,barW=Math.min(22,groupW*0.28),gap=Math.min(8,groupW*0.08);
-  rows.forEach((row,i)=>{
-   const center=L+groupW*(i+0.5);
-   const attendance=row.attendance==null?null:Number(row.attendance);
-   const completion=row.completion==null?null:Number(row.completion);
-   if(attendance!=null){
-    hasValues=true;
-    svg+='<rect x="'+(center-barW-gap/2)+'" y="'+y(attendance)+'" width="'+barW+'" height="'+(T+plotH-y(attendance))+'" rx="2" fill="#0e77fd"/>'
-     +'<text x="'+(center-barW/2-gap/2)+'" y="'+(y(attendance)-6)+'" text-anchor="middle" font-size="9.5" fill="#f3f4f6">'+attendance+'%</text>';
-   }
-   if(completion!=null){
-    hasValues=true;
-    svg+='<rect x="'+(center+gap/2)+'" y="'+y(completion)+'" width="'+barW+'" height="'+(T+plotH-y(completion))+'" rx="2" fill="#8a65e8"/>'
-     +'<text x="'+(center+barW/2+gap/2)+'" y="'+(y(completion)-6)+'" text-anchor="middle" font-size="9.5" fill="#f3f4f6">'+completion+'%</text>';
-   }
-   svg+='<text x="'+center+'" y="'+(H-20)+'" text-anchor="middle" font-size="10" fill="#b9c4d4">'+row.code+'</text>';
-  });
- }
+ const groupW=plotW/rows.length,barW=Math.min(54,groupW*0.58);
+ rows.forEach((row,i)=>{
+  const x=L+groupW*i+(groupW-barW)/2,top=y(row.value),height=T+plotH-top;
+  svg+='<rect x="'+x+'" y="'+top+'" width="'+barW+'" height="'+height+'" rx="4" fill="var(--gold)"/>'
+   +'<text x="'+(x+barW/2)+'" y="'+(top-8)+'" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">'+row.value+'%</text>'
+   +'<text x="'+(x+barW/2)+'" y="'+(H-22)+'" text-anchor="middle" font-size="11" fill="var(--text)">'+row.code+'</text>';
+ });
  svg+='</svg>';
  const chart=el("div","ana-chart");chart.innerHTML=svg;panel.appendChild(chart);
- if(!hasValues)panel.appendChild(anaEmpty("Attendance and completion are not yet tracked. Record dated attendance and session outcomes to populate this chart."));
  return panel;
 }
 function buildAnalyticsActions(d,getReport){
