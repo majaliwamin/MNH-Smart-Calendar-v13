@@ -146,10 +146,11 @@ def test_document_ingestion_is_persisted_as_private_cara_collection(monkeypatch)
             stored.append((sql, params))
     monkeypatch.setattr(documents, "database", lambda: FakeConnection())
     monkeypatch.setattr(documents, "_vectors", lambda texts, prefix: [[0.1, 0.2] for _ in texts])
-    result = documents.ingest("programme.txt", b"Important programme rules for students.")
+    result = documents.ingest("programme.txt", b"Important programme rules for students.", source_id="0123456789abcdef0123456789abcdef")
     assert result["title"] == "programme.txt"
     assert result["chunks"] == 1
-    assert any(params[0] == "cara_documents" for _, params in stored)
+    assert result["source_id"] == "0123456789abcdef0123456789abcdef"
+    assert any(params[0] == "cara_documents" and json.loads(params[2])["source_id"] == result["source_id"] for _, params in stored)
     assert any(params[0] == "cara_document_index" for _, params in stored)
 
 
