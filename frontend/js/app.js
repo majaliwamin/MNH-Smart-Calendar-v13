@@ -1023,6 +1023,7 @@ function showView(name){
  if(name==="resources"&&currentView!=="resources")previousNonResourcesView=currentView;
  else if(name!=="resources")previousNonResourcesView=name;
  currentView=name;
+ document.body.classList.toggle("weekly-view",name==="weekly");
  if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
