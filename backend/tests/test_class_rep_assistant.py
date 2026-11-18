@@ -406,3 +406,18 @@ def test_document_search_uses_semantic_fallback_when_keywords_miss(monkeypatch):
     assert results[0]["title"] == "Placental immunology notes"
     assert results[0]["retrieval"] == "semantic"
     assert results[0]["page"] == 4
+
+
+
+def test_default_ai_response_budget_supports_complete_academic_answers(monkeypatch):
+    from app.class_rep.config import provider_configs
+
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "test-account")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "test-key")
+    monkeypatch.delenv("MNH_CLASSREP_HF_API_KEY", raising=False)
+    monkeypatch.delenv("MNH_CLASSREP_HF_MODEL", raising=False)
+    monkeypatch.delenv("MNH_CLASSREP_GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("MNH_CLASSREP_GROQ_BASE_URL", raising=False)
+
+    configured = provider_configs()
+    assert configured[0]["max_tokens"] == 1800
