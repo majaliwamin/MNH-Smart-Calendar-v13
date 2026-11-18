@@ -224,6 +224,8 @@
   let authMode = "login";
   // A temporary network/API failure is not proof that the saved session expired.
   let retrySessionCheck = false;
+  let authCheckComplete = false;
+  let authCheckRunning = false;
   function setAuthMode(mode) {
     authMode = mode;
     authName.hidden = mode !== "register";
@@ -247,18 +249,22 @@
     } catch (_) {}
   }
   async function checkAuth() {
+    if (authCheckRunning) return;
+    authCheckRunning = true;
     try {
       const { response, result } = await requestJson("/api/class-rep/auth/me");
       if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       if (result.storage_ready === false) {
+        authCheckComplete = true; authCheckRunning = false;
         state.user = null; signOut.hidden = true; 
-        showHeader(false); body.hidden = true; authPanel.hidden = false; setAuthPresentation(root.classList.contains("is-open"));
+        showHeader(false); body.hidden = true; authPanel.hidden = !root.classList.contains("is-open"); setAuthPresentation(root.classList.contains("is-open"));
         authTitle.textContent = "Your private CRARA account is being prepared";
         authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
         authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
         authSubmit.disabled = true; authSwitch.disabled = true;
         return;
       }
+      authCheckComplete = true; authCheckRunning = false;
       retrySessionCheck = false;
       authTitle.textContent = "Your private CRARA account";
       authIntro.textContent = "Sign in to continue your conversations and access your saved tasks and memories.";
@@ -268,14 +274,15 @@
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
       signOut.hidden = !state.user; 
-      showHeader(Boolean(state.user));
+      showHeader(Boolean(root.classList.contains("is-open") && state.user));
       setAuthPresentation(root.classList.contains("is-open") && !state.user);
-      authPanel.hidden = Boolean(state.user);
-      body.hidden = !state.user;
+      authPanel.hidden = !root.classList.contains("is-open") || Boolean(state.user);
+      body.hidden = !state.user || !root.classList.contains("is-open");
       if (state.user) await loadPreviousConversation();
     } catch (error) {
       // A temporary network/API failure is not proof that the saved session
       // expired. Do not show the login form or discard the browser session.
+      authCheckComplete = true; authCheckRunning = false;
       retrySessionCheck = true;
       signOut.hidden = true; showHeader(false); body.hidden = true;
       authPanel.hidden = !root.classList.contains("is-open");
@@ -502,12 +509,15 @@
     }
     root.classList.toggle("is-open", open);
     setAuthPresentation(Boolean(open && !state.user));
-    showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user); updateLauncherVisibility();
+    showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user) || !authCheckComplete; updateLauncherVisibility();
     launcher.setAttribute("aria-expanded", String(open)); toggle.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }
   setAuthMode("login");
   launcher.addEventListener("click", () => setOpen(true));
   toggle.addEventListener("click", closeCRARA);
+  // Restore a saved account as soon as the app loads, not only after the user opens CRARA.
+  // Keep the login panel hidden while the saved session is being checked.
+  void checkAuth();
   checkStatus();
 })();
