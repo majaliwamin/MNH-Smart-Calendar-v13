@@ -124,13 +124,13 @@
   }
 
   function renderInline(parent, value) {
-    const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+    const pattern = /(\[[^\]\n]+\]\(\/api\/class-rep\/documents\/[a-f0-9]{32}\/file\)|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
     let cursor = 0;
     for (const match of value.matchAll(pattern)) {
       if (match.index > cursor) parent.append(document.createTextNode(value.slice(cursor, match.index)));
       const token = match[0];
       if (token.startsWith("[")) {
-        const parsed = /^\\[([^\\]]+)\\]\\((\\/api\\/class-rep\\/documents\\/[a-f0-9]{32}\\/file)\\)$/.exec(token);
+        const parsed = /^\[([^\]]+)\]\((\/api\/class-rep\/documents\/[a-f0-9]{32}\/file)\)$/.exec(token);
         if (parsed) {
           const link = document.createElement("a"); link.textContent = parsed[1]; link.href = parsed[2];
           link.target = "_blank"; link.rel = "noopener noreferrer"; link.className = "cr-file-open"; parent.append(link);
