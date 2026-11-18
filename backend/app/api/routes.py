@@ -177,6 +177,12 @@ def sync_resources_for_crara(payload: dict = Body(...)):
     indexed = 0
     indexing_unavailable = 0
     now = int(time.time() * 1000)
+
+    def safe_int(value):
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError, OverflowError):
+            return 0
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -189,10 +195,10 @@ def sync_resources_for_crara(payload: dict = Body(...)):
             "url": str(data.get("url") or "")[:1200],
             "note": str(data.get("note") or "")[:3000],
             "category": str(data.get("category") or "Others")[:80],
-            "createdAt": int(data.get("createdAt") or 0),
+            "createdAt": safe_int(data.get("createdAt")),
             "fileId": str(data.get("fileId") or "")[:64],
             "fileName": str(data.get("fileName") or "")[:255],
-            "fileSize": max(0, int(data.get("fileSize") or 0)),
+            "fileSize": max(0, safe_int(data.get("fileSize"))),
         }
         if not clean["title"] or not clean["url"]:
             continue
