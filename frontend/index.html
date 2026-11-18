@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.18-session-mode-contrast-v1";</script>
+<script>window.MNH_BUILD="2026.11.18-module-status-reschedule-v1";</script>
 <script>
 (function () {
   "use strict";
@@ -92,8 +92,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.18-session-mode-contrast-v1">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.18-session-mode-contrast-v1">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.18-module-status-reschedule-v1">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.18-module-status-reschedule-v1">
 
 </head>
 <body data-theme="dark">
@@ -251,7 +251,8 @@
 <div class="colour-dialog" id="module-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="module-dialog-title">
  <div class="dialog-card module-card">
   <h2 id="module-dialog-title">Schedule session</h2>
-  <div class="module-field"><label for="session-day">Weekday</label><select id="session-day"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option></select></div>
+  <div class="module-field" id="session-day-field"><label for="session-day">Weekday</label><select id="session-day"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option></select></div>
+  <div class="module-field" id="reschedule-date-field" hidden><label for="session-date">New session date</label><input id="session-date" type="date"><small>Choose a Monday–Friday date. Set the new start and end times below.</small></div>
   <div class="module-field time-pair"><div><label for="session-start">Start time</label><input id="session-start" type="time" step="60" value="08:00"></div><div><label for="session-end">End time</label><input id="session-end" type="time" step="60" value="10:00"></div></div>
   <div class="module-field">
    <label for="module-select">Select module</label>
@@ -273,8 +274,8 @@
   </div>
   <div class="module-details" id="module-details" aria-live="polite"></div>
   <div class="module-field">
-   <label for="session-status">Session outcome</label>
-   <select id="session-status"><option value="scheduled">Scheduled / not yet held</option><option value="completed">Completed</option><option value="missed">Missed</option></select>
+   <label for="session-status">Session status</label>
+   <select id="session-status"><option value="scheduled">Scheduled / not yet held</option><option value="completed">Completed</option><option value="missed">Missed</option><option value="cancelled">Cancelled</option><option value="rescheduled">Rescheduled — update date and time</option></select>
   </div>
   <div class="module-field">
    <label for="module-colour">Entry colour</label>
@@ -368,14 +369,14 @@
 
 
 
-<script src="/js/app.js?v=2026.11.18-session-mode-contrast-v1" defer></script>
-<script src="/js/class-rep.js?v=2026.11.18-session-mode-contrast-v1" defer></script>
+<script src="/js/app.js?v=2026.11.18-module-status-reschedule-v1" defer></script>
+<script src="/js/class-rep.js?v=2026.11.18-module-status-reschedule-v1" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.18-session-mode-contrast-v1";
+  const workerUrl = "/service-worker.js?v=2026.11.18-module-status-reschedule-v1";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();

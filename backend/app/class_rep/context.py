@@ -107,6 +107,14 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         "local_now": now,
         "records": grouped,
         "recent_activity_history": activity,
+        "session_status_semantics": (
+            "The shared cells collection is authoritative for timetable session status. "
+            "Valid saved statuses include scheduled, completed, missed, cancelled and rescheduled. "
+            "For a rescheduled session, weekStart (Monday), dayIndex (Monday=0 through Friday=4), "
+            "startTime and endTime describe its updated schedule. Do not infer attendance or module "
+            "performance percentages from timetable entries; report those as unavailable unless "
+            "actual attendance or completion measures are present."
+        ),
         "data_scope": "live shared application records; read-only",
         "context_scope": "recent activity" if history_query else "timetable" if schedule_query else "not required for this question",
     }

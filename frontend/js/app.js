@@ -30,6 +30,8 @@ function isJournal(r,c){return r===2&&c===1;}
 function parseClock(value){const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||""));if(!m)return null;const h=+m[1],n=+m[2];return h<24&&n<60?h*60+n:null;}
 function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
 function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
+function isoDateFromWeekDay(weekStart,dayIndex){const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(weekStart||""));if(!match||!Number.isInteger(dayIndex))return "";const date=new Date(Date.UTC(+match[1],+match[2]-1,+match[3]+dayIndex));return date.getUTCFullYear()+"-"+String(date.getUTCMonth()+1).padStart(2,"0")+"-"+String(date.getUTCDate()).padStart(2,"0");}
+function parseAcademicDate(value){const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||""));if(!match)return null;const date=new Date(Date.UTC(+match[1],+match[2]-1,+match[3]));if(date.getUTCFullYear()!==+match[1]||date.getUTCMonth()!==+match[2]-1||date.getUTCDate()!==+match[3])return null;const weekday=date.getUTCDay();if(weekday<1||weekday>5)return null;const monday=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate()-(weekday-1)));const weekStart=monday.getUTCFullYear()+"-"+String(monday.getUTCMonth()+1).padStart(2,"0")+"-"+String(monday.getUTCDate()).padStart(2,"0");const weekOffset=Math.round((monday.getTime()-WK.FIRST_MONDAY.getTime())/(7*86400000));return {dayIndex:weekday-1,weekStart,weekOffset};}
 function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
 function facilitatorFor(code){
  const configured=String(modules[code]?.facilitator||"").trim();
@@ -165,10 +167,9 @@ function renderModuleDetailsMeetingIcon(){
 function updateLecturerAssignmentStatus(){
  const field=document.getElementById("session-lecturer"),indicator=document.getElementById("lecturer-assignment-status");
  if(!field||!indicator)return;
- const assigned=!!field.value.trim();
- indicator.hidden=!assigned;
- indicator.textContent=assigned?"Lecturer assigned":"";
+ const assigned=!!field.value.trim();indicator.hidden=!assigned;indicator.textContent=assigned?"Lecturer assigned":"";
 }
+function updateSessionStatusFields(){const rescheduled=document.getElementById("session-status")?.value==="rescheduled",dayField=document.getElementById("session-day-field"),dateField=document.getElementById("reschedule-date-field"),dateInput=document.getElementById("session-date");if(dayField)dayField.hidden=rescheduled;if(dateField)dateField.hidden=!rescheduled;if(rescheduled&&dateInput&&!dateInput.value){const weekStart=activeCell?.weekStart||WK.isoMonday(weekOffset),dayIndex=Number.isInteger(activeCell?.dayIndex)?activeCell.dayIndex:Number(document.getElementById("session-day")?.value||0);dateInput.value=isoDateFromWeekDay(weekStart,dayIndex);}}
 function updateModuleDetails(code){
  const box=document.getElementById("module-details");
  const labelField=document.getElementById("module-label"),lecturerField=document.getElementById("session-lecturer");
@@ -192,8 +193,9 @@ function openModuleDialog(dayIndex,startTime,entry){
  const id=existing?.id||null;
  const start=startTime||"08:00";
  const end=existing?.endTime||(parseClock(start)+120<=1440?clockText(parseClock(start)+120):"23:59");
- activeCell={id,dayIndex,startTime:start,endTime:end};
+ activeCell={id,dayIndex,startTime:start,endTime:end,weekStart:String(existing?.data?.weekStart||WK.isoMonday(weekOffset))};
  document.getElementById("session-day").value=String(dayIndex);
+ document.getElementById("session-date").value=isoDateFromWeekDay(activeCell.weekStart,dayIndex);
  document.getElementById("session-start").value=existing?.startTime||start;
  document.getElementById("session-end").value=existing?.endTime||end;
  const existingCode=resolveModuleCode(existing?.data||{});
@@ -204,6 +206,7 @@ function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("session-link-field").hidden=document.getElementById("module-mode").value!=="online";
  document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
+ updateSessionStatusFields();
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
  updateModuleDetails(document.getElementById("module-select").value);
  document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
@@ -236,6 +239,8 @@ function showSessionDetails(entry){
  const details=document.getElementById("details-content");details.textContent="";
  const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
  lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
+ const outcome=String(entry.data?.status||"scheduled"),outcomeMessages={missed:"This session has been marked as missed.",cancelled:"This session has been cancelled.",rescheduled:"This session was rescheduled to "+dateText+" at "+entry.startTime+"–"+entry.endTime+"."};
+ if(outcomeMessages[outcome])details.appendChild(el("div","session-outcome-notice session-outcome-"+outcome,outcomeMessages[outcome]));
  const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){
   const linkRow=document.createElement("div");linkRow.className="session-meeting-link";
   const provider=meetingProviderMark(meetingUrl,true);
@@ -294,7 +299,7 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const outcome=String(entry.data?.status||"scheduled"),chosenColour=entry.data?.colour;if(["missed","cancelled"].includes(outcome)){area.classList.add("activity-status-"+outcome);area.style.setProperty("background","#667085","important");area.style.setProperty("border-color","#8993a3","important");area.style.setProperty("color","#fff","important");}else if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(["missed","cancelled","rescheduled"].includes(outcome))area.appendChild(el("span","activity-status-tag",outcome.toUpperCase()));if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -416,6 +421,7 @@ function requestAnalytics(){
 }
 document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
 document.getElementById("session-lecturer").addEventListener("input",updateLecturerAssignmentStatus);
+document.getElementById("session-status").addEventListener("change",updateSessionStatusFields);
  document.getElementById("session-link").addEventListener("input",renderModuleDetailsMeetingIcon);
 document.getElementById("session-link").addEventListener("change",renderModuleDetailsMeetingIcon);
 document.getElementById("module-mode").addEventListener("change",e=>{document.getElementById("session-link-field").hidden=e.target.value!=="online";});
@@ -423,28 +429,30 @@ document.getElementById("cancel-module").addEventListener("click",()=>hideDialog
 document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
 document.getElementById("apply-module").addEventListener("click",async()=>{
  if(!editingUnlocked||!activeCell)return;
- const dayIndex=Number(document.getElementById("session-day").value),startTime=document.getElementById("session-start").value,endTime=document.getElementById("session-end").value;
- const start=parseClock(startTime),end=parseClock(endTime);
- if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a weekday and a valid end time later than the start time.";return;}
- const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
- const deliveryMode=document.getElementById("module-mode").value;
+ const statusValue=document.getElementById("session-status").value,selectedDay=Number(document.getElementById("session-day").value);
+ const startTime=document.getElementById("session-start").value,endTime=document.getElementById("session-end").value,start=parseClock(startTime),end=parseClock(endTime);
+ if(start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a valid end time later than the start time.";return;}
+ let dayIndex=selectedDay,weekStart=String(activeCell.weekStart||WK.isoMonday(weekOffset)),targetOffset=weekOffset;
+ if(statusValue==="rescheduled"){
+  const destination=parseAcademicDate(document.getElementById("session-date").value);
+  if(!destination){statusEl.className="status error";statusEl.textContent="Choose a valid Monday–Friday date for the rescheduled session.";return;}
+  if(destination.weekOffset < -1 || destination.weekOffset > 14){statusEl.className="status error";statusEl.textContent="Choose a date within the available academic calendar.";return;}
+  dayIndex=destination.dayIndex;weekStart=destination.weekStart;targetOffset=destination.weekOffset;
+ }else if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5){statusEl.className="status error";statusEl.textContent="Choose a weekday for the session.";return;}
+ const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80),deliveryMode=document.getElementById("module-mode").value;
  const meetingInput=document.getElementById("session-link").value.trim(),meetingUrl=meetingInput?safeUrl(meetingInput):"";
  if(meetingInput&&!meetingUrl){statusEl.className="status error";statusEl.textContent="Enter a valid Google Meet, Zoom, Microsoft Teams or other HTTPS meeting link.";return;}
- const activityLabel=code||label;
- if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
- const oldId=activeCell.id;
- const weekStart=WK.isoMonday(weekOffset);
- let id=oldId||`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
- if(oldId&&/^\d+_\d+$/.test(oldId)&&dayIndex!==activeCell.dayIndex)id=`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
- const conflict=getSessionEntries().find(x=>x.id!==oldId&&x.id!==id&&x.dayIndex===dayIndex&&start<x.endMinutes&&end>x.startMinutes);
+ const activityLabel=code||label;if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
+ const oldId=activeCell.id;let id=oldId||`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+ if(oldId&&/^\d+_\d+$/.test(oldId)&&(dayIndex!==activeCell.dayIndex||weekStart!==activeCell.weekStart))id=`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+ const conflict=getSessionEntries(targetOffset).find(x=>x.id!==oldId&&x.id!==id&&x.dayIndex===dayIndex&&start<x.endMinutes&&end>x.startMinutes);
  if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
- const previous=state.cells[oldId||id]||{},module=modules[code]||{};
- const chosenColour=document.getElementById("module-colour").value;
- const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
- const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
- const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
+ const previous=state.cells[oldId||id]||{},module=modules[code]||{},chosenColour=document.getElementById("module-colour").value;
+ const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"",enteredFacilitator=document.getElementById("session-lecturer").value.trim();
+ const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:statusValue,meetingUrl};
  if(chosenColour)record.colour=chosenColour;else delete record.colour;
- state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
+ state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime,weekStart};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);
+ if(saved&&oldSaved){if(targetOffset!==weekOffset)setWeek(targetOffset);showView("weekly");statusEl.className="status ok";statusEl.textContent=statusValue==="rescheduled"?"Session rescheduled and the timetable has been updated.":"Changes saved. Returned to the dashboard.";}
 });
 document.getElementById("delete-module").addEventListener("click",async()=>{
  if(!editingUnlocked||!activeCell?.id)return;
@@ -2071,6 +2079,7 @@ function buildAnalyticsStatus(d){
   row.title="Open "+item.code+" in Modules";
   const copy=el("span","ana-status-copy");
   copy.append(el("b",null,item.code),el("span",null,item.title||""));
+  const counts=[];if(item.missedSessions)counts.push("Missed: "+item.missedSessions);if(item.cancelledSessions)counts.push("Cancelled: "+item.cancelledSessions);if(item.rescheduledSessions)counts.push("Rescheduled: "+item.rescheduledSessions);if(counts.length)copy.appendChild(el("small","ana-status-meta",counts.join(" · ")));
   const pill=el("span","ana-pill "+item.status,item.statusLabel);
   row.append(copy,pill);
   row.addEventListener("click",()=>showView("modules"));
@@ -2080,30 +2089,12 @@ function buildAnalyticsStatus(d){
  return panel;
 }
 function buildAnalyticsPerformance(d){
- const panel=anaPanel("Module Performance","analytics","ana-performance-panel");
- const rows=[
-  {label:"ARMN",value:20},
-  {label:"STAT-8100",value:50},
-  {label:"PNIM",value:70},
-  {label:"Library",value:65},
-  {label:"MIPN",value:45}
- ];
- const chart=el("div","ana-module-bars");
- chart.setAttribute("role","img");
- chart.setAttribute("aria-label","Module performance: ARMN 20 percent, STAT-8100 50 percent, PNIM 70 percent, Library 65 percent, MIPN 45 percent");
- rows.forEach(item=>{
-  const row=el("div","ana-module-bar-row");
-  const label=el("span","ana-module-bar-label",item.label);
-  const track=el("div","ana-module-bar-track");
-  const fill=el("span","ana-module-bar-fill");
-  fill.style.width=item.value+"%";
-  track.appendChild(fill);
-  const value=el("strong","ana-module-bar-value",item.value+"%");
-  row.append(label,track,value);
-  chart.appendChild(row);
- });
- panel.appendChild(chart);
- return panel;
+ const panel=anaPanel("Module Performance","analytics","ana-performance-panel"),measures=Array.isArray(d.modulePerformance)?d.modulePerformance:[],rows=[];
+ measures.forEach(item=>[["Attendance",item.attendance],["Completion",item.completion]].forEach(([kind,raw])=>{const value=raw==null?null:Number(raw);if(Number.isFinite(value)&&value>=0&&value<=100)rows.push({label:String(item.code||"Module")+" · "+kind,value});}));
+ if(!rows.length){panel.appendChild(anaEmpty("No verified module performance percentages are available yet. Record actual attendance and completed session outcomes before this chart is populated."));return panel;}
+ const chart=el("div","ana-module-bars");chart.setAttribute("role","img");chart.setAttribute("aria-label","Module performance from recorded attendance and completion data");
+ rows.forEach(item=>{const row=el("div","ana-module-bar-row"),label=el("span","ana-module-bar-label",item.label),track=el("div","ana-module-bar-track"),fill=el("span","ana-module-bar-fill");fill.style.width=item.value+"%";track.appendChild(fill);row.append(label,track,el("strong","ana-module-bar-value",item.value+"%"));chart.appendChild(row);});
+ panel.appendChild(chart);return panel;
 }
 function buildAnalyticsActions(d,getReport){
  const panel=anaPanel("Upcoming Actions","bulb");
