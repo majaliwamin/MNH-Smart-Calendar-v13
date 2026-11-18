@@ -170,9 +170,7 @@ def test_timetable_places_lecturer_directly_after_module_code_and_theme_reaches_
     assert code_at < lecturer_at
     assert "getSessionEntries" in app
     assert "endMinutes" in app
-    assert ".footer.banner{" in css
-    assert "background:" in css[css.index(".footer.banner{"):css.index(".footer.banner{") + 180]
-    assert "color:" in css[css.index(".footer.banner{"):css.index(".footer.banner{") + 180]
+    assert '.footer.banner{background:var(--panel);color:var(--text);border-color:var(--line)}' in css
 
 def test_analytics_does_not_present_timetable_templates_as_semester_attendance():
     routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
