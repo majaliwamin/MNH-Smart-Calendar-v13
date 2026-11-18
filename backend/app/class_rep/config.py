@@ -13,7 +13,7 @@ def _value(name: str, default: str = "") -> str:
 def provider_configs() -> list[dict]:
     """Return configured providers in the required priority order."""
     timeout = max(5, min(90, int(_value("MNH_CLASSREP_AI_TIMEOUT", "35"))))
-    max_tokens = max(128, min(3000, int(_value("MNH_CLASSREP_AI_MAX_TOKENS", "900"))))
+    max_tokens = max(128, min(3000, int(_value("MNH_CLASSREP_AI_MAX_TOKENS", "600"))))
     providers = []
 
     cf_account = _value("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID")

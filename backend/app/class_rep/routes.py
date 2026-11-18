@@ -271,11 +271,19 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
             return ChatResponse(reply=confirmation, provider="CRARA reminder engine",
                                 model="persistent in-app reminder", conversation_id=conversation_id)
+        stage_started = time.monotonic()
         retrieved = memory.retrieve_context(user["id"], payload.message.strip(), conversation_id)
+        memory_ms = round((time.monotonic() - stage_started) * 1000)
+        stage_started = time.monotonic()
         answer, provider, model, updated = reply(payload.message.strip(),
             [item.model_dump() for item in payload.history],
             management_analytics=analytics_context, memory_context=retrieved, owner_id=user['id'])
+        provider_pipeline_ms = round((time.monotonic() - stage_started) * 1000)
+        stage_started = time.monotonic()
         memory.save_turn(user["id"], conversation_id, payload.message.strip(), answer)
+        save_ms = round((time.monotonic() - stage_started) * 1000)
+        logger.info("CRARA timing memory_ms=%s provider_pipeline_ms=%s save_ms=%s prompt_history=%s",
+                    memory_ms, provider_pipeline_ms, save_ms, min(len(payload.history), 6))
         return ChatResponse(reply=answer, provider=provider, model=model,
                             context_updated_at=updated, conversation_id=conversation_id)
     except ProviderError as exc:
