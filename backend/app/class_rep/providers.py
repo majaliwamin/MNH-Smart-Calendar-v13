@@ -1,6 +1,7 @@
 """Server-side AI adapters with Cloudflare -> Hugging Face -> Groq fallback."""
 import json
 import logging
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
