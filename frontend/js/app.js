@@ -2279,6 +2279,10 @@ async function removeResource(id){
  try{
   if(cloud)await cloud.doc("resources/"+id).delete();
   else await window.mnhApi.request("DELETE","/api/doc/resources/"+encodeURIComponent(id));
+  if(cloud){
+   const synced=await fetch("/api/resources/sync/"+encodeURIComponent(id),{method:"DELETE",credentials:"same-origin"});
+   if(!synced.ok)throw new Error("The resource was removed from the cloud library but CRARA's shared index could not be synchronised.");
+  }
   if(existing&&existing.fileId){
    const response=await fetch("/api/resources/files/"+encodeURIComponent(existing.fileId),{method:"DELETE",credentials:"same-origin"});
    if(!response.ok)throw new Error("The resource entry was removed, but its stored file could not be deleted.");
