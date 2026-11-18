@@ -2256,3 +2256,89 @@ body:not(.weekly-view) #view-tabs .week-nav-row{
 body.cara-open #view-weekly > :not(#class-rep-assistant){
   display:none!important;
 }
+
+
+/* Compact single-row date, Home and academic-week navigation header. */
+#view-tabs.view-tabs{
+ display:flex!important;
+ flex-direction:row!important;
+ align-items:center!important;
+ justify-content:space-between!important;
+ gap:10px!important;
+ min-height:44px!important;
+ height:auto!important;
+ padding:5px clamp(12px,2vw,28px)!important;
+}
+#view-tabs .weekly-date-tab{
+ flex:0 0 auto!important;
+ align-self:center!important;
+ min-height:32px!important;
+ height:32px!important;
+ padding:0!important;
+ margin:0!important;
+ display:inline-flex!important;
+ flex-direction:row!important;
+ align-items:center!important;
+ justify-content:flex-start!important;
+ gap:7px!important;
+ white-space:nowrap!important;
+}
+#view-tabs .weekly-date-icon{width:20px!important;height:20px!important;flex:0 0 20px!important}
+#view-tabs .week-nav-row{
+ display:flex!important;
+ flex:1 1 auto!important;
+ min-width:0!important;
+ width:auto!important;
+ height:34px!important;
+ margin:0 0 0 auto!important;
+ padding:0!important;
+ flex-direction:row!important;
+ align-items:center!important;
+ justify-content:flex-end!important;
+ gap:7px!important;
+}
+#view-tabs .week-nav{
+ display:flex!important;
+ flex:0 1 auto!important;
+ width:auto!important;
+ max-width:100%!important;
+ height:32px!important;
+ margin:0!important;
+ align-items:center!important;
+ justify-content:flex-end!important;
+ gap:4px!important;
+}
+#view-tabs .week-nav .view-tab{
+ min-height:30px!important;
+ height:30px!important;
+ padding:2px 7px!important;
+}
+#view-tabs .week-nav .week-step{width:28px!important;min-width:28px!important;flex:0 0 28px!important}
+#view-tabs .week-nav .week-now{padding:2px 8px!important}
+#view-tabs .mnh-refresh-btn{
+ flex:0 0 34px!important;
+ width:34px!important;
+ min-width:34px!important;
+ height:34px!important;
+ margin:0!important;
+}
+@media(max-width:560px){
+ #view-tabs.view-tabs{gap:6px!important;padding:4px 9px!important;min-height:40px!important}
+ #view-tabs .weekly-date-tab{gap:4px!important;font-size:12px!important;min-height:30px!important;height:30px!important}
+ #view-tabs .weekly-date-icon{width:18px!important;height:18px!important;flex-basis:18px!important}
+ #view-tabs .week-nav-row{height:30px!important;gap:4px!important}
+ #view-tabs .week-nav{height:30px!important;gap:2px!important}
+ #view-tabs .week-nav .view-tab{height:28px!important;min-height:28px!important;padding:1px 5px!important}
+ #view-tabs .week-nav .week-step{width:24px!important;min-width:24px!important;flex-basis:24px!important;font-size:18px!important}
+ #view-tabs .week-nav .week-now{padding:1px 5px!important}
+ #view-tabs .week-nav .week-now .week-range{font-size:11px!important}
+ #view-tabs .mnh-refresh-btn{width:30px!important;min-width:30px!important;flex-basis:30px!important;height:30px!important}
+}
+@media(max-width:360px){
+ #view-tabs.view-tabs{gap:4px!important;padding-left:6px!important;padding-right:6px!important}
+ #view-tabs .weekly-date-tab{font-size:11px!important;gap:3px!important}
+ #view-tabs .weekly-date-icon{width:16px!important;height:16px!important;flex-basis:16px!important}
+ #view-tabs .week-nav .week-step{width:21px!important;min-width:21px!important;flex-basis:21px!important}
+ #view-tabs .week-nav .week-now .week-range{font-size:10px!important}
+ #view-tabs .mnh-refresh-btn{width:27px!important;min-width:27px!important;flex-basis:27px!important}
+}
