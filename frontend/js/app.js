@@ -2346,6 +2346,13 @@ function subscribeExtras(db){
   if(!remote.length&&!seen&&resources.length)return;   // first run: keep the local copy until saved
   if(remote.length){try{localStorage.setItem(resCloudKey,"1");}catch(e){}}
   resources=remote;cacheResources();renderResources();
+  // Firestore is the UI source of truth; mirror its complete snapshot to the
+  // backend read model so CRARA can discover the same shared resources.
+  fetch("/api/resources/sync",{method:"POST",headers:{"Content-Type":"application/json"},
+    credentials:"same-origin",body:JSON.stringify({resources:remote.map(x=>({id:x.id,data:{
+      title:x.title,url:x.url,note:x.note,category:x.category,createdAt:x.createdAt,
+      fileId:x.fileId,fileName:x.fileName,fileSize:x.fileSize
+    }}))})}).catch(error=>console.warn("Resource sync for CRARA could not complete",error));
  },()=>{});
 }
 function initHeader(){
