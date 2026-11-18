@@ -47,9 +47,13 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         "updated", "who changed", "audit",
     ))
     schedule_query = schedule_query or query is None
+    resource_query = any(term in text for term in (
+        "resource", "uploaded", "upload", "notes", "lecture note", "document", "pdf",
+        "file", "reading", "study material", "learning material",
+    ))
     selected = COLLECTIONS if history_query else (
-        ("cells", "modules", "facilitators", "examinations", "recurring")
-        if schedule_query else ()
+        (("cells", "modules", "facilitators", "examinations", "recurring") + (("resources",) if resource_query else ()))
+        if schedule_query else (("resources",) if resource_query else ())
     )
     with database() as connection:
         if selected:
@@ -108,7 +112,7 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         "records": grouped,
         "recent_activity_history": activity,
         "data_scope": "live shared application records; read-only",
-        "context_scope": "recent activity" if history_query else "timetable" if schedule_query else "not required for this question",
+        "context_scope": "recent activity" if history_query else "timetable and resources" if schedule_query and resource_query else "resources" if resource_query else "timetable" if schedule_query else "not required for this question",
     }
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     # Trim oldest records, then oldest activity, without slicing JSON mid-record.
