@@ -2356,8 +2356,8 @@ function initHeader(){
  document.addEventListener("click",()=>{if(!panel.hidden)closeBell();});
  document.getElementById("menu-btn").addEventListener("click",closeBell);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!panel.hidden){closeBell();bell.focus();}hideDialog("header-dialog");}});
- document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();try{location.hash=t.dataset.view;}catch(x){}showView(t.dataset.view);}));
- window.addEventListener("hashchange",()=>showView(location.hash.slice(1)));
+ document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();showView(t.dataset.view);}));
+ // Section navigation is intentionally kept out of the URL so refresh always returns Home.
  // header editing
  document.getElementById("edit-header").addEventListener("click",()=>{
   document.getElementById("header-title-input").value=headerCfg.title;document.getElementById("header-sub-input").value=headerCfg.subtitle;showDialog("header-dialog");
@@ -2373,7 +2373,7 @@ function initHeader(){
  const _build=build;build=function(){_build();refreshHeader();if(currentView==="modules")renderModules();};
  const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="facilitators"||currentView==="examinations"||currentView==="recurring")renderView(currentView);};
  setInterval(refreshHeader,30000);
- refreshHeader();showView(location.hash.slice(1)||"weekly");
+ refreshHeader();if(location.hash){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}showView("weekly");
  initWeekNav();
 }
 // ---- Hamburger menu ----
