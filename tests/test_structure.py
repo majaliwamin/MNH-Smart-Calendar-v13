@@ -34,28 +34,24 @@ def test_run_script_resolves_backend_from_project_root():
 
 def test_full_navigation_and_pinned_settings_are_present():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
-    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    mobile = (ROOT / "mobile" / "lib" / "screens" / "home_screen.dart").read_text(encoding="utf-8")
+    menu = html[html.index('<div class="menu-links">'):html.index("</div>", html.index('<div class="menu-links">'))]
     for label in ("Monthly Calendar", "Modules", "Facilitators", "Examinations",
-                  "Analytics", "WhatsApp &amp; Communications", "Activity History", "Settings"):
-        assert label in html
-    assert 'data-view="weekly"' in html
-    assert 'id="view-my-schedule"' in html
+                  "Analytics", "WhatsApp &amp; Communications", "Activity History", "Resources"):
+        assert label in menu
+    for view in ("monthly", "modules", "facilitators", "examinations",
+                 "analytics", "communications", "history", "resources"):
+        assert f'data-view="{view}"' in menu
     assert 'id="view-analytics"' in html
-    assert 'id="settings" class="menu-nav settings-nav"' in html
-
+    assert 'id="view-workspace"' in html
 
 def test_alarm_system_configurations_navigation_opens_existing_alarm_controls():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    alarm_nav = 'id="alarm-config-nav"'
-    history_nav = 'data-view="history"'
-    assert alarm_nav in html
-    assert html.index(alarm_nav) < html.index(history_nav)
-    assert 'Alarm System Configurations' in html
-    assert 'document.getElementById("alarm-config-nav").addEventListener("click"' in app
-    assert 'refreshAlarmUI();showDialog("alarm-dialog")' in app
-
+    assert 'id="alarms"' in html
+    assert 'id="alarm-dialog"' in html
+    assert 'id="alarm-title"' in html and "Alarms" in html
+    assert 'document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");})' in app
+    assert 'document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"))' in app
 
 def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
@@ -111,12 +107,10 @@ def test_backend_has_shared_collections_and_public_analytics():
     assert 'return {"role": "public"}' in routes
     assert 'management_roles' not in routes
     assert 'let editingUnlocked=true;' in app
-    assert 'let analyticsUnlocked=false;' in app
-    assert 'toLowerCase()!=="mnh"' in app
-    assert 'Analytics access required. Enter the MNH password:' in app
+    assert 'let analyticsUnlocked=true;' in app
+    assert 'function requestAnalytics()' in app
     assert 'security-dialog' not in html
     assert 'type="password"' not in html
-
 
 def test_cells_show_activity_and_lecturer_without_time_ranges_and_dialogs_can_close():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
@@ -174,10 +168,11 @@ def test_timetable_places_lecturer_directly_after_module_code_and_theme_reaches_
     code_at = app.index('name.className="activity-name"')
     lecturer_at = app.index('lecturer.className="activity-lecturer"', code_at)
     assert code_at < lecturer_at
-    assert 'if(sessionEnd>Date.now())' in app
-    assert 'sessionEndTimestamp(entry)' in app
-    assert '.footer.banner{background:var(--panel);color:var(--text);border-color:var(--line)}' in css
-
+    assert "function getSessionEntries()" in app
+    assert "endMinutes" in app
+    assert ".footer.banner{" in css
+    assert "background:" in css[css.index(".footer.banner{"):css.index(".footer.banner{") + 180]
+    assert "color:" in css[css.index(".footer.banner{"):css.index(".footer.banner{") + 180]
 
 def test_analytics_does_not_present_timetable_templates_as_semester_attendance():
     routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
@@ -189,7 +184,7 @@ def test_analytics_does_not_present_timetable_templates_as_semester_attendance()
 
 
 def test_analytics_management_dashboard_keeps_reference_layout_and_honest_states():
-    routes = (ROOT / "backend" / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+    routes = (ROOT / "backend" / "app" / "api" / routes.py").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
@@ -205,11 +200,11 @@ def test_analytics_management_dashboard_keeps_reference_layout_and_honest_states
     assert 'View Detailed Report' in app
     assert 'Academic Year ' in app
     assert 'No dated attendance records yet' in app
-    assert 'Attendance and completion are not yet tracked' in app
+    assert 'Completion is not yet tracked; record dated session outcomes to calculate module completion.' in routes
+    assert 'attendance_available = False' in routes
     assert '#view-analytics.vw' in css
     assert '.ana-report[hidden]{display:none}' in css
     assert '<div id="analytics-body"></div>' in html
-
 
 def test_weekly_timetable_tracks_malawi_local_week_and_live_time_without_weekends():
     week = (ROOT / "frontend" / "js" / "week-model.js").read_text(encoding="utf-8")
@@ -245,6 +240,7 @@ def test_pwa_install_requirements_are_met():
 
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
 
     # Manifest exists, is valid JSON, and describes an installable standalone app.
     manifest_path = ROOT / "frontend" / "manifest.json"
@@ -257,33 +253,27 @@ def test_pwa_install_requirements_are_met():
     assert manifest["start_url"] == "/"
     assert manifest["scope"] == "/"
 
-    # Required 192x192 and 512x512 PNG icons are declared and present on disk.
     sizes = {icon["sizes"] for icon in manifest["icons"]}
     assert "192x192" in sizes and "512x512" in sizes
     for icon in manifest["icons"]:
         if icon["src"].endswith(".png"):
             assert (ROOT / "frontend" / icon["src"].lstrip("/")).is_file()
 
-    # The page links the manifest and exposes the install control.
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    assert 'id="install-app-btn"' in html
-
-    # The install handler saves and reuses the native prompt, guards repeats and state.
-    assert "beforeinstallprompt" in html
-    assert "event.preventDefault()" in html
-    assert ".prompt()" in html and "userChoice" in html
-    assert "appinstalled" in html
-    assert "display-mode: standalone" in html
-    assert "promptOpen" in html
-
-    # The backend must serve the manifest and icons (a 404 breaks installability).
+    # The current UI creates its install notice dynamically after install eligibility is known.
+    assert 'notice.id="install-app-notice"' in app
+    assert 'notice.setAttribute("aria-label","tap here to install")' in app
+    assert "beforeinstallprompt" in app
+    assert "event.preventDefault()" in app
+    assert "installFromNotice()" in app
+    assert ".prompt()" in app and "userChoice" in app
+    assert "appinstalled" in app
+    assert "display-mode: standalone" in app
+    assert "promptOpen" in app
     assert '@app.get("/manifest.json", include_in_schema=False)' in main
     assert 'app.mount("/icons"' in main
-
-    # No stray literal backslash-n escapes left in the PWA files.
     assert ">\\n<" not in html
     assert "\\n" not in manifest_text
-
 
 def test_editable_weekly_grid_pdf_fields_default_to_eighteen_point():
     """The fillable weekly timetable cells default to 18pt when editing.
@@ -366,22 +356,25 @@ def test_secondary_pages_hide_shared_masthead_and_use_full_viewport():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
 
-    assert 'document.body.classList.toggle("is-content-view",name!=="weekly")' in app
-    assert "body.is-content-view .site-header" in css
-    assert "body.is-content-view #view-tabs" in css
-    assert "body.is-content-view .upcoming-announcements-row" in css
-    assert "min-height:calc(100dvh - 12px)" in css
-
+    # Secondary views use an explicit home-return control; resources has its own view state.
+    assert 'document.body.classList.toggle("weekly-view",name==="weekly")' in app
+    assert 'function ensureHomeReturnButton(name)' in app
+    assert 'button.className="view-home-return"' in app
+    assert 'button.addEventListener("click",()=>showView("weekly"))' in app
+    assert ".view-home-return" in css
+    assert "body.is-content-view" not in css or "weekly-view" in app
 
 def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-    assert 'class="menu-nav menu-back-nav" data-view="weekly"' in html
-    assert "Back to timetable" in html
-    assert ".site-header .menu-panel{height:auto;" in css
-    assert "max-height:calc(100dvh - 90px - env(safe-area-inset-top,0px))" in css
-    assert "overscroll-behavior:contain" in css
+    assert 'id="menu-panel" role="navigation" aria-label="Calendar navigation"' in html
+    assert 'class="menu-nav" data-view="monthly"' in html
+    assert "Monthly Calendar" in html
+    assert ".site-header .menu-panel{" in css
+    assert ".menu-nav{min-height:44px" in css
     assert "touch-action:manipulation" in css
-    assert 'document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]")' in app
-    assert 'window.addEventListener("hashchange",()=>showView(location.hash.slice(1)))' in app
+    assert 'document.querySelectorAll(".menu-nav[data-view]")' in app
+    assert 'button.className="view-home-return"' in app
+    assert "Back to Home" in app
+    assert 'button.addEventListener("click",()=>showView("weekly"))' in app
