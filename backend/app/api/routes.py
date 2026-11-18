@@ -354,6 +354,8 @@ def analytics(year: int | None = None):
             "targetSessions": module.get("semesterTargetSessions"),
             "targetHours": module.get("semesterTargetHours"),
             "missedSessions": sum(1 for item in matching if item["status"] == "missed"),
+            "cancelledSessions": sum(1 for item in matching if item["status"] == "cancelled"),
+            "rescheduledSessions": sum(1 for item in matching if item["status"] == "rescheduled"),
             "completedSessions": sum(1 for item in matching if item["status"] == "completed"),
             "onlineSessions": sum(1 for item in matching if item["mode"] in ("online", "virtual", "remote")),
             "faceToFaceSessions": sum(1 for item in matching if item["mode"] in ("face_to_face", "physical", "in_person", "inperson")),
@@ -397,6 +399,8 @@ def analytics(year: int | None = None):
             "status": status,
             "statusLabel": status_label,
             "missedSessions": item["missedSessions"],
+            "cancelledSessions": item["cancelledSessions"],
+            "rescheduledSessions": item["rescheduledSessions"],
             "weeklySessions": item["weeklySessions"],
         })
 
@@ -514,7 +518,15 @@ def analytics(year: int | None = None):
         },
         "moduleStatus": module_status,
         "modulePerformance": [
-            {"code": item["code"], "attendance": None, "completion": None}
+            {
+                "code": item["code"],
+                "attendance": None,
+                "completion": None,
+                "completedSessions": item["completedSessions"],
+                "missedSessions": item["missedSessions"],
+                "cancelledSessions": item["cancelledSessions"],
+                "rescheduledSessions": item["rescheduledSessions"],
+            }
             for item in dashboard_modules
         ],
         "actions": actions,
