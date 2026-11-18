@@ -30,7 +30,7 @@ def _bounded_value(value, depth: int = 0):
     return str(value)[:300]
 
 
-def build_calendar_context(query: str = '', limit: int = 120) -> tuple[str, str | None]:
+def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[str, str | None]:
     """Build a bounded snapshot from live shared records and non-sensitive audit summaries.
 
     This reads the same records used by the timetable UI. It does not write, mutate,
@@ -61,13 +61,16 @@ def build_calendar_context(query: str = '', limit: int = 120) -> tuple[str, str 
             ).fetchall()
         else:
             rows = []
-        try:
-            activity_rows = connection.execute(
-                "SELECT at,action,collection,item_id,summary FROM audit "
-                "ORDER BY at DESC LIMIT ?", (MAX_ACTIVITY_ITEMS if history_query else 0,)
-            ).fetchall()
-        except Exception:
-            # Older database deployments may not yet have the audit table.
+        if history_query:
+            try:
+                activity_rows = connection.execute(
+                    "SELECT at,action,collection,item_id,summary FROM audit "
+                    "ORDER BY at DESC LIMIT ?", (MAX_ACTIVITY_ITEMS,)
+                ).fetchall()
+            except Exception:
+                # Older database deployments may not yet have the audit table.
+                activity_rows = []
+        else:
             activity_rows = []
 
     grouped = {name: [] for name in COLLECTIONS}
