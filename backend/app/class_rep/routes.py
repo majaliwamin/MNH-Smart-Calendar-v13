@@ -5,13 +5,13 @@ from zoneinfo import ZoneInfo
 from collections import deque
 from hmac import compare_digest
 from io import BytesIO
-from fastapi import APIRouter, File, Header, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
 from app.class_rep.assistant import reply
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic
-from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
+from app.class_rep.documents import ingest, list_documents, delete_document, get_document_file, get_document_text, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
 from app.services.authentication import role_for_password
@@ -150,7 +150,7 @@ def status():
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
                                   "account_memories", "account_tasks"],
             "document_uploads": "enabled",
-            "document_search": "semantic" if cloudflare else "keyword_only",
+            "document_search": "keyword_only",
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
             "voice": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
             "speech_to_text_model": stt or None,
@@ -425,21 +425,64 @@ def conversations_list(request: Request):
 
 @router.get("/documents")
 def documents_list(request: Request):
-    _user(request)
-    return {"documents": list_documents(_user(request)["id"])}
+    user = _user(request)
+    return {"documents": list_documents(user["id"])}
 
 
 @router.post("/documents")
-async def documents_upload(request: Request, file: UploadFile = File(...),
-                           x_cara_admin_token: str | None = Header(default=None)):
-    _user(request)
-    filename = (file.filename or "").replace("\\\\", "/").split("/")[-1][:180]
+async def documents_upload(request: Request, file: UploadFile = File(...), conversation_id: str = Form(default="")):
+    user = _user(request)
+    filename = re.split(r"[/\\\\]", file.filename or "uploaded-document")[-1][:180]
     content = await file.read(10 * 1024 * 1024 + 1)
     await file.close()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Files must be 10 MB or smaller.")
     try:
-        return ingest(filename, content, owner_id=_user(request)["id"])
+        result = ingest(filename, content, owner_id=user["id"])
+        safe_conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", conversation_id or "")[:80] or uuid.uuid4().hex
+        file_link = "/api/class-rep/documents/" + result["id"] + "/file"
+        memory.save_turn(user["id"], safe_conversation_id,
+                         "I uploaded a file: " + filename,
+                         "The uploaded file is available in this conversation: [" + filename + "](" + file_link + ")")
+        result["conversation_id"] = safe_conversation_id
+        return result
     except DocumentError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/documents/{document_id}/file")
+def documents_file(document_id: str, request: Request):
+    user = _user(request)
+    if not document_id.isalnum() or len(document_id) != 32:
+        raise HTTPException(400, "Invalid document identifier.")
+    stored = get_document_file(document_id, user["id"])
+    if not stored:
+        # Older uploads predate binary retention. Their extracted text remains viewable.
+        extracted = get_document_text(document_id, user["id"])
+        if not extracted:
+            raise HTTPException(404, "Uploaded file not found.")
+        content = extracted["text"].encode("utf-8")
+        filename = extracted["title"] or "document.txt"
+        content_type = "text/plain; charset=utf-8"
+    else:
+        filename, content_type, content = stored
+    safe_name = filename.replace('"', "").replace("\\r", "").replace("\\n", "")[:180]
+    is_svg = filename.lower().endswith(".svg")
+    disposition = "inline" if content_type == "application/pdf" or (content_type.startswith("image/") and not is_svg) or content_type.startswith("text/") else "attachment"
+    return StreamingResponse(BytesIO(content), media_type=content_type,
+        headers={"Content-Disposition": disposition + '; filename="' + safe_name + '"',
+                 "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
+
+
+@router.get("/documents/{document_id}/text")
+def documents_text(document_id: str, request: Request):
+    user = _user(request)
+    if not document_id.isalnum() or len(document_id) != 32:
+        raise HTTPException(400, "Invalid document identifier.")
+    result = get_document_text(document_id, user["id"])
+    if not result:
+        raise HTTPException(404, "Readable document text not found.")
+    return result
 
 
 @router.delete("/documents/{document_id}")
