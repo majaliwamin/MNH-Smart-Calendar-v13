@@ -186,6 +186,9 @@
   }
   async function typeReply(bubble, value) {
     const answer = String(value || "");
+    bubble.classList.remove("cr-thinking");
+    bubble.removeAttribute("role");
+    bubble.removeAttribute("aria-label");
     bubble.textContent = "";
     const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion || answer.length < 90) { renderMarkdown(bubble, answer); return; }
@@ -351,14 +354,26 @@
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = ""; updateComposerAction();
     addMessage("user", message);
-    const pending = addMessage("assistant", nextWaitingPhrase());
+    const waitingLabel = nextWaitingPhrase().replace(/[.…]+$/, "");
+    const pending = addMessage("assistant", "");
+    pending.classList.add("cr-thinking");
+    pending.setAttribute("role", "status");
+    pending.setAttribute("aria-label", waitingLabel + ", waiting for CRARA response");
+    const waitingText = document.createElement("span");
+    waitingText.className = "cr-thinking-label";
+    waitingText.textContent = waitingLabel;
+    const waitingDots = document.createElement("span");
+    waitingDots.className = "cr-thinking-dots";
+    waitingDots.setAttribute("aria-hidden", "true");
+    for (let dot = 0; dot < 3; dot++) waitingDots.append(document.createElement("i"));
+    pending.replaceChildren(waitingText, waitingDots);
     state.busy = true; input.disabled = true;
     try {
       if (state.ready) {
         const headers = { "Content-Type": "application/json" };
         if (restrictedAnalytics) {
           const password = state.analyticsPassword || prompt("Management analytics are restricted. Enter the HOD, coordinator or executive dean password:");
-          if (!password) { pending.textContent = "Management analytics access was cancelled. No restricted information was retrieved."; return; }
+          if (!password) { pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = "Management analytics access was cancelled. No restricted information was retrieved."; return; }
           state.analyticsPassword = password;
           headers["X-CARA-Analytics-Password"] = password;
         }
@@ -391,9 +406,9 @@
       const detail = String(error && error.message || "");
       if (/password|authorised|analytics/i.test(detail)) {
         state.analyticsPassword = "";
-        pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
+        pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
       } else {
-        pending.textContent = detail && !/request could not be completed/i.test(detail) ? "CRARA service error: " + detail : "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+        pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = detail && !/request could not be completed/i.test(detail) ? "CRARA service error: " + detail : "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
       }
       if (!restrictedAnalytics && state.user) {
         const saved = await fetch("/api/class-rep/conversation/turn", {
