@@ -308,7 +308,7 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
     conversations = grouped[COL_CONVERSATIONS]
     active = next((item for item in conversations if item.get("id") == conversation_id), None)
     if active and active.get("messages"):
-        blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(active["messages"][-6:], ensure_ascii=False))
+        blocks.append("ACTIVE CONVERSATION HISTORY:\n" + json.dumps(active["messages"][-6:], ensure_ascii=False))
     ranked_conversations = []
     for conv in conversations:
         messages = conv.get("messages", [])
@@ -320,7 +320,7 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             ranked_conversations.append((score, conv.get("updated_at", 0), messages[-6:]))
     ranked_conversations.sort(key=lambda row: (row[0], row[1]), reverse=True)
     if ranked_conversations:
-        blocks.append("RELEVANT PREVIOUS CONVERSATIONS:\\n" + json.dumps([ranked_conversations[0][2]], ensure_ascii=False))
+        blocks.append("RELEVANT PREVIOUS CONVERSATIONS:\n" + json.dumps([ranked_conversations[0][2]], ensure_ascii=False))
 
     memories = [item for item in grouped[COL_MEMORIES] if not item.get("superseded_by")]
     relevant = []
@@ -330,7 +330,7 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             relevant.append((score, item.get("updated_at", 0), item))
     relevant.sort(key=lambda row: (row[0], row[1]), reverse=True)
     if relevant:
-        blocks.append("PERSISTENT USER MEMORIES:\\n" + json.dumps([row[2] for row in relevant[:4]], ensure_ascii=False))
+        blocks.append("PERSISTENT USER MEMORIES:\n" + json.dumps([row[2] for row in relevant[:4]], ensure_ascii=False))
 
     projects = []
     for item in grouped[COL_PROJECTS]:
@@ -339,7 +339,7 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             projects.append((score, item.get("updated_at", 0), item))
     projects.sort(key=lambda row: (row[0], row[1]), reverse=True)
     if projects:
-        blocks.append("PROJECT RECORDS:\\n" + json.dumps([row[2] for row in projects[:3]], ensure_ascii=False))
+        blocks.append("PROJECT RECORDS:\n" + json.dumps([row[2] for row in projects[:3]], ensure_ascii=False))
 
     tasks = []
     for item in grouped[COL_TASKS]:
@@ -349,12 +349,12 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
             tasks.append((score, item.get("updated_at", 0), item))
     tasks.sort(key=lambda row: (row[0], row[1]), reverse=True)
     if tasks:
-        blocks.append("PROJECT AND TASK STATE:\\n" + json.dumps([row[2] for row in tasks[:4]], ensure_ascii=False))
+        blocks.append("PROJECT AND TASK STATE:\n" + json.dumps([row[2] for row in tasks[:4]], ensure_ascii=False))
 
     reminders = [item for item in grouped[COL_REMINDERS] if item.get("status") in ("scheduled", "due")]
     if reminders:
-        blocks.append("UPCOMING OR DUE REMINDERS:\\n" + json.dumps(reminders[:4], ensure_ascii=False))
-    return "\\n\\n".join(blocks)[:5000] if blocks else "No relevant saved user memory or task history was found."
+        blocks.append("UPCOMING OR DUE REMINDERS:\n" + json.dumps(reminders[:4], ensure_ascii=False))
+    return "\n\n".join(blocks)[:5000] if blocks else "No relevant saved user memory or task history was found."
 
 def list_memories(user_id: str) -> list[dict]:
     return _list(COL_MEMORIES, user_id, 200)
