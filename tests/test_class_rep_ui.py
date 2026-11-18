@@ -125,3 +125,12 @@ def test_crara_formats_markdown_and_reveals_answers_progressively():
     assert "async function typeReply(bubble, value)" in js
     assert "await typeReply(pending, result.reply)" in js
     assert ".cr-message ul,.cr-message ol" in css
+
+
+def test_crara_keeps_login_form_hidden_when_saved_session_cannot_be_verified():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert "let retrySessionCheck = false" in js
+    assert "A temporary network/API failure is not proof that the saved session expired." in js
+    assert 'authSubmit.textContent = "Retry connection"' in js
+    assert "if (retrySessionCheck)" in js
+    assert 'authName.hidden = true; authEmail.hidden = true; authPassword.hidden = true;' in js
