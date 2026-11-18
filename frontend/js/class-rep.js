@@ -222,6 +222,7 @@
     }
   }
   let authMode = "login";
+  let retrySessionCheck = false;
   function setAuthMode(mode) {
     authMode = mode;
     authName.hidden = mode !== "register";
@@ -257,8 +258,11 @@
         authSubmit.disabled = true; authSwitch.disabled = true;
         return;
       }
+      retrySessionCheck = false;
       authTitle.textContent = "Your private CRARA account";
       authIntro.textContent = "Sign in to continue your conversations and access your saved tasks and memories.";
+      authName.hidden = false; authEmail.hidden = false; authPassword.hidden = false;
+      authSwitch.hidden = false; authSubmit.textContent = authMode === "register" ? "Create account" : "Sign in";
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
@@ -269,14 +273,26 @@
       body.hidden = !state.user;
       if (state.user) await loadPreviousConversation();
     } catch (error) {
-      state.user = null; signOut.hidden = true; showHeader(false); authPanel.hidden = false; body.hidden = true; setAuthPresentation(root.classList.contains("is-open"));
-      authTitle.textContent = "Your private CRARA account";
-      authIntro.textContent = "We could not verify your session. Check your connection, then sign in or try again.";
-      authFeedback.textContent = error.message || "CRARA could not reach the account service.";
-      authSubmit.disabled = false; authSwitch.disabled = false;
+      // A temporary network/API failure is not proof that the saved session
+      // expired. Do not show the login form or discard the browser session.
+      retrySessionCheck = true;
+      signOut.hidden = true; showHeader(false); body.hidden = true;
+      authPanel.hidden = !root.classList.contains("is-open");
+      setAuthPresentation(root.classList.contains("is-open"));
+      authTitle.textContent = "Your saved CRARA session is still protected";
+      authIntro.textContent = "CRARA could not verify your saved sign-in because the service is temporarily unreachable. Retry when the connection is available; you will only need to sign in if your session has actually expired.";
+      authName.hidden = true; authEmail.hidden = true; authPassword.hidden = true;
+      authSwitch.hidden = true; authSubmit.textContent = "Retry connection";
+      authFeedback.textContent = "";
+      authSubmit.disabled = false;
     }
   }
   async function authenticate() {
+    if (retrySessionCheck) {
+      authSubmit.disabled = true;
+      await checkAuth();
+      return;
+    }
     authSubmit.disabled = true;
     try {
       const payload = { email: authEmail.value.trim(), password: authPassword.value };
