@@ -30,7 +30,9 @@
   homeBack.title = "Back to Home";
   homeBack.innerHTML = '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7M8 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to Home</span>';
   homeBack.addEventListener("click", () => {
-    const homeNav = document.querySelector('.menu-nav[data-view="weekly"], .view-tab[data-view="weekly"], .hd-tab[data-view="weekly"]');
+    // Close CRARA first so its full-screen state and page locks are always cleared.
+    setOpen(false);
+    const homeNav = document.querySelector('#view-tabs .weekly-date-tab, .menu-nav[data-view="weekly"], .hd-tab[data-view="weekly"]');
     if (homeNav) homeNav.click();
   });
   header.append(brand, homeBack);
