@@ -188,9 +188,9 @@ def _twilio_send(digits: str, text: str) -> dict:
         token,
     )
     return {
-        "messageId": str(result.get("sid") or ""),
-        "status": str(result.get("status") or "queued"),
         "provider": "twilio",
+        "messageId": str(result.get("sid") or ""),
+        "providerStatus": str(result.get("status") or "queued"),
     }
 
 
@@ -309,12 +309,12 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
             result = _twilio_send(digits, clipped)
         else:
             result = wa_bridge.send_text(chat_id, clipped)
-    except wa_bridge.BridgeError as error:
-        comm_contacts.audit(actor, "crara-whatsapp-failed", digits, str(error)[:200])
-        raise SendError(str(error), 502) from error
     except SendError as error:
         comm_contacts.audit(actor, "crara-whatsapp-failed", digits, str(error)[:200])
         raise
+    except wa_bridge.BridgeError as error:
+        comm_contacts.audit(actor, "crara-whatsapp-failed", digits, str(error)[:200])
+        raise SendError(str(error), 502) from error
 
     comm_contacts.audit(actor, "crara-whatsapp-sent", digits, clipped[:200])
     response = {
