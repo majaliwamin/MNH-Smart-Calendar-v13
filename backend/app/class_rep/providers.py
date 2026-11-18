@@ -206,7 +206,7 @@ def complete(messages: list[dict]) -> tuple[str, str, str]:
             )
             failures.append(cfg["provider"])
     raise ProviderError(
-        "CRARA could not obtain a response within its provider time budget (" +
+        "CRARA providers are temporarily unavailable within the response time budget (" +
         ", ".join(failures) + "). Please try again later.",
         category="all_providers_failed",
     )
