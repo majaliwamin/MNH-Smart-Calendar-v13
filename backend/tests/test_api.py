@@ -336,12 +336,7 @@ def test_analytics_reports_cancelled_rescheduled_and_only_recorded_performance(m
         assert status["rescheduledSessions"] == 1
 
         performance = next(item for item in dashboard["modulePerformance"] if item["code"] == "PNIM-TEST")
-        assert performance["attendance"] is None
-        assert performance["completion"] is None
-        assert performance["completedSessions"] == 1
-        assert performance["missedSessions"] == 1
-        assert performance["cancelledSessions"] == 1
-        assert performance["rescheduledSessions"] == 1
+        assert performance == {"code": "PNIM-TEST", "attendance": None, "completion": None}
 
 
 def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path):
