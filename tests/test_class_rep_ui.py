@@ -23,7 +23,9 @@ def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
 def test_cara_starts_closed_and_has_requested_identity():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     assert 'el("button", "cara-launcher", "CRARA")' in js
-    assert 'CRARA (Classroom Representative & Academic Relations Assistant)' in js
+    assert 'Class Rep & Academic Relations Assistant' in js
+    assert 'MNH Smart Calendar' in js
+    assert 'cr-brand-mark' in js
     assert '"/api/class-rep/auth/" + authMode' in js
     assert "memory" not in js.lower()
     assert 'Your intelligent academic relations assistant' in js
@@ -48,7 +50,8 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'cr-account", "Memory"' not in js
-    assert 'header.append(identity)' in js
+    assert 'brand.append(brandMark, identity)' in js
+    assert 'header.append(brand, productLabel)' in js
     assert 'cr-toggle' not in js
     assert 'Sign out' not in js
     assert 'Close CRARA' not in js
