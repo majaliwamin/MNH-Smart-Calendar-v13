@@ -11,7 +11,7 @@ from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
 from app.class_rep.assistant import reply
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic
-from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
+from app.class_rep.documents import ingest, list_documents, delete_document, get_document_file, get_document_text, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
 from app.services.authentication import role_for_password
@@ -425,21 +425,50 @@ def conversations_list(request: Request):
 
 @router.get("/documents")
 def documents_list(request: Request):
-    _user(request)
-    return {"documents": list_documents(_user(request)["id"])}
+    user = _user(request)
+    return {"documents": list_documents(user["id"])}
 
 
 @router.post("/documents")
-async def documents_upload(request: Request, file: UploadFile = File(...),
-                           x_cara_admin_token: str | None = Header(default=None)):
-    _user(request)
-    filename = (file.filename or "").replace("\\\\", "/").split("/")[-1][:180]
+async def documents_upload(request: Request, file: UploadFile = File(...)):
+    user = _user(request)
+    filename = (file.filename or "uploaded-document").replace("\\\\", "/").split("/")[-1][:180]
     content = await file.read(10 * 1024 * 1024 + 1)
     await file.close()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Files must be 10 MB or smaller.")
     try:
-        return ingest(filename, content, owner_id=_user(request)["id"])
+        return ingest(filename, content, owner_id=user["id"])
     except DocumentError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/documents/{document_id}/file")
+def documents_file(document_id: str, request: Request):
+    user = _user(request)
+    if not document_id.isalnum() or len(document_id) != 32:
+        raise HTTPException(400, "Invalid document identifier.")
+    stored = get_document_file(document_id, user["id"])
+    if not stored:
+        raise HTTPException(404, "Uploaded file not found.")
+    filename, content_type, content = stored
+    safe_name = filename.replace('"', "").replace("\\r", "").replace("\\n", "")[:180]
+    inline_types = ("application/pdf", "image/", "text/plain", "text/csv", "image/svg+xml")
+    disposition = "inline" if content_type == "application/pdf" or content_type.startswith("image/") or content_type.startswith("text/") else "attachment"
+    return StreamingResponse(BytesIO(content), media_type=content_type,
+        headers={"Content-Disposition": disposition + '; filename="' + safe_name + '"',
+                 "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
+
+
+@router.get("/documents/{document_id}/text")
+def documents_text(document_id: str, request: Request):
+    user = _user(request)
+    if not document_id.isalnum() or len(document_id) != 32:
+        raise HTTPException(400, "Invalid document identifier.")
+    result = get_document_text(document_id, user["id"])
+    if not result:
+        raise HTTPException(404, "Readable document text not found.")
+    return result
 
 
 @router.delete("/documents/{document_id}")
