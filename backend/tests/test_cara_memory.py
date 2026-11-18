@@ -224,3 +224,54 @@ def test_cara_password_minimum_is_four_characters(monkeypatch, tmp_path):
         assert "4 and 256 characters" in str(exc)
     else:
         raise AssertionError("Three-character passwords must be rejected")
+
+
+
+def test_cara_uploaded_file_is_viewable_and_account_scoped(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    from app.class_rep import routes
+    routes._RATE_BUCKETS.clear()
+
+    payload = b"Placental malaria research notes for the MNH cohort."
+    with TestClient(app) as client:
+        registered = client.post("/api/class-rep/auth/register", json={
+            "name": "Document Owner", "email": "document-owner@example.org", "password": "secure-password"
+        })
+        assert registered.status_code == 200
+        uploaded = client.post(
+            "/api/class-rep/documents",
+            files={"file": ("research-notes.txt", payload, "text/plain")},
+            data={"conversation_id": "document-chat"},
+        )
+        assert uploaded.status_code == 200
+        item = uploaded.json()
+        assert item["title"] == "research-notes.txt"
+        assert item["conversation_id"] == "document-chat"
+        assert item["view_url"].endswith("/file")
+
+        opened = client.get(item["view_url"])
+        assert opened.status_code == 200
+        assert opened.content == payload
+        assert "inline" in opened.headers.get("content-disposition", "")
+
+        readable = client.get("/api/class-rep/documents/" + item["id"] + "/text")
+        assert readable.status_code == 200
+        assert "Placental malaria" in readable.json()["text"]
+
+        documents = client.get("/api/class-rep/documents").json()["documents"]
+        assert any(doc["id"] == item["id"] for doc in documents)
+        conversations = client.get("/api/class-rep/conversations").json()["conversations"]
+        saved = next(row for row in conversations if row["id"] == "document-chat")
+        assert "research-notes.txt" in saved["messages"][-1]["content"]
+
+        other = TestClient(app)
+        routes._RATE_BUCKETS.clear()
+        try:
+            other_registered = other.post("/api/class-rep/auth/register", json={
+                "name": "Different User", "email": "different-user@example.org", "password": "other-password"
+            })
+            assert other_registered.status_code == 200
+            assert other.get(item["view_url"]).status_code == 404
+            assert other.get("/api/class-rep/documents/" + item["id"] + "/text").status_code == 404
+        finally:
+            other.close()
