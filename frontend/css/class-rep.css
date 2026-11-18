@@ -145,3 +145,33 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 .cr-thinking-dots i:nth-child(3){animation-delay:.32s;}
 @keyframes crara-thinking-pulse{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
 @media(prefers-reduced-motion:reduce){.cr-thinking-dots i{animation:none;opacity:.8;}}
+
+
+/* Rich academic response rendering: readable Markdown tables, notation and charts. */
+.cr-assistant{white-space:normal;overflow-wrap:anywhere;}
+.cr-assistant table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.92em;line-height:1.45;}
+.cr-assistant .cr-table-wrap{max-width:100%;overflow-x:auto;margin:9px 0;border:1px solid var(--line);border-radius:9px;-webkit-overflow-scrolling:touch;}
+.cr-assistant .cr-table-wrap table{min-width:420px;margin:0;}
+.cr-assistant th,.cr-assistant td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);border-right:1px solid var(--line);}
+.cr-assistant th{font-weight:700;background:rgba(150,170,195,.11);color:var(--text);}
+.cr-assistant tr:last-child th,.cr-assistant tr:last-child td{border-bottom:0;}
+.cr-assistant td:last-child,.cr-assistant th:last-child{border-right:0;}
+.cr-assistant pre{max-width:100%;overflow:auto;padding:12px;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.2);white-space:pre;}
+.cr-assistant code{font-family:Consolas,Monaco,monospace;font-size:.9em;}
+.cr-assistant :not(pre)>code{padding:2px 5px;border-radius:4px;background:rgba(130,150,175,.16);}
+.cr-assistant a{color:var(--gold);text-decoration:underline;text-underline-offset:2px;}
+.cr-assistant .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding:5px 0;margin:10px 0;}
+.cr-assistant .cr-chart-figure{width:100%;max-width:760px;margin:12px 0;padding:12px;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:rgba(10,20,35,.24);}
+.cr-assistant .cr-chart-title{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--text);}
+.cr-assistant .cr-chart-frame{position:relative;width:100%;height:280px;max-height:52vh;}
+.cr-assistant .cr-chart-frame canvas{display:block;max-width:100%;}
+.cr-assistant .cr-chart-data{margin-top:8px;color:var(--muted);font-size:12px;}
+.cr-assistant .cr-chart-data summary{cursor:pointer;color:var(--gold);}
+.cr-assistant .cr-chart-fallback{margin:0;font-size:12px;line-height:1.5;overflow-wrap:anywhere;}
+@media(max-width:760px){
+ .cr-assistant table{font-size:12px;}
+ .cr-assistant th,.cr-assistant td{padding:7px 8px;}
+ .cr-assistant .cr-chart-figure{padding:9px;}
+ .cr-assistant .cr-chart-frame{height:230px;max-height:42vh;}
+ .cr-assistant .katex{font-size:1em;}
+}

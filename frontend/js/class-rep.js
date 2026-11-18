@@ -136,6 +136,10 @@
     if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
   }
   function renderMarkdown(bubble, value) {
+    if (window.CRARAResponseRenderer) {
+      window.CRARAResponseRenderer.render(bubble, value, transcript);
+      return;
+    }
     bubble.replaceChildren();
     const lines = String(value || "").replace(/\r/g, "").replace(/\\([*_.#>-])/g, "$1").split("\n");
     let paragraph = [];
