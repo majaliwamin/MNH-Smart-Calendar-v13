@@ -27,7 +27,7 @@ class DocumentError(RuntimeError):
     pass
 
 
-def _cloudflare(payload: dict) -> dict:
+def _cloudflare(payload: dict, timeout: int = 45) -> dict:
     account = os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip()
     key = os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
     model = os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", EMBED_MODEL_DEFAULT).strip()
@@ -38,7 +38,7 @@ def _cloudflare(payload: dict) -> dict:
                       headers={"Authorization": "Bearer " + key,
                                "Content-Type": "application/json"}, method="POST")
     try:
-        with urlopen(request, timeout=45) as response:
+        with urlopen(request, timeout=timeout) as response:
             result = json.loads(response.read().decode())
     except HTTPError as exc:
         raise DocumentError(f"Embedding service returned HTTP {exc.code}.") from exc
@@ -149,11 +149,11 @@ def _split(text: str) -> list[str]:
     return chunks
 
 
-def _vectors(texts: list[str], prefix: str) -> list[list[float]]:
+def _vectors(texts: list[str], prefix: str, timeout: int = 45) -> list[list[float]]:
     clean = []
     for offset in range(0, len(texts), 64):
         batch = texts[offset:offset + 64]
-        result = _cloudflare({"input": [prefix + text for text in batch], "dimensions": 256})
+        result = _cloudflare({"input": [prefix + text for text in batch], "dimensions": 256}, timeout=timeout)
         vectors = result.get("data")
         if not isinstance(vectors, list) or len(vectors) != len(batch):
             raise DocumentError("Embedding service returned an unexpected vector count.")
@@ -268,25 +268,32 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
             continue
     if not records:
         return []
-    try:
-        query_vector = _vectors([query], "task: search result | query: ")[0]
-        ranked = [( _cosine(query_vector, item.get("embedding", [])), item) for item in records]
-        ranked.sort(key=lambda pair: pair[0], reverse=True)
-        return [{"title": item.get("title"), "page": item.get("page"),
-                 "text": item.get("text", "")[:1800], "score": round(score, 4)}
-                for score, item in ranked[:limit] if score > 0]
-    except DocumentError:
-        # Explicitly labelled keyword fallback when the embedding service is unavailable.
-        terms = {word.lower() for word in re.findall(r"[\w-]{3,}", query)}
-        ranked = []
-        for item in records:
-            text = item.get("text", "")
-            haystack = (item.get("title", "") + " " + text).lower()
-            score = sum(1 for term in terms if term in haystack)
-            if score:
-                ranked.append((score, item))
-        ranked.sort(key=lambda pair: pair[0], reverse=True)
+
+    # Prefer an immediate local keyword match. This avoids a separate remote
+    # embedding request on ordinary questions whose terms are already in a source.
+    terms = {word.lower() for word in re.findall(r"[\w-]{3,}", query)}
+    ranked = []
+    for item in records:
+        haystack = (item.get("title", "") + " " + item.get("text", "")).lower()
+        score = sum(1 for term in terms if term in haystack)
+        if score:
+            ranked.append((score, item))
+    ranked.sort(key=lambda pair: pair[0], reverse=True)
+    if ranked:
         return [{"title": item.get("title"), "page": item.get("page"),
                  "text": item.get("text", "")[:1800], "score": score,
-                 "retrieval": "keyword-fallback"}
+                 "retrieval": "keyword"}
                 for score, item in ranked[:limit]]
+
+    # Semantic retrieval remains available when there is no lexical overlap,
+    # but its timeout is deliberately short so it cannot stall every chat turn.
+    try:
+        query_vector = _vectors([query], "task: search result | query: ", timeout=10)[0]
+        ranked_vectors = [(_cosine(query_vector, item.get("embedding", [])), item)
+                          for item in records]
+        ranked_vectors.sort(key=lambda pair: pair[0], reverse=True)
+        return [{"title": item.get("title"), "page": item.get("page"),
+                 "text": item.get("text", "")[:1800], "score": round(score, 4)}
+                for score, item in ranked_vectors[:limit] if score > 0]
+    except DocumentError:
+        return []
