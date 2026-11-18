@@ -1,0 +1,1 @@
+(function(){'use strict';window.CRARAResponseRenderer={render:function(bubble,value,transcript){bubble.textContent=String(value||'');if(transcript)transcript.scrollTop=transcript.scrollHeight;}}})();
