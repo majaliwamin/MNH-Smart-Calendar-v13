@@ -39,6 +39,10 @@ def test_cloudflare_provider_parses_workers_ai_response(monkeypatch):
     assert seen["payload"]["model"] == "@cf/qwen/test"
     assert seen["payload"]["messages"] == [{"role": "user", "content": "hello"}]
     assert seen["payload"]["stream"] is False
+    assert seen["payload"]["reasoning_effort"] == "low"
+    assert seen["payload"]["chat_template_kwargs"] == {"enable_thinking": False, "preserve_thinking": False}
+    assert seen["payload"]["max_completion_tokens"] == 100
+    assert "max_tokens" not in seen["payload"]
 
 
 def test_provider_falls_back_in_priority_order(monkeypatch):
