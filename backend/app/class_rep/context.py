@@ -1,5 +1,7 @@
 """Read-only retrieval of authoritative shared MNH calendar and activity data."""
 import json
+import re
+from urllib.parse import quote
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -86,6 +88,11 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         if not isinstance(record, dict):
             record = {"value": record}
         record["id"] = str(row["id"])[:100]
+        if row["col"] == "resources":
+            file_id = str(record.get("fileId") or "")
+            if re.fullmatch(r"[a-f0-9]{32}", file_id):
+                file_name = str(record.get("fileName") or record.get("title") or "resource")[:180]
+                record["view_url"] = "/api/resources/files/" + file_id + "?name=" + quote(file_name)
         grouped[row["col"]].append(record)
         stamp = row["updated_at"]
         if stamp is not None and (newest is None or stamp > newest):
