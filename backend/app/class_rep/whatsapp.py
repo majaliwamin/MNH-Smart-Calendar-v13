@@ -1,4 +1,4 @@
-"""CRARA -> WhatsApp sending: bridge-first, with Twilio selectable and a link fallback.
+"""CRARA -> WhatsApp sending: WAHA bridge, with a click-to-chat fallback.
 
 CRARA is advisory and drafts messages (see ``docs/communications-deployment.md``).
 This module adds the single narrow exception: send one plain-text WhatsApp
@@ -9,30 +9,23 @@ Delivery modes:
 
   **bridge**  A paired WhatsApp session on the Asterisk/VPS host, reached through
               ``app/services/wa_bridge.py`` (WAHA, ``POST /api/sendText``).
-              Asterisk itself cannot carry WhatsApp: it is a SIP/RTP PBX with no
-              WhatsApp channel, so the WhatsApp session runs as a separate
-              container on the same VPS and Asterisk is untouched.
-              Needs ``MNH_WA_BRIDGE_URL``.
-
-  **twilio**  Official Twilio WhatsApp sandbox or sender. Needs
-              ``MNH_TWILIO_ACCOUNT_SID``, ``MNH_TWILIO_AUTH_TOKEN`` and the
-              matching ``MNH_TWILIO_WHATSAPP_FROM`` (defaults to the shared
-              sandbox number). A trial account needs no card, and the sandbox
-              needs no WhatsApp Business Account, but the recipient must first
-              join the sandbox from their own phone. Free-form text is accepted
-              only inside the 24-hour window that the recipient's last message
-              opens; outside it Twilio returns error 63016 and a pre-approved
-              template is required.
+              This is the intended production path: it runs on hardware you
+              already own, it is unmetered, and it needs no third-party account
+              or card. Asterisk itself cannot carry WhatsApp (it is a SIP/RTP
+              PBX), so the WhatsApp session runs as a separate container on the
+              same VPS and Asterisk is untouched. Needs ``MNH_WA_BRIDGE_URL``.
 
   **link**    Nothing configured: return an official click-to-chat link
-              (``https://wa.me/<number>?text=...``). Free, no account, but the
-              human presses send.
+              (``https://wa.me/<number>?text=...``). Free, no account.
 
-Selection is controlled by ``MNH_CLASSREP_WHATSAPP_TRANSPORT``:
+Twilio support remains in this file but is **never selected automatically**.
+It is reachable only by setting ``MNH_CLASSREP_WHATSAPP_TRANSPORT=twilio``
+explicitly, because Twilio trials are not available in every country. With the
+variable unset, the choice is bridge, then link.
 
-    auto     (default) bridge if configured, else twilio, else link
+    auto     (default) bridge if configured, else link
     bridge   always the WAHA bridge
-    twilio   always Twilio
+    twilio   only when set by hand
     link     always the click-to-chat link
 
 Meta's WhatsApp Cloud API is not implemented here: registering a production
@@ -75,7 +68,7 @@ from app.services import comm_contacts, comm_service, wa_bridge
 router = APIRouter(prefix="/api/class-rep")
 
 DEFAULT_ALLOWED_NUMBER = "+265881988156"
-DEFAULT_TWILIO_FROM = "+14155238886"  # Twilio's shared WhatsApp sandbox number
+DEFAULT_TWILIO_FROM = "+14155238886"
 MAX_BODY_LENGTH = 4000
 TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 TRANSPORT_CHOICES = ("auto", "bridge", "twilio", "link")
@@ -139,16 +132,14 @@ def transport() -> str:
 def mode() -> str:
     """Which transport a send would use right now.
 
-    The bridge is preferred in 'auto': it runs on the VPS you already have, it is
-    unmetered, and it needs no third-party account.
+    Automatic selection is bridge, then link. Twilio is never chosen for you:
+    its trials are not available in every country, so it must be asked for.
     """
     chosen = transport()
     if chosen in ("bridge", "twilio", "link"):
         return chosen
     if wa_bridge.configured():
         return "bridge"
-    if twilio_configured():
-        return "twilio"
     return "link"
 
 
@@ -208,7 +199,7 @@ def _post_form(url: str, fields: dict, user: str, password: str, timeout: int = 
 
 
 def _twilio_send(digits: str, text: str) -> dict:
-    """Send through Twilio's official WhatsApp channel."""
+    """Send through Twilio's WhatsApp channel. Only used when asked for by hand."""
     sid = _env("MNH_TWILIO_ACCOUNT_SID")
     token = _env("MNH_TWILIO_AUTH_TOKEN")
     sender = _env("MNH_TWILIO_WHATSAPP_FROM", DEFAULT_TWILIO_FROM)
@@ -235,24 +226,11 @@ def status() -> dict:
         "transport": transport(),
         "mode": current,
         "ready": ready(),
-        "twilioConfigured": twilio_configured(),
         "bridgeConfigured": wa_bridge.configured(),
         "allowedRecipients": len(allowed_numbers()),
         "emergencyStop": comm_service.emergency_stop(),
-        "sender": _env("MNH_TWILIO_WHATSAPP_FROM", DEFAULT_TWILIO_FROM)
-        if current == "twilio"
-        else wa_bridge.profile_name(),
-        "missing": sorted(
-            [
-                name
-                for name in (
-                    "MNH_WA_BRIDGE_URL",
-                    "MNH_TWILIO_ACCOUNT_SID",
-                    "MNH_TWILIO_AUTH_TOKEN",
-                )
-                if not _env(name)
-            ]
-        ),
+        "sender": wa_bridge.profile_name(),
+        "missing": ["MNH_WA_BRIDGE_URL"] if not wa_bridge.configured() else [],
         "autoSend": current in ("bridge", "twilio"),
     }
 
@@ -333,14 +311,11 @@ def send(to: str, body: str, *, confirm: bool, actor: str = "public") -> dict:
             "to": digits,
             "link": build_link(digits, clipped),
             "detail": (
-                "No WhatsApp transport is configured, so this message was not "
-                "sent. Open the link on a phone signed in to WhatsApp and press "
-                "send."
+                "No WhatsApp bridge is configured, so this message was not sent. "
+                "Open the link on a phone signed in to WhatsApp and press send."
             ),
         }
 
-    # Fail with a clear message instead of sending a malformed request to a
-    # provider whose credentials were never supplied.
     if current == "twilio" and not twilio_configured():
         raise SendError(
             "Twilio is selected (MNH_CLASSREP_WHATSAPP_TRANSPORT=twilio) but "
@@ -408,7 +383,7 @@ def whatsapp_send(
     mnh_session: str | None = Cookie(None),
     data: dict = Body(default={}),
 ):
-    """Send one WhatsApp text, or return a link when no transport is configured."""
+    """Send one WhatsApp text, or return a link when no bridge is configured."""
     try:
         return send(
             str(data.get("to") or ""),
