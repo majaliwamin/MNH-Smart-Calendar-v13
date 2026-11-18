@@ -195,7 +195,7 @@
     bubble.removeAttribute("aria-label");
     bubble.textContent = "";
     const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion || answer.length < 90) { renderMarkdown(bubble, answer); return; }
+    if (reducedMotion || window.matchMedia("(max-width: 760px)").matches || answer.length < 90) { renderMarkdown(bubble, answer); return; }
     const step = answer.length > 1400 ? 10 : answer.length > 700 ? 7 : 4;
     for (let index = 0; index < answer.length; index += step) {
       bubble.textContent = answer.slice(0, index + step);
@@ -381,11 +381,23 @@
           state.analyticsPassword = password;
           headers["X-CARA-Analytics-Password"] = password;
         }
-        const response = await fetch("/api/class-rep/chat", {
-          method: "POST", headers,
-          cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId })
-        });
-        const result = await response.json().catch(() => ({}));
+        const controller = new AbortController();
+        const requestTimer = window.setTimeout(() => controller.abort(), 55000);
+        let response, result;
+        try {
+          response = await fetch("/api/class-rep/chat", {
+            method: "POST", headers, credentials: "same-origin", signal: controller.signal,
+            cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId })
+          });
+          result = await response.json().catch(() => ({}));
+        } catch (requestError) {
+          if (requestError && requestError.name === "AbortError") {
+            throw new Error("CRARA took too long to respond. Please try again; your message has not been lost from this chat.");
+          }
+          throw new Error("The connection to CRARA was interrupted. Check your internet connection and try again.");
+        } finally {
+          window.clearTimeout(requestTimer);
+        }
         if (!response.ok) throw new Error(result.detail || result.error || `CRARA request failed (HTTP ${response.status}).`);
         await typeReply(pending, result.reply);
         state.conversationId = result.conversation_id || state.conversationId;
