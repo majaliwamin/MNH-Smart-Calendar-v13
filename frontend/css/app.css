@@ -2223,3 +2223,15 @@ body:not(.weekly-view) #view-tabs .week-nav-row{
   opacity:1!important;
   text-shadow:none!important;
 }
+
+
+/* Session outcomes and rescheduling controls. */
+.module-field[hidden]{display:none!important}
+.module-field input[type=date]{width:100%;padding:11px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text);font:calc(14px * var(--text-scale)) Arial}
+#reschedule-date-field small{color:var(--muted);font-size:calc(11px * var(--text-scale));line-height:1.4}
+.activity-status-tag{display:inline-block;margin-top:3px;padding:2px 5px;border:1px solid currentColor;border-radius:4px;font-size:clamp(8px,.35vw + 6px,10px);font-weight:800;letter-spacing:.04em;line-height:1.1}
+.activity-status-missed,.activity-status-cancelled{background:#667085!important;border-color:#8993a3!important;color:#fff!important}
+.session-outcome-notice{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:7px;background:var(--panel);color:var(--text);font-size:calc(13px * var(--text-scale));font-weight:700;line-height:1.5}
+.session-outcome-missed,.session-outcome-cancelled{border-left-color:#8b95a5;background:#66708520}
+.session-outcome-rescheduled{border-left-color:#00a98a}
+.ana-status-meta{display:block;margin-top:4px;color:var(--muted);font-size:11px;font-weight:600;line-height:1.4}
