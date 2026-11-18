@@ -41,9 +41,11 @@ class MeetingAlarmService {
     Future<void> schedule(String key, String title, DateTime meeting) async {
       final fireAt = meeting.subtract(const Duration(minutes: 5));
       if (!fireAt.isAfter(now) || meeting.isAfter(horizon)) return;
+      final meetingTime = '${meeting.hour.toString().padLeft(2, "0")}:${meeting.minute.toString().padLeft(2, "0")}';
       await _plugin.zonedSchedule(
-        id: _id(key), title: 'Meeting in 5 minutes',
-        body: '$title starts at \${meeting.hour.toString().padLeft(2, '0')}:\${meeting.minute.toString().padLeft(2, '0')}',
+        id: _id(key),
+        title: 'Meeting in 5 minutes',
+        body: '$title starts at $meetingTime',
         scheduledDate: tz.TZDateTime.from(fireAt, tz.local),
         notificationDetails: const NotificationDetails(android: AndroidNotificationDetails(
           channelId, channelName, channelDescription: 'Audible reminders five minutes before meetings',
@@ -66,7 +68,8 @@ class MeetingAlarmService {
       final saved = DateTime.tryParse((data['weekStart'] ?? '').toString());
       final monday = saved == null ? currentWeekMonday : DateTime(saved.year, saved.month, saved.day);
       final date = monday.add(Duration(days: day));
-      await schedule('cell:\${row['id']}:\${date.toIso8601String()}', title,
+      final rowId = row['id'].toString();
+      await schedule('cell:$rowId:${date.toIso8601String()}', title,
         DateTime(date.year, date.month, date.day, hour, minute));
     }
 
@@ -79,7 +82,7 @@ class MeetingAlarmService {
       while (date.weekday != item.weekday) { date = date.add(const Duration(days: 1)); }
       for (var week = 0; week < 6; week++) {
         final d = date.add(Duration(days: 7 * week));
-        await schedule('recurring:\${item.id}:\${d.toIso8601String()}', item.title,
+        await schedule('recurring:${item.id}:${d.toIso8601String()}', item.title,
           DateTime(d.year, d.month, d.day, item.hour, item.minute));
       }
     }
