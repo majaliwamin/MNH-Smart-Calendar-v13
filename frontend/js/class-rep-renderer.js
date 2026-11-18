@@ -11,6 +11,14 @@
       if (line.trim().indexOf(fence) === 0 || /^\s*~~~/.test(line)) { fenced = !fenced; return line; }
       if (fenced) return line;
       var normalized = line.replace(/\\\|/g, "|");
+      // Repair bracket-wrapped equations commonly emitted by language models.
+      // Restrict conversion to equation-like lines so citations and Markdown links remain intact.
+      var trimmed = normalized.trim();
+      if (/^\[\s*.+\s*\]$/.test(trimmed) && /(?:\\\\(?:frac|sqrt|sum|text|sigma|mu|bar|alpha|beta|theta|chi|pi|Delta|mathrm)|[=^_])/.test(trimmed)) {
+        normalized = trimmed.replace(/^\[\s*/, "\\\\[").replace(/\s*\]$/, "\\\\]");
+      } else if (/^\[\s*.+(?:=|\\\\(?:frac|sqrt|sum))/.test(trimmed) && !/\]\s*$/.test(trimmed)) {
+        normalized = trimmed.replace(/^\[\s*/, "\\\\[") + "\\\\]";
+      }
       if (normalized.indexOf("| |") >= 0) normalized = normalized.replace(/\|\s+\|/g, "|\n|");
       return normalized;
     }).join("\n");
