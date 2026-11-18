@@ -1994,9 +1994,9 @@ function buildAnalyticsMode(d){
  const circumference=2*Math.PI*54;
  const faceLength=circumference*face/100;
  chart.innerHTML='<svg viewBox="0 0 140 140" role="img" aria-label="Session mode distribution">'
-  +'<circle cx="70" cy="70" r="54" fill="none" stroke="#24375b" stroke-width="20"/>'
-  +(available&&face>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#0e77fd" stroke-width="20" stroke-dasharray="'+faceLength+' '+circumference+'" transform="rotate(-90 70 70)"/>':'')
-  +(available&&online>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#8a65e8" stroke-width="20" stroke-dasharray="'+(circumference-faceLength)+' '+circumference+'" stroke-dashoffset="'+(-faceLength)+'" transform="rotate(-90 70 70)"/>':'')
+  +'<circle cx="70" cy="70" r="54" fill="none" stroke="#263449" stroke-width="20"/>'
+  +(available&&face>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#00CFA6" stroke-width="20" stroke-dasharray="'+faceLength+' '+circumference+'" transform="rotate(-90 70 70)"/>':'')
+  +(available&&online>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#FF9F1C" stroke-width="20" stroke-dasharray="'+(circumference-faceLength)+' '+circumference+'" stroke-dashoffset="'+(-faceLength)+'" transform="rotate(-90 70 70)"/>':'')
   +'</svg>';
  const center=el("div","ana-donut-center");
  if(available){
@@ -2004,8 +2004,8 @@ function buildAnalyticsMode(d){
   center.append(el("b",null,dominant.value+"%"),el("span",null,dominant.label));
   body.append(chart);
   body.append(anaLegend([
-   {tone:"blue",label:"Face-to-Face",value:face+"%"},
-   {tone:"purple",label:"Online",value:online+"%"}
+   {tone:"teal",label:"Face-to-Face",value:face+"%"},
+   {tone:"amber",label:"Online",value:online+"%"}
   ]));
  }else{
   center.append(el("b",null,"—"),el("span",null,"Not recorded"));
@@ -2050,7 +2050,7 @@ function buildAnalyticsTrend(d){
    return raw==null?null:Number(raw);
   });
   const points=values.map((value,i)=>[xs[i],y(value)]);
-  svg+='<polyline fill="none" stroke="#0e77fd" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="'+points.map(p=>p[0]+','+p[1]).join(' ')+'"/>';
+  svg+='<polyline fill="none" stroke="#00CFA6" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="'+points.map(p=>p[0]+','+p[1]).join(' ')+'"/>';
   points.forEach((point,i)=>{
    svg+='<circle cx="'+point[0]+'" cy="'+point[1]+'" r="4" fill="#0e77fd" stroke="#07142b" stroke-width="1.5"/>'
     +'<text x="'+point[0]+'" y="'+(point[1]-10)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f3f4f6">'+values[i]+'%</text>';
