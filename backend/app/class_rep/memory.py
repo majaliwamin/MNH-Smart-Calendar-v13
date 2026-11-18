@@ -287,7 +287,7 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
     if conversation_id:
         conv = _read(COL_CONVERSATIONS, _doc_id(user_id, conversation_id))
         if conv:
-            blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(conv.get("messages", [])[-12:], ensure_ascii=False))
+            blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(conv.get("messages", [])[-6:], ensure_ascii=False))
     conversations = _list(COL_CONVERSATIONS, user_id, 8)
     if conversations:
         ranked = []
