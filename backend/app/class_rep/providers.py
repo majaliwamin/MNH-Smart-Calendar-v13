@@ -1,6 +1,7 @@
 """Server-side AI adapters with Cloudflare -> Hugging Face -> Groq fallback."""
 import json
 import logging
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -187,9 +188,14 @@ def complete(messages: list[dict]) -> tuple[str, str, str]:
             category="not_configured",
         )
     failures = []
+    deadline = time.monotonic() + 22.0
     for cfg in configured:
+        remaining = deadline - time.monotonic()
+        if remaining < 3.0:
+            break
+        bounded = {**cfg, "timeout": max(3, min(int(cfg.get("timeout", 15)), 12, int(remaining)))}
         try:
-            answer = _complete_one(cfg, messages)
+            answer = _complete_one(bounded, messages)
             return answer, cfg["provider"], cfg["model"]
         except ProviderError as exc:
             # Safe diagnostics only: never log tokens, endpoints, prompts or response bodies.
@@ -200,7 +206,7 @@ def complete(messages: list[dict]) -> tuple[str, str, str]:
             )
             failures.append(cfg["provider"])
     raise ProviderError(
-        "All configured CRARA AI providers are temporarily unavailable (" +
+        "CRARA providers are temporarily unavailable within the response time budget (" +
         ", ".join(failures) + "). Please try again later.",
         category="all_providers_failed",
     )
