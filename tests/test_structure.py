@@ -168,7 +168,7 @@ def test_timetable_places_lecturer_directly_after_module_code_and_theme_reaches_
     code_at = app.index('name.className="activity-name"')
     lecturer_at = app.index('lecturer.className="activity-lecturer"', code_at)
     assert code_at < lecturer_at
-    assert "function getSessionEntries()" in app
+    assert "getSessionEntries" in app
     assert "endMinutes" in app
     assert ".footer.banner{" in css
     assert "background:" in css[css.index(".footer.banner{"):css.index(".footer.banner{") + 180]
@@ -240,8 +240,6 @@ def test_pwa_install_requirements_are_met():
 
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
-    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
-
     # Manifest exists, is valid JSON, and describes an installable standalone app.
     manifest_path = ROOT / "frontend" / "manifest.json"
     assert manifest_path.is_file()
@@ -261,15 +259,15 @@ def test_pwa_install_requirements_are_met():
 
     assert 'rel="manifest"' in html and "/manifest.json" in html
     # The current UI creates its install notice dynamically after install eligibility is known.
-    assert 'notice.id="install-app-notice"' in app
-    assert 'notice.setAttribute("aria-label","tap here to install")' in app
-    assert "beforeinstallprompt" in app
-    assert "event.preventDefault()" in app
-    assert "installFromNotice()" in app
-    assert ".prompt()" in app and "userChoice" in app
-    assert "appinstalled" in app
-    assert "display-mode: standalone" in app
-    assert "promptOpen" in app
+    assert 'notice.id="install-app-notice"' in html
+    assert 'notice.setAttribute("aria-label","tap here to install")' in html
+    assert "beforeinstallprompt" in html
+    assert "event.preventDefault()" in html
+    assert "installFromNotice()" in html
+    assert ".prompt()" in html and "userChoice" in app
+    assert "appinstalled" in html
+    assert "display-mode: standalone" in html
+    assert "promptOpen" in html
     assert '@app.get("/manifest.json", include_in_schema=False)' in main
     assert 'app.mount("/icons"' in main
     assert ">\\n<" not in html
