@@ -16,6 +16,8 @@ from app.config import DATA_DIR
 from app.database.connection import database, DB_LOCK
 from app.services.audit_service import write_activity, VISIBLE_ROLES
 from app.services.backup_service import list_backups, make_backup
+from app.class_rep.documents import ingest as ingest_crara_resource, delete_source_documents as delete_crara_resource_index
+from app.class_rep.documents import DocumentError as CRARADocumentError
 
 logger = logging.getLogger(__name__)
 
@@ -143,8 +145,19 @@ async def upload_resource_file(file: UploadFile = File(...)):
         raise HTTPException(500, "The file could not be saved.") from exc
     finally:
         await file.close()
+    crara_index = None
+    try:
+        crara_index = ingest_crara_resource(original_name, destination.read_bytes(), owner_id="shared", source_id=file_id)
+        index_status = "indexed"
+    except CRARADocumentError as exc:
+        index_status = "unavailable"
+        logger.warning("CRARA resource indexing skipped file_id=%s filename=%s reason=%s", file_id, original_name, str(exc))
+    except Exception:
+        index_status = "failed"
+        logger.exception("CRARA resource indexing failed file_id=%s filename=%s", file_id, original_name)
     return {"id": file_id, "url": "/api/resources/files/" + file_id,
-            "filename": original_name, "size": size, "contentType": RESOURCE_FILE_TYPES[extension]}
+            "filename": original_name, "size": size, "contentType": RESOURCE_FILE_TYPES[extension],
+            "crara_indexing": index_status, "crara_document_id": crara_index.get("id") if crara_index else None}
 
 
 @router.get("/resources/files/{file_id}")
@@ -167,6 +180,7 @@ def delete_resource_file(file_id: str):
         candidate = RESOURCE_UPLOAD_DIR / (file_id + extension)
         if candidate.is_file():
             candidate.unlink()
+            delete_crara_resource_index(file_id)
             return {"ok": True}
     raise HTTPException(404, "Resource file not found.")
 
