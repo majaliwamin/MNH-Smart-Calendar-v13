@@ -229,7 +229,8 @@ def test_cara_password_minimum_is_four_characters(monkeypatch, tmp_path):
 
 def test_cara_uploaded_file_is_viewable_and_account_scoped(monkeypatch, tmp_path):
     _test_storage(monkeypatch, tmp_path)
-    from app.class_rep import documents
+    from app.class_rep import routes
+    routes._RATE_BUCKETS.clear()
 
     payload = b"Placental malaria research notes for the MNH cohort."
     with TestClient(app) as client:
@@ -264,6 +265,7 @@ def test_cara_uploaded_file_is_viewable_and_account_scoped(monkeypatch, tmp_path
         assert "research-notes.txt" in saved["messages"][-1]["content"]
 
         other = TestClient(app)
+        routes._RATE_BUCKETS.clear()
         try:
             other_registered = other.post("/api/class-rep/auth/register", json={
                 "name": "Different User", "email": "different-user@example.org", "password": "other-password"
