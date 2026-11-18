@@ -315,7 +315,7 @@ def get_document_file(doc_id: str, owner_id: str):
         return None
     try:
         item = json.loads(row["data"])
-        if item.get("owner_id") != owner_id:
+        if item.get("owner_id", "shared") not in ("shared", owner_id):
             return None
         content = base64.b64decode(item.get("content_base64", ""), validate=True)
         return item.get("filename", "document"), item.get("content_type", "application/octet-stream"), content
@@ -337,7 +337,7 @@ def get_document_text(doc_id: str, owner_id: str) -> dict | None:
             item = json.loads(row["data"])
         except (TypeError, json.JSONDecodeError):
             continue
-        if item.get("owner_id") != owner_id:
+        if item.get("owner_id", "shared") not in ("shared", owner_id):
             continue
         title = item.get("title", title)
         page = item.get("page")
