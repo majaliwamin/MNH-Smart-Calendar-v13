@@ -375,3 +375,18 @@ def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
     assert 'button.className="view-home-return"' in app
     assert "Back to Home" in app
     assert 'button.addEventListener("click",()=>showView("weekly"))' in app
+
+
+
+def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
+    renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
+
+    assert "mathDelimiters.push({token: token, delimiter: delimiter})" in renderer
+    assert "mathDelimiters.forEach(function (item)" in renderer
+    assert "window.renderMathInElement(bubble" in renderer
+    assert "2026.11.18-crara-math-complete-v1" in html
+    assert "2026.11.18-crara-math-complete-v1" in worker
+    assert "2026.11.18-crara-math-complete-v1" in backend_config
