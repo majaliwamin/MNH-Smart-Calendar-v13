@@ -159,3 +159,17 @@ def test_crara_renderer_normalizes_equations_inside_markdown_lines():
     renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
     assert "equation.trim()" in renderer
     assert "doubled || single" in renderer
+
+
+
+def test_cara_header_has_explicit_persistent_chichewa_english_selector():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert 'cr-language-switch' in js
+    assert 'cr-language-option' in js
+    assert 'dataset.language = "CH"' in js
+    assert 'dataset.language = "EN"' in js
+    assert 'PUT", headers' in js
+    assert '/api/class-rep/language' in js
+    assert 'response_language: state.responseLanguage' in js
+    assert '.cr-language-option.is-active' in css
