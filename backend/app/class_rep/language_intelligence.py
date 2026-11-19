@@ -13,6 +13,7 @@ user's explicit selection rather than triggering a Chichewa answer by guesswork.
 """
 import re
 
+from app.class_rep.expressive_style import casual_style_block
 from app.class_rep.language import (
     DEFAULT_RESPONSE_LANGUAGE,
     SUPPORTED_RESPONSE_LANGUAGES,
@@ -90,6 +91,30 @@ _ACADEMIC = re.compile(
     r"microbiology|epidemiology|data|study|evidence|literature)\b",
     re.I,
 )
+# A short social mention of a topic ("just finished microbiology lab 🦠") is
+# conversation, not an academic question. It must not weaken real task markers.
+_CASUAL_TOPIC_MENTION = re.compile(
+    r"\b(?:microb\w*|bacteri\w*|virus\w*|germ\w*|lab|pregnan\w*|newborn|"
+    r"neonat\w*|baby|babies|maternal|malaria|midwif\w*|notes?|revision|"
+    r"book|class)\b",
+    re.I,
+)
+_ACADEMIC_TASK = re.compile(
+    r"\b(?:explain|define|describe|compare|contrast|analyse|analyze|discuss|"
+    r"evaluate|calculate|interpret|what\s+(?:is|are)|why|how\s+does|method|"
+    r"statistics|assignment|thesis|dissertation|research|evidence|literature)\b",
+    re.I,
+)
+_PLAYFUL = re.compile(r"\b(?:haha+|hehe+|hihi+|lol+|lmao|joke|joking|kidding)\b|🤣|😂|😜", re.I)
+_DISTRESSED = re.compile(
+    r"\b(?:sad|depressed|anxious|anxiety|worried|stressed|crying|upset|lonely|scared|afraid)\b|😭|😢|😔",
+    re.I,
+)
+_CASUAL_SOCIAL = re.compile(
+    r"^(?:moni|hello|hi|hey|muli\s+bwanj\w*|mwadzuka\s+bwanj\w*|mwaswera\s+bwanj\w*|"
+    r"good\s+morning|how(?:'s|\s+is)\s+it\s+going|how\s+are\s+you|thanks|zikomo|chabwino)\b",
+    re.I,
+)
 _MODE_CONVERSE = "converse"
 _MODE_FOLLOWUP = "followup"
 _MODE_EXPLAIN = "explain"
@@ -155,9 +180,29 @@ def detect_mode(message: str, history: list[dict] | None = None) -> str:
         return _MODE_FOLLOWUP
     if _EXPLAIN_EXPRESSION.search(text):
         return _MODE_EXPLAIN
+    # Short social mentions keep their topic flavour without becoming a lecture.
+    if (len(text) <= 100 and "?" not in text
+            and _CASUAL_TOPIC_MENTION.search(text)
+            and not _ACADEMIC_TASK.search(text)):
+        return _MODE_CONVERSE
     if _ACADEMIC.search(text):
         return _MODE_ACADEMIC
     return _MODE_CONVERSE
+
+
+def detect_tone(message: str, history: list[dict] | None = None) -> str:
+    """Return distress, playful, warm or neutral using observable markers."""
+    text = _normalise_text(message)
+    if not text:
+        return "neutral"
+    if _DISTRESSED.search(text):
+        return "distressed"
+    if _PLAYFUL.search(text):
+        return "playful"
+    is_short_task = len(text) <= 40 and not _ACADEMIC_TASK.search(text) and not _ACADEMIC.search(text)
+    if _CASUAL_SOCIAL.search(text) or is_short_task:
+        return "warm"
+    return "neutral"
 
 
 def resolve_response_language(
@@ -221,9 +266,15 @@ def mode_instruction(mode: str) -> str:
     return instructions.get(mode, instructions[_MODE_CONVERSE])
 
 
+def tone_style_instruction(tone: str, mode: str, response_language: str = "EN") -> str:
+    """Return the casual-only style layer; empty for serious or non-social turns."""
+    return casual_style_block(mode, tone, response_language)
+
+
 def language_profile(message: str, history: list[dict] | None = None) -> dict:
     """Diagnostic summary used by /status and tests; never shown to end users."""
     return {
         "detected_language": detect_language(message),
         "mode": detect_mode(message, history),
+        "tone": detect_tone(message, history),
     }

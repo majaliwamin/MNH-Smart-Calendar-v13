@@ -5,8 +5,11 @@ from app.class_rep.context import build_calendar_context
 from app.class_rep.providers import complete
 from app.class_rep.documents import search_documents
 from app.class_rep.language import response_language_instruction, CONVERSATION_CONTINUITY_INSTRUCTIONS
-from app.class_rep.language_intelligence import detect_language, detect_mode, mode_instruction
+from app.class_rep.language_intelligence import (
+    detect_language, detect_mode, detect_tone, mode_instruction, tone_style_instruction,
+)
 from app.class_rep.linguistic_knowledge import linguistic_context, unknown_term_answer
+from app.class_rep.expressive_style import casual_flourish, is_casual_turn
 from app.class_rep.output_validation import honest_fallback, validate_reply
 from app.class_rep.translation_engine import (
     TRANSLATION_ENGINE_INSTRUCTIONS,
@@ -70,12 +73,15 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     """
     mode = detect_mode(message, history)
     detected_language = detect_language(message)
+    tone = detect_tone(message, history)
     # Resolve high-confidence lexical questions before retrieval/model inference
     # can override the curated answer. Keep this guard narrow.
     deterministic_answer = direct_malungo_definition_answer(message, response_language)
     if deterministic_answer is None:
         deterministic_answer = direct_chichewa_conversation_answer(message, response_language, history)
     if deterministic_answer is not None:
+        if is_casual_turn(mode, tone):
+            deterministic_answer = casual_flourish(deterministic_answer, message, response_language)
         return deterministic_answer, "curated-lexicon", "deterministic-lexicon-v2", None
 
     lexical_evidence = linguistic_context(message)
@@ -101,6 +107,8 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
         SYSTEM_PROMPT +
         "\n\n" + CONVERSATION_CONTINUITY_INSTRUCTIONS +
         "\n\n" + mode_instruction(mode) +
+        (("\n\n" + tone_style_instruction(tone, mode, response_language))
+         if is_casual_turn(mode, tone) else "") +
         ("\n\n" + TRANSLATION_ENGINE_INSTRUCTIONS if translation_request else "") +
         "\n\n" + response_language_instruction(response_language) +
         "\n\nDETECTED USER MESSAGE LANGUAGE (evidence only, not a response instruction): " + detected_language +

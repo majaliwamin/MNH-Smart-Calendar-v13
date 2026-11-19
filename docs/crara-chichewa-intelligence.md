@@ -30,6 +30,21 @@ Chichewa reply. The backend now runs four explicit stages before inference:
 preference, the translation target, or detected Chichewa input — in that
 order. Users without a saved preference are no longer forced into English.
 
+## Casual expressive layer
+
+`expressive_style.py` adds a deliberately narrow social register. `detect_tone()`
+separates playful, warm, distressed and neutral messages; the emoji palette,
+clean joke candidates and informal phrasing are injected only when `detect_mode()`
+returns `converse`/`followup` **and** the tone is not distressed. Academic,
+translation, expression-meaning, biomedical and maternal/neonatal answers never
+receive emojis, jokes or slang. Curated morning/afternoon greeting answers get a
+single restrained emoji; the palette includes facial expressions (including 🤣,
+😂, 😭 and 😐), microbiology (🦠 🧬 🔬 🧫), maternal/neonatal (🤰 👶 🍼 🩺) and
+stationery/learning (📝 📚) symbols. Chichewa informal forms are limited to the
+verified standard greetings already present in the curated lessons; CRARA does
+not invent regional slang or Chichewa jokes, and jokes never target health,
+bodies, pregnancy, babies, identity or distress.
+
 ## Resources actually indexed
 
 Present and structured: the 13 lesson Markdown files under
