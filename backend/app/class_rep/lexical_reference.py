@@ -33,6 +33,41 @@ def lexical_reference_context(message: str) -> str:
     return "\n".join(notes)
 
 
+
+def direct_chichewa_conversation_answer(
+    message: str, response_language: str = "EN", history: list[dict] | None = None
+) -> str | None:
+    """Handle a small set of high-confidence everyday exchanges without model improvisation."""
+    text = re.sub(r"[!?.,]+$", "", str(message or "").strip().casefold())
+    lang = str(response_language or "EN").upper()
+
+    # Accept the common abbreviated chat spelling "bwanj" without repeating it.
+    if re.fullmatch(r"(?:mwadzuka|mwauka)\s+bwanj(?:i)?", text):
+        if lang == "CH":
+            return "Tadzuka bwino, zikomo. Inu mwadzuka bwanji?"
+        return "That is a morning greeting meaning “How did you wake up?” A natural reply is “Tadzuka bwino, zikomo.”"
+
+    if re.fullmatch(r"(?:moni|hello|hi|muli\s+bwanj(?:i)?)", text):
+        if lang == "CH":
+            return "Moni! Muli bwanji?"
+        return "Hello! How are you?"
+
+    if re.fullmatch(r"(?:eya|inde|inde\s+ndithu)", text):
+        previous = " ".join(
+            str(item.get("content", "")) for item in (history or [])[-3:]
+            if item.get("role") == "assistant"
+        ).casefold()
+        if any(phrase in previous for phrase in (
+            "nditha kukuthandizani", "ndingakuthandizeni", "mukhoza kundifunsira",
+            "how can i help", "what can i help"
+        )):
+            return (
+                "Chabwino. Ndi nkhani iti imene mukufuna tikambirane?"
+                if lang == "CH" else
+                "Of course. What would you like us to talk about?"
+            )
+    return None
+
 def direct_malungo_definition_answer(message: str, response_language: str = "EN") -> str | None:
     """Answer a direct definition question deterministically, bypassing model drift."""
     text = str(message or "").casefold().strip()

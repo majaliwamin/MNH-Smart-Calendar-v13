@@ -63,6 +63,7 @@ def test_non_translation_chat_does_not_trigger_document_retrieval():
 def test_reply_injects_translation_engine_and_retrieved_reference(monkeypatch):
     import app.class_rep.assistant as assistant
     from app.class_rep.translation_engine import TRANSLATION_ENGINE_INSTRUCTIONS
+    from app.class_rep.language import CONVERSATION_CONTINUITY_INSTRUCTIONS
 
     captured = {}
 
@@ -90,5 +91,75 @@ def test_reply_injects_translation_engine_and_retrieved_reference(monkeypatch):
     assert provider == "test-provider"
     assert model == "test-model"
     assert TRANSLATION_ENGINE_INSTRUCTIONS in captured["system"]
+    assert CONVERSATION_CONTINUITY_INSTRUCTIONS in captured["system"]
     assert "Medical Terms – Mawu a za Chipatala" in captured["system"]
     assert "abdominal pain — ululu wa m’mimba" in captured["system"]
+
+
+def test_morning_greeting_is_natural_and_deterministic():
+    from app.class_rep.lexical_reference import direct_chichewa_conversation_answer
+
+    answer = direct_chichewa_conversation_answer("mwadzuka bwanj", "CH")
+    assert answer == "Tadzuka bwino, zikomo. Inu mwadzuka bwanji?"
+    assert "Ndin bwanji" not in answer
+
+
+def test_yes_after_assistant_offer_continues_conversation_without_menu():
+    from app.class_rep.lexical_reference import direct_chichewa_conversation_answer
+
+    history = [
+        {"role": "assistant", "content": "Kodi nditha kukuthandizani ndi kanthu lero?"},
+    ]
+    answer = direct_chichewa_conversation_answer("eya", "CH", history)
+    assert answer == "Chabwino. Ndi nkhani iti imene mukufuna tikambirane?"
+    assert "PhD" not in answer
+    assert "Mukhoza kundifunsira" not in answer
+
+
+def test_short_greeting_respects_selected_english_language():
+    from app.class_rep.lexical_reference import direct_chichewa_conversation_answer
+
+    answer = direct_chichewa_conversation_answer("mwadzuka bwanji?", "EN")
+    assert answer.startswith("That is a morning greeting")
+
+
+
+def test_universal_conversation_rules_cover_all_domains_and_followups():
+    from app.class_rep.language import CONVERSATION_CONTINUITY_INSTRUCTIONS
+
+    rules = CONVERSATION_CONTINUITY_INSTRUCTIONS.casefold()
+    for domain in (
+        "academic and biomedical questions", "research methods", "translation",
+        "timetable and administrative requests", "coding help", "casual chat",
+    ):
+        assert domain in rules
+    assert "short or elliptical messages" in rules
+    assert "short affirmative" in rules
+    assert "selected response language" in rules
+    assert "do not overuse deterministic canned replies" in rules
+
+
+def test_reply_keeps_recent_context_for_elliptical_followups(monkeypatch):
+    import app.class_rep.assistant as assistant
+
+    captured = {}
+    monkeypatch.setattr(assistant, "build_calendar_context", lambda message: ("{}", None))
+    monkeypatch.setattr(assistant, "search_documents", lambda *args, **kwargs: [])
+
+    def complete(messages):
+        captured["messages"] = messages
+        return "Tiyeni tipitirize ndi gawo lotsatira.", "test-provider", "test-model"
+
+    monkeypatch.setattr(assistant, "complete", complete)
+    history = [
+        {"role": "user", "content": "Tiyeni tiphunzire za noun classes."},
+        {"role": "assistant", "content": "Noun classes ndi magulu a maina."},
+        {"role": "user", "content": "Perekani zitsanzo."},
+        {"role": "assistant", "content": "Munthu/anthu ndi mwana/ana."},
+    ]
+    answer, _, _, _ = assistant.reply(
+        "pitiriza", history, owner_id="shared", response_language="CH"
+    )
+    assert answer
+    assert any(m.get("content") == "Perekani zitsanzo." for m in captured["messages"])
+    assert any(m.get("content") == "pitiriza" for m in captured["messages"])
