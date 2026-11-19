@@ -14,6 +14,7 @@ from app.class_rep.lexical_reference import (
     lexical_reference_context,
     direct_malungo_definition_answer,
     unverified_chichewa_term_answer,
+    direct_chichewa_conversation_answer,
 )
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
@@ -62,6 +63,8 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     # Resolve high-confidence lexical questions before history, memory, documents, or
     # model inference can override the curated answer. Keep this guard narrow.
     deterministic_answer = direct_malungo_definition_answer(message, response_language)
+    if deterministic_answer is None:
+        deterministic_answer = direct_chichewa_conversation_answer(message, response_language, history)
     if deterministic_answer is None:
         deterministic_answer = unverified_chichewa_term_answer(message, response_language)
     if deterministic_answer is not None:
