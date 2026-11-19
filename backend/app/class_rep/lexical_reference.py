@@ -42,17 +42,17 @@ def direct_chichewa_conversation_answer(
     lang = str(response_language or "EN").upper()
 
     # Accept the common abbreviated chat spelling "bwanj" without repeating it.
-    if re.fullmatch(r"(?:mwadzuka|mwauka)\\s+bwanj(?:i)?", text):
+    if re.fullmatch(r"(?:mwadzuka|mwauka)\s+bwanj(?:i)?", text):
         if lang == "CH":
             return "Tadzuka bwino, zikomo. Inu mwadzuka bwanji?"
         return "That is a morning greeting meaning “How did you wake up?” A natural reply is “Tadzuka bwino, zikomo.”"
 
-    if re.fullmatch(r"(?:moni|hello|hi|muli\\s+bwanj(?:i)?)", text):
+    if re.fullmatch(r"(?:moni|hello|hi|muli\s+bwanj(?:i)?)", text):
         if lang == "CH":
             return "Moni! Muli bwanji?"
         return "Hello! How are you?"
 
-    if re.fullmatch(r"(?:eya|inde|inde\\s+ndithu)", text):
+    if re.fullmatch(r"(?:eya|inde|inde\s+ndithu)", text):
         previous = " ".join(
             str(item.get("content", "")) for item in (history or [])[-3:]
             if item.get("role") == "assistant"
