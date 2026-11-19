@@ -70,7 +70,7 @@ def glossary_matches(text: str, limit: int = 12) -> list[dict]:
         terms = [entry["en"]]
         terms.extend(part.strip() for part in re.split(r"[;/]", entry["ch"]) if len(part.strip()) >= 8)
         if "wodwala" in entry["ch"].casefold():
-            terms.append("wodwala")
+            terms.extend(("wodwala", "wodwalayo"))
         matched = any(
             re.search(
                 r"(?<![a-z0-9])" +
