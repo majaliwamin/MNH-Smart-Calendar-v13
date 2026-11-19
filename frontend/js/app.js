@@ -696,6 +696,8 @@ async function onCells(snap){
  state.cells=remote;state.fromCloud=true;
  try{saveState();}catch(e){}
  build();setSync("Shared timetable · up to date");
+ // Reveal the masthead, navigation and timetable together after the first authoritative shared snapshot.
+ if(typeof window.__mnhRevealApp==="function")window.__mnhRevealApp();
 }
 async function downloadFile(filename,text){
  const blob=new Blob([text],{type:"application/json"});
@@ -717,8 +719,8 @@ async function initCloud(){
   try{db.collection("cells").onSnapshot(onCells,()=>setSync("Shared server unavailable · local recovery copy retained"));}
   catch(e){setSync("Shared server unavailable · local recovery copy retained");}
   try{moduleUnsubscribe=db.collection("modules").onSnapshot(onModules,()=>setSync("Module updates temporarily unavailable"));}catch(e){}
- }catch(e){setSync("Shared server unavailable · local recovery copy retained");}
- finally{cloudInitialising=false;}
+ }catch(e){setSync("Shared server unavailable · local recovery copy retained");if(typeof window.__mnhRevealApp==="function")window.__mnhRevealApp();}
+ finally{cloudInitialising=false;if(!cloud&&typeof window.__mnhRevealApp==="function")window.__mnhRevealApp();}
 }
 window.addEventListener("online",()=>{if(!cloud)initCloud();});
 setInterval(()=>{if(!cloud&&navigator.onLine)initCloud();},15000);

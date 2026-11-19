@@ -11,6 +11,15 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json?v=2026.11.16-v15.00">
 <meta name="theme-color" content="#0b1930">
+<style>
+/* Keep the complete application shell hidden until its first coherent timetable render. */
+html.mnh-app-booting,html.mnh-app-booting body{background:#0b1017}
+html.mnh-app-booting body>*:not(script){visibility:hidden!important}
+html.mnh-app-booting body:before{content:"Loading MNH Calendar…";visibility:visible;position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#0b1017;color:#f2c14e;font:600 15px Arial,sans-serif;letter-spacing:.02em}
+html.mnh-app-ready body>*:not(script){visibility:visible}
+html.mnh-app-ready body:before{content:none}
+</style>
+<script>document.documentElement.classList.add("mnh-app-booting");</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MNH Calendar">
@@ -103,6 +112,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.8/chart.umd.min.js" defer></script>
 </head>
 <body data-theme="dark">
+<script>
+(function(){
+ "use strict";
+ var revealed=false;
+ window.__mnhRevealApp=function(){
+  if(revealed)return;
+  revealed=true;
+  document.documentElement.classList.remove("mnh-app-booting");
+  document.documentElement.classList.add("mnh-app-ready");
+ };
+ // Network failure or a slow shared database must never leave the app hidden.
+ window.setTimeout(window.__mnhRevealApp,4500);
+})();
+</script>
 <script>
 (function () {
   try {
