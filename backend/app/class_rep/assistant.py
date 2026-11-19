@@ -5,7 +5,11 @@ from app.class_rep.context import build_calendar_context
 from app.class_rep.providers import complete
 from app.class_rep.documents import search_documents
 from app.class_rep.language import response_language_instruction, CHICHEWA_CURRICULUM_CONTEXT
-from app.class_rep.lexical_reference import (\n    lexical_reference_context,\n    direct_malungo_definition_answer,\n    unverified_chichewa_term_answer,\n)
+from app.class_rep.lexical_reference import (
+    lexical_reference_context,
+    direct_malungo_definition_answer,
+    unverified_chichewa_term_answer,
+)
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
 
