@@ -100,3 +100,22 @@ def test_assistant_context_includes_pronoun_and_demonstrative_cautions():
     assert "lesson-05-pronouns-demonstratives.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "Distinguish independent pronouns" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not invent a complete near/far" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_question_words_lesson_teaches_supported_forms_cautiously():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-06-asking-questions.md").read_text(encoding="utf-8")
+    assert "**ndani?**" in lesson
+    assert "**chani?**" in lesson
+    assert "**kuti?**" in lesson
+    assert "**chifukwa?**" in lesson
+    assert "**zingati?**" in lesson
+    assert "mismatched" in lesson
+    assert "do not" in lesson.lower()
+
+
+def test_assistant_context_includes_question_word_lesson_and_source_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-06-asking-questions.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "ndani (who)" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "page 33 liti quiz line is mismatched" in CHICHEWA_CURRICULUM_CONTEXT
