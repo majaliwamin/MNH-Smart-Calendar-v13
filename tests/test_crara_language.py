@@ -235,3 +235,20 @@ def test_assistant_context_includes_lesson_12_modifier_scope_and_verification_li
     assert "mwana uyu" in CHICHEWA_CURRICULUM_CONTEXT
     assert "mwana wanga" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not combine modifiers" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_verb_structure_lesson_uses_only_documented_patterns_and_subject_examples():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-13-verb-structure-subject-agreement.md").read_text(encoding="utf-8")
+    for form in ("Ti-ku-pita", "Ti-ma-pita", "Ti-na-pita", "Ti-dza-pita", "Chinthu chikugwa.", "Zinthu zikugwa."):
+        assert form in lesson
+    assert "not a complete" in lesson.lower()
+    assert "do not" in lesson.lower()
+    assert "Independent pronouns are not the same as subject markers" in lesson
+
+
+def test_assistant_context_includes_lesson_13_verb_scope_and_agreement_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-13-verb-structure-subject-agreement.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "Ti-ku-pita" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not infer a complete conjugation" in CHICHEWA_CURRICULUM_CONTEXT
