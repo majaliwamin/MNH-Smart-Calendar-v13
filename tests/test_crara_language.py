@@ -27,3 +27,10 @@ def test_english_mode_does_not_auto_switch_for_chichewa_questions():
     instruction = response_language_instruction("EN")
     assert "ENGLISH (EN)" in instruction
     assert "Do not automatically switch to Chichewa" in instruction
+
+
+def test_curriculum_context_starts_with_the_alphabet_and_keeps_source_caveats():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "a, e, i, o, u" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "L/R, Dz/Z and Ts/S" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not describe a draft as an approved replacement" in CHICHEWA_CURRICULUM_CONTEXT
