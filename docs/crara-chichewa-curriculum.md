@@ -6,18 +6,24 @@ Build a staged, source-grounded Chichewa capability for CRARA. This is a curricu
 ## Source register
 1. **Chichewa learning/conversation guide** — user-provided PDF, version 4, February 2011, 62 pages. Use as an introductory phrase and grammar aid only. It contains inconsistent spacing/spelling and mismatched quiz answers; do not treat every example as authoritative.
 2. **Chinyanja (Chicewa)–English Dictionary** — user-provided PDF, originally compiled in 1979 and revised/republished in 1999, 72 pages. Use as a historical vocabulary cross-reference. Check regional, dated, spelling and meaning issues before teaching an entry as current standard Malawian Chichewa.
-3. **Malawi Institute of Education, Chichewa syllabus, Forms 1–2** — 2013 edition, 139 pages. Publicly accessible copy: https://edu.wtec1.com/pdfs/Chichewa%20syllabus%20Forms%201-2.pdf
-4. **Malawi Institute of Education, Chichewa syllabus, Forms 3–4** — 2013 edition, 153 pages. Publicly accessible copy: https://edu.wtec1.com/pdfs/Chichewa%20syllabus%20Forms%203-4.pdf
-5. **Malawi Institute of Education, Curriculum and Assessment Framework for Schools and Colleges in Malawi** — July 2025 framework, available from https://mie.edu.mw/downloads/. Use as current high-level curriculum context; do not assume it replaces the subject syllabuses without checking an approved updated Chichewa syllabus.
+3. **Malawi Institute of Education, Chichewa syllabus, Forms 1–2** — 2013 edition. Retrieved public copy: https://edu.wtec1.com/pdfs/Chichewa%20syllabus%20Forms%201-2.pdf
+4. **Malawi Institute of Education, Chichewa syllabus, Forms 3–4** — 2013 edition. Retrieved public copy: https://edu.wtec1.com/pdfs/Chichewa%20syllabus%20Forms%203-4.pdf
+5. **Ministry of Education, Science and Technology teacher-training resource** — Chichewa letter-sound practice, reproduced in a USAID-hosted document. Use for the 24-letter vowel-first sequence and literacy sound teaching.
+6. **Peace Corps/Malawi, Pre-departure Chichewa Language Materials** — Lesson 1 supplies five vowel sounds, examples and selected difficult sound combinations.
+7. **Malawi Institute of Education, Curriculum and Assessment Framework for Schools and Colleges in Malawi** — July 2025 framework, available from https://mie.edu.mw/downloads/.
+
+## Curriculum status as at 19 November 2026
+The 2013 Forms 1–2 and Forms 3–4 subject syllabuses are the retrieved detailed Chichewa syllabuses used in this project. MIE reported validation of draft lower-secondary syllabuses in March 2026 and the start of new integrated Chichewa literacy materials for Grade 1 in October 2026. Those reports show curriculum work is active; they do **not** establish that a replacement secondary Chichewa syllabus has been approved and published. Recheck MIE before labelling a later document as the current approved secondary syllabus.
 
 ## Progressive curriculum
 
 ### Stage 0 — Orientation and standard orthography
-- Identify Chichewa as the target language and distinguish standard Malawian Chichewa from related Chinyanja labels and regional usage.
-- Establish the standard written forms, vowel sounds, consonant sounds, syllables, stress and punctuation from vetted Chichewa teaching references.
-- Teach the sound/spelling contrasts explicitly identified in the MIE secondary syllabus: **L/R, Dz/Z, Ts/S**.
-- Introduce common consonant combinations and syllable construction only after checking them against reliable Chichewa orthography references.
-- Do not simply impose English alphabet pronunciation rules on Chichewa.
+- Teach the 24-letter vowel-first sequence listed in the Ministry of Education teacher-training resource: a, e, i, o, u, b, c, d, f, g, h, j, k, l, m, n, p, r, s, t, v, w, y, z.
+- Teach the five vowel sounds and use clear examples from the Peace Corps/Malawi introductory lesson.
+- Explain that a separate early-literacy frequency sequence includes **ch** among its 24 sound units; do not confuse this with the vowel-first letter sequence.
+- Teach common letter combinations and syllable construction after verifying each example.
+- Teach the secondary-school contrasts L/R, Dz/Z and Ts/S through listening and speaking.
+- Do not impose English alphabet pronunciation rules on Chichewa.
 
 ### Stage 1 — First words and everyday communication
 - Greetings and culturally appropriate responses.
@@ -88,7 +94,7 @@ Build on the Forms 1–2 foundation with more complex language use, listening an
 - Add reviewed corrections and examples as versioned learning data.
 
 ## Source-grounding rules
-- The MIE Forms 1–2 and Forms 3–4 syllabuses define the secondary-school scope and sequence. They include oral/written literature and language skills, not just grammar.
-- The 2011 guide and 1979/1999 dictionary are supplementary, not controlling authorities.
+- The MIE Forms 1–2 and Forms 3–4 syllabuses define the retrieved secondary-school scope and sequence. They include oral/written literature and language skills, not just grammar.
+- The teacher-training alphabet sequence and Peace Corps lesson are used for the beginner alphabet and vowel lesson; the 2011 user guide and 1979/1999 dictionary are supplementary, not controlling authorities.
 - Do not reproduce substantial passages from copyrighted syllabuses or dictionaries. Store short factual curriculum metadata, original teaching explanations and brief reviewed examples.
 - For disputed or uncertain language, state uncertainty, retain the technical English term if needed, and request review by a fluent Malawian Chichewa speaker.
