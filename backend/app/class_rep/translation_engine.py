@@ -8,19 +8,19 @@ import re
 from typing import Callable
 
 _TRANSLATION_INTENT = re.compile(
-    r"\\b(?:translate|translation|interpret|interpretation|meaning|means|define|"
-    r"how\\s+do\\s+you\\s+say|how\\s+to\\s+say|equivalent|"
-    r"translate\\s+into|in\\s+chichewa|in\\s+english|"
-    r"english\\s+(?:to|into)\\s+chichewa|chichewa\\s+(?:to|into)\\s+english)\\b",
+    r"\b(?:translate|translation|interpret|interpretation|meaning|means|define|"
+    r"how\s+do\s+you\s+say|how\s+to\s+say|equivalent|"
+    r"translate\s+into|in\s+chichewa|in\s+english|"
+    r"english\s+(?:to|into)\s+chichewa|chichewa\s+(?:to|into)\s+english)\b",
     re.I,
 )
 _CHICHEWA_MEANING = re.compile(
-    r"\\b(?:ndi\\s+chani|ndi\\s+chiyani|amatanthauza|tanthauzo\\s+la|"
-    r"zikutanthauza\\s+chiyani|mawu\\s+akuti)\\b",
+    r"\b(?:ndi\s+chani|ndi\s+chiyani|amatanthauza|tanthauzo\s+la|"
+    r"zikutanthauza\s+chiyani|mawu\s+akuti)\b",
     re.I,
 )
 _LANGUAGE_CUE = re.compile(
-    r"\\b(?:chichewa|chinyanja|chewa|english|chingerezi)\\b", re.I
+    r"\b(?:chichewa|chinyanja|chewa|english|chingerezi)\b", re.I
 )
 
 TRANSLATION_ENGINE_INSTRUCTIONS = """
@@ -92,7 +92,7 @@ def is_translation_or_interpretation_request(message: str) -> bool:
     return bool(
         _TRANSLATION_INTENT.search(text)
         or _CHICHEWA_MEANING.search(text)
-        or re.search(r"\\b(?:what\\s+does\\s+.+\\s+mean|meaning\\s+of)\\b", text, re.I)
+        or re.search(r"\b(?:what\s+does\s+.+\s+mean|meaning\s+of)\b", text, re.I)
     )
 
 
@@ -111,7 +111,7 @@ def build_translation_reference_context(
     queries = [str(message or "").strip()[:1000]]
     # Add direction-aware lexical searches so a phrase is not missed just because
     # the source sentence and the dictionary's headword use different word forms.
-    if re.search(r"\\b(?:medical|clinical|biomedical|research|scientific|health)\\b", message, re.I):
+    if re.search(r"\b(?:medical|clinical|biomedical|research|scientific|health)\b", message, re.I):
         queries.append("English Chichewa medical biomedical terminology " + message[:500])
     if _CHICHEWA_MEANING.search(message):
         queries.append("Chichewa English dictionary meaning " + message[:500])
@@ -150,5 +150,5 @@ def build_translation_reference_context(
         page = item.get("page")
         page_label = "page " + str(page) if page is not None else "page not recorded"
         text = str(item.get("text") or "")[:1800]
-        lines.append(f"SOURCE: {title}, {page_label}\\n{text}")
-    return "\\n\\n".join(lines)
+        lines.append(f"SOURCE: {title}, {page_label}\n{text}")
+    return "\n\n".join(lines)
