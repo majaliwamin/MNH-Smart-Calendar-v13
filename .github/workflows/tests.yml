@@ -26,7 +26,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r backend/requirements.txt pytest httpx2
       - name: Check Class Rep JavaScript syntax
-        run: node --check frontend/js/class-rep.js
+        run: |
+          node --check frontend/js/class-rep.js
+          node --check frontend/js/class-rep-renderer.js
       - name: Test Class Rep Assistant modules
         run: python -m pytest -q backend/tests/test_class_rep_assistant.py tests/test_class_rep_ui.py
       - name: Run full regression suite

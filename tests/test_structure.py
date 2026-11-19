@@ -389,10 +389,21 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.19-crara-chichewa-language-v1"
+    assert build == "2026.11.20-crara-visual-packages-v1"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
-    assert f'?v={build}' in html
+    versions = re.findall(r"\?v=([^\"'&]+)", html)
+    assert versions and set(versions) == {build}
+
+    assert "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" in html
+    assert "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" in html
+    assert "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" in html
+    assert "https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js" in html
+    assert "https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js" in html
+    assert "https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" in html
+    assert "https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js" in html
+    assert "cdnjs.cloudflare.com/ajax/libs/KaTeX" not in html
+    assert "cdnjs.cloudflare.com/ajax/libs/Chart.js" not in html
 
 
 def test_schedule_session_outcomes_and_dialog_close_button():

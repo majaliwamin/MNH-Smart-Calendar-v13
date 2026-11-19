@@ -5,6 +5,22 @@
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
+  function icon(name) {
+    var node = document.createElement("i");
+    node.setAttribute("data-lucide", name);
+    node.setAttribute("aria-hidden", "true");
+    return node;
+  }
+  function chartIcon(type) {
+    if (type === "scatter") return "scatter-chart";
+    if (type === "line") return "chart-line";
+    if (type === "pie" || type === "doughnut") return "chart-pie";
+    return "chart-column";
+  }
+  function activateIcons(bubble) {
+    if (!window.lucide || !window.lucide.createIcons) return;
+    try { window.lucide.createIcons(); } catch (_) {}
+  }
   function normalize(value) {
     var fenced = false, fence = String.fromCharCode(96).repeat(3);
     return String(value).split("\n").map(function (line) {
@@ -13,12 +29,15 @@
       var normalized = line.replace(/\\\|/g, "|");
       // Repair equations even when embedded inside a Markdown bullet or sentence.
       // Only equation-like bracket content is converted; citations and links are left alone.
-      normalized = normalized.replace(/\[\s*([^[\]]*(?:\\[A-Za-z]+|[=^_])[^[\]]*)\s*\]/g, function (_, equation) {
-        return "\\[" + equation.trim() + "\\]";
+      // Skip brackets that are already escaped as \( ... \) / \[ ... \] delimiters.
+      normalized = normalized.replace(/(^|[^\\])\[\s*([^[\]]*(?:\\[A-Za-z]+|[=^_])[^[\]]*)\s*\]/g, function (_, prefix, equation) {
+        return prefix + "\\[" + equation.trim() + "\\]";
       });
       // Convert model-style ((\mu)), ((s)), ((n-1)) and (\sigma^2) into inline math.
-      normalized = normalized.replace(/\(\s*(?:\(((?:\\[^()]+|[A-Za-z][A-Za-z0-9_{}^+\-*/= ]*))\)|(\\[^()]+))\s*\)/g, function (_, doubled, single) {
-        return "\\(" + (doubled || single).trim() + "\\)";
+      // The leading guard prevents this from matching the opening parenthesis of
+      // an already-delimited \( ... \) expression and doubling its backslash.
+      normalized = normalized.replace(/(^|[^\\])\(\s*(?:\(((?:\\[^()]+|[A-Za-z][A-Za-z0-9_{}^+\-*/= ]*))\)|(\\[^()]+))\s*\)/g, function (_, prefix, doubled, single) {
+        return prefix + "\\(" + (doubled || single).trim() + "\\)";
       });
       if (normalized.indexOf("| |") >= 0) normalized = normalized.replace(/\|\s+\|/g, "|\n|");
       return normalized;
@@ -45,7 +64,8 @@
     if (c.title) {
       var cap = document.createElement("figcaption");
       cap.className = "cr-chart-title";
-      cap.textContent = String(c.title).slice(0, 180);
+      cap.append(icon(chartIcon(type)));
+      cap.append(document.createTextNode(String(c.title).slice(0, 180)));
       fig.append(cap);
     }
     if (!window.Chart) {
@@ -70,7 +90,8 @@
     var details = document.createElement("details");
     details.className = "cr-chart-data";
     var summary = document.createElement("summary");
-    summary.textContent = "View chart data";
+    summary.append(icon("table"));
+    summary.append(document.createTextNode(" View chart data"));
     details.append(summary);
     var table = document.createElement("table");
     var head = document.createElement("tr");
@@ -152,6 +173,17 @@
         {left: "$", right: "$", display: false}
       ], throwOnError: false, strict: "ignore"
     });
+    bubble.querySelectorAll(".katex-display").forEach(function (equation) {
+      var previous = equation.previousElementSibling;
+      if (previous && previous.classList.contains("cr-math-label")) return;
+      var label = document.createElement("span");
+      label.className = "cr-math-label";
+      label.append(icon("sigma"));
+      label.append(document.createTextNode(" Formula"));
+      equation.parentNode.insertBefore(label, equation);
+    });
+    bubble.querySelectorAll("[data-lucide]").forEach(function (node) { node.classList.add("cr-icon"); });
+    activateIcons(bubble);
     if (transcript) transcript.scrollTop = transcript.scrollHeight;
   }
   window.CRARAResponseRenderer = {render: render};
