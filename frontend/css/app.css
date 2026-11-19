@@ -2342,3 +2342,39 @@ body.cara-open #view-weekly > :not(#class-rep-assistant){
  #view-tabs .week-nav .week-now .week-range{font-size:10px!important}
  #view-tabs .mnh-refresh-btn{width:27px!important;min-width:27px!important;flex-basis:27px!important}
 }
+
+
+/* v15.08: contain the weekly timetable so sticky table cells never paint
+   through the announcement strip, masthead, or primary navigation. */
+#view-weekly:not([hidden]){
+  position:relative!important;
+  z-index:0!important;
+  isolation:isolate!important;
+}
+#view-weekly:not([hidden]) .wrap{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain!important;
+}
+#view-weekly:not([hidden]) .wrap table{
+  position:relative!important;
+  z-index:0!important;
+}
+/* Keep all three shared header bands opaque and above timetable stacking contexts. */
+.activity-marquee-shell[aria-label="Future academic events"]{
+  z-index:12003!important;
+  background:var(--header-surface,var(--head))!important;
+  isolation:isolate!important;
+}
+.site-header{
+  z-index:12002!important;
+  background:var(--header-surface,var(--head))!important;
+  isolation:isolate!important;
+}
+#view-tabs.view-tabs{
+  z-index:12001!important;
+  background:linear-gradient(180deg,var(--panel),var(--nav))!important;
+  isolation:isolate!important;
+}
