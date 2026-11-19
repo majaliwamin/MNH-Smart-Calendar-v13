@@ -2407,3 +2407,9 @@ html body > .activity-marquee-shell[aria-label="Future academic events"] .activi
   z-index:0;
   background:transparent!important;
 }
+
+
+/* CRARA is a focused workspace: keep the global announcement ticker off this page. */
+body.cara-open .activity-marquee-shell[aria-label="Future academic events"]{
+  display:none!important;
+}
