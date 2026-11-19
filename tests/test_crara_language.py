@@ -145,3 +145,22 @@ def test_assistant_context_includes_possession_lesson_and_cautions():
     assert "lesson-07-possession.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "mwana wanga" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not invent a full possessive paradigm" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+
+def test_chichewa_adjectives_lesson_uses_documented_agreement_examples():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-08-adjectives-modifiers.md").read_text(encoding="utf-8")
+    assert "munthu wabwino" in lesson and "anthu abwino" in lesson
+    assert "mwana wabwino" in lesson and "ana abwino" in lesson
+    assert "chinthu chabwino" in lesson and "zinthu zabwino" in lesson
+    assert "buku labwino" in lesson and "mabuku abwino" in lesson
+    assert "not a complete chart" in lesson.lower()
+    assert "do not" in lesson.lower()
+
+
+def test_assistant_context_includes_adjective_lesson_and_agreement_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-08-adjectives-modifiers.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "munthu wabwino/anthu abwino" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "Distinguish adjective agreement" in CHICHEWA_CURRICULUM_CONTEXT
