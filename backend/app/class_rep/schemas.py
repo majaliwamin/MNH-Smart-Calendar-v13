@@ -11,6 +11,7 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     history: list[ChatMessage] = Field(default_factory=list, max_length=12)
     conversation_id: str | None = Field(default=None, max_length=80)
+    response_language: str = Field(default="EN", pattern="^(EN|CH|en|ch)$")
 
 
 class ChatResponse(BaseModel):
