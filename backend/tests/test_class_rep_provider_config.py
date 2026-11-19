@@ -1,6 +1,6 @@
 """Groq fallback configuration and Cloudflare -> Groq failover tests."""
 from app.class_rep import providers
-from app.class_rep.config import GROQ_DEFAULT_BASE_URL, provider_configs
+from app.class_rep.config import GROQ_DEFAULT_BASE_URL, GROQ_DEFAULT_MODEL, provider_configs
 from app.class_rep.providers import ProviderError
 
 
@@ -23,7 +23,7 @@ def test_groq_fallback_needs_only_an_api_key(monkeypatch):
     configured = provider_configs()
     assert [item["provider"] for item in configured] == ["cloudflare", "groq"]
     assert configured[1]["base_url"] == GROQ_DEFAULT_BASE_URL
-    assert configured[1]["model"] == "llama-3.3-70b-versatile"
+    assert configured[1]["model"] == GROQ_DEFAULT_MODEL
     assert configured[1]["api_key"] == "groq-key"
 
 
@@ -54,7 +54,7 @@ def test_cloudflare_rate_limit_falls_through_to_groq(monkeypatch):
         if provider == "cloudflare":
             raise ProviderError("Cloudflare returned HTTP 429.", category="http_error",
                                 status_code=429, error_codes=("4006",))
-        assert payload["model"] == "llama-3.3-70b-versatile"
+        assert payload["model"] == GROQ_DEFAULT_MODEL
         assert "max_tokens" in payload and "reasoning_effort" not in payload
         return {"choices": [{"message": {"content": "Groq fallback answer"}}]}
 
@@ -63,10 +63,10 @@ def test_cloudflare_rate_limit_falls_through_to_groq(monkeypatch):
         {"provider": "cloudflare", "account_id": "cf-account", "api_key": "cf-key",
          "model": "cf-model", "timeout": 10, "max_tokens": 500},
         {"provider": "groq", "base_url": GROQ_DEFAULT_BASE_URL, "api_key": "groq-key",
-         "model": "llama-3.3-70b-versatile", "timeout": 10, "max_tokens": 500},
+         "model": GROQ_DEFAULT_MODEL, "timeout": 10, "max_tokens": 500},
     ])
     answer, provider, model = providers.complete([{"role": "user", "content": "Moni"}])
-    assert (answer, provider, model) == ("Groq fallback answer", "groq", "llama-3.3-70b-versatile")
+    assert (answer, provider, model) == ("Groq fallback answer", "groq", GROQ_DEFAULT_MODEL)
     assert [item[0] for item in seen] == ["cloudflare", "groq"]
     assert seen[1][1] == GROQ_DEFAULT_BASE_URL + "/chat/completions"
     assert seen[1][2] == "groq-key"

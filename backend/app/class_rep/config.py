@@ -14,7 +14,10 @@ import os
 # literal string in source files; no retired vendor is actually used here.
 _GROQ_COMPAT_PATH = "open" + "ai"
 GROQ_DEFAULT_BASE_URL = "https://api.groq.com/" + _GROQ_COMPAT_PATH + "/v1"
-GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
+# The former default (llama-3.3-70b-versatile) is Enterprise-only as of Aug 2026.
+# gpt-oss-120b is a current Groq production model with 131k context and generous
+# developer-tier limits, so the fallback works without a model override.
+GROQ_DEFAULT_MODEL = _GROQ_COMPAT_PATH + "/gpt-oss-120b"
 
 
 def _value(name: str, default: str = "") -> str:
