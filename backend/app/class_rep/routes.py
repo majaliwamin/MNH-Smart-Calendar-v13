@@ -25,6 +25,13 @@ _RATE_WINDOW_SECONDS, _RATE_LIMIT = 60, 30
 _ANALYTICS_QUERY = re.compile(r"analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours", re.I)
 _ANALYTICS_ROLES = {"hod", "coordinator", "executive_dean"}
 
+_LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com"
+
+
+def _is_language_toggle_owner(user: dict) -> bool:
+    """Only the designated signed-in account may use CRARA language preferences."""
+    return str((user or {}).get("email", "")).strip().casefold() == _LANGUAGE_TOGGLE_OWNER_EMAIL
+
 
 def _rate(key: str, limit: int = _RATE_LIMIT):
     now = time.monotonic()
@@ -248,12 +255,16 @@ def _explicit_task(user_id: str, message: str, conversation_id: str = ""):
 @router.get("/language")
 def get_language(request: Request):
     user = _user(request)
+    if not _is_language_toggle_owner(user):
+        return {"response_language": "EN"}
     return {"response_language": memory.get_response_language(user["id"])}
 
 
 @router.put("/language")
 def update_language(request: Request, payload: dict):
     user = _user(request)
+    if not _is_language_toggle_owner(user):
+        raise HTTPException(403, "The CRARA response-language setting is restricted to its designated owner account.")
     try:
         language = memory.set_response_language(user["id"], payload.get("response_language", ""))
     except memory.MemoryError as exc:
@@ -300,7 +311,7 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         answer, provider, model, updated = reply(payload.message.strip(),
             [item.model_dump() for item in payload.history],
             management_analytics=analytics_context, memory_context=retrieved, owner_id=user['id'],
-            response_language=normalize_response_language(payload.response_language))
+            response_language=normalize_response_language(payload.response_language) if _is_language_toggle_owner(user) else "EN")
         provider_pipeline_ms = round((time.monotonic() - stage_started) * 1000)
         stage_started = time.monotonic()
         memory.save_turn(user["id"], conversation_id, payload.message.strip(), answer)
