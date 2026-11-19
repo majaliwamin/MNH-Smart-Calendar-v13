@@ -124,7 +124,7 @@ def test_assistant_context_includes_question_word_lesson_and_source_cautions():
 def test_crara_language_toggle_owner_check_uses_authenticated_email_only():
     from app.class_rep.routes import _is_language_toggle_owner
     assert _is_language_toggle_owner({"id": "owner", "email": "majaliwamin@gmail.com"})
-    assert _is_language_toggle_owner({"email": "MAJALIOWAMIN@GMAIL.COM"})
+    assert _is_language_toggle_owner({"email": "MAJALIWAMIN@GMAIL.COM"})
     assert not _is_language_toggle_owner({"id": "owner", "email": "someone@example.com"})
     assert not _is_language_toggle_owner({"email": ""})
     assert not _is_language_toggle_owner({})
