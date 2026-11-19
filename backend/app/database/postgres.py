@@ -10,10 +10,17 @@ import time
 from pathlib import Path
 
 import psycopg
+from psycopg.pq import TransactionStatus
 from psycopg.rows import tuple_row
 
 _READY = False
 _READY_LOCK = threading.Lock()
+# One chat turn used to open a fresh TLS connection to the remote database for
+# every small read/write helper (~12 connections per turn). Reuse a small pool
+# instead; each worker process keeps its own pool.
+_POOL_LOCK = threading.Lock()
+_POOL = []
+_POOL_SIZE = max(1, min(32, int(os.getenv("MNH_DB_POOL_SIZE", "8") or 8)))
 _PRIMARY_KEYS = {"docs": ("col", "id"), "app_meta": ("key",), "reminder_log": ("ikey",)}
 _SEED_MODULES = {
     "MIPN 8100": {"title": "Medical Imaging in Pregnancy and Neonates", "facilitator": "Not specified"},
@@ -85,6 +92,50 @@ class Connection:
 
     def close(self):
         self.raw.close()
+
+
+class PooledConnection(Connection):
+    """Return the underlying connection to the pool instead of dropping the TLS link."""
+
+    def __init__(self, raw, pool):
+        super().__init__(raw)
+        self._pool = pool
+        self._returned = False
+
+    def close(self):
+        if self._returned:
+            return
+        self._returned = True
+        raw = self.raw
+        try:
+            if raw.closed:
+                return
+            # Never lend a connection with an unfinished transaction.
+            if raw.info.transaction_status != TransactionStatus.IDLE:
+                raw.rollback()
+        except Exception:
+            try:
+                raw.close()
+            except Exception:
+                pass
+            return
+        with _POOL_LOCK:
+            if len(self._pool) < _POOL_SIZE:
+                self._pool.append(raw)
+                return
+        try:
+            raw.close()
+        except Exception:
+            pass
+
+
+def _acquire_raw():
+    with _POOL_LOCK:
+        while _POOL:
+            raw = _POOL.pop()
+            if not raw.closed:
+                return raw
+    return _raw_connect()
 
 
 def _raw_connect():
@@ -193,4 +244,4 @@ def _initialise():
 
 def connect():
     _initialise()
-    return Connection(_raw_connect())
+    return PooledConnection(_acquire_raw(), _POOL)
