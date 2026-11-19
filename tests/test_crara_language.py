@@ -216,3 +216,22 @@ def test_assistant_context_includes_number_and_concord_scope_limits():
     from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
     assert "lesson-11-number-noun-class-concord.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "Do not infer plural forms, noun classes or full concord paradigms by analogy" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_expanded_noun_phrase_lesson_distinguishes_modifier_functions_without_inventing_combinations():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-12-expanding-noun-phrases.md").read_text(encoding="utf-8")
+    assert "mwana uyu" in lesson
+    assert "mwana wanga" in lesson
+    assert "mwana wabwino" in lesson
+    assert "do not" in lesson.lower()
+    assert "does not introduce combined forms" in lesson
+    assert "near/far" in lesson
+
+
+def test_assistant_context_includes_lesson_12_modifier_scope_and_verification_limits():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-12-expanding-noun-phrases.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "mwana uyu" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "mwana wanga" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not combine modifiers" in CHICHEWA_CURRICULUM_CONTEXT
