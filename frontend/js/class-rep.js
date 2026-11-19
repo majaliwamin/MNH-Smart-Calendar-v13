@@ -376,11 +376,14 @@
       });
       if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
       state.user = result.user; state.history = []; state.conversationId = null;
-      if (canUseLanguageToggle()) try {
-        const languageResult = await requestJson("/api/class-rep/language");
-        if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
-      } catch (_) { state.responseLanguage = "EN"; }
-      else state.responseLanguage = "EN";
+      if (canUseLanguageToggle()) {
+        try {
+          const languageResult = await requestJson("/api/class-rep/language");
+          if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
+        } catch (_) { state.responseLanguage = "EN"; }
+      } else {
+        state.responseLanguage = "EN";
+      }
       renderLanguageChoice();
       transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
