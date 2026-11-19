@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.19-schedule-dialog-full-screen-v1";</script>
+<script>window.MNH_BUILD="2026.11.19-simplified-schedule-dialog-v1";</script>
 <script>
 (function () {
   "use strict";
@@ -92,7 +92,7 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.19-schedule-dialog-full-screen-v1">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.19-simplified-schedule-dialog-v1">
 <link rel="stylesheet" href="/css/class-rep.css?v=2026.11.18-crara-compact-desktop-input-v1">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
@@ -283,10 +283,6 @@
    <select id="session-status"><option value="scheduled">Scheduled / not yet held</option><option value="completed">Completed</option><option value="missed">Missed</option></select>
   </div>
   <div class="module-field">
-   <label for="module-colour">Entry colour</label>
-   <select id="module-colour"><option value="">No colour — use current theme</option><option value="#2F5D8C">Navy blue</option><option value="#3C7A5A">Green</option><option value="#8A6D2F">Gold</option><option value="#7B3F61">Plum</option><option value="#4B5D7A">Slate</option></select>
-  </div>
-  <div class="module-field">
    <label for="module-mode">Delivery mode</label>
    <select id="module-mode"><option value="unspecified">Not specified</option><option value="online">Online</option><option value="face_to_face">Face-to-face</option></select>
   </div>
@@ -374,15 +370,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.19-schedule-dialog-full-screen-v1" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.19-schedule-dialog-full-screen-v1" defer></script>
-<script src="/js/class-rep.js?v=2026.11.19-schedule-dialog-full-screen-v1" defer></script>
+<script src="/js/app.js?v=2026.11.19-simplified-schedule-dialog-v1" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.19-simplified-schedule-dialog-v1" defer></script>
+<script src="/js/class-rep.js?v=2026.11.19-simplified-schedule-dialog-v1" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.19-schedule-dialog-full-screen-v1";
+  const workerUrl = "/service-worker.js?v=2026.11.19-simplified-schedule-dialog-v1";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
