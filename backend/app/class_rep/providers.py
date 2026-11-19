@@ -51,7 +51,12 @@ def _provider_error_details(raw: bytes) -> tuple[tuple[str, ...], tuple[str, ...
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (ValueError, UnicodeDecodeError, TypeError):
-        return (), ()
+        # Cloudflare edge blocks are plain text, e.g. "error code: 1010".
+        try:
+            text = " ".join(raw.decode("utf-8", "replace").split())[:200]
+        except (TypeError, AttributeError):
+            return (), ()
+        return ((), (text.replace("Bearer ", "[redacted] "),)) if text else ((), ())
     if not isinstance(payload, dict):
         return (), ()
     candidates = []
@@ -98,6 +103,9 @@ def _post_json(endpoint: str, api_key: str, payload: dict, timeout: int,
         "Authorization": "Bearer " + api_key,
         "Content-Type": "application/json",
         "Accept": "application/json",
+        # Groq sits behind Cloudflare, which rejects urllib's default Python
+        # user-agent with edge error 1010. A stable agent avoids the block.
+        "User-Agent": "CRARA/1.0",
     }, method="POST")
     try:
         with urlopen(request, timeout=timeout) as response:

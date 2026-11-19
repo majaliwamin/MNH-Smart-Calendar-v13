@@ -59,6 +59,34 @@ def test_groq_payload_uses_reasoning_model_parameters():
     assert oss["reasoning_effort"] == "low"
 
 
+def test_post_json_sends_a_user_agent_so_groq_edge_allows_it(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"choices": [{"message": {"content": "ok"}}]}'
+
+    def fake_urlopen(request, timeout):
+        captured.update({name.lower(): value for name, value in request.header_items()})
+        return FakeResponse()
+
+    monkeypatch.setattr(providers, "urlopen", fake_urlopen)
+    providers._post_json("https://api.example.test/v1/chat/completions", "key", {}, 5, "groq")
+    assert captured.get("user-agent") == "CRARA/1.0"
+
+
+def test_plain_text_edge_errors_are_captured():
+    codes, messages = _provider_error_details(b"error code: 1010")
+    assert codes == ()
+    assert messages == ("error code: 1010",)
+
+
 def test_non_cloudflare_error_details_are_captured_and_redacted():
     raw = json.dumps({"error": {
         "code": "invalid_request_error",
