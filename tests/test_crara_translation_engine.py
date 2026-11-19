@@ -62,16 +62,20 @@ def test_non_translation_chat_does_not_trigger_document_retrieval():
 
 def test_reply_injects_translation_engine_and_retrieved_reference(monkeypatch):
     import app.class_rep.assistant as assistant
-    import app.class_rep.translation_engine as engine
+    from app.class_rep.translation_engine import TRANSLATION_ENGINE_INSTRUCTIONS
 
     captured = {}
 
     monkeypatch.setattr(assistant, "build_calendar_context", lambda message: ("{}", None))
     monkeypatch.setattr(assistant, "search_documents", lambda *args, **kwargs: [])
-    monkeypatch.setattr(engine, "search_documents", lambda query, limit, owner_id: [
-        {"title": "Medical Terms – Mawu a za Chipatala", "page": 10,
-         "text": "abdominal pain — ululu wa m’mimba", "score": 2}
-    ])
+    monkeypatch.setattr(
+        assistant,
+        "build_translation_reference_context",
+        lambda message, owner_id="shared": (
+            "Retrieved reference: Medical Terms – Mawu a za Chipatala, page 10\n"
+            "abdominal pain — ululu wa m’mimba"
+        ),
+    )
 
     def complete(messages):
         captured["system"] = messages[0]["content"]
