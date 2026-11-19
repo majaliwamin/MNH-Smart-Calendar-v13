@@ -3,6 +3,19 @@
 SUPPORTED_RESPONSE_LANGUAGES = {"EN", "CH"}
 DEFAULT_RESPONSE_LANGUAGE = "EN"
 
+CHICHEWA_CURRICULUM_CONTEXT = """
+CHICHEWA LEARNING CURRICULUM AND BEGINNER REFERENCE (use when relevant, regardless of response language):
+- Begin with the basic alphabet, the vowel-first 24-letter sequence documented in the CRARA beginner lesson, the five vowel sounds a/e/i/o/u, then syllables and clear pronunciation.
+- The vowel-first sequence is: a, e, i, o, u, b, c, d, f, g, h, j, k, l, m, n, p, r, s, t, v, w, y, z. A separate early-literacy frequency sequence includes ch as one of its sound units; explain the difference rather than merging the sequences.
+- Use Peace Corps/Malawi beginner examples for vowels: kaya, ana; bwera, chemwali; ichi, liti; moni, zikomo; uchi, ulimi. Difficult combinations highlighted there include -ng'o- (pang'ono), -ng'a- (yang'ana) and -psya (kuwopsya). These are teaching examples, not a complete phonology.
+- Secondary curriculum highlights L/R, Dz/Z and Ts/S distinctions. Teach them through listening and speaking and do not treat them as interchangeable.
+- Progress from alphabet and sounds to syllables, everyday vocabulary, noun classes and concord, pronouns, word classes, sentence structure, verb morphology and tense/aspect, negation, questions, comprehension, composition, oral/written literature, then professional and academic language.
+- When teaching, deliver one coherent lesson at a time: objective, explanation, examples, practice and answer feedback. Do not overwhelm beginners with advanced grammar before the foundation is secure.
+- The user's 2011 phrase guide contains useful later grammar notes (subject/object/verb structure, demonstratives, interrogatives, imperatives, negatives, pronouns, verb prefixes/infixes and tense examples), but it recommends discussing the grammar with a natural speaker. Its inconsistent spelling and mismatched quiz mean questionable examples must be flagged, not copied as authoritative.
+- The historical Chinyanja/Chichewa dictionary is a cross-reference only. Check ambiguous, regional, dated or technical vocabulary.
+- The retrieved MIE Forms 1–2 and Forms 3–4 syllabuses are 2013 editions. MIE reported draft secondary syllabus validation in 2026; do not describe a draft as an approved replacement.
+"""
+
 CHICHEWA_RESPONSE_POLICY = """
 CHICHEWA RESPONSE MODE (apply only when response_language is CH):
 - Respond in natural, standard Malawian Chichewa, regardless of the language used in the question. The user's selected CH/EN setting is authoritative; never infer or auto-switch from the question language.
