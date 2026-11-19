@@ -199,3 +199,20 @@ def test_assistant_context_includes_sentence_types_and_word_order_cautions():
     assert "lesson-10-sentence-types-word-order.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not invent new Chichewa question, imperative or negative forms" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not establish a complete Chichewa word-order rule" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_number_and_concord_lesson_reuses_only_documented_pairs_and_examples():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-11-number-noun-class-concord.md").read_text(encoding="utf-8")
+    for form in ("munthu", "anthu", "mwana", "ana", "chinthu", "zinthu", "buku", "mabuku"):
+        assert form in lesson
+    assert "munthu wabwino" in lesson and "anthu abwino" in lesson
+    assert "Chinthu chikugwa." in lesson and "Zinthu zikugwa." in lesson
+    assert "not a complete subject-marker chart" in lesson
+    assert "Do not treat" in lesson
+
+
+def test_assistant_context_includes_number_and_concord_scope_limits():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-11-number-noun-class-concord.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "Do not infer plural forms, noun classes or full concord paradigms by analogy" in CHICHEWA_CURRICULUM_CONTEXT
