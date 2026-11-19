@@ -52,7 +52,7 @@ def test_english_messages_are_not_misdetected_as_chichewa(message):
 
 def test_empty_input_defaults_to_english():
     assert detect_language("") == "EN"
-    assert language_profile("") == {"detected_language": "EN", "mode": "converse"}
+    assert language_profile("") == {"detected_language": "EN", "mode": "converse", "tone": "neutral"}
 
 
 # ---------------------------------------------------------------------------
