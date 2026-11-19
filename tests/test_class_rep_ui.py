@@ -173,3 +173,14 @@ def test_cara_header_has_explicit_persistent_chichewa_english_selector():
     assert '/api/class-rep/language' in js
     assert 'response_language: state.responseLanguage' in js
     assert '.cr-language-option.is-active' in css
+
+
+def test_crara_language_toggle_is_only_rendered_for_designated_signed_in_email():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert 'LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com"' in js
+    assert 'function canUseLanguageToggle(user = state.user)' in js
+    assert 'String(user && user.email || "").trim().toLowerCase() === LANGUAGE_TOGGLE_OWNER_EMAIL' in js
+    assert 'languageSwitch.hidden = !visible || !canUseLanguageToggle()' in js
+    assert 'if (state.user && canUseLanguageToggle())' in js
+    assert '.cr-language-switch[hidden]{display:none!important}' in css
