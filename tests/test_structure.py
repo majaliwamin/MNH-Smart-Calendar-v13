@@ -389,7 +389,22 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.19-schedule-dialog-full-screen-v1"
+    assert build == "2026.11.19-session-outcomes-close-control-v1"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
+
+
+def test_schedule_session_outcomes_and_dialog_close_button():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    app_css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+
+    schedule_dialog = html.split('id="module-dialog"', 1)[1].split('id="details-dialog"', 1)[0]
+    assert '<option value="cancelled">Cancelled</option>' in schedule_dialog
+    assert '<option value="rescheduled">Rescheduled</option>' in schedule_dialog
+    assert "session-outcome-hint" in schedule_dialog
+    assert 'id="module-colour"' not in html
+    assert 'getElementById("module-colour")' not in app_js
+    assert 'String(previous.weekStart||"").trim()||WK.isoMonday(weekOffset)' in app_js
+    assert ".dialog-card .dialog-close{z-index:6!important;" in app_css
