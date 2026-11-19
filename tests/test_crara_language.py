@@ -128,3 +128,20 @@ def test_crara_language_toggle_owner_check_uses_authenticated_email_only():
     assert not _is_language_toggle_owner({"id": "owner", "email": "someone@example.com"})
     assert not _is_language_toggle_owner({"email": ""})
     assert not _is_language_toggle_owner({})
+
+
+
+def test_chichewa_possession_lesson_teaches_only_source_supported_example():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-07-possession.md").read_text(encoding="utf-8")
+    assert "mwana wanga" in lesson
+    assert "my child" in lesson
+    assert "does not provide a complete table" in lesson
+    assert "do not" in lesson.lower()
+
+
+def test_assistant_context_includes_possession_lesson_and_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-07-possession.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "mwana wanga" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not invent a full possessive paradigm" in CHICHEWA_CURRICULUM_CONTEXT
