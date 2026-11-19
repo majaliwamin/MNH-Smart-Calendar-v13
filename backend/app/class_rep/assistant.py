@@ -5,7 +5,7 @@ from app.class_rep.context import build_calendar_context
 from app.class_rep.providers import complete
 from app.class_rep.documents import search_documents
 from app.class_rep.language import response_language_instruction, CHICHEWA_CURRICULUM_CONTEXT
-from app.class_rep.lexical_reference import lexical_reference_context, direct_malungo_definition_answer
+from app.class_rep.lexical_reference import (\n    lexical_reference_context,\n    direct_malungo_definition_answer,\n    unverified_chichewa_term_answer,\n)
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
 
@@ -50,6 +50,14 @@ When answering questions about recent changes, use recent_activity_history and i
 
 
 def reply(message: str, history: list[dict], management_analytics: dict | None = None, memory_context: str | None = None, owner_id: str = 'shared', response_language: str = 'EN') -> tuple[str, str, str, str | None]:
+    # Resolve high-confidence lexical questions before history, memory, documents, or
+    # model inference can override the curated answer. Keep this guard narrow.
+    deterministic_answer = direct_malungo_definition_answer(message, response_language)
+    if deterministic_answer is None:
+        deterministic_answer = unverified_chichewa_term_answer(message, response_language)
+    if deterministic_answer is not None:
+        return deterministic_answer, "curated-lexicon", "deterministic-lexicon-v2", None
+
     context, updated = build_calendar_context(message)
     documents = search_documents(message, limit=4, owner_id=owner_id)
     document_context = json.dumps(documents, ensure_ascii=False) if documents else "No relevant uploaded document passages were retrieved."
