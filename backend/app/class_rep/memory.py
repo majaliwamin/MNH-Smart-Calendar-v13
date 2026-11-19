@@ -411,11 +411,17 @@ def tick_reminders():
 COL_PREFERENCES = "cara_preferences"
 
 
+def response_language_state(user_id: str) -> tuple[str, bool]:
+    """Return (saved language, explicit choice) from a single database read."""
+    item = _read(COL_PREFERENCES, user_id)
+    value = str((item or {}).get("response_language", "")).strip().upper()
+    explicit = value in {"EN", "CH"}
+    return (value if explicit else "EN"), explicit
+
+
 def get_response_language(user_id: str) -> str:
     """Return the account's saved CRARA response language (English by default)."""
-    item = _read(COL_PREFERENCES, user_id) or {}
-    value = str(item.get("response_language", "EN")).strip().upper()
-    return value if value in {"EN", "CH"} else "EN"
+    return response_language_state(user_id)[0]
 
 
 def has_response_language_preference(user_id: str) -> bool:
@@ -425,8 +431,7 @@ def has_response_language_preference(user_id: str) -> bool:
     that Chichewa input is not forced into English for accounts that never
     selected a language.
     """
-    item = _read(COL_PREFERENCES, user_id)
-    return isinstance(item, dict) and str(item.get("response_language", "")).strip().upper() in {"EN", "CH"}
+    return response_language_state(user_id)[1]
 
 
 def set_response_language(user_id: str, language: str) -> str:

@@ -292,11 +292,12 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
     conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", payload.conversation_id or "")[:80] or uuid.uuid4().hex
     history = [item.model_dump() for item in payload.history]
+    persisted_preference, explicit_preference = memory.response_language_state(user["id"])
     selected_language = resolve_response_language(
         payload.response_language,
         payload.message.strip(),
-        persisted_preference=memory.get_response_language(user["id"]),
-        explicit_preference=memory.has_response_language_preference(user["id"]),
+        persisted_preference=persisted_preference,
+        explicit_preference=explicit_preference,
         history=history,
     )
     try:
