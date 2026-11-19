@@ -8,13 +8,14 @@ from io import BytesIO
 from fastapi import APIRouter, File, Header, HTTPException, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from app.class_rep.config import provider_config, provider_configs
-from app.class_rep.schemas import ChatRequest, ChatResponse
+from app.class_rep.schemas import ChatRequest, ChatResponse, TranslationRequest, TranslationResponse
 from app.class_rep.assistant import reply
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
 from app.class_rep.language import normalize_response_language
+from app.class_rep.translation import translate_text, detect_language
 from app.services.authentication import role_for_password
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,31 @@ def provider_diagnostics(request: Request):
         ",".join(result.get("inference_error_codes", [])) or "-",
     )
     return result
+
+
+@router.post("/translate", response_model=TranslationResponse)
+def translate(payload: TranslationRequest, request: Request):
+    """Authenticated bidirectional translation and interpretation endpoint."""
+    user = _user(request)
+    _rate("translate:" + user["id"] + ":" + (request.client.host if request.client else "unknown"))
+    source = payload.source_language.upper()
+    target = payload.target_language.upper()
+    if source == "AUTO":
+        source = detect_language(payload.text)
+    if target == "AUTO" and source in {"EN", "CH"}:
+        target = "CH" if source == "EN" else "EN"
+    try:
+        answer, provider, model = translate_text(
+            payload.text, source, target, payload.register, payload.domain, payload.mode
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return TranslationResponse(
+        translation=answer, source_language=source, target_language=target,
+        provider=provider, model=model,
+    )
 
 
 @router.get("/status")
