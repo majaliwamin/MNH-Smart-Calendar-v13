@@ -90,6 +90,10 @@ def validate_reply(
     elif str(response_language).upper() == "EN" and detect_language(text) == "CH" and len(text) > 60:
         reasons.append("the selected response language was EN but the reply is Chichewa")
 
+    if (str(response_language).upper() == "CH" and mode in ("converse", "followup")
+            and ("nthabwala" in folded or "nkhani ya" in folded)):
+        reasons.append("a Chichewa social reply invented a joke instead of using verified warm lines")
+
     if text.count("\\(") != text.count("\\)") or text.count("\\[") != text.count("\\]"):
         reasons.append("LaTeX math delimiters are unbalanced")
     if text.count("```") % 2:

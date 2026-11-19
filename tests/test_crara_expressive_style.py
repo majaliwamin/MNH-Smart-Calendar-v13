@@ -7,8 +7,10 @@ from app.class_rep.expressive_style import (
     VERIFIED_INFORMAL_CHICHEWA,
     VERIFIED_LIGHT_CHICHEWA,
     casual_flourish,
+    casual_joke_answer,
     casual_style_block,
 )
+from app.class_rep.output_validation import validate_reply
 from app.class_rep.language_intelligence import (
     detect_mode,
     detect_tone,
@@ -28,6 +30,10 @@ def test_curated_jokes_are_short_clean_and_not_medical_advice():
         assert len(joke) < 140
         assert "dose" not in joke.casefold()
         assert "diagnos" not in joke.casefold()
+        assert "bacteri" not in joke.casefold()
+        assert "baby" not in joke.casefold()
+        assert "stethoscope" not in joke.casefold()
+        assert "doctor" not in joke.casefold()
     assert all("😊" in line or "🙂" in line or "😄" in line or "👋" in line
                for line in VERIFIED_LIGHT_CHICHEWA)
 
@@ -54,7 +60,7 @@ def test_short_casual_topic_mention_does_not_become_an_academic_turn():
 
 def test_style_block_is_gated_to_non_distressed_social_turns():
     assert "CURATED SOCIAL LINES" in casual_style_block("converse", "playful", "EN")
-    assert "CURATED SOCIAL LINES" in casual_style_block("followup", "warm", "CH")
+    assert "Do NOT tell jokes in Chichewa" in casual_style_block("followup", "warm", "CH")
     assert casual_style_block("academic", "warm", "EN") == ""
     assert casual_style_block("translate_into_chichewa", "playful", "EN") == ""
     assert casual_style_block("explain", "playful", "EN") == ""
@@ -63,11 +69,27 @@ def test_style_block_is_gated_to_non_distressed_social_turns():
     assert CASUAL_MODES == {"converse", "followup"}
 
 
-def test_chichewa_style_block_forbids_invented_slang():
+def test_chichewa_style_block_forbids_invented_slang_and_jokes():
     block = casual_style_block("converse", "warm", "CH")
-    assert "do not invent slang" in block
+    assert "Do NOT tell jokes in Chichewa" in block
+    assert "do not invent slang" in block.casefold()
     assert "Moni" in block
-    assert "CURATED SOCIAL LINES" in block
+    assert "CURATED SOCIAL LINES" not in block
+
+
+def test_explicit_joke_requests_use_only_curated_answers():
+    assert casual_joke_answer("haha tell me a clean joke", "EN") in CURATED_JOKES_EN
+    ch_answer = casual_joke_answer("haha tell me a clean joke", "CH")
+    assert "nkhani ya" not in ch_answer
+    assert "😊" in ch_answer
+    assert casual_joke_answer("How many grams in a mole?", "EN") is None
+
+
+def test_validation_rejects_invented_chichewa_jokes():
+    draft = "Eya! Pali nkhani ya dokotala ndi wina yomwe inandiseka kwambiri."
+    result = validate_reply(draft, "haha", "CH", "converse", False)
+    assert not result.ok
+    assert "invented a joke" in " ".join(result.reasons)
 
 
 def test_casual_flourish_adds_one_mood_or_topic_emoji():
@@ -93,6 +115,27 @@ def test_live_greeting_gets_emoji_but_medical_definition_does_not(monkeypatch):
     assert provider == "curated-lexicon"
     assert "malaria" in definition.casefold()
     assert not any(emoji in definition for emoji in ("🙂", "🤣", "🦠"))
+
+
+def test_joke_request_bypasses_model_and_never_invents_chichewa_humour(monkeypatch):
+    def unexpected_call(*args, **kwargs):
+        raise AssertionError("Curated joke answers must bypass retrieval and model inference.")
+
+    monkeypatch.setattr(assistant, "build_calendar_context", unexpected_call)
+    monkeypatch.setattr(assistant, "search_documents", unexpected_call)
+    monkeypatch.setattr(assistant, "complete", unexpected_call)
+
+    answer, provider, model, _ = assistant.reply(
+        "haha tell me a clean joke", [], response_language="EN")
+    assert provider == "curated-casual"
+    assert model == "deterministic-joke-v1"
+    assert answer in CURATED_JOKES_EN
+
+    answer, provider, _, _ = assistant.reply(
+        "haha tell me a clean joke", [], response_language="CH")
+    assert provider == "curated-casual"
+    assert "nkhani ya" not in answer
+    assert "😊" in answer
 
 
 def test_model_prompt_includes_style_only_for_casual_turns(monkeypatch):
