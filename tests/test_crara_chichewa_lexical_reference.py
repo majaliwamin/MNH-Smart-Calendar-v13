@@ -20,3 +20,25 @@ def test_unmatched_words_do_not_receive_invented_dictionary_entries():
 def test_matching_is_case_insensitive_and_word_bounded():
     assert "means malaria" in lexical_reference_context("MALUNGO")
     assert lexical_reference_context("malungoka") == ""
+
+
+from app.class_rep.lexical_reference import direct_malungo_definition_answer
+
+
+def test_direct_malungo_question_gets_deterministic_chichewa_answer():
+    answer = direct_malungo_definition_answer("Malungo ndi chani?", "CH")
+    assert answer is not None
+    assert "matenda a malungo (malaria)" in answer
+    assert "achibale" in answer
+
+
+def test_direct_malungo_question_gets_deterministic_english_answer():
+    answer = direct_malungo_definition_answer("What does malungo mean?", "EN")
+    assert answer is not None
+    assert "malaria" in answer
+    assert "does not mean relatives" in answer
+
+
+def test_malungo_reference_does_not_override_unrelated_questions():
+    assert direct_malungo_definition_answer("Tell me about malaria prevention") is None
+    assert direct_malungo_definition_answer("Muli bwanji?") is None
