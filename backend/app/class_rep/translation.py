@@ -128,6 +128,7 @@ def translation_instruction(source_language: str = "AUTO", target_language: str 
     target = LANGUAGES.get(target_language, "the language explicitly requested by the user")
     register = register if register in REGISTERS else "neutral"
     mode = mode if mode in {"translate", "interpret"} else "translate"
+    domain = re.sub(r"[^a-zA-Z0-9 ,/&-]", "", str(domain or "general"))[:80] or "general"
     task = "Translate faithfully" if mode == "translate" else "Interpret the meaning, intent, tone and context, then provide a faithful translation"
     return f"""
 DEDICATED BIDIRECTIONAL ENGLISH–CHICHEWA ENGINE
