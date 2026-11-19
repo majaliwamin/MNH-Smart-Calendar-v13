@@ -159,7 +159,7 @@ def translate(payload: TranslationRequest, request: Request):
         target = "CH" if source == "EN" else "EN"
     try:
         answer, provider, model = translate_text(
-            payload.text, source, target, payload.register, payload.domain, payload.mode
+            payload.text, source, target, payload.language_register, payload.domain, payload.mode
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
