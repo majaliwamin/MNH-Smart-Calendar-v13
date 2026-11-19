@@ -102,21 +102,21 @@ def is_translation_request(message: str) -> bool:
 
 def requested_target_language(message: str, default: str = "AUTO") -> str:
     text = (message or "").casefold()
-    if re.search(r"\\b(?:into|to|in)\\s+english\\b", text):
+    if re.search(r"\b(?:into|to|in)\s+english\b", text):
         return "EN"
-    if re.search(r"\\b(?:into|to|in)\\s+chichewa\\b", text):
+    if re.search(r"\b(?:into|to|in)\s+chichewa\b", text):
         return "CH"
     return default.upper()
 
 
 def requested_mode(message: str) -> str:
-    return "interpret" if re.search(r"\\b(interpret|interpretation|intended meaning|contextual meaning)\\b", (message or "").casefold()) else "translate"
+    return "interpret" if re.search(r"\b(interpret|interpretation|intended meaning|contextual meaning)\b", (message or "").casefold()) else "translate"
 
 
 def requested_register(message: str) -> str:
     text = (message or "").casefold()
     for register in ("clinical", "academic", "professional", "casual"):
-        if re.search(r"\\b" + register + r"\\b", text):
+        if re.search(r"\b" + register + r"\b", text):
             return register
     return "neutral"
 
