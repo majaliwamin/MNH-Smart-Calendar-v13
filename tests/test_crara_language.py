@@ -34,3 +34,18 @@ def test_curriculum_context_starts_with_the_alphabet_and_keeps_source_caveats():
     assert "a, e, i, o, u" in CHICHEWA_CURRICULUM_CONTEXT
     assert "L/R, Dz/Z and Ts/S" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not describe a draft as an approved replacement" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_greetings_lesson_preserves_user_source_forms():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-02-greetings-introductions.md").read_text(encoding="utf-8")
+    assert "Muli bwanji?" in lesson
+    assert "Ndi-li bwino" in lesson
+    assert "Dzina lako/lanu ndani?" in lesson
+    assert "printed forms rather than quietly correcting them" in lesson
+
+
+def test_assistant_context_includes_source_caution_for_greetings():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "Muli bwanji?" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not silently normalise them" in CHICHEWA_CURRICULUM_CONTEXT
