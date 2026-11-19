@@ -92,3 +92,30 @@ def test_reply_injects_translation_engine_and_retrieved_reference(monkeypatch):
     assert TRANSLATION_ENGINE_INSTRUCTIONS in captured["system"]
     assert "Medical Terms – Mawu a za Chipatala" in captured["system"]
     assert "abdominal pain — ululu wa m’mimba" in captured["system"]
+
+
+def test_morning_greeting_is_natural_and_deterministic():
+    from app.class_rep.lexical_reference import direct_chichewa_conversation_answer
+
+    answer = direct_chichewa_conversation_answer("mwadzuka bwanj", "CH")
+    assert answer == "Tadzuka bwino, zikomo. Inu mwadzuka bwanji?"
+    assert "Ndin bwanji" not in answer
+
+
+def test_yes_after_assistant_offer_continues_conversation_without_menu():
+    from app.class_rep.lexical_reference import direct_chichewa_conversation_answer
+
+    history = [
+        {"role": "assistant", "content": "Kodi nditha kukuthandizani ndi kanthu lero?"},
+    ]
+    answer = direct_chichewa_conversation_answer("eya", "CH", history)
+    assert answer == "Chabwino. Ndi nkhani iti imene mukufuna tikambirane?"
+    assert "PhD" not in answer
+    assert "Mukhoza kundifunsira" not in answer
+
+
+def test_short_greeting_respects_selected_english_language():
+    from app.class_rep.lexical_reference import direct_chichewa_conversation_answer
+
+    answer = direct_chichewa_conversation_answer("mwadzuka bwanji?", "EN")
+    assert answer.startswith("That is a morning greeting")
