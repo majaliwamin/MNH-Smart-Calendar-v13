@@ -57,3 +57,27 @@ def direct_malungo_definition_answer(message: str, response_language: str = "EN"
         "*Plasmodium* parasites, usually transmitted through the bite of an "
         "infected female *Anopheles* mosquito. It does not mean relatives or kin."
     )
+
+
+def unverified_chichewa_term_answer(message: str, response_language: str = "EN") -> str | None:
+    """Decline to guess at a short, unsupported Chichewa word-meaning follow-up."""
+    text = str(message or "").casefold().strip()
+    if len(text) > 100:
+        return None
+    match = re.fullmatch(r"([a-zA-ZÀ-ž’'-]+)\s+(?:nanga|ndi\s+chani|ndi\s+chiyani)\??", text)
+    if not match:
+        return None
+    term = match.group(1).casefold()
+    if term in _ENTRIES:
+        return None
+    if str(response_language or "").upper() == "CH":
+        return (
+            f"Pakadali pano ndilibe umboni wokwanira wotsimikizira tanthauzo la mawu akuti **{term}**. "
+            "Sindikufuna kungoyerekezera kapena kukupatsani tanthauzo lolakwika. "
+            "Chonde mundipatse chiganizo kapena mmene mawuwa agwiritsidwira ntchito."
+        )
+    return (
+        f"I don't yet have a sufficiently verified Chichewa reference for **{term}**. "
+        "I don't want to guess or give you an invented definition. "
+        "Please share the sentence or context in which you heard it so I can help assess it."
+    )
