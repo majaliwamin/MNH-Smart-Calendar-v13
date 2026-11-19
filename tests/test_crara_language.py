@@ -49,3 +49,19 @@ def test_assistant_context_includes_source_caution_for_greetings():
     from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
     assert "Muli bwanji?" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not silently normalise them" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_verbs_lesson_preserves_source_examples_and_caveats():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-03-common-verbs-simple-sentences.md").read_text(encoding="utf-8")
+    assert "ku-lankhula" in lesson
+    assert "Ti-ma-pita" in lesson
+    assert "Ti-na-pita" in lesson
+    assert "Ti-dza-pita" in lesson
+    assert "do not infer a complete conjugation rule" in lesson
+
+
+def test_assistant_context_includes_source_cautions_for_verb_patterns():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-03-common-verbs-simple-sentences.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not generalise its limited examples" in CHICHEWA_CURRICULUM_CONTEXT
