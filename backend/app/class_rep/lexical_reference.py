@@ -36,10 +36,10 @@ def lexical_reference_context(message: str) -> str:
 def direct_malungo_definition_answer(message: str, response_language: str = "EN") -> str | None:
     """Answer a direct definition question deterministically, bypassing model drift."""
     text = str(message or "").casefold().strip()
-    if len(text) > 180 or not re.search(r"(?<![\\w])malungo(?![\\w])", text):
+    if len(text) > 180 or not re.search(r"(?<![\w])malungo(?![\w])", text):
         return None
     asks_meaning = re.search(
-        r"\\b(chani|chiyani|tanthauzo|meaning|means|what\\s+(?:is|does))\\b",
+        r"\b(chani|chiyani|tanthauzo|meaning|means|what\s+(?:is|does))\b",
         text,
     )
     if not asks_meaning:
