@@ -164,3 +164,19 @@ def test_assistant_context_includes_adjective_lesson_and_agreement_cautions():
     assert "lesson-08-adjectives-modifiers.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "munthu wabwino/anthu abwino" in CHICHEWA_CURRICULUM_CONTEXT
     assert "Distinguish adjective agreement" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_adverbs_lesson_uses_source_listed_time_place_and_manner_forms():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-09-adverbs-time-place-manner.md").read_text(encoding="utf-8")
+    for form in ("lero", "mawa", "tsopano", "madzulo", "posachedwa", "pano", "apo", "pafupi", "patali", "mofulumira", "pang’ono pang’ono"):
+        assert form in lesson
+    assert "Adjectives/adverbs/Other" in lesson
+    assert "do not" in lesson.lower()
+
+
+def test_assistant_context_includes_adverbs_lesson_and_source_limitations():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-09-adverbs-time-place-manner.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "mofulumira" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not infer a full paradigm" in CHICHEWA_CURRICULUM_CONTEXT
