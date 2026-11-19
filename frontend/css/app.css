@@ -2378,3 +2378,32 @@ body.cara-open #view-weekly > :not(#class-rep-assistant){
   background:linear-gradient(180deg,var(--panel),var(--nav))!important;
   isolation:isolate!important;
 }
+
+
+/* v15.09: the announcement ticker is the topmost sticky band.
+   Give the shell an explicitly opaque paint layer so scrolling table cells
+   cannot show through its intentionally transparent inner marquee. */
+html body > .activity-marquee-shell[aria-label="Future academic events"]{
+  position:-webkit-sticky!important;
+  position:sticky!important;
+  top:0!important;
+  z-index:2147483000!important;
+  isolation:isolate!important;
+  background-color:var(--head,#0b1017)!important;
+  background-image:none!important;
+  opacity:1!important;
+}
+html body > .activity-marquee-shell[aria-label="Future academic events"]::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background-color:var(--head,#0b1017);
+  opacity:1;
+}
+html body > .activity-marquee-shell[aria-label="Future academic events"] .activity-marquee{
+  position:relative;
+  z-index:0;
+  background:transparent!important;
+}
