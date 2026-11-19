@@ -53,7 +53,7 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'cr-account", "Memory"' not in js
     assert 'brand.append(brandMark, identity)' in js
-    assert 'header.append(brand, homeBack)' in js
+    assert 'header.append(brand, languageSwitch, homeBack)' in js
     assert 'cr-toggle' not in js
     assert 'Sign out' not in js
     assert 'Close CRARA' not in js
