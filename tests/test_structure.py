@@ -389,7 +389,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.19-session-outcomes-close-control-v1"
+    assert build == "2026.11.19-crara-ticker-outcome-spacing-v1"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -408,3 +408,8 @@ def test_schedule_session_outcomes_and_dialog_close_button():
     assert 'getElementById("module-colour")' not in app_js
     assert 'String(previous.weekStart||"").trim()||WK.isoMonday(weekOffset)' in app_js
     assert ".dialog-card .dialog-close{z-index:6!important;" in app_css
+    # Empty module-details was reserving a blank row immediately above Session outcome.
+    assert ".module-details:empty{display:none!important;}" in app_css
+    # The global animated upcoming-events strip must not appear in either CRARA state.
+    assert "body.cara-open .activity-marquee-shell" in app_css
+    assert "body.cara-auth-open .activity-marquee-shell" in app_css
