@@ -407,4 +407,4 @@ def test_schedule_session_outcomes_and_dialog_close_button():
     assert 'id="module-colour"' not in html
     assert 'getElementById("module-colour")' not in app_js
     assert 'String(previous.weekStart||"").trim()||WK.isoMonday(weekOffset)' in app_js
-    assert ".dialog-card .dialog-close{z-index:6!important}" in app_css
+    assert ".dialog-card .dialog-close{z-index:6!important;" in app_css
