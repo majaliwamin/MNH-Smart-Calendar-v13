@@ -4,7 +4,7 @@
   if (!root || root.dataset.ready === "1") return;
   root.dataset.ready = "1";
 
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null };
+  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null, responseLanguage: "EN" };
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -34,7 +34,39 @@
     const homeNav = document.querySelector('#view-tabs .weekly-date-tab, .menu-nav[data-view="weekly"], .hd-tab[data-view="weekly"]');
     if (homeNav) homeNav.click();
   });
-  header.append(brand, homeBack);
+  const languageSwitch = el("div", "cr-language-switch");
+  languageSwitch.setAttribute("role", "group");
+  languageSwitch.setAttribute("aria-label", "CRARA response language");
+  const languageEN = el("button", "cr-language-option", "EN"); languageEN.type = "button"; languageEN.dataset.language = "EN";
+  const languageCH = el("button", "cr-language-option", "CH"); languageCH.type = "button"; languageCH.dataset.language = "CH";
+  languageSwitch.append(languageEN, languageCH);
+  function renderLanguageChoice() {
+    [languageEN, languageCH].forEach(button => {
+      const active = button.dataset.language === state.responseLanguage;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  }
+  async function saveResponseLanguage(value) {
+    if (!state.user || !["EN", "CH"].includes(value) || value === state.responseLanguage) return;
+    const previous = state.responseLanguage;
+    state.responseLanguage = value; renderLanguageChoice();
+    try {
+      const { response, result } = await requestJson("/api/class-rep/language", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response_language: value })
+      });
+      if (!response.ok) throw new Error(result.detail || "Could not save language preference.");
+      state.responseLanguage = result.response_language === "CH" ? "CH" : "EN"; renderLanguageChoice();
+    } catch (error) {
+      state.responseLanguage = previous; renderLanguageChoice();
+      status(error.message || "Could not save language preference.", false);
+    }
+  }
+  languageEN.addEventListener("click", () => saveResponseLanguage("EN"));
+  languageCH.addEventListener("click", () => saveResponseLanguage("CH"));
+  renderLanguageChoice();
+  header.append(brand, languageSwitch, homeBack);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -293,7 +325,13 @@
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
-      
+      if (state.user) {
+        try {
+          const languageResult = await requestJson("/api/class-rep/language");
+          if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
+        } catch (_) { /* retain English default if preference lookup is temporarily unavailable */ }
+      }
+      renderLanguageChoice();
       showHeader(Boolean(root.classList.contains("is-open") && state.user));
       setAuthPresentation(root.classList.contains("is-open") && !state.user);
       authPanel.hidden = !root.classList.contains("is-open") || Boolean(state.user);
@@ -329,7 +367,12 @@
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
-      state.user = result.user; state.history = []; state.conversationId = null; 
+      state.user = result.user; state.history = []; state.conversationId = null;
+      try {
+        const languageResult = await requestJson("/api/class-rep/language");
+        if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
+      } catch (_) { state.responseLanguage = "EN"; }
+      renderLanguageChoice();
       transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
@@ -395,7 +438,7 @@
         try {
           response = await fetch("/api/class-rep/chat", {
             method: "POST", headers, credentials: "same-origin", signal: controller.signal,
-            cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId })
+            cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId, response_language: state.responseLanguage })
           });
           result = await response.json().catch(() => ({}));
         } catch (requestError) {
