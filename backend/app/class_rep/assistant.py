@@ -6,7 +6,7 @@ from app.class_rep.providers import complete
 from app.class_rep.documents import search_documents
 from app.class_rep.language import response_language_instruction, CONVERSATION_CONTINUITY_INSTRUCTIONS
 from app.class_rep.language_intelligence import detect_language, detect_mode, mode_instruction
-from app.class_rep.linguistic_knowledge import linguistic_context
+from app.class_rep.linguistic_knowledge import linguistic_context, unknown_term_answer
 from app.class_rep.output_validation import honest_fallback, validate_reply
 from app.class_rep.translation_engine import (
     TRANSLATION_ENGINE_INSTRUCTIONS,
@@ -88,6 +88,13 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     context, updated = build_calendar_context(message)
     documents = search_documents(message, limit=4, owner_id=owner_id)
     document_context = json.dumps(documents, ensure_ascii=False) if documents else "No relevant uploaded document passages were retrieved."
+    # An expression-meaning question about an unknown headword must never reach
+    # the model: without a curated entry or a retrieved passage containing the
+    # term, any definition would be an invented vocabulary claim.
+    if mode not in ("translate_into_chichewa", "translate_into_english"):
+        guarded = unknown_term_answer(message, response_language, documents)
+        if guarded is not None:
+            return guarded, "curated-lexicon", "deterministic-unknown-term-v1", updated
     analytics_context = json.dumps(management_analytics, ensure_ascii=False) if management_analytics is not None else "Not requested or not authorised for this conversation."
     evidence_available = bool(documents) or "STRUCTURED CHICHEWA LEXICAL KNOWLEDGE" in lexical_evidence or bool(translation_references)
     system_content = (

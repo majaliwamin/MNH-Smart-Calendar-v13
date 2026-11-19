@@ -16,6 +16,10 @@ Chichewa reply. The backend now runs four explicit stages before inference:
    retrieved evidence and only mode-relevant prompt sections. The 16 KB
    always-on curriculum block was removed from ordinary turns. History now
    keeps the last 10 turns.
+3b. **Refuse invented meanings**: an expression-meaning question about a
+   headword with no curated entry and no retrieved passage containing it is
+   answered with a request for the full sentence, never sent to the model.
+
 4. **Validate** `output_validation.py` applies independent rule checks
    (language match, banned templates, unsupported verification claims,
    unbalanced LaTeX, repetition, truncation). A failure triggers one bounded

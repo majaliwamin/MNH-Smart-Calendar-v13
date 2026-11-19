@@ -257,6 +257,44 @@ def test_ambiguous_short_expression_requests_context_not_invention():
     assert "ask for context when needed" in context
 
 
+def test_unknown_expression_is_never_defined_by_the_model(monkeypatch):
+    import app.class_rep.assistant as assistant
+
+    monkeypatch.setattr(assistant, "build_calendar_context", lambda message: ("{}", None))
+    monkeypatch.setattr(assistant, "search_documents", lambda *args, **kwargs: [])
+
+    def must_not_call_model(messages):
+        raise AssertionError("the model must not define an unverified expression")
+
+    monkeypatch.setattr(assistant, "complete", must_not_call_model)
+    answer, provider, model, _ = assistant.reply("matewe nd chan", [], response_language="CH")
+    assert "sindili ndi tanthauzo lotsimikizirika" in answer
+    assert "chiganizo chonse" in answer
+    assert provider == "curated-lexicon"
+    assert model == "deterministic-unknown-term-v1"
+
+
+def test_queried_term_extraction_is_narrow():
+    from app.class_rep.linguistic_knowledge import known_term, queried_term
+
+    assert queried_term("matewe nd chan") == "matewe"
+    assert queried_term("What does matewe mean?") == "matewe"
+    assert queried_term("Muli bwanji?") is None
+    assert queried_term("Chifukwa chiyani?") is None
+    assert known_term("matewe") is False
+    assert known_term("malungo") is True
+    assert known_term("windo") is True
+
+
+def test_retrieved_passage_can_supply_an_unlisted_term(monkeypatch):
+    from app.class_rep.linguistic_knowledge import unknown_term_answer
+
+    assert unknown_term_answer("matewe nd chan", "CH") is not None
+    assert unknown_term_answer(
+        "matewe nd chan", "CH", [{"text": "The lesson glossary defines matewe here."}]
+    ) is None
+
+
 def test_lexicon_integrity():
     stats = lexicon_stats()
     assert stats["entries"] >= 50

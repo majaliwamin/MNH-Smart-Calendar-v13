@@ -139,6 +139,78 @@ def linguistic_context(message: str, limit: int = 5) -> str:
     )
 
 
+# Questions that explicitly ask for the meaning of one expression. The captured
+# term is checked against the lexicon before the model is allowed to answer, so
+# an unknown headword cannot acquire an invented definition.
+_TERM_QUERY_PATTERNS = (
+    re.compile(r"\bmawu\s+akuti\s+(?P<term>[^\s?,.;!:]{2,})", re.I),
+    re.compile(r"\btanthauzo\s+la\s+(?P<term>[^\s?,.;!:]{2,})", re.I),
+    re.compile(r"\b(?P<term>[^\s?,.;!:]{2,})\s+(?:amatanthauza|zikutanthauza)\s+(?:chiyani|chani|chan|nanga)", re.I),
+    re.compile(r"\b(?P<term>[^\s?,.;!:]{2,})\s+(?:ndi|nd)\s+(?:chani|chiyani|chan)\b", re.I),
+    re.compile(r"\bwhat\s+does\s+(?P<term>[^\s?,.;!:]{2,})\s+mean\b", re.I),
+    re.compile(r"\bmeaning\s+of\s+(?P<term>[^\s?,.;!:]{2,})", re.I),
+)
+
+
+def queried_term(message: str) -> str | None:
+    """Return the single expression whose meaning the user is asking about."""
+    text = str(message or "")
+    for pattern in _TERM_QUERY_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        term = match.group("term").strip("'’\"“”()[]{},.;:?!-")
+        if len(term) >= 2 and not term.isdigit():
+            return term
+    return None
+
+
+def known_term(term: str) -> bool:
+    """Return True when the term or one of its variants has a curated entry."""
+    needle = str(term or "").casefold().strip()
+    if not needle:
+        return False
+    for entry in load_lexicon()["entries"]:
+        for key in [entry.get("term", "")] + list(entry.get("variants", [])):
+            key = str(key).casefold().strip()
+            if not key:
+                continue
+            if needle == key or re.search(r"(?<!\w)" + re.escape(key) + r"(?!\w)", needle):
+                return True
+    return False
+
+
+def unknown_term_answer(
+    message: str,
+    response_language: str = "EN",
+    retrieved_texts: tuple | list = (),
+) -> str | None:
+    """Refuse to define an unknown expression without inventing vocabulary.
+
+    Returns ``None`` when the message is not a single-term meaning question, or
+    when the term is curated or actually appears in a retrieved passage. Only
+    then may the model answer; otherwise the user gets an honest request for
+    the surrounding sentence.
+    """
+    term = queried_term(message)
+    if not term or known_term(term):
+        return None
+    for passage in retrieved_texts:
+        if term.casefold() in str(passage).casefold():
+            return None
+    if str(response_language).upper() == "CH":
+        return (
+            "Pepani, sindili ndi tanthauzo lotsimikizirika la mawu akuti '"
+            + term + "' m'mabuku omwe alipo. Mungandipatse chiganizo chonse "
+            "kapena mmene mawuwa agwiritsidwira ntchito?"
+        )
+    return (
+        "I don't have a verified reference entry for '" + term + "'. Please "
+        "share the full sentence or the context in which it is used so I can "
+        "help accurately."
+    )
+
+
 def verified_term_names(query: str, limit: int = 6) -> set[str]:
     """Headwords with high/curated confidence, used to guard canned refusals."""
     result = set()
