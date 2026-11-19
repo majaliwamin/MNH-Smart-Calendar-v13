@@ -73,3 +73,14 @@ def test_auto_direction_is_bidirectional(monkeypatch):
     translation.translate_text("How are you?", "AUTO", "AUTO")
     assert "Source language: Chichewa. Target language: English." in seen[0]
     assert "Source language: English. Target language: Chichewa." in seen[1]
+
+
+
+def test_explicit_target_language_overrides_default_selector():
+    assert translation.requested_target_language("Translate this into English", "CH") == "EN"
+    assert translation.requested_target_language("Translate this into Chichewa", "EN") == "CH"
+
+
+def test_chat_translation_infers_interpretation_and_register():
+    assert translation.requested_mode("Interpret the intended meaning in context") == "interpret"
+    assert translation.requested_register("Translate this for a clinical consultation") == "clinical"
