@@ -58,7 +58,7 @@ def test_chichewa_verbs_lesson_preserves_source_examples_and_caveats():
     assert "Ti-ma-pita" in lesson
     assert "Ti-na-pita" in lesson
     assert "Ti-dza-pita" in lesson
-    assert "do not infer a complete conjugation rule" in lesson
+    assert "Do not infer a complete conjugation rule" in lesson
 
 
 def test_assistant_context_includes_source_cautions_for_verb_patterns():
