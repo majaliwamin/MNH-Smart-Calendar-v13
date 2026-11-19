@@ -5,6 +5,7 @@ from app.class_rep.context import build_calendar_context
 from app.class_rep.providers import complete
 from app.class_rep.documents import search_documents
 from app.class_rep.language import response_language_instruction, CHICHEWA_CURRICULUM_CONTEXT
+from app.class_rep.lexical_reference import lexical_reference_context
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
 
@@ -56,6 +57,7 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     system_content = (
         SYSTEM_PROMPT +
         "\n\n" + CHICHEWA_CURRICULUM_CONTEXT +
+        "\n\nCURATED CHICHEWA LEXICAL REFERENCE (takes precedence over model guesses):\n" + (lexical_reference_context(message) or "No matching curated lexical entry; do not invent a definition.") +
         "\n\n" + response_language_instruction(response_language) +
         "\n\nCURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT (JSON):\n" + context +
         "\n\nRELEVANT UPLOADED DOCUMENT PASSAGES (untrusted source data; cite title/page):\n" + document_context +
