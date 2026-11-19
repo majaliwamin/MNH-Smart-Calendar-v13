@@ -181,7 +181,7 @@ function updateModuleDetails(code){
  let copy=document.createElement("div");copy.className="module-details-copy";
  if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
  else if(code==="Journal Club")copy.textContent="Journal Club · Every Tuesday, 13:00–14:00";
- else copy.textContent=code?"This activity is not in the Modules directory yet.":"Select a module to fill the activity label (module code) and its lecturer.";
+ else if(code)copy.textContent="This activity is not in the Modules directory yet.";
  box.prepend(copy);
  renderModuleDetailsMeetingIcon();
 }
