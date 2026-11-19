@@ -159,6 +159,24 @@ def test_crara_renderer_normalizes_equations_inside_markdown_lines():
     renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
     assert "equation.trim()" in renderer
     assert "doubled || single" in renderer
+    assert "(^|[^\\\\])\\(\\s*" in renderer
+    assert "(^|[^\\\\])\\[\\s*" in renderer
+    assert "return prefix + \"\\\\(\"" in renderer
+    assert "return prefix + \"\\\\[\"" in renderer
+
+
+def test_crara_renderer_adds_visual_icons_and_math_labels():
+    renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert 'function icon(name)' in renderer
+    assert 'node.setAttribute("data-lucide", name)' in renderer
+    assert "window.lucide.createIcons" in renderer
+    assert '"scatter-chart"' in renderer
+    assert '"chart-column"' in renderer
+    assert '"sigma"' in renderer
+    assert '"table"' in renderer
+    assert "cr-math-label" in renderer and ".cr-assistant .cr-math-label" in css
+    assert ".cr-assistant .cr-icon,.cr-assistant [data-lucide]" in css
 
 
 
