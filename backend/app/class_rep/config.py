@@ -15,9 +15,9 @@ import os
 _GROQ_COMPAT_PATH = "open" + "ai"
 GROQ_DEFAULT_BASE_URL = "https://api.groq.com/" + _GROQ_COMPAT_PATH + "/v1"
 # The former default (llama-3.3-70b-versatile) is Enterprise-only as of Aug 2026.
-# gpt-oss-120b is a current Groq production model with 131k context and generous
-# developer-tier limits, so the fallback works without a model override.
-GROQ_DEFAULT_MODEL = _GROQ_COMPAT_PATH + "/gpt-oss-120b"
+# Groq recommends qwen3.8-27b as its direct replacement; reasoning can be
+# switched off for this model, which keeps fallback replies fast.
+GROQ_DEFAULT_MODEL = "qwen/qwen3.8-27b"
 
 
 def _value(name: str, default: str = "") -> str:

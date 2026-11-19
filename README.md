@@ -83,7 +83,7 @@ Set these in Render → Environment. Do not commit credentials:
 - `MNH_CLASSREP_CLOUDFLARE_API_KEY`
 - `MNH_CLASSREP_CLOUDFLARE_MODEL`
 - `MNH_CLASSREP_HF_API_KEY` and `MNH_CLASSREP_HF_MODEL` (optional fallback)
-- `MNH_CLASSREP_GROQ_API_KEY` (optional fallback; only the key is required — the endpoint defaults to Groq's standard chat-completions route and the model defaults to Groq's current 120B production model with 131k context). `MNH_CLASSREP_GROQ_MODEL` and `MNH_CLASSREP_GROQ_BASE_URL` are optional overrides. Add a model override only if Groq changes its supported-model list.
+- `MNH_CLASSREP_GROQ_API_KEY` (optional fallback; only the key is required — the endpoint defaults to Groq's standard chat-completions route and the model defaults to Groq's current fast 27B production model with reasoning disabled). `MNH_CLASSREP_GROQ_MODEL` and `MNH_CLASSREP_GROQ_BASE_URL` are optional overrides. Add a model override only if Groq changes its supported-model list.
 
 Providers are tried in order: Cloudflare → Hugging Face → Groq. When Cloudflare is
 rate-limited or out of credits, CRARA automatically uses the next configured

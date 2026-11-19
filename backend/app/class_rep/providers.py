@@ -46,6 +46,51 @@ def _cloudflare_error_codes(raw: bytes) -> tuple[str, ...]:
     return _cloudflare_error_details(raw)[0]
 
 
+def _provider_error_details(raw: bytes) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Extract bounded, redacted error metadata from a non-Cloudflare provider."""
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, TypeError):
+        return (), ()
+    if not isinstance(payload, dict):
+        return (), ()
+    candidates = []
+    error = payload.get("error")
+    if isinstance(error, dict):
+        candidates.append(error)
+    elif isinstance(error, str):
+        candidates.append({"message": error})
+    candidates.append(payload)
+    errors = payload.get("errors")
+    if isinstance(errors, list):
+        candidates.extend(item for item in errors[:5] if isinstance(item, dict))
+    codes, messages = [], []
+    for item in candidates:
+        code = item.get("code") or item.get("type")
+        if code is not None:
+            codes.append(str(code)[:40])
+        message = item.get("message")
+        if isinstance(message, str):
+            safe = " ".join(message.split()).replace("Bearer ", "[redacted] ")
+            messages.append(safe[:180])
+    return tuple(dict.fromkeys(codes))[:5], tuple(dict.fromkeys(messages))[:3]
+
+
+def _groq_payload(cfg: dict, messages: list[dict]) -> dict:
+    """Use Groq's reasoning-model parameter names and disable visible reasoning."""
+    payload = {
+        "model": cfg["model"], "messages": messages, "temperature": 0.25,
+        "max_completion_tokens": cfg["max_tokens"],
+    }
+    model = str(cfg["model"])
+    if model.startswith("qwen/"):
+        payload["reasoning_effort"] = "none"
+    elif "/gpt-oss" in model:
+        payload["include_reasoning"] = False
+        payload["reasoning_effort"] = "low"
+    return payload
+
+
 def _post_json(endpoint: str, api_key: str, payload: dict, timeout: int,
                provider: str) -> dict:
     body = json.dumps(payload).encode("utf-8")
@@ -62,8 +107,13 @@ def _post_json(endpoint: str, api_key: str, payload: dict, timeout: int,
                                     category="invalid_response")
             return parsed
     except HTTPError as exc:
-        codes, messages = _cloudflare_error_details(exc.read()) if provider == "cloudflare" else ((), ())
-        detail = (" Cloudflare: " + "; ".join(messages)) if messages else ""
+        raw = exc.read()
+        if provider == "cloudflare":
+            codes, messages = _cloudflare_error_details(raw)
+        else:
+            codes, messages = _provider_error_details(raw)
+        label = "Cloudflare" if provider == "cloudflare" else provider
+        detail = (" " + label + ": " + "; ".join(messages)) if messages else ""
         raise ProviderError(
             "Provider returned HTTP %s.%s" % (exc.code, detail),
             category="http_error", status_code=exc.code, error_codes=codes,
@@ -118,10 +168,12 @@ def _complete_one(cfg: dict, messages: list[dict]) -> str:
         answer = _extract_chat_content(result)
     else:
         endpoint = cfg["base_url"].rstrip("/") + "/chat/completions"
-        result = _post_json(endpoint, cfg["api_key"], {
+        payload = _groq_payload(cfg, messages) if provider == "groq" else {
             "model": cfg["model"], "messages": messages,
             "temperature": 0.25, "max_tokens": cfg["max_tokens"],
-        }, cfg["timeout"], provider)
+        }
+        result = _post_json(endpoint, cfg["api_key"], payload,
+                            cfg["timeout"], provider)
         answer = _extract_chat_content(result)
     if not isinstance(answer, str) or not answer.strip():
         raise ProviderError("Provider returned an empty or unsupported response.",
@@ -175,6 +227,21 @@ def cloudflare_diagnostic() -> dict:
                 "inference_success": False, "stage": "workers_ai_inference",
                 "inference_http_status": exc.status_code, "inference_error_codes": list(exc.error_codes),
                 "inference_error_messages": list(exc.error_messages), "message": str(exc)[:300]}
+
+
+def provider_diagnostic(cfg: dict) -> dict:
+    """One-shot smoke test for a fallback provider; returns only safe metadata."""
+    common = {"provider": cfg["provider"], "model": cfg["model"], "configured": True}
+    try:
+        _complete_one(cfg, [{"role": "user",
+                             "content": "Reply with exactly: CRARA diagnostic successful."}])
+        return dict(common, inference_success=True, stage="complete")
+    except ProviderError as exc:
+        return dict(common, inference_success=False, stage="inference",
+                    http_status=exc.status_code,
+                    error_codes=list(exc.error_codes),
+                    error_messages=list(exc.error_messages)[:3],
+                    message=str(exc)[:300])
 
 
 def complete(messages: list[dict]) -> tuple[str, str, str]:
