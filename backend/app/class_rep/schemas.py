@@ -26,7 +26,7 @@ class TranslationRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     source_language: str = Field(default="AUTO", pattern="^(EN|CH|AUTO|en|ch|auto)$")
     target_language: str = Field(default="AUTO", pattern="^(EN|CH|AUTO|en|ch|auto)$")
-    language_register: str = Field(default="neutral", pattern="^(casual|neutral|professional|clinical|academic)$")
+    language_register: str = Field(default="neutral", alias="register", pattern="^(casual|neutral|professional|clinical|academic)$")
     domain: str = Field(default="general", max_length=80)
     mode: str = Field(default="translate", pattern="^(translate|interpret)$")
 
