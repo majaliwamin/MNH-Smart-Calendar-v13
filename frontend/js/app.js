@@ -202,7 +202,6 @@ function openModuleDialog(dayIndex,startTime,entry){
  document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
  document.getElementById("session-link").value=existing?.data?.meetingUrl||"";
  document.getElementById("session-link-field").hidden=document.getElementById("module-mode").value!=="online";
- document.getElementById("module-colour").value=existing?.data?.colour||"";
  document.getElementById("session-status").value=existing?.data?.status||"scheduled";
  document.getElementById("delete-module").style.display=id?"inline-block":"none";
  updateModuleDetails(document.getElementById("module-select").value);
@@ -433,17 +432,17 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  const activityLabel=code||label;
  if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
  const oldId=activeCell.id;
- const weekStart=WK.isoMonday(weekOffset);
+ const previous=state.cells[oldId]||{};
+ // Keep the existing week/date when only the session outcome is updated.
+ const weekStart=String(previous.weekStart||"").trim()||WK.isoMonday(weekOffset);
  let id=oldId||`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
  if(oldId&&/^\d+_\d+$/.test(oldId)&&dayIndex!==activeCell.dayIndex)id=`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
  const conflict=getSessionEntries().find(x=>x.id!==oldId&&x.id!==id&&x.dayIndex===dayIndex&&start<x.endMinutes&&end>x.startMinutes);
  if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
- const previous=state.cells[oldId||id]||{},module=modules[code]||{};
- const chosenColour=document.getElementById("module-colour").value;
+ const module=modules[code]||{};
  const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
  const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
  const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
- if(chosenColour)record.colour=chosenColour;else delete record.colour;
  state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
 });
 document.getElementById("delete-module").addEventListener("click",async()=>{
