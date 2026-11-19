@@ -65,3 +65,19 @@ def test_assistant_context_includes_source_cautions_for_verb_patterns():
     from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
     assert "lesson-03-common-verbs-simple-sentences.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not generalise its limited examples" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_noun_classes_lesson_teaches_pairs_and_concord_cautiously():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-04-noun-classes-agreement.md").read_text(encoding="utf-8")
+    assert "munthu" in lesson and "anthu" in lesson
+    assert "mwana" in lesson and "ana" in lesson
+    assert "buku labwino" in lesson and "mabuku abwino" in lesson
+    assert "not a complete subject-marker chart" in lesson
+    assert "do not" in lesson.lower()
+
+
+def test_assistant_context_includes_noun_class_lesson_and_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-04-noun-classes-agreement.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "Do not guess noun classes" in CHICHEWA_CURRICULUM_CONTEXT
