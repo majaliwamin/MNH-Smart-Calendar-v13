@@ -418,6 +418,17 @@ def get_response_language(user_id: str) -> str:
     return value if value in {"EN", "CH"} else "EN"
 
 
+def has_response_language_preference(user_id: str) -> bool:
+    """Return True only when the user explicitly saved EN or CH before.
+
+    This distinguishes an intentional English choice from the schema default so
+    that Chichewa input is not forced into English for accounts that never
+    selected a language.
+    """
+    item = _read(COL_PREFERENCES, user_id)
+    return isinstance(item, dict) and str(item.get("response_language", "")).strip().upper() in {"EN", "CH"}
+
+
 def set_response_language(user_id: str, language: str) -> str:
     """Persist the explicit response-language choice to the authenticated account."""
     value = str(language or "").strip().upper()

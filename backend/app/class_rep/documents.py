@@ -304,8 +304,12 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
         return []
     # Match meaningful query terms in SQLite before loading document payloads.
     # This avoids reading/parsing the entire document collection on every chat turn.
-    stop_words = {"what", "which", "when", "where", "who", "why", "how", "the", "and", "for", "with", "from", "that", "this", "are", "was", "were", "is", "does", "did", "can", "could", "would", "should", "you", "your", "about", "please", "tell", "explain", "define", "mean", "means", "into", "have", "has", "had", "not", "all", "any", "some", "use", "used", "using", "give", "show", "me"}
-    terms = sorted({word.lower() for word in re.findall(r"[\w-]{3,}", query)} - stop_words)
+    stop_words = {"what", "which", "when", "where", "who", "why", "how", "the", "and", "for", "with", "from", "that", "this", "are", "was", "were", "is", "does", "did", "can", "could", "would", "should", "you", "your", "about", "please", "tell", "explain", "define", "mean", "means", "into", "have", "has", "had", "not", "all", "any", "some", "use", "used", "using", "give", "show", "me",
+                  # Chichewa function words: keeping these as search terms made
+                  # ordinary questions retrieve arbitrary recency-ranked chunks.
+                  "ndi", "nanga", "chani", "chiyani", "chifukwa", "bwanji", "bwanj", "kodi", "bwino", "zikomo", "muli", "koma", "ndipo", "kapena", "mawu", "akuti", "tanthauzo", "zikutanthauza", "amatanthauza", "ine", "iwe", "iye", "ife", "inu", "iwo"}
+    term_pattern = re.compile(r"[^\W\d_]{3,}(?:['’-][^\W\d_]{2,})*", re.UNICODE)
+    terms = sorted({word.casefold().replace("’", "'") for word in term_pattern.findall(query)} - stop_words)
     if not terms:
         return []
     clauses = " OR ".join("data LIKE ?" for _ in terms)
@@ -325,7 +329,7 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
     ranked = []
     for item in records:
         haystack = (item.get("title", "") + " " + item.get("text", "")).lower()
-        document_terms = set(re.findall(r"[\w-]{3,}", haystack))
+        document_terms = {word.casefold().replace("’", "'") for word in term_pattern.findall(haystack)}
         score = len(set(terms) & document_terms)
         if score:
             ranked.append((score, item))
