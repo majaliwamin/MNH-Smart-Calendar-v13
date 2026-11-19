@@ -31,3 +31,29 @@ def lexical_reference_context(message: str) -> str:
         if re.search(r"(?<![\w])" + re.escape(key) + r"(?![\w])", text):
             notes.append(note)
     return "\n".join(notes)
+
+
+def direct_malungo_definition_answer(message: str, response_language: str = "EN") -> str | None:
+    """Answer a direct definition question deterministically, bypassing model drift."""
+    text = str(message or "").casefold().strip()
+    if len(text) > 180 or not re.search(r"(?<![\w])malungo(?![\w])", text):
+        return None
+    asks_meaning = re.search(
+        r"\b(chani|chiyani|tanthauzo|meaning|means|what\s+(?:is|does))\b",
+        text,
+    )
+    if not asks_meaning:
+        return None
+    if str(response_language or "").upper() == "CH":
+        return (
+            "**Malungo** amatanthauza **matenda a malungo (malaria)**. "
+            "Si mawu otanthauza achibale kapena anthu a m’banja. "
+            "Malungo amayamba chifukwa cha tizilombo ta *Plasmodium*, "
+            "tomwe nthawi zambiri timafalikira munthu akalumidwa ndi udzudzu "
+            "wonyamula tizilomboti."
+        )
+    return (
+        "**Malungo** is the Chichewa term for **malaria**, an illness caused by "
+        "*Plasmodium* parasites, usually transmitted through the bite of an "
+        "infected female *Anopheles* mosquito. It does not mean relatives or kin."
+    )
