@@ -4,7 +4,11 @@
   if (!root || root.dataset.ready === "1") return;
   root.dataset.ready = "1";
 
+  const LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com";
   const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null, responseLanguage: "EN" };
+  function canUseLanguageToggle(user = state.user) {
+    return String(user && user.email || "").trim().toLowerCase() === LANGUAGE_TOGGLE_OWNER_EMAIL;
+  }
   const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -40,6 +44,7 @@
   const languageEN = el("button", "cr-language-option", "EN"); languageEN.type = "button"; languageEN.dataset.language = "EN";
   const languageCH = el("button", "cr-language-option", "CH"); languageCH.type = "button"; languageCH.dataset.language = "CH";
   languageSwitch.append(languageEN, languageCH);
+  languageSwitch.hidden = true;
   function renderLanguageChoice() {
     [languageEN, languageCH].forEach(button => {
       const active = button.dataset.language === state.responseLanguage;
@@ -48,7 +53,7 @@
     });
   }
   async function saveResponseLanguage(value) {
-    if (!state.user || !["EN", "CH"].includes(value) || value === state.responseLanguage) return;
+    if (!canUseLanguageToggle() || !["EN", "CH"].includes(value) || value === state.responseLanguage) return;
     const previous = state.responseLanguage;
     state.responseLanguage = value; renderLanguageChoice();
     try {
@@ -120,6 +125,7 @@
   updateLauncherVisibility();
   // Do not mount the assistant hero at all until authentication succeeds.
   function showHeader(visible) {
+    languageSwitch.hidden = !visible || !canUseLanguageToggle();
     if (visible) {
       if (!header.isConnected) root.insertBefore(header, body);
       header.hidden = false;
@@ -325,11 +331,13 @@
       authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
       authSubmit.disabled = false; authSwitch.disabled = false;
       state.user = result.authenticated ? result.user : null;
-      if (state.user) {
+      if (state.user && canUseLanguageToggle()) {
         try {
           const languageResult = await requestJson("/api/class-rep/language");
           if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
         } catch (_) { /* retain English default if preference lookup is temporarily unavailable */ }
+      } else {
+        state.responseLanguage = "EN";
       }
       renderLanguageChoice();
       showHeader(Boolean(root.classList.contains("is-open") && state.user));
@@ -368,10 +376,11 @@
       });
       if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
       state.user = result.user; state.history = []; state.conversationId = null;
-      try {
+      if (canUseLanguageToggle()) try {
         const languageResult = await requestJson("/api/class-rep/language");
         if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
       } catch (_) { state.responseLanguage = "EN"; }
+      else state.responseLanguage = "EN";
       renderLanguageChoice();
       transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false;
       authPassword.value = ""; status("Sign in successful", true);
