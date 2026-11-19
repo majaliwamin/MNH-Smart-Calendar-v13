@@ -42,8 +42,11 @@ single restrained emoji; the palette includes facial expressions (including 🤣
 😂, 😭 and 😐), microbiology (🦠 🧬 🔬 🧫), maternal/neonatal (🤰 👶 🍼 🩺) and
 stationery/learning (📝 📚) symbols. Chichewa informal forms are limited to the
 verified standard greetings already present in the curated lessons; CRARA does
-not invent regional slang or Chichewa jokes, and jokes never target health,
-bodies, pregnancy, babies, identity or distress.
+not invent regional slang or Chichewa jokes. Jokes are English-only, come from a
+fixed non-clinical library, and never target health, bodies, pregnancy, babies,
+identity or distress. An explicit Chichewa joke request gets an honest curated
+reply, and rule-based validation rejects any model-generated Chichewa joke in a
+social turn.
 
 ## Resources actually indexed
 

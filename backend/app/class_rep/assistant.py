@@ -9,7 +9,7 @@ from app.class_rep.language_intelligence import (
     detect_language, detect_mode, detect_tone, mode_instruction, tone_style_instruction,
 )
 from app.class_rep.linguistic_knowledge import linguistic_context, unknown_term_answer
-from app.class_rep.expressive_style import casual_flourish, is_casual_turn
+from app.class_rep.expressive_style import casual_flourish, casual_joke_answer, is_casual_turn
 from app.class_rep.output_validation import honest_fallback, validate_reply
 from app.class_rep.translation_engine import (
     TRANSLATION_ENGINE_INSTRUCTIONS,
@@ -83,6 +83,10 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
         if is_casual_turn(mode, tone):
             deterministic_answer = casual_flourish(deterministic_answer, message, response_language)
         return deterministic_answer, "curated-lexicon", "deterministic-lexicon-v2", None
+    if is_casual_turn(mode, tone):
+        joke_answer = casual_joke_answer(message, response_language)
+        if joke_answer is not None:
+            return joke_answer, "curated-casual", "deterministic-joke-v1", None
 
     lexical_evidence = linguistic_context(message)
     translation_request = (
