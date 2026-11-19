@@ -2407,3 +2407,45 @@ html body > .activity-marquee-shell[aria-label="Future academic events"] .activi
   z-index:0;
   background:transparent!important;
 }
+
+
+/* 2026.11.19-schedule-dialog-full-screen-v1: the Schedule session dialog is a true viewport-level overlay. */
+html body .colour-dialog{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483500!important;
+  isolation:isolate!important;
+  display:none;
+  box-sizing:border-box;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  padding:calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px))!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+html body .colour-dialog.open{display:flex!important}
+html body .colour-dialog .dialog-card{
+  position:relative!important;
+  z-index:1!important;
+  flex:0 0 auto;
+  width:min(520px,100%);
+  max-height:calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))!important;
+  max-height:calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))!important;
+  margin:0 auto!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+html body .colour-dialog .dialog-card h2{
+  position:sticky!important;
+  top:0!important;
+  z-index:4!important;
+  background:var(--panel)!important;
+}
+@media(max-height:620px){
+  html body .colour-dialog{padding-top:calc(6px + env(safe-area-inset-top, 0px))!important;padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px))!important}
+  html body .colour-dialog .dialog-card{max-height:calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))!important;padding:16px!important}
+}
