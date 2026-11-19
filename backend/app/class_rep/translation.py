@@ -67,8 +67,20 @@ def glossary_matches(text: str, limit: int = 12) -> list[dict]:
     normalized = re.sub(r"[^a-z0-9]+", " ", (text or "").casefold()).strip()
     matches = []
     for entry in MEDICAL_GLOSSARY:
-        term = entry["en"].casefold()
-        if re.search(r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", normalized):
+        terms = [entry["en"]]
+        terms.extend(part.strip() for part in re.split(r"[;/]", entry["ch"]) if len(part.strip()) >= 8)
+        if "wodwala" in entry["ch"].casefold():
+            terms.append("wodwala")
+        matched = any(
+            re.search(
+                r"(?<![a-z0-9])" +
+                re.escape(re.sub(r"[^a-z0-9]+", " ", term.casefold()).strip()) +
+                r"(?![a-z0-9])",
+                normalized,
+            )
+            for term in terms
+        )
+        if matched:
             matches.append(entry)
     return sorted(matches, key=lambda item: len(item["en"]), reverse=True)[:limit]
 
