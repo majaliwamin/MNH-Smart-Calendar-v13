@@ -180,3 +180,22 @@ def test_assistant_context_includes_adverbs_lesson_and_source_limitations():
     assert "lesson-09-adverbs-time-place-manner.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "mofulumira" in CHICHEWA_CURRICULUM_CONTEXT
     assert "do not infer a full paradigm" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+def test_chichewa_sentence_types_lesson_uses_existing_source_examples_without_inventing_paradigms():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-10-sentence-types-word-order.md").read_text(encoding="utf-8")
+    assert "Ndi ku pita" in lesson
+    assert "Ndi ku dya" in lesson
+    assert "Ndi-ku-funa ku-gula pwhetekele" in lesson
+    assert "ndani?" in lesson and "kuti?" in lesson
+    assert "does not add new Chichewa question sentences" in lesson
+    assert "Do not assume that Chichewa always follows English word order" in lesson
+    assert "does not reproduce unverified paradigms" in lesson
+
+
+def test_assistant_context_includes_sentence_types_and_word_order_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-10-sentence-types-word-order.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not invent new Chichewa question, imperative or negative forms" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not establish a complete Chichewa word-order rule" in CHICHEWA_CURRICULUM_CONTEXT
