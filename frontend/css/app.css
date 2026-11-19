@@ -2409,7 +2409,7 @@ html body > .activity-marquee-shell[aria-label="Future academic events"] .activi
 }
 
 
-/* 2026.11.19-schedule-dialog-full-screen-v1: the Schedule session dialog is a true viewport-level overlay. */
+/* 2026.11.19-session-outcomes-close-control-v1: the Schedule session dialog is a true viewport-level overlay. */
 html body .colour-dialog{
   position:fixed!important;
   inset:0!important;
@@ -2449,3 +2449,7 @@ html body .colour-dialog .dialog-card h2{
   html body .colour-dialog{padding-top:calc(6px + env(safe-area-inset-top, 0px))!important;padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px))!important}
   html body .colour-dialog .dialog-card{max-height:calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))!important;padding:16px!important}
 }
+
+/* Keep the dialog close affordance above the sticky title bar. */
+html body .colour-dialog .dialog-card .dialog-close{z-index:6!important;}
+.session-outcome-hint{display:block;margin-top:6px;color:var(--muted);font-size:calc(12px * var(--text-scale));line-height:1.4;}
