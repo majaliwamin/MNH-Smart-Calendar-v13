@@ -14,6 +14,7 @@ from app.class_rep.providers import ProviderError, cloudflare_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
+from app.class_rep.language import normalize_response_language
 from app.services.authentication import role_for_password
 
 logger = logging.getLogger(__name__)
@@ -244,6 +245,22 @@ def _explicit_task(user_id: str, message: str, conversation_id: str = ""):
     return memory.upsert_task(user_id, task_data)
 
 
+@router.get("/language")
+def get_language(request: Request):
+    user = _user(request)
+    return {"response_language": memory.get_response_language(user["id"])}
+
+
+@router.put("/language")
+def update_language(request: Request, payload: dict):
+    user = _user(request)
+    try:
+        language = memory.set_response_language(user["id"], payload.get("response_language", ""))
+    except memory.MemoryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"response_language": language}
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str | None = Header(default=None)):
     user = _user(request)
@@ -282,7 +299,8 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         stage_started = time.monotonic()
         answer, provider, model, updated = reply(payload.message.strip(),
             [item.model_dump() for item in payload.history],
-            management_analytics=analytics_context, memory_context=retrieved, owner_id=user['id'])
+            management_analytics=analytics_context, memory_context=retrieved, owner_id=user['id'],
+            response_language=normalize_response_language(payload.response_language))
         provider_pipeline_ms = round((time.monotonic() - stage_started) * 1000)
         stage_started = time.monotonic()
         memory.save_turn(user["id"], conversation_id, payload.message.strip(), answer)
