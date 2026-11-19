@@ -17,6 +17,13 @@ def test_mlw_glossary_matches_and_cites_printed_page():
     assert "kuchoka kwa nsengwa" in context
 
 
+def test_mlw_glossary_matches_chichewa_source_phrases():
+    matches = translation.glossary_matches("Wodwalayo akumva ululu wa m'mimba.")
+    terms = {item["en"] for item in matches}
+    assert "patient" in terms
+    assert "abdominal pain" in terms
+
+
 def test_glossary_does_not_force_unmatched_terms():
     assert translation.glossary_context("matewe") == (
         "No exact MLW glossary entry matched. Do not invent a dictionary citation or force a technical equivalent."
