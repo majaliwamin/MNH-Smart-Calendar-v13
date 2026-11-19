@@ -406,3 +406,24 @@ def tick_reminders():
                 item["due_marked_at"] = _now()
                 db.execute("UPDATE docs SET data=?,updated_at=? WHERE col=? AND id=?",
                            (json.dumps(item, ensure_ascii=False), _now(), COL_REMINDERS, row["id"]))
+
+
+COL_PREFERENCES = "cara_preferences"
+
+
+def get_response_language(user_id: str) -> str:
+    """Return the account's saved CRARA response language (English by default)."""
+    item = _read(COL_PREFERENCES, user_id) or {}
+    value = str(item.get("response_language", "EN")).strip().upper()
+    return value if value in {"EN", "CH"} else "EN"
+
+
+def set_response_language(user_id: str, language: str) -> str:
+    """Persist the explicit response-language choice to the authenticated account."""
+    value = str(language or "").strip().upper()
+    if value not in {"EN", "CH"}:
+        raise MemoryError("Choose EN for English or CH for Chichewa.")
+    item = _read(COL_PREFERENCES, user_id) or {}
+    item.update({"response_language": value, "updated_at": _now()})
+    _write(COL_PREFERENCES, user_id, item)
+    return value

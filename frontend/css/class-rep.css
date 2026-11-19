@@ -237,3 +237,11 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
     resize:vertical;
   }
 }
+
+
+/* CRARA response language selector — affects assistant replies only. */
+.cr-language-switch{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;padding:3px;border:1px solid rgba(212,175,55,.55);border-radius:999px;background:#242424;}
+.cr-language-option{min-width:35px;height:30px;padding:0 9px;border:0;border-radius:999px;background:transparent;color:#ddd;font-size:11px;font-weight:800;letter-spacing:.35px;cursor:pointer;}
+.cr-language-option.is-active{background:#c9a43b;color:#171717;}
+.cr-language-option:focus-visible{outline:2px solid #f5d36d;outline-offset:2px;}
+@media(max-width:760px){.cr-head{gap:7px;padding-left:10px;padding-right:10px}.cr-language-option{min-width:31px;height:28px;padding:0 7px}.cr-home-back{flex:0 0 auto}}
