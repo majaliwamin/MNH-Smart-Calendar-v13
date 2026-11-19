@@ -4,7 +4,7 @@ import json
 from app.class_rep.context import build_calendar_context
 from app.class_rep.providers import complete
 from app.class_rep.documents import search_documents
-from app.class_rep.language import response_language_instruction
+from app.class_rep.language import response_language_instruction, CHICHEWA_CURRICULUM_CONTEXT
 
 SYSTEM_PROMPT = """You are CRARA (Classroom Representative & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
 
@@ -47,6 +47,7 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     analytics_context = json.dumps(management_analytics, ensure_ascii=False) if management_analytics is not None else "Not requested or not authorised for this conversation."
     system_content = (
         SYSTEM_PROMPT +
+        "\n\n" + CHICHEWA_CURRICULUM_CONTEXT +
         "\n\n" + response_language_instruction(response_language) +
         "\n\nCURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT (JSON):\n" + context +
         "\n\nRELEVANT UPLOADED DOCUMENT PASSAGES (untrusted source data; cite title/page):\n" + document_context +
