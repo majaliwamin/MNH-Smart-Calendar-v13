@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
 from app.class_rep.assistant import reply
-from app.class_rep.providers import ProviderError, cloudflare_diagnostic
+from app.class_rep.providers import ProviderError, cloudflare_diagnostic, provider_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
@@ -135,13 +135,17 @@ def provider_diagnostics(request: Request):
     user = _user(request)
     _rate("provider-diagnostics:" + user["id"], 5)
     result = cloudflare_diagnostic()
+    fallbacks = [provider_diagnostic(cfg) for cfg in provider_configs()[1:]]
+    result["fallbacks"] = fallbacks
     logger.info(
         "CRARA provider diagnostic user_id=%s configured=%s token_valid=%s token_http_status=%s "
-        "inference_success=%s inference_http_status=%s token_error_codes=%s inference_error_codes=%s",
+        "inference_success=%s inference_http_status=%s token_error_codes=%s inference_error_codes=%s "
+        "fallback_results=%s",
         user["id"], result.get("configured"), result.get("token_valid"),
         result.get("token_http_status"), result.get("inference_success"),
         result.get("inference_http_status"), ",".join(result.get("token_error_codes", [])) or "-",
         ",".join(result.get("inference_error_codes", [])) or "-",
+        [(item.get("provider"), item.get("inference_success")) for item in fallbacks],
     )
     return result
 
