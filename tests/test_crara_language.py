@@ -81,3 +81,22 @@ def test_assistant_context_includes_noun_class_lesson_and_cautions():
     from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
     assert "lesson-04-noun-classes-agreement.md" in CHICHEWA_CURRICULUM_CONTEXT
     assert "Do not guess noun classes" in CHICHEWA_CURRICULUM_CONTEXT
+
+
+
+def test_chichewa_pronouns_and_demonstratives_lesson_keeps_forms_distinct():
+    from pathlib import Path
+    lesson = (Path(__file__).resolve().parents[1] / "docs" / "crara-chichewa-lessons" / "lesson-05-pronouns-demonstratives.md").read_text(encoding="utf-8")
+    assert "ine" in lesson and "iwe" in lesson and "iye" in lesson
+    assert "ife" in lesson and "inu" in lesson and "iwo" in lesson
+    assert "independent pronoun" in lesson
+    assert "subject markers" in lesson
+    assert "Ichi ndi chani?" in lesson
+    assert "not a complete demonstrative or concord chart" in lesson
+
+
+def test_assistant_context_includes_pronoun_and_demonstrative_cautions():
+    from app.class_rep.language import CHICHEWA_CURRICULUM_CONTEXT
+    assert "lesson-05-pronouns-demonstratives.md" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "Distinguish independent pronouns" in CHICHEWA_CURRICULUM_CONTEXT
+    assert "do not invent a complete near/far" in CHICHEWA_CURRICULUM_CONTEXT
