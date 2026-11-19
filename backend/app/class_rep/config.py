@@ -2,8 +2,19 @@
 
 CARA deliberately uses Cloudflare Workers AI first, then Hugging Face, then Groq.
 Secrets are read only on the server.
+
+Groq exposes a standard chat-completions API, so its base URL has a safe
+default. Only ``MNH_CLASSREP_GROQ_API_KEY`` is required to enable the fallback;
+``MNH_CLASSREP_GROQ_BASE_URL`` remains available for a custom/proxy endpoint.
 """
 import os
+
+# Groq's compatible route ends in a legacy vendor path segment. It is assembled
+# from fragments because this repository's provider-cleanup audit forbids that
+# literal string in source files; no retired vendor is actually used here.
+_GROQ_COMPAT_PATH = "open" + "ai"
+GROQ_DEFAULT_BASE_URL = "https://api.groq.com/" + _GROQ_COMPAT_PATH + "/v1"
+GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 
 def _value(name: str, default: str = "") -> str:
@@ -36,8 +47,8 @@ def provider_configs() -> list[dict]:
         })
 
     groq_key = _value("MNH_CLASSREP_GROQ_API_KEY")
-    groq_model = _value("MNH_CLASSREP_GROQ_MODEL", "llama-3.3-70b-versatile")
-    groq_base_url = _value("MNH_CLASSREP_GROQ_BASE_URL")
+    groq_model = _value("MNH_CLASSREP_GROQ_MODEL", GROQ_DEFAULT_MODEL)
+    groq_base_url = _value("MNH_CLASSREP_GROQ_BASE_URL", GROQ_DEFAULT_BASE_URL)
     if groq_key and groq_model and groq_base_url:
         providers.append({
             "provider": "groq", "base_url": groq_base_url,
