@@ -14,6 +14,9 @@ from app.class_rep.translation import (
     is_translation_request,
     translation_instruction,
     glossary_context,
+    requested_target_language,
+    requested_mode,
+    requested_register,
 )
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
@@ -84,10 +87,10 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     if is_translation_request(message):
         system_content += chr(10) + chr(10) + translation_instruction(
             source_language="AUTO",
-            target_language=response_language,
-            register="neutral",
-            domain="general",
-            mode="translate",
+            target_language=requested_target_language(message, response_language),
+            register=requested_register(message),
+            domain="clinical medicine" if glossary_context(message) != "No exact MLW glossary entry matched. Do not invent a dictionary citation or force a technical equivalent." else "general",
+            mode=requested_mode(message),
             glossary=glossary_context(message),
         )
     messages = [{"role": "system", "content": system_content}]
