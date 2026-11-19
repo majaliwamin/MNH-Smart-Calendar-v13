@@ -64,7 +64,7 @@ def unverified_chichewa_term_answer(message: str, response_language: str = "EN")
     text = str(message or "").casefold().strip()
     if len(text) > 100:
         return None
-    match = re.fullmatch(r"([a-zA-ZÀ-ž’'-]+)\\s+(?:nanga|ndi\\s+chani|ndi\\s+chiyani)\\??", text)
+    match = re.fullmatch(r"([a-zA-ZÀ-ž’'-]+)\s+(?:nanga|ndi\s+chani|ndi\s+chiyani)\??", text)
     if not match:
         return None
     term = match.group(1).casefold()
