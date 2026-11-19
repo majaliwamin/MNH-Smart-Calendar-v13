@@ -14,7 +14,8 @@ from app.class_rep.providers import ProviderError, cloudflare_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
 from app.class_rep import memory
-from app.class_rep.language import normalize_response_language
+from app.class_rep.language_intelligence import resolve_response_language
+from app.class_rep.linguistic_knowledge import lexicon_stats
 from app.services.authentication import role_for_password
 
 logger = logging.getLogger(__name__)
@@ -156,7 +157,13 @@ def status():
             "provider_priority": ["cloudflare", "huggingface", "groq"],
             "knowledge_sources": ["timetable", "modules", "facilitators", "examinations", "recurring_activities",
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
-                                  "account_memories", "account_tasks"],
+                                  "account_memories", "account_tasks", "curated_chichewa_lexicon"],
+            "language_intelligence": {
+                "version": lexicon_stats()["version"],
+                "lexicon_entries": lexicon_stats()["entries"],
+                "capabilities": ["language_detection", "intent_mode_detection", "source_grounded_retrieval",
+                                 "independent_output_validation"],
+            },
             "document_uploads": "enabled",
             "document_search": "keyword_then_semantic_fallback" if cloudflare else "keyword_only",
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
@@ -284,23 +291,45 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         from app.api.routes import analytics as get_analytics
         analytics_context = {"authorised_role": role, "summary": get_analytics()}
     conversation_id = re.sub(r"[^a-zA-Z0-9_-]", "", payload.conversation_id or "")[:80] or uuid.uuid4().hex
+    history = [item.model_dump() for item in payload.history]
+    selected_language = resolve_response_language(
+        payload.response_language,
+        payload.message.strip(),
+        persisted_preference=memory.get_response_language(user["id"]),
+        explicit_preference=memory.has_response_language_preference(user["id"]),
+        history=history,
+    )
     try:
         project_created = _explicit_project(user["id"], payload.message.strip(), conversation_id)
         if project_created:
-            confirmation = "I have saved the project '" + project_created["title"] + "' to your CRARA project records."
+            confirmation = (
+                "Ndasunga pulojekiti ya '" + project_created["title"] + "' m’zolemba za CRARA."
+                if selected_language == "CH" else
+                "I have saved the project '" + project_created["title"] + "' to your CRARA project records."
+            )
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
             return ChatResponse(reply=confirmation, provider="CRARA project memory",
                                 model="persistent project record", conversation_id=conversation_id)
         task_created = _explicit_task(user["id"], payload.message.strip(), conversation_id)
         if task_created:
-            confirmation = "I have saved the task “" + task_created["title"] + "” to your CRARA task list as not started."
+            confirmation = (
+                "Ndasunga ntchito yoti '" + task_created["title"] + "' m’ndandanda wa ntchito wa CRARA, osayamba."
+                if selected_language == "CH" else
+                "I have saved the task “" + task_created["title"] + "” to your CRARA task list as not started."
+            )
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
             return ChatResponse(reply=confirmation, provider="CRARA task engine",
                                 model="persistent task memory", conversation_id=conversation_id)
         reminder_created = _explicit_reminder(user["id"], payload.message.strip())
         if reminder_created:
             reminder, scheduled_for = reminder_created
-            confirmation = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CRARA when you return; no SMS, email or push notification channel is configured."
+            when = scheduled_for.strftime("%A, %d %B %Y, %H:%M")
+            confirmation = (
+                "Ndakonzekeretsa chikumbutso cha '" + reminder["message"] + "' pa " + when +
+                " (Africa/Blantyre). Chidzawoneka mu CRARA mukabwerera; palibe njira ya SMS, imelo kapena push notification."
+                if selected_language == "CH" else
+                "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + when + " (Africa/Blantyre). It will appear in CRARA when you return; no SMS, email or push notification channel is configured."
+            )
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
             return ChatResponse(reply=confirmation, provider="CRARA reminder engine",
                                 model="persistent in-app reminder", conversation_id=conversation_id)
@@ -309,9 +338,9 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
         memory_ms = round((time.monotonic() - stage_started) * 1000)
         stage_started = time.monotonic()
         answer, provider, model, updated = reply(payload.message.strip(),
-            [item.model_dump() for item in payload.history],
+            history,
             management_analytics=analytics_context, memory_context=retrieved, owner_id=user['id'],
-            response_language=normalize_response_language(payload.response_language) if _is_language_toggle_owner(user) else "EN")
+            response_language=selected_language)
         provider_pipeline_ms = round((time.monotonic() - stage_started) * 1000)
         stage_started = time.monotonic()
         memory.save_turn(user["id"], conversation_id, payload.message.strip(), answer)

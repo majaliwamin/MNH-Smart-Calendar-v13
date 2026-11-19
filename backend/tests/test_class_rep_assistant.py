@@ -122,7 +122,7 @@ def test_assistant_uses_live_context_and_limits_history(monkeypatch):
     assert "not recorded" in answer
     assert provider == "cloudflare" and model == "test-model"
     assert updated == "2026-11-16T10:00"
-    assert len(seen["messages"]) == 8
+    assert len(seen["messages"]) == 12
     assert "CURRENT LIVE APPLICATION KNOWLEDGE SNAPSHOT" in seen["messages"][0]["content"]
     assert seen["messages"][-1]["content"] == "What time is the exam?"
 
