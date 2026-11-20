@@ -1,10 +1,11 @@
 """Read-only retrieval of authoritative shared MNH calendar and activity data."""
 import json
-from datetime import datetime
+from datetime import datetime, time as clock_time, timedelta
 from zoneinfo import ZoneInfo
 
 from app.database.connection import database
 from app.config import TIMEZONE
+from app.services.schedule import sessions_from_collections
 
 COLLECTIONS = (
     "cells", "modules", "facilitators", "examinations",
@@ -28,6 +29,46 @@ def _bounded_value(value, depth: int = 0):
     if value is None or isinstance(value, (bool, int, float)):
         return value
     return str(value)[:300]
+
+
+def _resolved_schedule(collections: dict, today, now: datetime) -> dict:
+    """Resolve raw cells/recurring records into dated, weekday-named sessions.
+
+    Raw cells store a numeric ``dayIndex`` and ``weekStart``. The timetable UI
+    resolves those into dates before display; CRARA must receive the same
+    resolution instead of being asked to infer calendar days from integers.
+    """
+    monday = today - timedelta(days=today.weekday())
+    weeks = []
+    for offset in (0, 7):
+        week_start = monday + timedelta(days=offset)
+        sessions = []
+        for item in sessions_from_collections(collections, week_start=week_start):
+            session_date = item["date"]
+            starts = datetime.combine(session_date, clock_time.fromisoformat(item["start"]))
+            ends = datetime.combine(session_date, clock_time.fromisoformat(item["end"]))
+            sessions.append({
+                "id": item["id"],
+                "date": session_date.isoformat(),
+                "weekday": item["weekday"],
+                "start": item["start"],
+                "end": item["end"],
+                "code": item["code"],
+                "title": item["activity"],
+                "module_title": item["module_title"],
+                "lecturer": item["lecturer"],
+                "mode": item["mode"],
+                "status": item["status"],
+                "is_today": session_date == today,
+                "is_upcoming": ends >= now.replace(tzinfo=None),
+            })
+        weeks.append({"week_start": week_start.isoformat(), "sessions": sessions})
+    return {
+        "note": "Authoritative Monday–Friday sessions resolved from the same live cells and recurring records. "
+                "Dates, weekdays and times are already resolved; use this block for today, this week, "
+                "next week and upcoming-class questions instead of decoding raw dayIndex values.",
+        "weeks": weeks,
+    }
 
 
 def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[str, str | None]:
@@ -78,12 +119,15 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
             activity_rows = []
 
     grouped = {name: [] for name in COLLECTIONS}
+    raw_collections = {name: {} for name in COLLECTIONS}
     newest = None
     for row in rows:
         try:
             data = json.loads(row["data"])
         except (TypeError, json.JSONDecodeError):
             continue
+        if row["col"] in raw_collections and isinstance(data, dict):
+            raw_collections[row["col"]][str(row["id"])] = data
         record = _bounded_value(data)
         if not isinstance(record, dict):
             record = {"value": record}
@@ -105,11 +149,14 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
         if row["at"] is not None and (newest is None or row["at"] > newest):
             newest = row["at"]
 
-    now = datetime.now(ZoneInfo(TIMEZONE)).isoformat(timespec="minutes")
+    now_value = datetime.now(ZoneInfo(TIMEZONE))
+    now = now_value.isoformat(timespec="minutes")
     payload = {
         "timezone": TIMEZONE,
         "local_now": now,
         "records": grouped,
+        "resolved_schedule": _resolved_schedule(
+            raw_collections, now_value.date(), now_value),
         "recent_activity_history": activity,
         "data_scope": "live shared application records; read-only",
         "context_scope": "recent activity" if history_query else "timetable and resources" if schedule_query and resource_query else "resources" if resource_query else "timetable" if schedule_query else "not required for this question",
