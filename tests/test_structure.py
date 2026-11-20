@@ -402,7 +402,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-downloads-fixed-v13"
+    assert build == "2026.11.20-windows-setup-simulation-v14"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -474,6 +474,39 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "body.python-library-view .bottom-nav" in css
     assert ".python-library-frame" in css
     assert ".python-library-back" in css
+
+
+def test_python_library_windows_setup_simulation_is_additive():
+    resource_dir = ROOT / "frontend" / "resources"
+    library = (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
+    bridge = (resource_dir / "biomedical_api.js").read_text(encoding="utf-8")
+
+    assert library.count('<script src="./biomedical_api.js" defer></script>') == 1
+    assert "var SIM_KEY = 'biomedical_windows_setup_sim_v1';" in bridge
+    assert "root.id = 'bm-windows-simulation';" in bridge
+    assert "function createWindowsSimulation()" in bridge
+    assert "    createWindowsSimulation();" in bridge
+    assert "window.BiomedicalSimulation" in bridge
+    assert "API.windowsSimulation" in bridge
+    assert "function simExec(raw, options)" in bridge
+    assert "function simRunBatch(text)" in bridge
+    assert "Simulated state only. This module never runs host commands or edits PATH." in bridge
+    assert "This lab only interprets the Windows setup commands taught in this chapter and never runs host commands" in bridge
+    for fault_id in (
+        "python-not-recognised", "pip-not-recognised", "store-alias", "wrong-python",
+        "multiple-installs", "jupyter-not-found", "package-install-failure",
+        "dependency-conflict", "path-not-refreshed", "ps-activation-blocked",
+        "invalid-directory-path", "permission-denied", "imports-fail",
+        "notebook-wrong-kernel",
+    ):
+        assert "'" + fault_id + "':" in bridge
+    for command in (
+        "python --version", "py --version", "python -m pip --version",
+        "where.exe python", "where.exe py", "py -0p", "python -m venv ",
+        "freeze > requirements.txt", "'-r '",
+        "jupyter notebook", "jupyter lab", "winver",
+    ):
+        assert command in bridge
 
 
 def test_service_worker_cache_writes_are_guarded():
