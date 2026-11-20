@@ -117,6 +117,17 @@ _LABEL_ALIASES: dict[str, tuple[str, ...]] = {
     "coefficients": ("coefficients", "beta coefficients"),
     "n_per_group": ("per group", "sample size per group", "n per group"),
     "effect_size": ("effect size", "cohen's d", "cohens d"),
+    "value": ("value", "answer", "result"),
+    "nth_term": ("nth term", "u_n", "a_n", "term"),
+    "sum_first_n": ("sum of the first", "sum of first", "series sum", "sum"),
+    "image": ("image", "transformed point", "new coordinates"),
+    "bearing_degrees": ("bearing", "bearing degrees", "true bearing"),
+    "optimal_value": ("optimal value", "objective value", "optimum value", "maximum value", "minimum value"),
+    "optimal_point": ("optimal point", "optimum point"),
+    "scale_factor": ("scale factor", "k", "linear scale factor"),
+    "gradient": ("gradient", "slope", "m"),
+    "y_intercept": ("y intercept", "intercept", "c"),
+    "value_at_x": ("value at x", "y when x", "read-off value"),
 }
 _ALL_LABEL_ALIASES = sorted(
     {alias for aliases in _LABEL_ALIASES.values() for alias in aliases},
