@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from app.class_rep.config import provider_config, provider_configs
 from app.class_rep.schemas import ChatRequest, ChatResponse
 from app.class_rep.assistant import reply
+from app.class_rep.error_hygiene import is_transient_error_text
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic, provider_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
@@ -379,8 +380,12 @@ def conversation_turn(request: Request, payload: dict):
     if reminder_result:
         reminder, scheduled_for = reminder_result
         answer = "I have scheduled an in-app reminder for “" + reminder["message"] + "” at " + scheduled_for.strftime("%A, %d %B %Y, %H:%M") + " (Africa/Blantyre). It will appear in CRARA when you return; no SMS, email or push notification channel is configured."
-    memory.save_turn(user["id"], conversation_id, message, answer)
-    return {"saved": True, "conversation_id": conversation_id, "reply": answer}
+    # A provider/connection error bubble is display-only. Persisting it would
+    # replay an outage as an assistant statement on the next turn.
+    transient_error = is_transient_error_text(answer)
+    if not transient_error:
+        memory.save_turn(user["id"], conversation_id, message, answer)
+    return {"saved": not transient_error, "conversation_id": conversation_id, "reply": answer}
 
 
 @router.get("/memories")

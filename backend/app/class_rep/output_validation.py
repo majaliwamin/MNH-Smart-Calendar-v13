@@ -13,6 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.class_rep.error_hygiene import is_transient_error_text
 from app.class_rep.language_intelligence import detect_language
 from app.class_rep.math_engine.results import MathResult
 
@@ -22,6 +23,10 @@ _BANNED_PHRASES = (
     "as crara",
     "i am an academic coordination assistant",
     "crara service error",
+    "automated system error",
+    "service providers were temporarily unavailable",
+    "service providers are temporarily unavailable",
+    "not a response to your question",
     "providererror",
     "all_providers_failed",
     "not_configured",
@@ -279,6 +284,8 @@ def validate_reply(
     for phrase in _BANNED_PHRASES:
         if phrase in folded:
             reasons.append("the reply contains a banned template or internal error phrase: " + phrase)
+    if is_transient_error_text(text):
+        reasons.append("the reply refers to a transient service-provider error instead of answering")
 
     if evidence_available:
         for phrase in _VERIFICATION_CLAIM:
@@ -303,6 +310,10 @@ def validate_reply(
 
     if text.count("\\(") != text.count("\\)") or text.count("\\[") != text.count("\\]"):
         reasons.append("LaTeX math delimiters are unbalanced")
+    if re.search(r"\\\\\(|\\\\\[", text):
+        reasons.append("LaTeX math delimiters are double-escaped")
+    if re.search(r"\\(?:left|right)\\([\[\(])", text):
+        reasons.append("LaTeX commands are nested inside math delimiters")
     if text.count("```") % 2:
         reasons.append("a fenced code/chart block is unfinished")
 

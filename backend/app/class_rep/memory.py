@@ -17,6 +17,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.database.connection import database
+from app.class_rep.error_hygiene import clean_conversation_messages
 
 COL_USERS = "cara_users"
 COL_SESSIONS = "cara_sessions"
@@ -287,12 +288,12 @@ def retrieve_context(user_id: str, query: str, conversation_id: str = "") -> str
     if conversation_id:
         conv = _read(COL_CONVERSATIONS, _doc_id(user_id, conversation_id))
         if conv:
-            blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(conv.get("messages", [])[-6:], ensure_ascii=False))
+            blocks.append("ACTIVE CONVERSATION HISTORY:\\n" + json.dumps(clean_conversation_messages(conv.get("messages", []))[-6:], ensure_ascii=False))
     conversations = _list(COL_CONVERSATIONS, user_id, 8)
     if conversations:
         ranked = []
         for conv in conversations:
-            messages = conv.get("messages", [])
+            messages = clean_conversation_messages(conv.get("messages", []))
             text = " ".join(m.get("content", "") for m in messages[-12:])
             words = set(WORD_PATTERN.findall(text.lower()))
             score = len(terms & words)

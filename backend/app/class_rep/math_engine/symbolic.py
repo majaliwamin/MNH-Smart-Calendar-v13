@@ -93,6 +93,41 @@ def _result(operation: str, method: str, expression: str, values: dict[str, Any]
     )
 
 
+def quadratic_formula_derivation() -> MathResult:
+    """Return a fixed, deterministic completing-the-square derivation."""
+    formula = r"x=\frac{-b\pm\sqrt{b^{2}-4ac}}{2a}"
+    return MathResult(
+        operation="quadratic_formula_derivation",
+        domain="mathematics",
+        method="deterministic completing-the-square derivation",
+        status="concept",
+        inputs={"expression": "ax^2 + bx + c = 0"},
+        assumptions=[
+            "The coefficient a is non-zero.",
+            "The ± sign represents the two quadratic roots; b² − 4ac is the discriminant.",
+        ],
+        steps=[
+            r"Start with \(ax^{2}+bx+c=0\), where \(a\neq0\).",
+            r"Divide every term by \(a\): \(x^{2}+\frac{b}{a}x+\frac{c}{a}=0\).",
+            r"Move the constant term: \(x^{2}+\frac{b}{a}x=-\frac{c}{a}\).",
+            r"Add \(\left(\frac{b}{2a}\right)^{2}\) to both sides to complete the square.",
+            r"Factor the left side and simplify the right: \(\left(x+\frac{b}{2a}\right)^{2}=\frac{b^{2}-4ac}{4a^{2}}\).",
+            r"Take square roots: \(x+\frac{b}{2a}=\pm\frac{\sqrt{b^{2}-4ac}}{2a}\).",
+            r"Subtract \(\frac{b}{2a}\) and combine the fractions: \(x=\frac{-b\pm\sqrt{b^{2}-4ac}}{2a}\).",
+        ],
+        values={"formula": formula, "discriminant": r"\Delta=b^{2}-4ac"},
+        latex={
+            "general_form": r"ax^{2}+bx+c=0",
+            "formula": formula,
+            "discriminant": r"\Delta=b^{2}-4ac",
+        },
+        interpretation=(
+            r"Completing the square on \(ax^{2}+bx+c=0\) gives the quadratic "
+            r"formula \(x=\frac{-b\pm\sqrt{b^{2}-4ac}}{2a}\) for \(a\neq0\)."
+        ),
+    )
+
+
 def simplify(expression: str) -> MathResult:
     sp, error = _sympy()
     if sp is None:

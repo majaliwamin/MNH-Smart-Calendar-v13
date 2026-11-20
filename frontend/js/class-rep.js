@@ -489,17 +489,8 @@
       } else {
         pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = detail && !/request could not be completed/i.test(detail) ? "CRARA service error: " + detail : "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
       }
-      if (!restrictedAnalytics && state.user) {
-        const saved = await fetch("/api/class-rep/conversation/turn", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
-        if (saved) {
-          state.conversationId = saved.conversation_id;
-          state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
-          state.history = state.history.slice(-12);
-        }
-      }
+      // Do not persist error bubbles as assistant turns. A transient provider
+      // outage must not become conversation history for the next request.
       status("", false);
     } finally {
       state.busy = false; input.disabled = false; input.focus();
