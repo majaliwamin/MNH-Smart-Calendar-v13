@@ -258,16 +258,22 @@ def test_pwa_install_requirements_are_met():
             assert (ROOT / "frontend" / icon["src"].lstrip("/")).is_file()
 
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    # The current UI creates its install notice dynamically after install eligibility is known.
+    # The install/download action is available from the header on every viewport,
+    # with the weekly notice retained as a second entry point.
+    assert 'id="install-app-btn"' in html
+    assert 'class="hd-install-btn"' in html
+    assert 'aria-label="Download and install MNH Calendar"' in html
+    assert 'installButton.addEventListener("click",openInstallChoice)' in html
     assert 'notice.id="install-app-notice"' in html
     assert 'notice.setAttribute("aria-label","tap here to install")' in html
     assert "beforeinstallprompt" in html
     assert "event.preventDefault()" in html
-    assert "installFromNotice()" in html
+    assert "openInstallChoice()" in html
     assert ".prompt()" in html and "userChoice" in html
     assert "appinstalled" in html
     assert "display-mode: standalone" in html
     assert "promptOpen" in html
+    assert "mnh-install-choice" in html
     assert '@app.get("/manifest.json", include_in_schema=False)' in main
     assert 'app.mount("/icons"' in main
     assert ">\\n<" not in html
@@ -396,7 +402,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-copy-icon-v9"
+    assert build == "2026.11.20-download-icon-v10"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html

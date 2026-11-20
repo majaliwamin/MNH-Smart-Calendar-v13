@@ -81,9 +81,20 @@ def test_cara_header_and_composer_controls_have_no_button_shapes():
 def test_main_header_stays_frozen_and_install_icon_is_available():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    assert 'id="install-app-btn"' in html
+    assert 'class="hd-install-btn"' in html
     assert 'notice.id="install-app-notice"' in html
     assert 'window.addEventListener("beforeinstallprompt"' in html
     assert 'window.addEventListener("appinstalled"' in html
+    assert ".hd-install-btn{" in css
+    # The timetable export menu remains beside the restored install/download button.
+    assert 'id="dl-btn"' in html
+    assert 'id="dl-menu"' in html
+    assert 'data-fmt="pdf"' in html
+    assert 'data-fmt="image"' in html
+    assert 'data-fmt="xlsx"' in html
+    assert ".hd-dlbtn{" in css
+    assert "@media(max-width:720px)" in css
     assert ".site-header{\n  position:-webkit-sticky!important;\n  position:sticky!important;" in css
     assert ".view-tabs{\n  position:-webkit-sticky!important;\n  position:sticky!important;" in css
     assert "--mnh-sticky-header-offset:82px" in css
