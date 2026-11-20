@@ -389,7 +389,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-biomedical-library-v3"
+    assert build == "2026.11.20-biomedical-library-v4"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -400,7 +400,11 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1"' in html
+    assert 'id="view-python-library"' in html
+    assert 'id="python-library-back"' in html
+    assert 'data-view="python-library"' in html
+    assert "Open Python Library full screen" in html
     assert "Backend execution starts off" in html
     assert 'app.mount("/resources", StaticFiles(directory=str(FRONTEND_DIR / "resources")), name="resources")' in main
     assert (resource_dir / "python-command-library.html").is_file()
@@ -419,6 +423,17 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "runnerEnabled && !embeddedMode" in bridge
     assert "Enter a trusted backend API URL before enabling the runner." in bridge
     assert "bm-chapter-index" in bridge
+
+    app_js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    assert '"python-library"' in app_js
+    assert "python-library-view" in app_js
+    assert "python-library-back" in app_js
+    assert 'currentView!=="python-library"' in app_js
+    assert 'name!=="python-library"' in app_js
+    assert "body.python-library-view .bottom-nav" in css
+    assert ".python-library-frame" in css
+    assert ".python-library-back" in css
 
 
 def test_service_worker_cache_writes_are_guarded():
