@@ -1,5 +1,6 @@
 """Export tests: module selection, editable Excel, fillable PDF."""
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -99,6 +100,14 @@ def test_export_endpoints_serve_the_selection(client):
     listed = client.get("/api/export/modules").json()
     codes = [m["code"] for m in listed["modules"]]
     assert {"ARMN – 8100", "MIPN 8100", "PNIM-8100"} <= set(codes)
+
+
+def test_export_query_uses_portable_prefix_filter():
+    from app.api import routes as routes_module
+
+    source = Path(routes_module.__file__).read_text(encoding="utf-8")
+    assert "col NOT LIKE 'cara_%'" not in source
+    assert "substr(col,1,5) <> 'cara_'" in source
 
 
 def test_downloads_skip_malformed_stored_documents(client):

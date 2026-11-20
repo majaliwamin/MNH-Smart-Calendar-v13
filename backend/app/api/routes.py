@@ -52,7 +52,7 @@ def _export_rows():
     try:
         with database() as connection:
             return connection.execute(
-                "SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id"
+                "SELECT col,id,data FROM docs WHERE substr(col,1,5) <> 'cara_' ORDER BY col,id"
             ).fetchall()
     except Exception as exc:
         logger.exception("Export document query failed")
