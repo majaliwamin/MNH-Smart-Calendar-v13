@@ -128,6 +128,11 @@ def build_calendar_context(query: str | None = None, limit: int = 120) -> tuple[
             continue
         if row["col"] in raw_collections and isinstance(data, dict):
             raw_collections[row["col"]][str(row["id"])] = data
+        # Raw cells/recurring records carry numeric dayIndex values and no dates.
+        # Expose only the resolved schedule for timetable questions so the model
+        # cannot mix a resolved weekday with an unresolved dayIndex.
+        if schedule_query and row["col"] in ("cells", "recurring"):
+            continue
         record = _bounded_value(data)
         if not isinstance(record, dict):
             record = {"value": record}

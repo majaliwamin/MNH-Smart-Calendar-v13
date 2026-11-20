@@ -146,6 +146,8 @@ def test_resolved_schedule_exposes_numeric_dayindex_cells_as_dated_sessions(monk
     monkeypatch.setattr(context, "datetime", FrozenDatetime)
     payload, _ = context.build_calendar_context("any upcoming class?")
     data = json.loads(payload)
+    assert data["records"]["cells"] == []
+    assert data["records"]["recurring"] == []
     weeks = data["resolved_schedule"]["weeks"]
     assert [week["week_start"] for week in weeks] == ["2026-11-16", "2026-11-23"]
     friday = [item for item in weeks[0]["sessions"] if item["date"] == "2026-11-20"]
@@ -155,7 +157,7 @@ def test_resolved_schedule_exposes_numeric_dayindex_cells_as_dated_sessions(monk
         and item["end"] == "15:30" and item["is_today"] and item["is_upcoming"]
         for item in friday
     )
-    assert "resolved_schedule" in assistant.SYSTEM_PROMPT
+    assert "is the only timetable source" in assistant.SYSTEM_PROMPT
 
 from app.class_rep import assistant
 
