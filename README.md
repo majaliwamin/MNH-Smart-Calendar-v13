@@ -59,7 +59,7 @@ To stop the local server, press `Ctrl+C` in the terminal. Do not open `frontend/
 
 ## CARA — Classroom and Academic Relations Assistant
 
-CARA is the persistent academic assistant in the web application. Its AI provider priority is Cloudflare Workers AI, then Hugging Face, then Groq. Credentials are server-side environment variables only.
+CARA is the persistent academic assistant in the web application. Its AI provider priority is Cloudflare Workers AI, then Gemini, then Groq. Credentials are server-side environment variables only.
 
 The CARA backend is in `backend/app/class_rep/`:
 
@@ -82,13 +82,13 @@ Set these in Render → Environment. Do not commit credentials:
 - `MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID`
 - `MNH_CLASSREP_CLOUDFLARE_API_KEY`
 - `MNH_CLASSREP_CLOUDFLARE_MODEL`
-- `MNH_CLASSREP_HF_API_KEY` (optional fallback; the standard `HF_TOKEN` is also accepted). Only the token is required — the endpoint defaults to Hugging Face's chat-completions-compatible router and the model defaults to `Qwen/Qwen3-30B-A3B-Instruct-2507`. `MNH_CLASSREP_HF_MODEL` and `MNH_CLASSREP_HF_BASE_URL` are optional overrides.
+- `MNH_CLASSREP_GEMINI_API_KEY` (optional free fallback; `GEMINI_API_KEY` is also accepted). Only the key is required — the endpoint defaults to Gemini's standard chat-completions-compatible route and the model defaults to the free-tier `gemini-3.5-flash-lite`. `MNH_CLASSREP_GEMINI_MODEL` and `MNH_CLASSREP_GEMINI_BASE_URL` are optional overrides. Hugging Face variables are no longer read because free-only HF tokens return HTTP 402 for Inference Providers.
 - `MNH_CLASSREP_GROQ_API_KEY` (optional fallback; only the key is required — the endpoint defaults to Groq's standard chat-completions route and the model defaults to Groq's current fast 27B production model with reasoning disabled). `MNH_CLASSREP_GROQ_MODEL` and `MNH_CLASSREP_GROQ_BASE_URL` are optional overrides. Add a model override only if Groq changes its supported-model list.
 
-Providers are tried in order: Cloudflare → Hugging Face → Groq. When Cloudflare is
+Providers are tried in order: Cloudflare → Gemini → Groq. When Cloudflare is
 rate-limited or out of credits, CRARA automatically uses the next configured
 provider; when Cloudflare recovers it becomes primary again without a redeploy.
-Check `/api/class-rep/status` for `fallbacks` to confirm Hugging Face and Groq are active.
+Check `/api/class-rep/status` for `fallbacks` to confirm Gemini and Groq are active.
 - `MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL`
 - `MNH_CLASSREP_CLOUDFLARE_STT_MODEL` (optional speech-to-text model)
 - `MNH_CLASSREP_CLOUDFLARE_TTS_MODEL` (optional text-to-speech model)

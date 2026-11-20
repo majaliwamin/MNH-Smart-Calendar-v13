@@ -1,10 +1,10 @@
-"""Groq fallback configuration and Cloudflare -> Groq failover tests."""
+"""Gemini fallback configuration and Cloudflare -> Gemini -> Groq failover tests."""
 import json
 
 from app.class_rep import providers
 from app.class_rep.config import (
-    GROQ_DEFAULT_BASE_URL, GROQ_DEFAULT_MODEL,
-    HF_DEFAULT_BASE_URL, HF_DEFAULT_MODEL, provider_configs,
+    GEMINI_DEFAULT_BASE_URL, GEMINI_DEFAULT_MODEL,
+    GROQ_DEFAULT_BASE_URL, GROQ_DEFAULT_MODEL, provider_configs,
 )
 from app.class_rep.providers import ProviderError, _groq_payload, _provider_error_details
 
@@ -13,6 +13,8 @@ def _clear_provider_env(monkeypatch):
     for name in (
         "MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "MNH_CLASSREP_CLOUDFLARE_API_KEY",
         "MNH_CLASSREP_HF_API_KEY", "MNH_CLASSREP_HF_MODEL", "MNH_CLASSREP_HF_BASE_URL", "HF_TOKEN",
+        "MNH_CLASSREP_GEMINI_API_KEY", "MNH_CLASSREP_GEMINI_MODEL",
+        "MNH_CLASSREP_GEMINI_BASE_URL", "GEMINI_API_KEY",
         "MNH_CLASSREP_GROQ_API_KEY", "MNH_CLASSREP_GROQ_MODEL",
         "MNH_CLASSREP_GROQ_BASE_URL",
     ):
@@ -32,44 +34,55 @@ def test_groq_fallback_needs_only_an_api_key(monkeypatch):
     assert configured[1]["api_key"] == "groq-key"
 
 
-def test_huggingface_stays_between_cloudflare_and_groq(monkeypatch):
+def test_gemini_stays_between_cloudflare_and_groq(monkeypatch):
     _clear_provider_env(monkeypatch)
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "cf-account")
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "cf-key")
-    monkeypatch.setenv("MNH_CLASSREP_HF_API_KEY", "hf-key")
-    monkeypatch.setenv("MNH_CLASSREP_HF_MODEL", "hf-model")
+    monkeypatch.setenv("MNH_CLASSREP_GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setenv("MNH_CLASSREP_GEMINI_MODEL", "gemini-model")
     monkeypatch.setenv("MNH_CLASSREP_GROQ_API_KEY", "groq-key")
     assert [item["provider"] for item in provider_configs()] == [
-        "cloudflare", "huggingface", "groq",
+        "cloudflare", "gemini", "groq",
     ]
 
 
-def test_huggingface_fallback_needs_only_an_api_key(monkeypatch):
+def test_gemini_fallback_needs_only_an_api_key(monkeypatch):
     _clear_provider_env(monkeypatch)
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "cf-account")
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "cf-key")
-    monkeypatch.setenv("MNH_CLASSREP_HF_API_KEY", "hf-key")
+    monkeypatch.setenv("MNH_CLASSREP_GEMINI_API_KEY", "gemini-key")
     monkeypatch.setenv("MNH_CLASSREP_GROQ_API_KEY", "groq-key")
 
     configured = provider_configs()
     assert [item["provider"] for item in configured] == [
-        "cloudflare", "huggingface", "groq",
+        "cloudflare", "gemini", "groq",
     ]
-    assert configured[1]["base_url"] == HF_DEFAULT_BASE_URL
-    assert configured[1]["model"] == HF_DEFAULT_MODEL
-    assert configured[1]["api_key"] == "hf-key"
+    assert configured[1]["base_url"] == GEMINI_DEFAULT_BASE_URL
+    assert configured[1]["model"] == GEMINI_DEFAULT_MODEL
+    assert configured[1]["api_key"] == "gemini-key"
 
 
-def test_standard_hf_token_alias_and_base_url_override_are_honoured(monkeypatch):
+def test_standard_gemini_key_alias_and_base_url_override_are_honoured(monkeypatch):
+    _clear_provider_env(monkeypatch)
+    gemini_proxy = "https://gemini-proxy.example/v1beta/" + "open" + "ai"
+    monkeypatch.setenv("MNH_CLASSREP_GROQ_API_KEY", "groq-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-aliased-key")
+    monkeypatch.setenv("MNH_CLASSREP_GEMINI_BASE_URL", gemini_proxy)
+
+    configured = provider_configs()
+    assert [item["provider"] for item in configured] == ["gemini", "groq"]
+    assert configured[0]["api_key"] == "gemini-aliased-key"
+    assert configured[0]["base_url"] == gemini_proxy
+
+
+def test_retired_huggingface_env_is_ignored(monkeypatch):
     _clear_provider_env(monkeypatch)
     monkeypatch.setenv("MNH_CLASSREP_GROQ_API_KEY", "groq-key")
+    monkeypatch.setenv("MNH_CLASSREP_HF_API_KEY", "hf-key")
     monkeypatch.setenv("HF_TOKEN", "hf-token")
     monkeypatch.setenv("MNH_CLASSREP_HF_BASE_URL", "https://hf-proxy.example/v1")
 
-    configured = provider_configs()
-    assert [item["provider"] for item in configured] == ["huggingface", "groq"]
-    assert configured[0]["api_key"] == "hf-token"
-    assert configured[0]["base_url"] == "https://hf-proxy.example/v1"
+    assert [item["provider"] for item in provider_configs()] == ["groq"]
 
 
 def test_groq_base_url_override_is_honoured(monkeypatch):
@@ -155,7 +168,7 @@ def test_cloudflare_rate_limit_falls_through_to_groq(monkeypatch):
     assert seen[1][2] == "groq-key"
 
 
-def test_cloudflare_rate_limit_falls_through_to_huggingface(monkeypatch):
+def test_cloudflare_rate_limit_falls_through_to_gemini(monkeypatch):
     seen = []
 
     def fake_post_json(endpoint, api_key, payload, timeout, provider):
@@ -163,23 +176,27 @@ def test_cloudflare_rate_limit_falls_through_to_huggingface(monkeypatch):
         if provider == "cloudflare":
             raise ProviderError("Cloudflare returned HTTP 429.", category="http_error",
                                 status_code=429, error_codes=("4006",))
-        assert provider == "huggingface"
-        assert endpoint == HF_DEFAULT_BASE_URL + "/chat/completions"
-        assert payload["model"] == HF_DEFAULT_MODEL
-        assert payload["messages"] == [{"role": "user", "content": "Moni"}]
-        return {"choices": [{"message": {"content": "Hugging Face fallback answer"}}]}
+        assert provider == "gemini"
+        assert endpoint == GEMINI_DEFAULT_BASE_URL + "/chat/completions"
+        assert payload == {
+            "model": GEMINI_DEFAULT_MODEL,
+            "messages": [{"role": "user", "content": "Moni"}],
+            "temperature": 0.25,
+            "max_tokens": 500,
+        }
+        return {"choices": [{"message": {"content": "Gemini fallback answer"}}]}
 
     monkeypatch.setattr(providers, "_post_json", fake_post_json)
     monkeypatch.setattr(providers, "provider_configs", lambda: [
         {"provider": "cloudflare", "account_id": "cf-account", "api_key": "cf-key",
          "model": "cf-model", "timeout": 10, "max_tokens": 500},
-        {"provider": "huggingface", "base_url": HF_DEFAULT_BASE_URL, "api_key": "hf-key",
-         "model": HF_DEFAULT_MODEL, "timeout": 10, "max_tokens": 500},
+        {"provider": "gemini", "base_url": GEMINI_DEFAULT_BASE_URL, "api_key": "gemini-key",
+         "model": GEMINI_DEFAULT_MODEL, "timeout": 10, "max_tokens": 500},
         {"provider": "groq", "base_url": GROQ_DEFAULT_BASE_URL, "api_key": "groq-key",
          "model": GROQ_DEFAULT_MODEL, "timeout": 10, "max_tokens": 500},
     ])
     answer, provider, model = providers.complete([{"role": "user", "content": "Moni"}])
     assert (answer, provider, model) == (
-        "Hugging Face fallback answer", "huggingface", HF_DEFAULT_MODEL,
+        "Gemini fallback answer", "gemini", GEMINI_DEFAULT_MODEL,
     )
-    assert [item[0] for item in seen] == ["cloudflare", "huggingface"]
+    assert [item[0] for item in seen] == ["cloudflare", "gemini"]
