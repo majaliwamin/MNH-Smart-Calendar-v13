@@ -48,6 +48,17 @@ def _collections_from_documents(documents):
     return collections
 
 
+def _export_rows():
+    try:
+        with database() as connection:
+            return connection.execute(
+                "SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id"
+            ).fetchall()
+    except Exception as exc:
+        logger.exception("Export document query failed")
+        raise HTTPException(500, f"Export document query failed: {type(exc).__name__}: {exc}") from exc
+
+
 CANONICAL_RECURRING = {
     "journal-club": ("Journal Club", "Tuesday", "13:00–14:00"),
     "seminar-mnh": ("Seminar in MNH", "Thursday", "10:00–12:00"),
@@ -308,8 +319,10 @@ def export_timetable_xlsx(modules: str | None = None, week_start: date | None = 
         from app.services.excel_export import build_timetable_workbook
     except ImportError as exc:
         raise HTTPException(503, "Excel export is unavailable: install backend requirements (openpyxl).") from exc
-    with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
+    except Exception as exc:
+        logger.exception("Excel export module import failed")
+        raise HTTPException(500, f"Excel export is unavailable: {type(exc).__name__}: {exc}") from exc
+    rows = _export_rows()
     collections = _collections_from_documents(_safe_documents(rows))
     selected = [code for code in (modules or "").split(",") if code.strip()]
     if week_start is not None and week_start.weekday() != 0:
@@ -334,8 +347,10 @@ def export_timetable_pdf(modules: str | None = None, week_start: date | None = N
         from app.services.pdf_export import build_timetable_pdf
     except ImportError as exc:
         raise HTTPException(503, "PDF export is unavailable: install backend requirements (reportlab).") from exc
-    with database() as connection:
-        rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
+    except Exception as exc:
+        logger.exception("PDF export module import failed")
+        raise HTTPException(500, f"PDF export is unavailable: {type(exc).__name__}: {exc}") from exc
+    rows = _export_rows()
     collections = _collections_from_documents(_safe_documents(rows))
     selected = [code for code in (modules or "").split(",") if code.strip()]
     if week_start is not None and week_start.weekday() != 0:
@@ -660,8 +675,7 @@ def history():
 
 @router.get("/backup")
 def backup_json():
-    with database() as c:
-        rows = c.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
+    rows = _export_rows()
     return {"format": "mnh-calendar-backup", "version": 1, "created_at": int(time.time()*1000),
             "documents": _safe_documents(rows)}
 
@@ -727,8 +741,7 @@ def reminders_run_now(mnh_session: str | None = Cookie(default=None)):
 
 @router.get("/export")
 def export_all():
-    with database() as c:
-        rows = c.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
+    rows = _export_rows()
     return _safe_documents(rows)
 
 
