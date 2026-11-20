@@ -893,10 +893,10 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","resources"];
+const VIEWS=["weekly","silver-dashboard","monthly","modules","facilitators","examinations","recurring","communications","analytics","history","export","resources","python-library"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly",previousNonResourcesView="weekly";
+let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly",previousNonResourcesView="weekly",previousNonLibraryView="weekly";
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
 function fmtH(m){const h=Math.floor(m/60),mm=m%60;return mm?(h?h+"h "+mm+"m":mm+"m"):h+"h";}
 function todayIndexFor(offset){return WK.currentDayIndex(offset==null?weekOffset:offset);}
@@ -1044,18 +1044,21 @@ function showView(name){
  if(!VIEWS.includes(name))name="weekly";
  const craraRoot=document.getElementById("class-rep-assistant");
  if(craraRoot){if(name!=="weekly"&&typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=name!=="weekly";}
- if(name==="resources"&&currentView!=="resources")previousNonResourcesView=currentView;
- else if(name!=="resources")previousNonResourcesView=name;
+ if(name==="resources"&&currentView!=="resources"&&currentView!=="python-library")previousNonResourcesView=currentView;
+ else if(name!=="resources"&&name!=="python-library")previousNonResourcesView=name;
+ if(name==="python-library"&&currentView!=="python-library")previousNonLibraryView=currentView;
+ else if(name!=="python-library")previousNonLibraryView=name;
  currentView=name;
  document.body.classList.toggle("weekly-view",name==="weekly");
  if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
- const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources");
- weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";
- const resourcesMode=name==="resources";
+ const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources"),library=document.getElementById("view-python-library");
+ weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";
+ const resourcesMode=name==="resources",libraryMode=name==="python-library";
  document.body.classList.toggle("resources-view",resourcesMode);
- document.querySelector(".hd-title").hidden=resourcesMode;
- document.querySelector(".hd-today").hidden=resourcesMode;
- document.getElementById("view-tabs").hidden=resourcesMode;
+ document.body.classList.toggle("python-library-view",libraryMode);
+ document.querySelector(".hd-title").hidden=resourcesMode||libraryMode;
+ document.querySelector(".hd-today").hidden=resourcesMode||libraryMode;
+ document.getElementById("view-tabs").hidden=resourcesMode||libraryMode;
 
  workspace.hidden=!(["modules","monthly","facilitators","examinations","recurring","communications","history","export"].includes(name));
  document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
@@ -2367,6 +2370,8 @@ function initHeader(){
  document.getElementById("menu-btn").addEventListener("click",closeBell);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!panel.hidden){closeBell();bell.focus();}hideDialog("header-dialog");}});
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();showView(t.dataset.view);}));
+ document.getElementById("open-python-library")?.addEventListener("click",()=>showView("python-library"));
+ document.getElementById("python-library-back")?.addEventListener("click",()=>showView(previousNonLibraryView));
  // Section navigation is intentionally kept out of the URL so refresh always returns Home.
  // header editing
  document.getElementById("edit-header").addEventListener("click",()=>{
