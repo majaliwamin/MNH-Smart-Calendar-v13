@@ -1,0 +1,501 @@
+id,time_days,readmitted,anaemia,delivery_mode,age
+P001,250,1,Anaemia,Vaginal,34
+P002,26,1,No anaemia,Vaginal,26
+P003,59,1,No anaemia,Caesarean,24
+P004,220,1,Anaemia,Vaginal,27
+P005,344,0,Anaemia,Vaginal,24
+P006,13,1,Anaemia,Vaginal,27
+P007,235,1,No anaemia,Caesarean,35
+P008,71,0,Anaemia,Vaginal,27
+P009,68,1,Anaemia,Vaginal,29
+P010,196,1,Anaemia,Vaginal,30
+P011,107,1,No anaemia,Vaginal,29
+P012,242,1,Anaemia,Caesarean,23
+P013,148,0,No anaemia,Caesarean,35
+P014,9,1,No anaemia,Vaginal,31
+P015,165,0,No anaemia,Caesarean,25
+P016,61,0,Anaemia,Caesarean,26
+P017,82,0,No anaemia,Vaginal,28
+P018,298,0,No anaemia,Vaginal,44
+P019,154,0,Anaemia,Vaginal,21
+P020,14,1,Anaemia,Vaginal,25
+P021,134,1,No anaemia,Vaginal,24
+P022,184,0,No anaemia,Vaginal,30
+P023,127,1,Anaemia,Vaginal,19
+P024,180,0,No anaemia,Vaginal,33
+P025,199,0,No anaemia,Vaginal,34
+P026,95,1,Anaemia,Vaginal,36
+P027,49,0,No anaemia,Vaginal,22
+P028,82,0,Anaemia,Vaginal,23
+P029,166,0,No anaemia,Vaginal,15
+P030,32,0,No anaemia,Vaginal,27
+P031,27,1,Anaemia,Caesarean,25
+P032,74,0,No anaemia,Vaginal,34
+P033,59,1,No anaemia,Vaginal,33
+P034,233,1,No anaemia,Vaginal,28
+P035,153,1,No anaemia,Vaginal,24
+P036,203,1,No anaemia,Caesarean,25
+P037,349,0,No anaemia,Vaginal,29
+P038,73,1,Anaemia,Vaginal,31
+P039,239,1,Anaemia,Vaginal,30
+P040,138,1,No anaemia,Vaginal,15
+P041,80,0,Anaemia,Vaginal,29
+P042,315,1,No anaemia,Caesarean,23
+P043,29,1,No anaemia,Caesarean,25
+P044,244,0,No anaemia,Vaginal,31
+P045,91,0,No anaemia,Vaginal,27
+P046,138,0,Anaemia,Vaginal,26
+P047,174,0,No anaemia,Vaginal,22
+P048,112,1,Anaemia,Caesarean,34
+P049,59,1,Anaemia,Vaginal,20
+P050,7,1,No anaemia,Vaginal,34
+P051,348,0,Anaemia,Caesarean,34
+P052,263,0,No anaemia,Vaginal,30
+P053,107,0,No anaemia,Caesarean,22
+P054,77,1,Anaemia,Vaginal,32
+P055,73,1,Anaemia,Vaginal,23
+P056,91,1,Anaemia,Vaginal,31
+P057,153,1,Anaemia,Caesarean,32
+P058,69,0,Anaemia,Vaginal,28
+P059,107,1,No anaemia,Caesarean,21
+P060,91,1,No anaemia,Caesarean,30
+P061,191,0,No anaemia,Vaginal,33
+P062,41,0,Anaemia,Vaginal,22
+P063,271,0,Anaemia,Vaginal,30
+P064,95,0,No anaemia,Vaginal,17
+P065,325,0,No anaemia,Vaginal,30
+P066,23,1,Anaemia,Vaginal,22
+P067,109,1,Anaemia,Vaginal,28
+P068,296,0,Anaemia,Vaginal,29
+P069,65,1,Anaemia,Caesarean,23
+P070,134,0,No anaemia,Vaginal,25
+P071,41,1,No anaemia,Vaginal,24
+P072,34,0,No anaemia,Vaginal,25
+P073,107,0,Anaemia,Vaginal,36
+P074,336,0,No anaemia,Vaginal,26
+P075,77,0,No anaemia,Vaginal,15
+P076,120,0,Anaemia,Vaginal,23
+P077,243,0,No anaemia,Vaginal,36
+P078,40,0,Anaemia,Vaginal,15
+P079,193,0,No anaemia,Vaginal,15
+P080,178,0,No anaemia,Vaginal,17
+P081,193,1,Anaemia,Vaginal,26
+P082,51,1,Anaemia,Vaginal,26
+P083,62,1,Anaemia,Vaginal,37
+P084,33,0,Anaemia,Vaginal,36
+P085,191,1,Anaemia,Caesarean,31
+P086,131,1,No anaemia,Vaginal,24
+P087,112,0,No anaemia,Caesarean,28
+P088,23,1,No anaemia,Vaginal,21
+P089,75,0,No anaemia,Vaginal,29
+P090,65,0,No anaemia,Caesarean,30
+P091,210,0,No anaemia,Vaginal,23
+P092,171,1,Anaemia,Vaginal,21
+P093,10,1,No anaemia,Caesarean,24
+P094,148,0,No anaemia,Caesarean,33
+P095,164,1,No anaemia,Vaginal,17
+P096,86,1,Anaemia,Caesarean,22
+P097,22,1,No anaemia,Vaginal,27
+P098,147,1,No anaemia,Vaginal,31
+P099,70,0,No anaemia,Vaginal,24
+P100,223,0,Anaemia,Vaginal,22
+P101,120,0,No anaemia,Vaginal,20
+P102,3,1,No anaemia,Vaginal,28
+P103,209,0,Anaemia,Vaginal,29
+P104,206,0,Anaemia,Vaginal,15
+P105,316,0,No anaemia,Vaginal,23
+P106,35,0,Anaemia,Vaginal,28
+P107,44,1,No anaemia,Caesarean,39
+P108,88,1,No anaemia,Vaginal,18
+P109,265,0,No anaemia,Vaginal,28
+P110,43,1,Anaemia,Vaginal,25
+P111,156,0,No anaemia,Vaginal,31
+P112,171,1,Anaemia,Vaginal,20
+P113,194,0,No anaemia,Vaginal,18
+P114,111,0,No anaemia,Vaginal,32
+P115,47,0,No anaemia,Vaginal,25
+P116,28,1,No anaemia,Vaginal,23
+P117,210,0,No anaemia,Vaginal,23
+P118,134,0,No anaemia,Vaginal,40
+P119,8,1,No anaemia,Caesarean,28
+P120,164,0,No anaemia,Vaginal,24
+P121,330,0,Anaemia,Vaginal,18
+P122,321,1,Anaemia,Vaginal,32
+P123,110,0,Anaemia,Vaginal,15
+P124,139,0,Anaemia,Caesarean,19
+P125,53,1,No anaemia,Caesarean,33
+P126,46,1,No anaemia,Vaginal,32
+P127,285,0,No anaemia,Caesarean,19
+P128,151,0,No anaemia,Vaginal,15
+P129,241,0,No anaemia,Vaginal,25
+P130,284,0,No anaemia,Vaginal,22
+P131,7,1,Anaemia,Vaginal,27
+P132,168,0,No anaemia,Vaginal,31
+P133,266,0,No anaemia,Vaginal,29
+P134,87,0,No anaemia,Vaginal,32
+P135,94,1,Anaemia,Vaginal,38
+P136,115,1,No anaemia,Caesarean,25
+P137,118,1,No anaemia,Vaginal,25
+P138,35,0,Anaemia,Vaginal,31
+P139,210,0,No anaemia,Caesarean,24
+P140,96,0,No anaemia,Vaginal,30
+P141,325,0,Anaemia,Vaginal,28
+P142,134,1,No anaemia,Caesarean,20
+P143,167,1,Anaemia,Vaginal,26
+P144,182,0,No anaemia,Vaginal,29
+P145,131,0,No anaemia,Vaginal,32
+P146,124,1,Anaemia,Vaginal,23
+P147,101,1,No anaemia,Vaginal,26
+P148,3,1,Anaemia,Caesarean,17
+P149,202,1,Anaemia,Vaginal,21
+P150,148,0,No anaemia,Vaginal,28
+P151,1,1,Anaemia,Vaginal,27
+P152,64,1,No anaemia,Caesarean,40
+P153,254,0,No anaemia,Vaginal,34
+P154,16,1,Anaemia,Vaginal,27
+P155,2,1,No anaemia,Vaginal,22
+P156,283,0,Anaemia,Vaginal,19
+P157,14,1,No anaemia,Vaginal,27
+P158,1,1,Anaemia,Vaginal,21
+P159,47,0,No anaemia,Vaginal,24
+P160,61,0,Anaemia,Caesarean,20
+P161,79,1,Anaemia,Vaginal,27
+P162,146,0,No anaemia,Caesarean,26
+P163,48,0,Anaemia,Vaginal,29
+P164,296,1,No anaemia,Vaginal,18
+P165,139,0,No anaemia,Vaginal,36
+P166,244,1,Anaemia,Caesarean,38
+P167,56,0,No anaemia,Vaginal,21
+P168,67,0,Anaemia,Vaginal,25
+P169,351,0,No anaemia,Vaginal,34
+P170,72,1,Anaemia,Vaginal,28
+P171,3,1,Anaemia,Vaginal,24
+P172,52,0,Anaemia,Vaginal,30
+P173,1,1,No anaemia,Vaginal,28
+P174,246,0,No anaemia,Vaginal,24
+P175,209,1,No anaemia,Caesarean,15
+P176,107,0,Anaemia,Caesarean,29
+P177,68,0,No anaemia,Caesarean,36
+P178,118,0,No anaemia,Vaginal,24
+P179,121,1,Anaemia,Vaginal,21
+P180,138,0,Anaemia,Vaginal,15
+P181,103,0,No anaemia,Vaginal,27
+P182,276,0,No anaemia,Vaginal,21
+P183,128,0,No anaemia,Vaginal,26
+P184,77,0,Anaemia,Vaginal,27
+P185,189,1,Anaemia,Vaginal,30
+P186,193,0,No anaemia,Vaginal,30
+P187,72,0,No anaemia,Vaginal,25
+P188,32,1,No anaemia,Vaginal,30
+P189,136,0,No anaemia,Caesarean,17
+P190,145,0,No anaemia,Vaginal,26
+P191,70,0,No anaemia,Vaginal,31
+P192,39,0,No anaemia,Caesarean,32
+P193,24,1,Anaemia,Vaginal,26
+P194,93,0,Anaemia,Vaginal,25
+P195,128,1,No anaemia,Vaginal,21
+P196,130,0,No anaemia,Caesarean,31
+P197,11,1,No anaemia,Vaginal,26
+P198,1,1,Anaemia,Caesarean,22
+P199,179,0,Anaemia,Vaginal,26
+P200,351,0,No anaemia,Vaginal,23
+P201,6,1,No anaemia,Caesarean,39
+P202,266,0,No anaemia,Caesarean,22
+P203,127,0,No anaemia,Vaginal,26
+P204,135,0,No anaemia,Vaginal,28
+P205,134,1,Anaemia,Caesarean,15
+P206,129,0,No anaemia,Vaginal,33
+P207,247,0,No anaemia,Vaginal,25
+P208,284,0,No anaemia,Vaginal,19
+P209,35,1,Anaemia,Vaginal,15
+P210,105,0,No anaemia,Vaginal,15
+P211,144,1,No anaemia,Vaginal,36
+P212,12,1,No anaemia,Vaginal,31
+P213,43,0,Anaemia,Vaginal,21
+P214,226,1,Anaemia,Vaginal,26
+P215,155,0,Anaemia,Vaginal,15
+P216,29,1,No anaemia,Caesarean,33
+P217,311,1,No anaemia,Caesarean,17
+P218,103,0,Anaemia,Vaginal,24
+P219,187,0,No anaemia,Vaginal,32
+P220,16,1,Anaemia,Vaginal,26
+P221,268,0,Anaemia,Vaginal,31
+P222,122,1,No anaemia,Vaginal,38
+P223,194,0,No anaemia,Vaginal,38
+P224,112,1,No anaemia,Vaginal,27
+P225,237,0,No anaemia,Vaginal,25
+P226,250,0,Anaemia,Vaginal,15
+P227,222,0,No anaemia,Vaginal,29
+P228,228,0,No anaemia,Vaginal,15
+P229,40,0,No anaemia,Caesarean,28
+P230,75,1,No anaemia,Vaginal,29
+P231,313,1,No anaemia,Caesarean,15
+P232,262,0,No anaemia,Vaginal,25
+P233,117,0,No anaemia,Vaginal,21
+P234,308,0,No anaemia,Vaginal,22
+P235,20,1,Anaemia,Caesarean,26
+P236,161,0,No anaemia,Vaginal,29
+P237,17,1,Anaemia,Vaginal,27
+P238,16,1,No anaemia,Vaginal,24
+P239,88,0,Anaemia,Vaginal,27
+P240,158,0,No anaemia,Vaginal,21
+P241,74,1,No anaemia,Caesarean,26
+P242,193,0,No anaemia,Vaginal,20
+P243,109,0,No anaemia,Vaginal,18
+P244,184,1,Anaemia,Vaginal,31
+P245,269,0,Anaemia,Vaginal,24
+P246,357,0,Anaemia,Vaginal,36
+P247,130,1,No anaemia,Vaginal,26
+P248,302,0,No anaemia,Vaginal,19
+P249,95,0,Anaemia,Caesarean,28
+P250,333,0,No anaemia,Caesarean,21
+P251,129,1,Anaemia,Vaginal,32
+P252,213,1,Anaemia,Vaginal,28
+P253,94,0,Anaemia,Caesarean,30
+P254,73,0,Anaemia,Vaginal,34
+P255,331,0,No anaemia,Vaginal,35
+P256,117,0,Anaemia,Vaginal,18
+P257,172,0,No anaemia,Vaginal,34
+P258,59,1,Anaemia,Vaginal,24
+P259,35,0,Anaemia,Vaginal,22
+P260,102,0,No anaemia,Caesarean,23
+P261,9,1,Anaemia,Caesarean,17
+P262,169,0,No anaemia,Vaginal,20
+P263,42,0,No anaemia,Vaginal,29
+P264,10,1,No anaemia,Vaginal,34
+P265,364,0,No anaemia,Vaginal,20
+P266,125,0,Anaemia,Vaginal,24
+P267,204,0,Anaemia,Vaginal,38
+P268,149,1,Anaemia,Caesarean,17
+P269,286,0,No anaemia,Caesarean,22
+P270,98,1,Anaemia,Vaginal,19
+P271,167,1,No anaemia,Vaginal,27
+P272,43,1,Anaemia,Vaginal,22
+P273,86,1,Anaemia,Vaginal,27
+P274,112,0,No anaemia,Vaginal,26
+P275,355,0,Anaemia,Vaginal,24
+P276,153,0,Anaemia,Caesarean,27
+P277,278,0,Anaemia,Vaginal,25
+P278,290,0,No anaemia,Vaginal,18
+P279,108,0,Anaemia,Vaginal,32
+P280,73,0,No anaemia,Caesarean,20
+P281,98,1,Anaemia,Vaginal,23
+P282,152,1,No anaemia,Caesarean,31
+P283,93,1,Anaemia,Vaginal,24
+P284,38,1,No anaemia,Caesarean,35
+P285,145,0,Anaemia,Caesarean,25
+P286,90,0,Anaemia,Vaginal,30
+P287,87,0,Anaemia,Caesarean,32
+P288,61,0,No anaemia,Caesarean,22
+P289,117,0,No anaemia,Caesarean,35
+P290,128,0,Anaemia,Vaginal,34
+P291,166,0,No anaemia,Vaginal,31
+P292,76,0,Anaemia,Vaginal,19
+P293,178,0,No anaemia,Vaginal,30
+P294,114,1,No anaemia,Caesarean,22
+P295,351,0,No anaemia,Vaginal,34
+P296,211,0,Anaemia,Vaginal,27
+P297,62,1,Anaemia,Caesarean,38
+P298,104,0,No anaemia,Vaginal,18
+P299,193,0,No anaemia,Vaginal,26
+P300,306,0,No anaemia,Vaginal,29
+P301,161,1,Anaemia,Vaginal,30
+P302,107,1,Anaemia,Caesarean,28
+P303,169,1,Anaemia,Vaginal,33
+P304,156,0,No anaemia,Caesarean,21
+P305,169,1,No anaemia,Caesarean,33
+P306,172,0,No anaemia,Vaginal,28
+P307,160,1,Anaemia,Caesarean,43
+P308,92,0,No anaemia,Caesarean,27
+P309,113,1,No anaemia,Vaginal,18
+P310,256,1,No anaemia,Caesarean,18
+P311,57,1,No anaemia,Vaginal,25
+P312,65,1,Anaemia,Caesarean,31
+P313,7,1,No anaemia,Vaginal,21
+P314,3,1,Anaemia,Vaginal,23
+P315,78,1,Anaemia,Caesarean,21
+P316,89,1,Anaemia,Caesarean,33
+P317,150,0,No anaemia,Vaginal,24
+P318,39,0,No anaemia,Vaginal,19
+P319,257,0,No anaemia,Vaginal,21
+P320,197,0,No anaemia,Vaginal,21
+P321,143,1,No anaemia,Vaginal,29
+P322,80,1,No anaemia,Vaginal,27
+P323,126,0,No anaemia,Vaginal,28
+P324,249,0,No anaemia,Caesarean,16
+P325,113,0,Anaemia,Vaginal,29
+P326,11,1,Anaemia,Caesarean,22
+P327,91,0,No anaemia,Vaginal,24
+P328,29,1,Anaemia,Vaginal,26
+P329,174,0,Anaemia,Caesarean,25
+P330,249,1,No anaemia,Caesarean,19
+P331,278,1,No anaemia,Caesarean,24
+P332,159,0,No anaemia,Caesarean,20
+P333,122,1,Anaemia,Vaginal,32
+P334,295,0,Anaemia,Vaginal,31
+P335,4,1,Anaemia,Vaginal,30
+P336,20,1,No anaemia,Vaginal,33
+P337,45,1,Anaemia,Vaginal,21
+P338,168,1,No anaemia,Vaginal,30
+P339,251,0,Anaemia,Caesarean,28
+P340,146,1,Anaemia,Vaginal,19
+P341,266,0,Anaemia,Vaginal,30
+P342,185,0,No anaemia,Caesarean,22
+P343,92,0,No anaemia,Vaginal,16
+P344,47,0,No anaemia,Vaginal,30
+P345,167,1,No anaemia,Caesarean,22
+P346,267,0,No anaemia,Vaginal,16
+P347,54,0,No anaemia,Vaginal,25
+P348,68,0,No anaemia,Caesarean,32
+P349,60,1,No anaemia,Caesarean,31
+P350,302,0,No anaemia,Vaginal,20
+P351,98,0,Anaemia,Vaginal,34
+P352,236,0,Anaemia,Caesarean,20
+P353,112,0,No anaemia,Vaginal,30
+P354,65,1,Anaemia,Vaginal,24
+P355,67,1,Anaemia,Caesarean,37
+P356,62,0,No anaemia,Vaginal,37
+P357,260,1,Anaemia,Vaginal,23
+P358,154,0,No anaemia,Vaginal,28
+P359,276,0,Anaemia,Caesarean,16
+P360,90,0,Anaemia,Vaginal,25
+P361,35,0,Anaemia,Vaginal,26
+P362,243,0,No anaemia,Caesarean,21
+P363,238,0,No anaemia,Vaginal,23
+P364,233,1,No anaemia,Vaginal,19
+P365,78,0,No anaemia,Vaginal,27
+P366,45,0,No anaemia,Vaginal,27
+P367,59,1,No anaemia,Caesarean,34
+P368,231,0,No anaemia,Vaginal,27
+P369,86,1,Anaemia,Caesarean,27
+P370,98,0,No anaemia,Vaginal,28
+P371,62,1,Anaemia,Vaginal,30
+P372,244,0,No anaemia,Vaginal,27
+P373,135,0,No anaemia,Vaginal,30
+P374,325,0,No anaemia,Vaginal,19
+P375,21,1,Anaemia,Vaginal,31
+P376,49,1,Anaemia,Vaginal,23
+P377,59,1,No anaemia,Caesarean,15
+P378,300,0,No anaemia,Vaginal,28
+P379,113,0,No anaemia,Caesarean,33
+P380,103,1,No anaemia,Vaginal,17
+P381,79,0,No anaemia,Vaginal,20
+P382,85,1,Anaemia,Caesarean,22
+P383,52,1,No anaemia,Vaginal,34
+P384,76,0,No anaemia,Vaginal,38
+P385,257,0,No anaemia,Vaginal,26
+P386,6,1,No anaemia,Caesarean,17
+P387,3,1,Anaemia,Vaginal,31
+P388,345,0,Anaemia,Vaginal,15
+P389,80,0,Anaemia,Vaginal,20
+P390,252,0,No anaemia,Vaginal,21
+P391,45,0,Anaemia,Vaginal,33
+P392,14,1,No anaemia,Vaginal,25
+P393,184,0,No anaemia,Vaginal,23
+P394,182,0,No anaemia,Caesarean,34
+P395,72,0,No anaemia,Caesarean,21
+P396,58,1,Anaemia,Vaginal,21
+P397,76,0,No anaemia,Vaginal,29
+P398,249,0,No anaemia,Vaginal,23
+P399,184,0,No anaemia,Vaginal,19
+P400,74,0,No anaemia,Caesarean,20
+P401,102,1,Anaemia,Vaginal,23
+P402,147,0,No anaemia,Caesarean,32
+P403,105,0,No anaemia,Caesarean,25
+P404,263,0,No anaemia,Vaginal,23
+P405,80,0,No anaemia,Vaginal,24
+P406,288,0,Anaemia,Vaginal,20
+P407,31,0,Anaemia,Vaginal,31
+P408,199,0,Anaemia,Vaginal,20
+P409,68,1,No anaemia,Caesarean,29
+P410,242,1,Anaemia,Vaginal,30
+P411,157,0,No anaemia,Caesarean,21
+P412,71,1,Anaemia,Vaginal,28
+P413,116,0,No anaemia,Caesarean,15
+P414,347,0,No anaemia,Vaginal,31
+P415,227,0,No anaemia,Vaginal,23
+P416,175,1,Anaemia,Caesarean,16
+P417,329,0,Anaemia,Caesarean,20
+P418,231,1,Anaemia,Caesarean,31
+P419,33,1,No anaemia,Vaginal,26
+P420,288,0,No anaemia,Vaginal,22
+P421,260,1,Anaemia,Vaginal,23
+P422,247,0,No anaemia,Caesarean,16
+P423,229,1,No anaemia,Caesarean,31
+P424,352,0,No anaemia,Vaginal,22
+P425,44,1,Anaemia,Caesarean,27
+P426,199,0,No anaemia,Caesarean,26
+P427,150,0,Anaemia,Vaginal,25
+P428,230,1,No anaemia,Vaginal,39
+P429,45,0,No anaemia,Vaginal,33
+P430,121,1,No anaemia,Vaginal,29
+P431,41,1,No anaemia,Vaginal,23
+P432,102,1,No anaemia,Vaginal,19
+P433,251,0,No anaemia,Vaginal,33
+P434,184,0,No anaemia,Caesarean,27
+P435,53,0,No anaemia,Vaginal,17
+P436,44,0,Anaemia,Vaginal,29
+P437,73,0,No anaemia,Vaginal,33
+P438,84,0,No anaemia,Vaginal,15
+P439,320,0,No anaemia,Vaginal,26
+P440,309,0,No anaemia,Vaginal,34
+P441,43,0,No anaemia,Vaginal,18
+P442,235,1,No anaemia,Vaginal,23
+P443,222,1,Anaemia,Caesarean,24
+P444,25,1,Anaemia,Caesarean,27
+P445,47,0,No anaemia,Vaginal,30
+P446,110,0,Anaemia,Vaginal,30
+P447,273,0,Anaemia,Vaginal,34
+P448,131,0,No anaemia,Caesarean,20
+P449,57,1,No anaemia,Vaginal,31
+P450,218,0,No anaemia,Vaginal,25
+P451,276,1,Anaemia,Vaginal,27
+P452,80,1,No anaemia,Vaginal,35
+P453,279,0,Anaemia,Vaginal,22
+P454,136,0,No anaemia,Vaginal,23
+P455,53,1,Anaemia,Vaginal,35
+P456,137,0,No anaemia,Vaginal,26
+P457,61,0,No anaemia,Vaginal,28
+P458,68,1,Anaemia,Vaginal,30
+P459,46,1,No anaemia,Vaginal,29
+P460,238,0,No anaemia,Vaginal,30
+P461,169,0,No anaemia,Vaginal,28
+P462,66,0,No anaemia,Vaginal,31
+P463,103,0,No anaemia,Caesarean,34
+P464,201,1,No anaemia,Vaginal,15
+P465,63,1,Anaemia,Vaginal,25
+P466,6,1,No anaemia,Caesarean,34
+P467,131,1,No anaemia,Vaginal,28
+P468,206,0,No anaemia,Vaginal,15
+P469,167,0,No anaemia,Caesarean,34
+P470,48,1,No anaemia,Caesarean,24
+P471,48,1,No anaemia,Caesarean,30
+P472,93,0,Anaemia,Vaginal,23
+P473,155,0,No anaemia,Vaginal,38
+P474,117,0,Anaemia,Caesarean,21
+P475,281,0,No anaemia,Vaginal,29
+P476,149,0,No anaemia,Vaginal,28
+P477,190,1,Anaemia,Vaginal,25
+P478,38,0,Anaemia,Caesarean,40
+P479,271,0,No anaemia,Vaginal,32
+P480,226,1,Anaemia,Vaginal,19
+P481,78,0,Anaemia,Vaginal,24
+P482,165,0,No anaemia,Vaginal,30
+P483,65,0,Anaemia,Vaginal,15
+P484,7,1,Anaemia,Caesarean,33
+P485,153,1,No anaemia,Vaginal,28
+P486,54,0,No anaemia,Vaginal,21
+P487,32,0,Anaemia,Vaginal,21
+P488,2,1,Anaemia,Caesarean,27
+P489,195,1,No anaemia,Vaginal,24
+P490,72,1,No anaemia,Vaginal,18
+P491,76,0,No anaemia,Vaginal,25
+P492,113,0,No anaemia,Vaginal,17
+P493,67,1,No anaemia,Vaginal,27
+P494,358,0,No anaemia,Vaginal,25
+P495,110,0,No anaemia,Vaginal,25
+P496,132,1,Anaemia,Vaginal,29
+P497,57,0,Anaemia,Vaginal,31
+P498,3,1,No anaemia,Vaginal,21
+P499,131,0,No anaemia,Caesarean,25
+P500,1,1,No anaemia,Vaginal,26
