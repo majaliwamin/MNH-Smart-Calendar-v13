@@ -51,6 +51,19 @@ _PRIMARY_BY_OPERATION: dict[str, tuple[str, ...]] = {
     "sample_size_proportion": ("n_required", "n_unrounded"),
     "sample_size_two_means": ("cohens_d", "n_per_group"),
     "effect_size": ("effect_size",),
+    "arithmetic_sequence_term": ("nth_term",),
+    "arithmetic_sequence_sum": ("sum_first_n",),
+    "geometric_sequence_term": ("nth_term",),
+    "geometric_sequence_sum": ("sum_first_n",),
+    "geometric_transformation": ("image",),
+    "mensuration": ("value",),
+    "circle_geometry": ("value",),
+    "similarity": ("scale_factor", "result"),
+    "linear_model": ("value",),
+    "graph_reading": ("gradient", "y_intercept", "value_at_x"),
+    "locus": ("midpoint",),
+    "bearing": ("distance", "bearing_degrees"),
+    "linear_program": ("optimal_value", "optimal_point"),
 }
 
 

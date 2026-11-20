@@ -12,7 +12,7 @@ import copy
 import re
 from typing import Any
 
-from . import datasets, descriptive, epidemiology, inference, parsing, probability, regression, symbolic
+from . import datasets, descriptive, epidemiology, inference, mathsdrill, parsing, probability, regression, symbolic
 from .registry import formula_result, lookup_symbol
 from .results import MathResult, blocked_result
 
@@ -39,6 +39,10 @@ _CAPABILITIES: dict[str, list[str]] = {
     ],
     "data_support": ["pasted CSV or Markdown tables", "uploaded CSV/Excel document passages", "column-level missingness and duplicate checks"],
     "knowledge_registry": ["context-sensitive symbol meanings", "formulas with inputs, assumptions, applications and examples"],
+    "mathsdrill_complement": [
+        "school sequences", "coordinate transformations", "mensuration", "circle geometry", "similarity",
+        "loci", "bearings", "linear programming", "linear modelling", "graph reading", "curated step justifications",
+    ],
 }
 
 _MATH_CUE = re.compile(
@@ -70,6 +74,19 @@ _SYMBOL_DOMAIN_CONTEXT = re.compile(
 )
 _EXPLICIT_CALCULATION = re.compile(
     r"\b(?:calculate|compute|evaluate|work\s+out|solve|find|derive|fit|plot|construct|test)\b", re.I,
+)
+_SCHOOL_MATH_CUE = re.compile(
+    r"\b(?:nth\s+term|arithmetic\s+(?:sequence|progression)|geometric\s+(?:sequence|progression)|"
+    r"common\s+difference|common\s+ratio|reflect\w*|rotat\w*|translat\w*|enlarg\w*|"
+    r"locus|perpendicular\s+bisector|equidistant\s+from|\bbearing\b|navigation|mensuration|"
+    r"(?:area|perimeter|circumference|volume|surface\s+area)\s+of\s+(?:a|an|the)?\s*"
+    r"(?:rectangle|triangle|circle|trapezium|trapezoid|cylinder|cone|sphere|cuboid)|"
+    r"(?:rectangle|circle|trapezium|cylinder|cone|sphere|cuboid)\s+(?:with|of)\s+"
+    r"(?:radius|length|width|height|base)|chord|tangent|arc\s+length|sector\s+area|"
+    r"similarity|similar\s+(?:figures?|triangles?|shapes?)|linear\s+program\w*|linear\s+model|"
+    r"subject\s+to|"
+    r"fixed\s+cost|depreciat\w*|read\s+off|equation\s+of\s+the\s+line)\b",
+    re.I,
 )
 _CLINICAL_CONTEXT = re.compile(
     r"\b(?:patient|diagnos\w*|symptom\w*|treat\w*|management|prescri\w*|medication|"
@@ -298,7 +315,7 @@ def detect_math_request(
             return True, "symbol"
     if _FORMULA_QUESTION.search(text) and _MATH_CUE.search(text):
         return True, "formula"
-    cue = bool(_MATH_CUE.search(text))
+    cue = bool(_MATH_CUE.search(text) or _SCHOOL_MATH_CUE.search(text))
     explicit_calculation = bool(_EXPLICIT_CALCULATION.search(text))
     has_value = bool(re.search(r"\d|[A-Za-z]\s*=|π|√|∫|∑|[μσλθαβρ]", text))
     if _FOLLOWUP.search(text) and history:
@@ -363,6 +380,16 @@ def _dispatch(text: str, context: str, message: str) -> MathResult | None:
         result = formula_result(query.strip(" ?.!;:,"))
         if result is not None:
             return result
+        return None
+
+    # Additive MathsDrill complement for school mathematics. It is deliberately
+    # narrow and first defers to CRARA's own biomedical/statistical contexts.
+    # If a school cue matched but the complement could not parse it safely, the
+    # turn returns to the language path instead of becoming a false refusal.
+    if _SCHOOL_MATH_CUE.search(text):
+        school_result = mathsdrill.solve(text)
+        if school_result is not None:
+            return school_result
         return None
 
     # Structured pasted data and uploaded CSV/Excel passages.
@@ -685,6 +712,8 @@ def _dispatch(text: str, context: str, message: str) -> MathResult | None:
     expression = _arithmetic_expression(message)
     if expression:
         return symbolic.simplify(expression)
+    if _SCHOOL_MATH_CUE.search(text) and not _EXPLICIT_CALCULATION.search(text):
+        return None
     return blocked_result("mathematics", "No deterministic computation could be identified from the supplied information.", domain="mathematics")
 
 
