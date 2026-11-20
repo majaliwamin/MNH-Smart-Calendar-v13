@@ -389,7 +389,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-biomedical-library-v4"
+    assert build == "2026.11.20-biomedical-library-v5"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -423,6 +423,14 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "runnerEnabled && !embeddedMode" in bridge
     assert "Enter a trusted backend API URL before enabling the runner." in bridge
     assert "bm-chapter-index" in bridge
+    assert 'request("/analysis/methods"' in bridge
+    assert 'request("/analysis", { method: "POST", body: body })' in bridge
+    assert 'request("/notebooks", {' in bridge
+    assert 'request("/reports", {' in bridge
+    assert "Download report" in bridge
+    assert "function hidePanel()" in bridge
+    assert "function showPanel()" in bridge
+    assert "clearDatasetState(" in bridge
 
     app_js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")

@@ -56,6 +56,15 @@
   var sessionEl = null;
   var safetyEl = null;
   var apiButtonEl = null;
+  var toolRowEl = null;
+  var analysisSelectEl = null;
+  var analysisColumnsEl = null;
+  var analysisOptionsEl = null;
+  var notebookNameEl = null;
+  var notebookIdEl = null;
+  var reportTitleEl = null;
+  var reportFormatEl = null;
+  var reopenButtonEl = null;
 
   var API = {
     defaultBaseUrl: DEFAULT_BASE,
@@ -84,12 +93,19 @@
     samples: SAMPLES,
     selectSample: selectSample,
     uploadFile: uploadFile,
-    loadDataset: loadDataset
+    loadDataset: loadDataset,
+    clearDatasetState: clearDatasetState,
+    refreshAnalysisMethods: refreshAnalysisMethods,
+    runAnalysis: runAnalysis,
+    saveNotebook: saveNotebook,
+    loadNotebook: loadNotebook,
+    generateReport: generateReport,
+    downloadReport: downloadReport
   };
 
   async function request(path, options) {
     options = options || {};
-    requireRunner();
+    if (!options.skipRunnerCheck) requireRunner();
     var config = {
       method: options.method || "GET",
       headers: options.headers || {}
@@ -137,11 +153,23 @@
     if (!nextBaseUrl) {
       throw new Error("Enter a trusted backend API URL before enabling the runner.");
     }
-    API.setBaseUrl(nextBaseUrl, true);
-    runnerEnabled = true;
-    updateRunnerControls();
-    setStatus("Backend runner enabled for " + baseUrl, "info");
-    return health();
+    var previousBaseUrl = baseUrl;
+    API.setBaseUrl(nextBaseUrl, false);
+    try {
+      var healthData = await health();
+      runnerEnabled = true;
+      API.setBaseUrl(nextBaseUrl, true);
+      updateRunnerControls();
+      setStatus("Backend runner enabled for " + baseUrl, "ok");
+      refreshAnalysisMethods().catch(function () {});
+      return healthData;
+    } catch (error) {
+      API.setBaseUrl(previousBaseUrl, false);
+      runnerEnabled = false;
+      updateRunnerControls();
+      setStatus("Backend not enabled: " + (error && error.message ? error.message : String(error)), "error");
+      throw error;
+    }
   }
 
   function updateRunnerControls() {
@@ -160,6 +188,11 @@
     fileInputs.forEach(function (input) {
       input.disabled = !runnerEnabled;
     });
+    if (toolRowEl) {
+      Array.prototype.forEach.call(toolRowEl.querySelectorAll("button,input,select"), function (control) {
+        control.disabled = !runnerEnabled;
+      });
+    }
     if (apiButtonEl) {
       apiButtonEl.textContent = runnerEnabled ? "Set API" : "Enable runner";
     }
@@ -196,13 +229,18 @@
       ".bm-file-status{padding:8px 12px;border-top:1px solid var(--bd,#cdd8e0);font-weight:600;color:var(--ac,#0b5d7a)}",
       ".bm-api-row{padding:6px 10px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--bd,#cdd8e0)}",
       ".bm-api-row input{flex:1;min-width:0;padding:4px 6px;font-size:12px;border:1px solid var(--bd,#cdd8e0);border-radius:4px;background:var(--card,#eef5f8);color:var(--fg,#1b2a3a)}",
+      ".bm-tools{padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-bottom:1px solid var(--bd,#cdd8e0)}",
+      ".bm-tools select,.bm-tools input{flex:1;min-width:110px;padding:4px 6px;font-size:12px;border:1px solid var(--bd,#cdd8e0);border-radius:4px;background:var(--card,#eef5f8);color:var(--fg,#1b2a3a)}",
+      ".bm-tools .bm-wide{flex-basis:100%}",
+      ".bm-tools button[disabled]{opacity:.55;cursor:not-allowed}",
+      ".bm-reopen{position:fixed;right:16px;bottom:16px;z-index:9999;display:none;padding:7px 10px;font-size:12px;border:1px solid var(--ac,#0b5d7a);border-radius:6px;background:var(--card,#eef5f8);color:var(--fg,#1b2a3a);box-shadow:0 4px 14px rgba(0,0,0,.2)}",
       ".bm-chapter-index{margin:12px 0 18px;padding:12px 14px;border:2px solid var(--ac,#0b5d7a);border-radius:10px;background:var(--card,#eef5f8)}",
       ".bm-chapter-index>strong{display:block;margin-bottom:8px;color:var(--ac,#0b5d7a);font-size:16px}",
       ".bm-chapter-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}",
       ".bm-chapter-links a{display:block;padding:7px 8px;border:1px solid var(--bd,#cdd8e0);border-radius:6px;background:var(--bg,#fff);color:var(--fg,#1b2a3a);text-decoration:none;font-size:13px;line-height:1.25}",
       ".bm-chapter-links a:hover,.bm-chapter-links a:focus-visible{border-color:var(--ac,#0b5d7a);color:var(--ac,#0b5d7a)}",
       "@media(max-width:640px){.bm-chapter-index{padding:10px}.bm-chapter-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.bm-chapter-links a{font-size:12px;padding:6px}}",
-      "@media print{.bm-panel,.bm-run-btn,.bm-file-actions,.bm-chapter-index{display:none!important}}"
+      "@media print{.bm-panel,.bm-reopen,.bm-run-btn,.bm-file-actions,.bm-chapter-index{display:none!important}}"
     ].join("");
     document.head.appendChild(style);
   }
@@ -223,7 +261,7 @@
     var newBtn = makeButton("New session", function () { newSession().catch(showError); });
     var resetBtn = makeButton("Reset variables", function () { resetSession().catch(showError); });
     var clearBtn = makeButton("Clear output", clearOutput);
-    var hideBtn = makeButton("Hide", function () { panel.style.display = "none"; });
+    var hideBtn = makeButton("Hide", hidePanel);
     head.appendChild(newBtn);
     head.appendChild(resetBtn);
     head.appendChild(clearBtn);
@@ -252,6 +290,66 @@
     apiRow.appendChild(apiInput);
     apiRow.appendChild(apiButtonEl);
 
+    toolRowEl = document.createElement("div");
+    toolRowEl.className = "bm-tools";
+
+    analysisSelectEl = document.createElement("select");
+    analysisSelectEl.setAttribute("aria-label", "Statistical analysis method");
+    analysisSelectEl.title = "Statistical analysis method";
+    analysisSelectEl.appendChild(new Option("Loading methods…", ""));
+    var analysisBtn = makeButton("Run analysis", function () { runAnalysisFromUI().catch(showError); });
+
+    analysisColumnsEl = document.createElement("input");
+    analysisColumnsEl.type = "text";
+    analysisColumnsEl.placeholder = "Columns, comma-separated";
+    analysisColumnsEl.setAttribute("aria-label", "Analysis columns");
+    analysisColumnsEl.title = "Columns used by the statistical analysis";
+
+    analysisOptionsEl = document.createElement("input");
+    analysisOptionsEl.type = "text";
+    analysisOptionsEl.className = "bm-wide";
+    analysisOptionsEl.placeholder = 'Options JSON, e.g. {"alpha":0.05}';
+    analysisOptionsEl.setAttribute("aria-label", "Analysis options JSON");
+    analysisOptionsEl.title = "Optional JSON object passed to the analysis endpoint";
+
+    notebookNameEl = document.createElement("input");
+    notebookNameEl.type = "text";
+    notebookNameEl.placeholder = "Notebook name";
+    notebookNameEl.value = "Command library notebook";
+    notebookNameEl.setAttribute("aria-label", "Notebook name");
+    var saveNotebookBtn = makeButton("Save notebook", function () { saveNotebook().catch(showError); });
+
+    notebookIdEl = document.createElement("input");
+    notebookIdEl.type = "text";
+    notebookIdEl.placeholder = "Notebook ID (blank = first)";
+    notebookIdEl.setAttribute("aria-label", "Notebook ID to load");
+    notebookIdEl.title = "Leave blank to load the most recently saved notebook";
+    var loadNotebookBtn = makeButton("Load notebook", function () { loadNotebook().catch(showError); });
+
+    reportTitleEl = document.createElement("input");
+    reportTitleEl.type = "text";
+    reportTitleEl.placeholder = "Report title";
+    reportTitleEl.value = "Biomedical analysis report";
+    reportTitleEl.setAttribute("aria-label", "Report title");
+    reportFormatEl = document.createElement("select");
+    reportFormatEl.setAttribute("aria-label", "Report format");
+    [["pdf", "PDF"], ["html", "HTML"], ["xlsx", "Excel"], ["csv", "CSV"]].forEach(function (item) {
+      reportFormatEl.appendChild(new Option(item[1], item[0]));
+    });
+    var reportBtn = makeButton("Download report", function () { downloadReport().catch(showError); });
+
+    toolRowEl.appendChild(analysisSelectEl);
+    toolRowEl.appendChild(analysisBtn);
+    toolRowEl.appendChild(analysisColumnsEl);
+    toolRowEl.appendChild(analysisOptionsEl);
+    toolRowEl.appendChild(notebookNameEl);
+    toolRowEl.appendChild(saveNotebookBtn);
+    toolRowEl.appendChild(notebookIdEl);
+    toolRowEl.appendChild(loadNotebookBtn);
+    toolRowEl.appendChild(reportTitleEl);
+    toolRowEl.appendChild(reportFormatEl);
+    toolRowEl.appendChild(reportBtn);
+
     safetyEl = document.createElement("div");
     safetyEl.className = "bm-status bm-info";
 
@@ -263,10 +361,26 @@
     panel.appendChild(statusEl);
     panel.appendChild(sessionEl);
     panel.appendChild(apiRow);
+    panel.appendChild(toolRowEl);
     panel.appendChild(safetyEl);
     panel.appendChild(outputEl);
     document.body.appendChild(panel);
+
+    reopenButtonEl = makeButton("Show backend", showPanel);
+    reopenButtonEl.className = "bm-reopen";
+    reopenButtonEl.id = "bm-reopen";
+    document.body.appendChild(reopenButtonEl);
     return panel;
+  }
+
+  function hidePanel() {
+    if (panel) panel.style.display = "none";
+    if (reopenButtonEl) reopenButtonEl.style.display = "block";
+  }
+
+  function showPanel() {
+    if (panel) panel.style.display = "flex";
+    if (reopenButtonEl) reopenButtonEl.style.display = "none";
   }
 
   function makeButton(label, handler) {
@@ -275,6 +389,12 @@
     button.textContent = label;
     button.addEventListener("click", handler);
     return button;
+  }
+
+  function wireFocusReading(link) {
+    link.addEventListener("click", function () {
+      if (typeof window.enterFocusReading === "function") window.enterFocusReading();
+    });
   }
 
   function showError(error) {
@@ -288,7 +408,8 @@
   }
 
   async function health() {
-    var data = await request("/health");
+    if (!baseUrl) throw new Error("No backend API URL is configured.");
+    var data = await request("/health", { skipRunnerCheck: true });
     setStatus("Backend online (" + baseUrl + ")", "ok");
     return data;
   }
@@ -317,17 +438,20 @@
     });
     sessionId = data.session_id;
     if (sessionEl) sessionEl.textContent = "New session " + sessionId.slice(0, 8);
+    clearDatasetState("No dataset loaded in the new session.");
     setStatus("New session created.", "ok");
     return sessionId;
   }
 
   async function resetSession() {
+    clearDatasetState("No dataset loaded after reset. Select the file again.");
     if (!sessionId) return ensureSession();
     var data = await request("/sessions/" + encodeURIComponent(sessionId) + "/reset", {
       method: "POST",
       body: {}
     });
     if (sessionEl) sessionEl.textContent = "Session " + data.session_id.slice(0, 8) + " reset";
+    clearDatasetState("No dataset loaded after reset. Select the file again.");
     setStatus("Session variables cleared.", "ok");
     return data;
   }
@@ -386,6 +510,217 @@
       data.status === "ok" ? "Completed in " + data.duration_ms + " ms" : "Cell raised " + data.error.ename,
       data.status === "ok" ? "ok" : "error"
     );
+  }
+
+  function showData(title, data) {
+    var text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    if (outputEl) outputEl.textContent = title + "\n" + text;
+  }
+
+  function clearDatasetState(reason) {
+    window.__bmSelectedDataset = null;
+    if (fileStatusEl) {
+      fileStatusEl.textContent = reason || "No dataset selected.";
+    }
+  }
+
+  async function refreshAnalysisMethods() {
+    var data = await request("/analysis/methods", { skipRunnerCheck: true });
+    var methods = (data && data.methods) || [];
+    if (!analysisSelectEl) return methods;
+    var previous = analysisSelectEl.value;
+    analysisSelectEl.textContent = "";
+    methods.forEach(function (method) {
+      analysisSelectEl.appendChild(new Option(method, method));
+    });
+    if (methods.indexOf(previous) >= 0) analysisSelectEl.value = previous;
+    return methods;
+  }
+
+  function analysisColumns() {
+    var raw = analysisColumnsEl ? analysisColumnsEl.value : "";
+    var columns = raw.split(",").map(function (value) { return value.trim(); }).filter(Boolean);
+    if (columns.length) return columns;
+    var selected = window.__bmSelectedDataset || {};
+    var available = selected.numeric_columns || selected.column_names || [];
+    return available.slice(0, 2);
+  }
+
+  function analysisOptions() {
+    var raw = analysisOptionsEl ? analysisOptionsEl.value.trim() : "";
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Analysis options must be a JSON object.");
+    }
+    return parsed;
+  }
+
+  async function runAnalysis(options) {
+    options = options || {};
+    var selected = window.__bmSelectedDataset;
+    if (!selected || !selected.dataset_id) {
+      throw new Error("Choose or upload a dataset before running an analysis.");
+    }
+    var analysis = options.analysis || (analysisSelectEl ? analysisSelectEl.value : "");
+    if (!analysis) throw new Error("Select a statistical method first.");
+    var columns = options.columns || analysisColumns();
+    var body = {
+      dataset_id: options.dataset_id || selected.dataset_id,
+      analysis: analysis,
+      columns: columns,
+      options: options.options || analysisOptions()
+    };
+    if (options.group_column) body.group_column = options.group_column;
+    if (options.value_column) body.value_column = options.value_column;
+    if (!body.value_column && columns.length) body.value_column = columns[0];
+    if (!body.group_column && columns.length > 1) body.group_column = columns[1];
+    setStatus("Running " + analysis + "…", "info");
+    var data = await request("/analysis", { method: "POST", body: body });
+    window.__bmLastAnalysis = data;
+    showData("Analysis: " + analysis, data);
+    setStatus("Analysis completed.", "ok");
+    return data;
+  }
+
+  function runAnalysisFromUI() {
+    return runAnalysis();
+  }
+
+  function collectNotebookCells() {
+    return Array.prototype.map.call(
+      document.querySelectorAll('[data-py="1"][data-exec-type="notebook"]'),
+      function (card, index) {
+        var codeEl = card.querySelector("pre:not(.o)");
+        return {
+          cell_type: "code",
+          source: codeEl ? codeEl.textContent : "",
+          execution_order: index + 1,
+          outputs: [],
+          metadata: {
+            chapter: card.getAttribute("data-chapter-title") ||
+              (card.closest("section.s") ? card.closest("section.s").id : ""),
+            exec_type: "notebook"
+          }
+        };
+      }
+    ).filter(function (cell) { return cell.source.trim().length > 0; });
+  }
+
+  async function saveNotebook(options) {
+    options = options || {};
+    var name = options.name || (notebookNameEl ? notebookNameEl.value.trim() : "");
+    if (!name) throw new Error("Enter a notebook name.");
+    var cells = options.cells || collectNotebookCells();
+    if (!cells.length) throw new Error("No notebook cells were found in this library.");
+    var selected = window.__bmSelectedDataset || {};
+    var data = await request("/notebooks", {
+      method: "POST",
+      body: {
+        name: name,
+        cells: cells,
+        metadata: {
+          source: "biomedical-command-library",
+          dataset_id: selected.dataset_id || null,
+          dataset_name: selected.filename || null,
+          cell_count: cells.length
+        }
+      }
+    });
+    window.__bmLastNotebook = data;
+    showData("Notebook saved", data);
+    setStatus("Saved notebook '" + name + "'.", "ok");
+    return data;
+  }
+
+  async function loadNotebook(options) {
+    var notebooks = await request("/notebooks");
+    if (!notebooks.length) throw new Error("No saved notebooks were found.");
+    var notebookId = (options && options.notebook_id) ||
+      (notebookIdEl ? notebookIdEl.value.trim() : "");
+    if (!notebookId) {
+      notebookId = notebooks[0].id || notebooks[0].notebook_id;
+    }
+    if (!notebookId) throw new Error("The selected notebook has no ID.");
+    if (notebookIdEl) notebookIdEl.value = notebookId;
+    var data = await request("/notebooks/" + encodeURIComponent(notebookId));
+    window.__bmLoadedNotebook = data;
+    var cells = data.cells || [];
+    showData("Notebook loaded: " + data.name + " (" + cells.length + " cells)", {
+      notebook_id: data.id || data.notebook_id,
+      name: data.name,
+      metadata: data.metadata,
+      first_cells: cells.slice(0, 3).map(function (cell) { return cell.source; })
+    });
+    setStatus("Loaded notebook '" + data.name + "'.", "ok");
+    return data;
+  }
+
+  function reportSections() {
+    var analysis = window.__bmLastAnalysis;
+    if (!analysis) {
+      return {
+        methods: "No statistical analysis was run from this browser session.",
+        results: "No results were supplied by this interface.",
+        limitations: "No study-specific limitations were supplied.",
+        conclusions: "Not provided by this interface."
+      };
+    }
+    return {
+      methods: "Method: " + analysis.analysis + ". Assumptions: " +
+        ((analysis.assumptions || []).join("; ") || "Not reported."),
+      results: JSON.stringify(analysis.results || analysis, null, 2),
+      limitations: "Results are computed from the selected dataset by the backend. No study-specific limitations were supplied.",
+      conclusions: "Not provided by this interface."
+    };
+  }
+
+  async function generateReport(options) {
+    options = options || {};
+    var selected = window.__bmSelectedDataset || {};
+    var format = options.format || (reportFormatEl ? reportFormatEl.value : "pdf");
+    var title = options.title || (reportTitleEl ? reportTitleEl.value.trim() : "") ||
+      "Biomedical analysis report";
+    var data = await request("/reports", {
+      method: "POST",
+      body: {
+        title: title,
+        study_description: options.study_description ||
+          "Teaching report generated from the selected dataset using the biomedical Python backend.",
+        format: format,
+        sections: options.sections || reportSections(),
+        dataset_id: options.dataset_id || selected.dataset_id || null,
+        history_ids: options.history_ids || [],
+        include_versions: true
+      }
+    });
+    window.__bmLastReport = data;
+    showData("Report generated", data);
+    setStatus("Report generated (" + format.toUpperCase() + ").", "ok");
+    return data;
+  }
+
+  async function downloadReport(options) {
+    var report = await generateReport(options);
+    requireRunner();
+    var response;
+    try {
+      response = await fetch(baseUrl + "/reports/" + encodeURIComponent(report.report_id) + "/download");
+    } catch (error) {
+      throw new Error("Cannot reach backend at " + baseUrl + ".");
+    }
+    if (!response.ok) throw new Error("Report download failed (HTTP " + response.status + ").");
+    var blob = await response.blob();
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = report.filename || ("report." + report.format);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setStatus("Report download started: " + link.download, "ok");
+    return report;
   }
 
   async function runCard(card, button) {
@@ -502,6 +837,10 @@
 
   async function loadDataset(uploaded, label) {
     await ensureSession();
+    var metadata = {};
+    try {
+      metadata = await request("/datasets/" + encodeURIComponent(uploaded.dataset_id));
+    } catch (error) { /* metadata is optional for loading df into the kernel */ }
     var name = uploaded.filename || label || "dataset";
     var lower = name.toLowerCase();
     var pathLiteral = JSON.stringify(uploaded.storage_path);
@@ -528,6 +867,9 @@
       dataset_id: uploaded.dataset_id,
       rows: uploaded.rows,
       columns: uploaded.columns_count,
+      column_names: metadata.columns || [],
+      numeric_columns: metadata.numeric_columns || [],
+      categorical_columns: metadata.categorical_columns || [],
       session_id: result.session_id,
       storage_path: uploaded.storage_path
     };
@@ -549,6 +891,7 @@
       link.href = "#simulated_data_files";
       link.textContent = "Simulated data";
       link.title = "Choose a simulated dataset for the backend runner";
+      wireFocusReading(link);
       var firstLink = nav.querySelector("a");
       nav.insertBefore(link, firstLink || null);
     }
@@ -677,6 +1020,7 @@
       link.href = "#" + encodeURIComponent(section.id);
       link.textContent = chapterLabel(section);
       link.title = "Go to " + chapterLabel(section);
+      wireFocusReading(link);
       links.appendChild(link);
     });
     index.appendChild(links);
@@ -716,6 +1060,7 @@
       health().catch(function (error) {
         setStatus(error.message, "error");
       });
+      refreshAnalysisMethods().catch(function () {});
     }
     return { attached: cards.length };
   }
