@@ -159,7 +159,7 @@ def status():
     return {"ready": bool(configured), "provider": cfg["provider"], "model": cfg["model"],
             "secret_configured": bool(configured), "connection": "not_tested",
             "fallbacks": [p["provider"] for p in configured[1:]],
-            "provider_priority": ["cloudflare", "huggingface", "groq"],
+            "provider_priority": ["cloudflare", "gemini", "groq"],
             "knowledge_sources": ["timetable", "modules", "facilitators", "examinations", "recurring_activities",
                                   "announcements", "resources", "uploaded_documents", "account_conversations",
                                   "account_memories", "account_tasks", "curated_chichewa_lexicon"],

@@ -1,4 +1,4 @@
-"""Server-side AI adapters with Cloudflare -> Hugging Face -> Groq fallback."""
+"""Server-side AI adapters with Cloudflare -> Gemini -> Groq fallback."""
 import json
 import logging
 from urllib.error import HTTPError, URLError
@@ -257,7 +257,7 @@ def complete(messages: list[dict]) -> tuple[str, str, str]:
     configured = provider_configs()
     if not configured:
         raise ProviderError(
-            "No AI provider is configured. Add Cloudflare credentials, then Hugging Face "
+            "No AI provider is configured. Add Cloudflare credentials, then Gemini "
             "or Groq credentials as fallbacks in the hosting environment.",
             category="not_configured",
         )

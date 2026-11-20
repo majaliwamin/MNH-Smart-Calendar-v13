@@ -48,7 +48,7 @@ def test_cloudflare_provider_parses_workers_ai_response(monkeypatch):
 def test_provider_falls_back_in_priority_order(monkeypatch):
     configured = [
         {"provider": "cloudflare", "model": "cf-model"},
-        {"provider": "huggingface", "model": "hf-model"},
+        {"provider": "gemini", "model": "gemini-model"},
         {"provider": "groq", "model": "groq-model"},
     ]
     monkeypatch.setattr(providers, "provider_configs", lambda: configured)
@@ -57,12 +57,12 @@ def test_provider_falls_back_in_priority_order(monkeypatch):
         calls.append(cfg["provider"])
         if cfg["provider"] == "cloudflare":
             raise ProviderError("unavailable")
-        return "HF answer"
+        return "Gemini answer"
     monkeypatch.setattr(providers, "_complete_one", fake_complete_one)
     assert providers.complete([{"role": "user", "content": "hello"}]) == (
-        "HF answer", "huggingface", "hf-model"
+        "Gemini answer", "gemini", "gemini-model"
     )
-    assert calls == ["cloudflare", "huggingface"]
+    assert calls == ["cloudflare", "gemini"]
 
 
 def test_all_provider_failures_return_safe_error(monkeypatch):
@@ -414,8 +414,9 @@ def test_default_ai_response_budget_supports_complete_academic_answers(monkeypat
 
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "test-account")
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "test-key")
-    monkeypatch.delenv("MNH_CLASSREP_HF_API_KEY", raising=False)
-    monkeypatch.delenv("MNH_CLASSREP_HF_MODEL", raising=False)
+    monkeypatch.delenv("MNH_CLASSREP_GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("MNH_CLASSREP_GEMINI_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("MNH_CLASSREP_GROQ_API_KEY", raising=False)
     monkeypatch.delenv("MNH_CLASSREP_GROQ_BASE_URL", raising=False)
 
