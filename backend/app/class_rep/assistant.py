@@ -11,6 +11,7 @@ from app.class_rep.language_intelligence import (
 )
 from app.class_rep.linguistic_knowledge import linguistic_context, unknown_term_answer
 from app.class_rep.expressive_style import casual_flourish, casual_joke_answer, is_casual_turn
+from app.class_rep.error_hygiene import clean_history, clean_transient_error_text
 from app.class_rep.output_validation import honest_fallback, validate_reply
 from app.class_rep.translation_engine import (
     TRANSLATION_ENGINE_INSTRUCTIONS,
@@ -78,6 +79,11 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     lexical/document evidence actually retrieved for this turn, followed by
     independent rule-based validation of the draft.
     """
+    # Transient provider failures are never part of the conversation. Drop any
+    # previously saved service-error turns before they can be replayed as if
+    # CRARA had authored them.
+    history = clean_history(history)
+    memory_context = clean_transient_error_text(memory_context) if memory_context else memory_context
     mode = detect_mode(message, history)
     detected_language = detect_language(message)
     tone = detect_tone(message, history)

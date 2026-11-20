@@ -20,7 +20,7 @@ _CAPABILITIES: dict[str, list[str]] = {
     "pure_mathematics": [
         "arithmetic", "algebra", "equations and inequalities", "calculus", "matrix and vector algebra",
         "coordinate geometry", "trigonometry", "complex numbers", "combinatorics",
-        "numerical roots and optimisation", "differential equations",
+        "numerical roots and optimisation", "differential equations", "curated quadratic-formula derivation",
     ],
     "probability": [
         "Bayes theorem", "probability rules", "binomial", "Poisson", "normal", "t", "chi-square",
@@ -368,6 +368,12 @@ def _dispatch(text: str, context: str, message: str) -> MathResult | None:
                 if result is not None:
                     return result
             return None
+    # Deterministic derivations are curated fact, not free-form model output.
+    # This keeps a common school derivation available during provider outages.
+    if re.search(r"\bquadratic\s+formula\b", text, re.I) and re.search(
+            r"\b(?:derive|derivation|prove|proof|complete|completing|show|work\s+out)\b", text, re.I):
+        return symbolic.quadratic_formula_derivation()
+
     if "formula" in lower or "equation for" in lower:
         query = re.sub(
             r"^(?:please\s+)?(?:what is|what's|give me|show me|show|state|explain|define)\s+",
