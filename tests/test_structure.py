@@ -389,10 +389,32 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.19-crara-chichewa-language-v1"
+    assert build == "2026.11.20-biomedical-library-v1"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
+
+
+def test_python_library_resource_is_served_with_opt_in_runner():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+    resource_dir = ROOT / "frontend" / "resources"
+
+    assert 'src="/resources/python-command-library.html?runner=off"' in html
+    assert "Backend execution starts off" in html
+    assert 'app.mount("/resources", StaticFiles(directory=str(FRONTEND_DIR / "resources")), name="resources")' in main
+    assert (resource_dir / "python-command-library.html").is_file()
+    assert (resource_dir / "biomedical_api.js").is_file()
+    assert (resource_dir / "sample_data.js").is_file()
+    assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
+
+    library = (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
+    bridge = (resource_dir / "biomedical_api.js").read_text(encoding="utf-8")
+    assert '<script src="./biomedical_api.js" defer></script>' in library
+    assert "Simulated data 1: anc_cohort.csv" in bridge
+    assert 'pageParams.get("runner")' in bridge
+    assert "function requireRunner()" in bridge
+    assert 'button.dataset.bmExecType !== "notebook"' in bridge
 
 
 def test_schedule_session_outcomes_and_dialog_close_button():

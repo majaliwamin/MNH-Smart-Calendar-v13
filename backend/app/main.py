@@ -138,6 +138,7 @@ async def manifest():
 app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
 app.mount("/icons", StaticFiles(directory=str(FRONTEND_DIR / "icons")), name="icons")
+app.mount("/resources", StaticFiles(directory=str(FRONTEND_DIR / "resources")), name="resources")
 
 
 def build_info() -> dict:
