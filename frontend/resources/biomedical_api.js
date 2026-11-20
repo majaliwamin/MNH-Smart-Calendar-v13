@@ -20,18 +20,31 @@
   var queryBaseUrl = "";
   var runnerParam = "";
   var runnerEnabled = true;
+  var embeddedMode = false;
   var runnerButtons = [];
   var sampleButtons = [];
   var fileInputs = [];
   try { savedBaseUrl = localStorage.getItem("biomedical_api_base") || ""; } catch (error) {}
+  try { embeddedMode = window.self !== window.top; } catch (error) { embeddedMode = true; }
   try {
     var pageParams = new URLSearchParams(window.location.search);
     queryBaseUrl = pageParams.get("api") || "";
     runnerParam = String(pageParams.get("runner") || "").toLowerCase();
   } catch (error) {}
-  if (runnerParam === "off" || runnerParam === "0" || runnerParam === "false") runnerEnabled = false;
+  if (runnerParam === "off" || runnerParam === "0" || runnerParam === "false") {
+    runnerEnabled = false;
+  } else if (runnerParam === "on" || runnerParam === "1" || runnerParam === "true") {
+    runnerEnabled = true;
+  } else if (embeddedMode) {
+    runnerEnabled = false;
+  }
   if (window.BIOMEDICAL_RUNNER_ENABLED === false) runnerEnabled = false;
-  var baseUrl = String(window.BIOMEDICAL_API_BASE_URL || queryBaseUrl || savedBaseUrl || DEFAULT_BASE).replace(/\/+$/, "");
+  var explicitBaseUrl = String(window.BIOMEDICAL_API_BASE_URL || queryBaseUrl).trim().replace(/\/+$/, "");
+  // public/embedded pages never inherit the local trusted backend URL.
+  var baseUrl = explicitBaseUrl ||
+    (runnerEnabled && !embeddedMode
+      ? (String(savedBaseUrl).trim().replace(/\/+$/, "") || DEFAULT_BASE)
+      : "");
   var sessionId = null;
   var fileStatusEl = null;
   var sampleData = null;
@@ -49,9 +62,12 @@
     getBaseUrl: function () { return baseUrl; },
     isRunnerEnabled: function () { return runnerEnabled; },
     setBaseUrl: function (value, persist) {
-      baseUrl = String(value || DEFAULT_BASE).replace(/\/+$/, "");
+      baseUrl = String(value || "").trim().replace(/\/+$/, "");
       if (persist) {
-        try { localStorage.setItem("biomedical_api_base", baseUrl); } catch (error) {}
+        try {
+          if (baseUrl) localStorage.setItem("biomedical_api_base", baseUrl);
+          else localStorage.removeItem("biomedical_api_base");
+        } catch (error) {}
       }
       return baseUrl;
     },
@@ -86,7 +102,7 @@
     try {
       response = await fetch(baseUrl + path, config);
     } catch (error) {
-      throw new Error("Cannot reach backend at " + baseUrl + ". Start it with: python -m uvicorn app.main:app --reload");
+      throw new Error("Cannot reach backend at " + baseUrl + ". Check the URL and that the trusted backend is running.");
     }
     var payload;
     try {
@@ -117,9 +133,11 @@
   }
 
   async function enableRunner(value) {
-    if (value !== undefined && String(value).trim()) {
-      API.setBaseUrl(value, true);
+    var nextBaseUrl = value === undefined ? baseUrl : String(value).trim().replace(/\/+$/, "");
+    if (!nextBaseUrl) {
+      throw new Error("Enter a trusted backend API URL before enabling the runner.");
     }
+    API.setBaseUrl(nextBaseUrl, true);
     runnerEnabled = true;
     updateRunnerControls();
     setStatus("Backend runner enabled for " + baseUrl, "info");
@@ -148,7 +166,7 @@
     if (safetyEl) {
       safetyEl.textContent = runnerEnabled
         ? "Local trusted backend only. Use simulated or non-sensitive teaching data."
-        : "Backend execution is off. Enter a trusted local backend URL and press Enable runner to activate it.";
+        : "No backend is configured on this public page. Enter a trusted backend URL only if you deliberately want to enable execution.";
     }
     if (!runnerEnabled) {
       setStatus("Backend execution is off.", "info");
@@ -178,7 +196,13 @@
       ".bm-file-status{padding:8px 12px;border-top:1px solid var(--bd,#cdd8e0);font-weight:600;color:var(--ac,#0b5d7a)}",
       ".bm-api-row{padding:6px 10px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--bd,#cdd8e0)}",
       ".bm-api-row input{flex:1;min-width:0;padding:4px 6px;font-size:12px;border:1px solid var(--bd,#cdd8e0);border-radius:4px;background:var(--card,#eef5f8);color:var(--fg,#1b2a3a)}",
-      "@media print{.bm-panel,.bm-run-btn,.bm-file-actions{display:none!important}}"
+      ".bm-chapter-index{margin:12px 0 18px;padding:12px 14px;border:2px solid var(--ac,#0b5d7a);border-radius:10px;background:var(--card,#eef5f8)}",
+      ".bm-chapter-index>strong{display:block;margin-bottom:8px;color:var(--ac,#0b5d7a);font-size:16px}",
+      ".bm-chapter-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}",
+      ".bm-chapter-links a{display:block;padding:7px 8px;border:1px solid var(--bd,#cdd8e0);border-radius:6px;background:var(--bg,#fff);color:var(--fg,#1b2a3a);text-decoration:none;font-size:13px;line-height:1.25}",
+      ".bm-chapter-links a:hover,.bm-chapter-links a:focus-visible{border-color:var(--ac,#0b5d7a);color:var(--ac,#0b5d7a)}",
+      "@media(max-width:640px){.bm-chapter-index{padding:10px}.bm-chapter-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.bm-chapter-links a{font-size:12px;padding:6px}}",
+      "@media print{.bm-panel,.bm-run-btn,.bm-file-actions,.bm-chapter-index{display:none!important}}"
     ].join("");
     document.head.appendChild(style);
   }
@@ -207,7 +231,7 @@
 
     statusEl = document.createElement("div");
     statusEl.className = "bm-status bm-info";
-    statusEl.textContent = "Checking backend…";
+    statusEl.textContent = runnerEnabled ? "Checking backend…" : "Backend execution is off.";
 
     sessionEl = document.createElement("div");
     sessionEl.className = "bm-status bm-info";
@@ -623,9 +647,53 @@
     return section;
   }
 
+  function chapterLabel(section) {
+    var raw = section.getAttribute("data-chapter-title") || "";
+    if (!raw) {
+      var heading = section.querySelector("h2");
+      raw = heading ? heading.textContent : section.id;
+    }
+    return raw.replace(/Copy chapter code/gi, "").replace(/\s+/g, " ").trim() || section.id;
+  }
+
+  function createEmbeddedChapterIndex() {
+    if (!embeddedMode || document.getElementById("bm-chapter-index")) return;
+    var sections = Array.prototype.slice.call(document.querySelectorAll("section.s[id]"));
+    if (!sections.length) return;
+
+    var index = document.createElement("nav");
+    index.id = "bm-chapter-index";
+    index.className = "bm-chapter-index";
+    index.setAttribute("aria-label", "Command library chapters");
+
+    var heading = document.createElement("strong");
+    heading.textContent = "Chapters in this library (" + sections.length + ")";
+    index.appendChild(heading);
+
+    var links = document.createElement("div");
+    links.className = "bm-chapter-links";
+    sections.forEach(function (section) {
+      var link = document.createElement("a");
+      link.href = "#" + encodeURIComponent(section.id);
+      link.textContent = chapterLabel(section);
+      link.title = "Go to " + chapterLabel(section);
+      links.appendChild(link);
+    });
+    index.appendChild(links);
+
+    var cover = document.getElementById("designed-cover-page") || document.body.firstElementChild;
+    if (cover && cover.parentNode) {
+      cover.parentNode.insertBefore(index, cover);
+    } else {
+      document.body.appendChild(index);
+    }
+    return index;
+  }
+
   function attach() {
     createPanel();
     createDataFileSection();
+    createEmbeddedChapterIndex();
     var cards = document.querySelectorAll('[data-py="1"]');
     cards.forEach(function (card) {
       if (card.querySelector(".bm-run-btn")) return;
