@@ -224,6 +224,8 @@
       "background:#10202b;color:#e6f1f7;font:12px Consolas,monospace}",
       ".bm-output img{display:block;max-width:100%;margin:8px 0;background:#fff}",
       ".bm-run-btn{padding:3px 8px!important;font-size:12px!important;white-space:nowrap}",
+      ".bm-copy-in-code{position:absolute!important;top:7px;right:8px;z-index:2;width:30px;height:26px;padding:0!important;font-size:16px!important;line-height:24px!important;border:1px solid #3d5f72!important;border-radius:5px!important;background:#1b3446!important;color:#d8eaf3!important}",
+      ".bm-copy-in-code:hover,.bm-copy-in-code:focus-visible{background:#315267!important;outline:none}",
       ".bm-run-btn[disabled]{opacity:.55;cursor:not-allowed}",
       ".bm-file-actions{padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}",
       ".bm-file-actions button{padding:7px 10px}",
@@ -1060,6 +1062,20 @@
         button.title = execType.toUpperCase() + " commands are not Python notebook cells.";
       }
       header.appendChild(button);
+
+      var preEl = card.querySelector("pre");
+      var copyBtn = Array.prototype.slice.call(header.querySelectorAll("button")).filter(function (candidate) {
+        return /copy/i.test(candidate.textContent) || String(candidate.getAttribute("onclick") || "").indexOf("cp(this)") !== -1;
+      })[0];
+      if (preEl && copyBtn && !copyBtn.classList.contains("bm-copy-in-code")) {
+        preEl.style.position = "relative";
+        preEl.style.paddingTop = "38px";
+        copyBtn.classList.add("bm-copy-in-code");
+        copyBtn.textContent = "⧉";
+        copyBtn.setAttribute("aria-label", "Copy command");
+        copyBtn.setAttribute("title", "Copy command");
+        preEl.appendChild(copyBtn);
+      }
     });
     updateRunnerControls();
     if (runnerEnabled) {
