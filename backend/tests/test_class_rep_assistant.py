@@ -106,6 +106,57 @@ def test_activity_history_is_included_in_cara_context(monkeypatch):
     assert data["recent_activity_history"][0]["summary"] == "Updated session: MIPN 8100"
     assert updated is not None
 
+
+def test_resolved_schedule_exposes_numeric_dayindex_cells_as_dated_sessions(monkeypatch):
+    from datetime import datetime as real_datetime
+
+    from app.class_rep import assistant, context
+
+    class FrozenDatetime(real_datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return real_datetime(2026, 11, 20, 9, 0, tzinfo=tz)
+
+    class Row(dict):
+        pass
+
+    rows = [
+        Row(col="cells", id="session-fri-pm", data=json.dumps({
+            "dayIndex": 4, "startTime": "13:30", "endTime": "15:30",
+            "code": "Library", "title": "Library Sesion", "weekStart": "2026-11-16",
+            "mode": "face_to_face", "status": "scheduled",
+        }), updated_at=1795000000000),
+        Row(col="modules", id="Library", data=json.dumps(
+            {"title": "Library Session"}), updated_at=1795000000000),
+        Row(col="recurring", id="journal-club", data=json.dumps({
+            "title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00",
+            "enabled": True,
+        }), updated_at=1795000000000),
+    ]
+
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            if "FROM audit" in query:
+                return type("Rows", (), {"fetchall": lambda self: []})()
+            return type("Rows", (), {"fetchall": lambda self: rows})()
+
+    monkeypatch.setattr(context, "database", lambda: FakeConnection())
+    monkeypatch.setattr(context, "datetime", FrozenDatetime)
+    payload, _ = context.build_calendar_context("any upcoming class?")
+    data = json.loads(payload)
+    weeks = data["resolved_schedule"]["weeks"]
+    assert [week["week_start"] for week in weeks] == ["2026-11-16", "2026-11-23"]
+    friday = [item for item in weeks[0]["sessions"] if item["date"] == "2026-11-20"]
+    assert friday and all(item["weekday"] == "Friday" for item in friday)
+    assert any(
+        item["title"] == "Library Sesion" and item["start"] == "13:30"
+        and item["end"] == "15:30" and item["is_today"] and item["is_upcoming"]
+        for item in friday
+    )
+    assert "resolved_schedule" in assistant.SYSTEM_PROMPT
+
 from app.class_rep import assistant
 
 
