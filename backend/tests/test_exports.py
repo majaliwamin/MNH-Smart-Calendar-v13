@@ -99,3 +99,19 @@ def test_export_endpoints_serve_the_selection(client):
     listed = client.get("/api/export/modules").json()
     codes = [m["code"] for m in listed["modules"]]
     assert {"ARMN – 8100", "MIPN 8100", "PNIM-8100"} <= set(codes)
+
+
+def test_downloads_skip_malformed_stored_documents(client):
+    """One corrupt or non-object record must not break every download."""
+    with connection.database() as c:
+        c.execute("INSERT INTO docs(col,id,data) VALUES(?,?,?)", ("resources", "bad-json", "{not json"))
+        c.execute("INSERT INTO docs(col,id,data) VALUES(?,?,?)", ("resources", "bad-shape", "[1,2]"))
+    xlsx = client.get("/api/export/timetable.xlsx")
+    pdf = client.get("/api/export/timetable.pdf")
+    backup = client.get("/api/backup")
+    raw = client.get("/api/export")
+    assert xlsx.status_code == 200 and xlsx.content[:2] == b"PK"
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
+    assert backup.status_code == 200 and raw.status_code == 200
+    ids = {item["id"] for item in raw.json()}
+    assert "bad-json" not in ids and "bad-shape" not in ids

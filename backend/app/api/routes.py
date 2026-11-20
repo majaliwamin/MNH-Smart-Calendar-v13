@@ -25,6 +25,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 ALLOWED_COLLECTIONS = {"cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"}
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_. –-]{0,99}$")
+
+
+def _safe_documents(rows):
+    """Skip malformed or non-object stored documents so one bad row cannot break downloads."""
+    documents = []
+    for row in rows:
+        try:
+            data = json.loads(row["data"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        documents.append({"col": row["col"], "id": row["id"], "data": data})
+    return documents
+
+
+def _collections_from_documents(documents):
+    collections = {}
+    for item in documents:
+        collections.setdefault(item["col"], {})[item["id"]] = item["data"]
+    return collections
+
+
 CANONICAL_RECURRING = {
     "journal-club": ("Journal Club", "Tuesday", "13:00–14:00"),
     "seminar-mnh": ("Seminar in MNH", "Thursday", "10:00–12:00"),
@@ -287,16 +310,15 @@ def export_timetable_xlsx(modules: str | None = None, week_start: date | None = 
         raise HTTPException(503, "Excel export is unavailable: install backend requirements (openpyxl).") from exc
     with database() as connection:
         rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
-    collections = {}
-    for row in rows:
-        try:
-            collections.setdefault(row["col"], {})[row["id"]] = json.loads(row["data"])
-        except (TypeError, json.JSONDecodeError):
-            continue
+    collections = _collections_from_documents(_safe_documents(rows))
     selected = [code for code in (modules or "").split(",") if code.strip()]
     if week_start is not None and week_start.weekday() != 0:
         raise HTTPException(400, "The export week must start on a Monday.")
-    payload = build_timetable_workbook(collections, selected or None, week_start)
+    try:
+        payload = build_timetable_workbook(collections, selected or None, week_start)
+    except Exception as exc:
+        logger.exception("Excel timetable export failed during rendering")
+        raise HTTPException(500, f"Excel export could not be rendered: {type(exc).__name__}: {exc}") from exc
     filename = "MNH-Smart-Calendar-Editable-Timetable.xlsx"
     return StreamingResponse(BytesIO(payload), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
@@ -314,12 +336,7 @@ def export_timetable_pdf(modules: str | None = None, week_start: date | None = N
         raise HTTPException(503, "PDF export is unavailable: install backend requirements (reportlab).") from exc
     with database() as connection:
         rows = connection.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
-    collections = {}
-    for row in rows:
-        try:
-            collections.setdefault(row["col"], {})[row["id"]] = json.loads(row["data"])
-        except (TypeError, json.JSONDecodeError):
-            continue
+    collections = _collections_from_documents(_safe_documents(rows))
     selected = [code for code in (modules or "").split(",") if code.strip()]
     if week_start is not None and week_start.weekday() != 0:
         raise HTTPException(400, "The export week must start on a Monday.")
@@ -329,7 +346,7 @@ def export_timetable_pdf(modules: str | None = None, week_start: date | None = N
         payload = build_timetable_pdf(collections, selected or None, week_start, theme, font_scale)
     except Exception as exc:
         logger.exception("PDF timetable export failed during rendering")
-        raise HTTPException(500, "PDF export could not be rendered. The server has recorded the rendering error.") from exc
+        raise HTTPException(500, f"PDF export could not be rendered: {type(exc).__name__}: {exc}") from exc
     if not payload or not payload.startswith(b"%PDF"):
         logger.error("PDF timetable renderer returned an empty or invalid document")
         raise HTTPException(500, "PDF export returned an invalid document. Please try again.")
@@ -646,7 +663,7 @@ def backup_json():
     with database() as c:
         rows = c.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
     return {"format": "mnh-calendar-backup", "version": 1, "created_at": int(time.time()*1000),
-            "documents": [{"col": r["col"], "id": r["id"], "data": json.loads(r["data"])} for r in rows]}
+            "documents": _safe_documents(rows)}
 
 
 @router.get("/session")
@@ -712,7 +729,7 @@ def reminders_run_now(mnh_session: str | None = Cookie(default=None)):
 def export_all():
     with database() as c:
         rows = c.execute("SELECT col,id,data FROM docs WHERE col NOT LIKE 'cara_%' ORDER BY col,id").fetchall()
-    return [{"col": r["col"], "id": r["id"], "data": json.loads(r["data"])} for r in rows]
+    return _safe_documents(rows)
 
 
 @router.get("/col/{collection}")
