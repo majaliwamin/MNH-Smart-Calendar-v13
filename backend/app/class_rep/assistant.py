@@ -1,5 +1,6 @@
 """Conversation orchestration and Class Rep domain instructions."""
 import json
+import re
 
 from app.class_rep.context import build_calendar_context
 from app.class_rep.providers import complete
@@ -19,6 +20,12 @@ from app.class_rep.translation_engine import (
 from app.class_rep.lexical_reference import (
     direct_malungo_definition_answer,
     direct_chichewa_conversation_answer,
+)
+from app.class_rep.math_engine import solve as solve_math
+from app.class_rep.math_engine.presentation import (
+    blocked_math_answer,
+    deterministic_math_answer,
+    math_contract_instruction,
 )
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
@@ -89,24 +96,57 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
             return joke_answer, "curated-casual", "deterministic-joke-v1", None
 
     lexical_evidence = linguistic_context(message)
-    translation_request = (
-        mode in ("translate_into_chichewa", "translate_into_english")
-        or is_translation_or_interpretation_request(message)
-    )
+    explicit_translation_mode = mode in ("translate_into_chichewa", "translate_into_english")
+    explicit_bilingual_cue = bool(re.search(
+        r"\b(?:translate|translation|interpret\s+(?:this|it)?\s*(?:into|to)|"
+        r"interpretation\s+(?:into|to)|in\s+(?:chichewa|chinyanja|chewa|english)|"
+        r"chichewa|chinyanja|english)\b",
+        message, re.I,
+    ))
+    translation_request = explicit_translation_mode or is_translation_or_interpretation_request(message)
     translation_references = build_translation_reference_context(message, owner_id=owner_id) if translation_request else ""
 
     context, updated = build_calendar_context(message)
     documents = search_documents(message, limit=4, owner_id=owner_id)
     document_context = json.dumps(documents, ensure_ascii=False) if documents else "No relevant uploaded document passages were retrieved."
+    document_source = "\n".join(str(item.get("text", "")) for item in documents if isinstance(item, dict))
+
+    # Deterministic computation runs inside the real CRARA turn. It is grounded
+    # in the latest message, useful history and retrieved document text, but it
+    # only consumes values that are explicitly present in those sources.
+    math_result = solve_math(message, history=history, source_text=document_source or None)
+    if translation_request and (
+        explicit_translation_mode
+        or math_result is None
+        or math_result.operation not in ("symbol_meaning", "formula_lookup")
+    ):
+        math_result = None
+    if math_result is not None and math_result.status == "blocked":
+        return blocked_math_answer(math_result, response_language), "deterministic-math", "blocked-v1", updated
+
     # An expression-meaning question about an unknown headword must never reach
     # the model: without a curated entry or a retrieved passage containing the
-    # term, any definition would be an invented vocabulary claim.
-    if mode not in ("translate_into_chichewa", "translate_into_english"):
+    # term, any definition would be an invented vocabulary claim. Registry-backed
+    # symbol/formula lookups are curated mathematical knowledge, so they bypass
+    # this lexical guard.
+    registry_lookup = math_result is not None and math_result.operation in ("symbol_meaning", "formula_lookup")
+    if registry_lookup and not explicit_translation_mode and not explicit_bilingual_cue:
+        # "What does μ mean?" is a mathematical registry question, not an
+        # English/Chichewa translation task even though the wording is similar.
+        translation_request = False
+        translation_references = ""
+    if not explicit_translation_mode and not registry_lookup:
         guarded = unknown_term_answer(message, response_language, documents)
         if guarded is not None:
             return guarded, "curated-lexicon", "deterministic-unknown-term-v1", updated
     analytics_context = json.dumps(management_analytics, ensure_ascii=False) if management_analytics is not None else "Not requested or not authorised for this conversation."
-    evidence_available = bool(documents) or "STRUCTURED CHICHEWA LEXICAL KNOWLEDGE" in lexical_evidence or bool(translation_references)
+    evidence_available = (
+        bool(documents) or "STRUCTURED CHICHEWA LEXICAL KNOWLEDGE" in lexical_evidence
+        or bool(translation_references) or registry_lookup
+    )
+    math_evidence = ""
+    if math_result is not None:
+        math_evidence = "\n\n" + math_contract_instruction(math_result) + "\n" + math_result.evidence_block()
     system_content = (
         SYSTEM_PROMPT +
         "\n\n" + CONVERSATION_CONTINUITY_INSTRUCTIONS +
@@ -114,6 +154,7 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
         (("\n\n" + tone_style_instruction(tone, mode, response_language))
          if is_casual_turn(mode, tone) else "") +
         ("\n\n" + TRANSLATION_ENGINE_INSTRUCTIONS if translation_request else "") +
+        math_evidence +
         "\n\n" + response_language_instruction(response_language) +
         "\n\nDETECTED USER MESSAGE LANGUAGE (evidence only, not a response instruction): " + detected_language +
         "\n\n" + lexical_evidence +
@@ -131,13 +172,15 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     messages.append({"role": "user", "content": message})
     answer, provider, model = complete(messages)
 
-    validation = validate_reply(answer, message, response_language, mode, evidence_available)
+    validation = validate_reply(answer, message, response_language, mode, evidence_available, math_result)
     if not validation.ok:
         messages[0]["content"] += "\n\n" + validation.repair_instruction()
         repaired, repaired_provider, repaired_model = complete(messages)
-        repaired_validation = validate_reply(repaired, message, response_language, mode, evidence_available)
+        repaired_validation = validate_reply(repaired, message, response_language, mode, evidence_available, math_result)
         if repaired_validation.ok:
             answer, provider, model = repaired, repaired_provider + "+validated", repaired_model
+        elif math_result is not None:
+            answer, provider, model = deterministic_math_answer(math_result, response_language), "deterministic-math", "rule-based-v1"
         else:
             answer, provider, model = honest_fallback(response_language), "validation-fallback", "rule-based-v1"
     return answer, provider, model, updated
