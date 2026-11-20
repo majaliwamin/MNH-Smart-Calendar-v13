@@ -349,6 +349,13 @@ def test_upcoming_announcement_ticker_is_open_ended_and_refresh_control_is_ui_hi
     assert "border:0;" in css and "border-radius:0;" in css
     assert "animation:activity-flow-right 90s linear infinite" in css
 
+    # The animated strip is direct body markup and must render on the home view only.
+    assert 'html body > .activity-marquee-shell[aria-label="Future academic events"]{' in css
+    assert (
+        'html body.weekly-view:not(.is-content-view):not(.cara-open):not(.cara-auth-open)'
+        ':not(.python-library-view) > .activity-marquee-shell[aria-label="Future academic events"]{'
+    ) in css
+
 
 def test_secondary_views_offer_home_return_navigation():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
@@ -389,7 +396,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-biomedical-library-v5"
+    assert build == "2026.11.20-home-only-upcoming-v6"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html

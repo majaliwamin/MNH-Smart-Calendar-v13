@@ -2474,6 +2474,19 @@ html body .colour-dialog .dialog-card .dialog-close{z-index:6!important;}
 body.cara-open .activity-marquee-shell,
 body.cara-auth-open .activity-marquee-shell{display:none!important;visibility:hidden!important;pointer-events:none!important;}
 
+/* Upcoming sessions are a home-page-only ticker. The shell is a direct body child,
+   so scope visibility explicitly instead of relying on the obsolete wrapper class. */
+html body > .activity-marquee-shell[aria-label="Future academic events"]{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+html body.weekly-view:not(.is-content-view):not(.cara-open):not(.cara-auth-open):not(.python-library-view) > .activity-marquee-shell[aria-label="Future academic events"]{
+  display:block!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+
 
 /* Reconciled from PR #111: keep scheduling dialogs above sticky banners and headers. */
 html body .colour-dialog{
