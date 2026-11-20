@@ -6,6 +6,10 @@ Secrets are read only on the server.
 Groq exposes a standard chat-completions API, so its base URL has a safe
 default. Only ``MNH_CLASSREP_GROQ_API_KEY`` is required to enable the fallback;
 ``MNH_CLASSREP_GROQ_BASE_URL`` remains available for a custom/proxy endpoint.
+
+Hugging Face likewise needs only ``MNH_CLASSREP_HF_API_KEY`` (or the standard
+``HF_TOKEN``). Its router endpoint and chat model have safe defaults, with
+``MNH_CLASSREP_HF_BASE_URL`` and ``MNH_CLASSREP_HF_MODEL`` available as overrides.
 """
 import os
 
@@ -18,6 +22,12 @@ GROQ_DEFAULT_BASE_URL = "https://api.groq.com/" + _GROQ_COMPAT_PATH + "/v1"
 # Groq recommends qwen3.8-27b as its direct replacement; reasoning can be
 # switched off for this model, which keeps fallback replies fast.
 GROQ_DEFAULT_MODEL = "qwen/qwen3.8-27b"
+
+# Hugging Face's chat-completions-compatible router needs no model-specific path. This
+# Qwen 3 Instruct model is public and non-gated, keeping the fallback usable
+# with only a token while preserving the CRARA model family.
+HF_DEFAULT_BASE_URL = "https://router.huggingface.co/v1"
+HF_DEFAULT_MODEL = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
 
 def _value(name: str, default: str = "") -> str:
@@ -40,11 +50,12 @@ def provider_configs() -> list[dict]:
             "timeout": timeout, "max_tokens": max_tokens,
         })
 
-    hf_key = _value("MNH_CLASSREP_HF_API_KEY")
-    hf_model = _value("MNH_CLASSREP_HF_MODEL")
-    if hf_key and hf_model:
+    hf_key = _value("MNH_CLASSREP_HF_API_KEY") or _value("HF_TOKEN")
+    hf_base_url = _value("MNH_CLASSREP_HF_BASE_URL", HF_DEFAULT_BASE_URL)
+    hf_model = _value("MNH_CLASSREP_HF_MODEL", HF_DEFAULT_MODEL)
+    if hf_key and hf_base_url and hf_model:
         providers.append({
-            "provider": "huggingface", "base_url": "https://router.huggingface.co/v1",
+            "provider": "huggingface", "base_url": hf_base_url,
             "api_key": hf_key, "model": hf_model,
             "timeout": timeout, "max_tokens": max_tokens,
         })

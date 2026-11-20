@@ -82,13 +82,13 @@ Set these in Render → Environment. Do not commit credentials:
 - `MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID`
 - `MNH_CLASSREP_CLOUDFLARE_API_KEY`
 - `MNH_CLASSREP_CLOUDFLARE_MODEL`
-- `MNH_CLASSREP_HF_API_KEY` and `MNH_CLASSREP_HF_MODEL` (optional fallback)
+- `MNH_CLASSREP_HF_API_KEY` (optional fallback; the standard `HF_TOKEN` is also accepted). Only the token is required — the endpoint defaults to Hugging Face's chat-completions-compatible router and the model defaults to `Qwen/Qwen3-30B-A3B-Instruct-2507`. `MNH_CLASSREP_HF_MODEL` and `MNH_CLASSREP_HF_BASE_URL` are optional overrides.
 - `MNH_CLASSREP_GROQ_API_KEY` (optional fallback; only the key is required — the endpoint defaults to Groq's standard chat-completions route and the model defaults to Groq's current fast 27B production model with reasoning disabled). `MNH_CLASSREP_GROQ_MODEL` and `MNH_CLASSREP_GROQ_BASE_URL` are optional overrides. Add a model override only if Groq changes its supported-model list.
 
 Providers are tried in order: Cloudflare → Hugging Face → Groq. When Cloudflare is
 rate-limited or out of credits, CRARA automatically uses the next configured
 provider; when Cloudflare recovers it becomes primary again without a redeploy.
-Check `/api/class-rep/status` for `fallbacks` to confirm Groq is active.
+Check `/api/class-rep/status` for `fallbacks` to confirm Hugging Face and Groq are active.
 - `MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL`
 - `MNH_CLASSREP_CLOUDFLARE_STT_MODEL` (optional speech-to-text model)
 - `MNH_CLASSREP_CLOUDFLARE_TTS_MODEL` (optional text-to-speech model)
