@@ -211,6 +211,8 @@
     var style = document.createElement("style");
     style.id = "bm-api-styles";
     style.textContent = [
+      ".cover-page .bio-motion{display:none!important}",
+      ".cover-page .bio-sprite{animation:none!important;display:none!important}",
       ".bm-panel{position:fixed;right:16px;bottom:16px;width:min(430px,calc(100vw - 32px));max-height:62vh;z-index:9999;",
       "background:var(--card,#eef5f8);color:var(--fg,#1b2a3a);border:1px solid var(--ac,#0b5d7a);",
       "border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;font:13px system-ui}",
@@ -1026,8 +1028,11 @@
     index.appendChild(links);
 
     var cover = document.getElementById("designed-cover-page") || document.body.firstElementChild;
-    if (cover && cover.parentNode) {
-      cover.parentNode.insertBefore(index, cover);
+    var originalNav = document.querySelector("nav");
+    if (originalNav && originalNav.parentNode) {
+      originalNav.parentNode.insertBefore(index, originalNav);
+    } else if (cover && cover.parentNode) {
+      cover.parentNode.insertBefore(index, cover.nextSibling);
     } else {
       document.body.appendChild(index);
     }
@@ -1066,6 +1071,7 @@
   }
 
   window.BiomedicalAPI = API;
+  addStyles();
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", attach, { once: true });
   } else {

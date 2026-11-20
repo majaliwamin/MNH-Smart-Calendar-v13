@@ -396,7 +396,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-home-only-upcoming-v6"
+    assert build == "2026.11.20-static-library-cover-v7"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -438,6 +438,19 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "function hidePanel()" in bridge
     assert "function showPanel()" in bridge
     assert "clearDatasetState(" in bridge
+
+    # The cover is a static landing page; the generated index and the original
+    # topic navigation are both injected/rendered after it, together.
+    cover_pos = library.index('class="cover-page" id="designed-cover-page"')
+    topics_pos = library.index("<nav>")
+    assert cover_pos < topics_pos
+    assert "bio-motion" in library  # source content stays intact
+    assert ".cover-page .bio-motion{display:none!important}" in bridge
+    assert ".cover-page .bio-sprite{animation:none!important;display:none!important}" in bridge
+    assert "addStyles();" in bridge
+    assert "originalNav.parentNode.insertBefore(index, originalNav)" in bridge
+    assert "insertBefore(index, cover);" not in bridge
+    assert "cover.nextSibling" in bridge
 
     app_js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
