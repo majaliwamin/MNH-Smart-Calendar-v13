@@ -14,7 +14,7 @@ from app.class_rep.error_hygiene import is_transient_error_text
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic, provider_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.voice import transcribe, speak, VoiceError
-from app.class_rep import memory
+from app.class_rep import memory, whatsapp_send
 from app.class_rep.language_intelligence import resolve_response_language
 from app.class_rep.linguistic_knowledge import lexicon_stats
 from app.services.authentication import role_for_password
@@ -177,7 +177,8 @@ def status():
             "text_to_speech_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL", "@cf/deepgram/aura-2-en"),
             "management_analytics": "role_restricted",
             "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
-            "account_memory": "persistent_account_scoped" if _durable_storage_ready() else "disabled_missing_durable_storage", "reminder_delivery": "in_app_only"}
+            "account_memory": "persistent_account_scoped" if _durable_storage_ready() else "disabled_missing_durable_storage",
+            "reminder_delivery": "in_app_only", "whatsapp_sending": whatsapp_send.status()}
 
 
 
@@ -339,6 +340,14 @@ def chat(payload: ChatRequest, request: Request, x_cara_analytics_password: str 
             memory.save_turn(user["id"], conversation_id, payload.message.strip(), confirmation)
             return ChatResponse(reply=confirmation, provider="CRARA reminder engine",
                                 model="persistent in-app reminder", conversation_id=conversation_id)
+        try:
+            send_result = whatsapp_send.handle(user["id"], payload.message.strip(), selected_language)
+        except whatsapp_send.SendError as error:
+            send_result = {"reply": str(error), "provider": "CRARA WhatsApp send", "model": "blocked"}
+        if send_result:
+            memory.save_turn(user["id"], conversation_id, payload.message.strip(), send_result["reply"])
+            return ChatResponse(reply=send_result["reply"], provider=send_result["provider"],
+                                model=send_result["model"], conversation_id=conversation_id)
         stage_started = time.monotonic()
         retrieved = memory.retrieve_context(user["id"], payload.message.strip(), conversation_id)
         memory_ms = round((time.monotonic() - stage_started) * 1000)

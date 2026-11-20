@@ -182,8 +182,12 @@ Any configured chat-completions endpoint works:
 - vendor-specific: `MNH_COMM_AI_BASE_URL=https://api.configured-provider.com/v1`, e.g. `MNH_COMM_AI_MODEL=your-selected-model`
 - Self-hosted (e.g. an internal LLM gateway): point `MNH_COMM_AI_BASE_URL` at it.
 
-The assistant drafts only. It cannot send WhatsApp messages, place calls, or
-override consent — the code has no path for that.
+The Communications Centre drafter drafts only. CRARA has one explicit send
+path: a signed-in user asks to send a WhatsApp message, reviews the exact text
+and saved student group, then replies `CONFIRM SEND <token>`. Only then does the
+backend dispatch through the WhatsApp bridge, re-checking consent, opt-out,
+do-not-contact and the emergency stop. CRARA cannot place calls or override
+those safeguards.
 
 ---
 
@@ -197,8 +201,11 @@ override consent — the code has no path for that.
    sent message) and the responsible user is flagged to review.
 4. Place one test voice call to a number you own during calling hours;
    confirm state transitions to answered/ended in the Voice calls card.
-5. Turn the emergency stop on and confirm drafting, scheduling and calling all
-   refuse; turn it off afterwards.
+5. Add one consented **Student** WhatsApp group, then ask CRARA to send a test
+   message. Confirm that it previews the exact text with a `CONFIRM SEND` token
+   and sends nothing until that token is supplied.
+6. Turn the emergency stop on and confirm drafting, scheduling, CRARA sending
+   and calling all refuse; turn it off afterwards.
 
 ---
 
