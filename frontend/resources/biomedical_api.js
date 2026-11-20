@@ -372,6 +372,7 @@
     reopenButtonEl.className = "bm-reopen";
     reopenButtonEl.id = "bm-reopen";
     document.body.appendChild(reopenButtonEl);
+    hidePanel();
     return panel;
   }
 

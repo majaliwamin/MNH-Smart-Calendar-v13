@@ -396,7 +396,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.20-static-library-cover-v7"
+    assert build == "2026.11.20-collapsed-runner-v8"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -448,6 +448,8 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert ".cover-page .bio-motion{display:none!important}" in bridge
     assert ".cover-page .bio-sprite{animation:none!important;display:none!important}" in bridge
     assert "addStyles();" in bridge
+    assert bridge.count("hidePanel();") == 1
+    assert 'if (reopenButtonEl) reopenButtonEl.style.display = "block";' in bridge
     assert "originalNav.parentNode.insertBefore(index, originalNav)" in bridge
     assert "insertBefore(index, cover);" not in bridge
     assert "cover.nextSibling" in bridge
