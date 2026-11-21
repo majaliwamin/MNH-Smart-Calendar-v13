@@ -294,7 +294,7 @@ def test_pwa_install_requirements_are_met():
     assert 'if(choice&&choice.outcome==="accepted"){' in html
     assert "if(accept)accept.hidden=true;" in html
     assert "promptOpen" not in html
-    assert "mnh_force_gate" not in html
+    assert 'has("mnh_force_gate")' in html
     assert "appinstalled" in html
     assert "display-mode: standalone" in html
     assert "mnh-install-choice" in html
@@ -306,14 +306,13 @@ def test_pwa_install_requirements_are_met():
     assert "Download statement permission" not in html
     assert "Choosing Close downloads nothing" not in html
     assert 'id="mnh-install-statement"' not in html
-    assert 'id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy" hidden' in html
-    assert 'id="mnh-install-accept" hidden' in html
+    assert 'id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"' in html
+    assert 'id="mnh-install-accept">Install<' in html
     assert 'aria-label="Install MNH Calendar"' in html
     assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
-    assert 'else document.documentElement.classList.add("mnh-gate-open");' not in html
+    assert 'else if (mobile || forceGate) document.documentElement.classList.add("mnh-gate-open");' in html
     assert 'document.documentElement.classList.add("mnh-install-exempt")' in html
-    assert "Android|iPhone|iPad|iPod|Mobile" not in html
-    assert "&& !mobile && !forceGate" not in html
+    assert "Android|iPhone|iPad|iPod|Mobile" in html
     assert "\n ensureDialog();\n" in html
     assert "openInstallChoice();" in html
     assert "accept.hidden=false;" in html
@@ -454,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-mobile-gate-v26"
+    assert build == "2026.11.21-first-open-gate-v27"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -465,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-mobile-gate-v26"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-first-open-gate-v27"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
