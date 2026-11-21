@@ -29,7 +29,7 @@ def test_cara_starts_closed_and_has_requested_identity():
     assert 'cr-home-back' in js
     assert 'cr-brand-mark' in js
     assert '"/api/class-rep/auth/" + authMode' in js
-    assert "memory" not in js.lower()
+    assert "cr-memory-panel" not in js
     assert 'Your intelligent academic relations assistant' in js
     assert 'root.classList.remove("is-open")' in js
     assert 'function demoReply(message)' in js
@@ -53,7 +53,7 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'cr-account", "Memory"' not in js
     assert 'brand.append(brandMark, identity)' in js
-    assert 'header.append(brand, languageSwitch, homeBack)' in js
+    assert 'header.append(brand, languageSwitch, signIn, homeBack)' in js
     assert 'cr-toggle' not in js
     assert 'Sign out' not in js
     assert 'Close CRARA' not in js
@@ -132,26 +132,28 @@ def test_main_header_stays_frozen_and_download_menu_is_available():
     assert "--mnh-sticky-header-offset:82px" in css
 
 
-def test_crara_login_hides_assistant_header_and_uses_full_viewport():
+def test_crara_opens_chat_directly_with_optional_account_access():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert "function showHeader(visible)" in js
     assert "root.append(body, authPanel)" in js
     assert "root.insertBefore(header, body)" in js
     assert "header.remove()" in js
-    assert "showHeader(false); body.hidden = true;" in js
-    assert "authPanel.hidden = !root.classList.contains(\"is-open\")" in js
-    assert "showHeader(Boolean(open && state.user))" in js
-    assert "function setAuthPresentation(active)" in js
-    assert "body.cara-auth-open .site-header" in css
-    assert "body.cara-auth-open .view-tabs" in css
-    assert "body.cara-auth-open .bottom-nav" in css
+    assert "function applyChatPresentation()" in js
+    assert "function openAuthPanel()" in js
+    assert "function closeAuthPanel()" in js
+    assert 'el("button", "cr-sign-in", "Sign in")' in js
+    assert 'el("button", "cr-auth-back", "Back to chat")' in js
+    assert "setAuthPresentation(false)" in js
+    assert "authPanel.hidden = true" in js
+    assert "body.hidden = !open || !state.user" in js
+    assert 'if (!message || state.busy) return;' in js
+    assert ".cr-sign-in[hidden]{display:none!important}" in css
+    assert ".cr-auth-back{" in css
     assert "body.cara-auth-open #view-weekly> :not(#class-rep-assistant)" in css
     assert "async function requestJson(path, options = {})" in js
     assert 'credentials: "same-origin"' in js
     assert "Could not connect to CRARA services" in js
-    assert ".cr-auth-panel{position:fixed;z-index:25;top:0;right:0;bottom:0;left:0;" in css
-    assert "@media(max-width:760px){.cr-auth-panel{top:0;bottom:0;" in css
 
 
 def test_crara_is_sticky_in_landing_navigation_and_hidden_during_scheduling():
@@ -179,23 +181,27 @@ def test_crara_formats_markdown_and_reveals_answers_progressively():
     assert ".cr-message ul,.cr-message ol" in css
 
 
-def test_crara_keeps_login_form_hidden_when_saved_session_cannot_be_verified():
+def test_crara_never_shows_login_wall_when_session_check_fails():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
-    assert "let retrySessionCheck = false" in js
-    assert "A temporary network/API failure is not proof that the saved session expired." in js
-    assert 'authSubmit.textContent = "Retry connection"' in js
-    assert "if (retrySessionCheck)" in js
-    assert 'authName.hidden = true; authEmail.hidden = true; authPassword.hidden = true;' in js
+    assert "retrySessionCheck" not in js
+    assert "Retry connection" not in js
+    assert "Your saved CRARA session is still protected" not in js
+    assert "status(\"Services unavailable · guest chat cannot start\", false);" in js
+    assert "authFeedback.textContent = error.message" in js
+    assert "applyChatPresentation();" in js
 
 
 
 def test_crara_restores_saved_session_on_app_start_without_flashing_login_form():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
-    assert "let authCheckComplete = false" in js
+    assert "let authCheckComplete = true" in js
     assert "let authCheckRunning = false" in js
+    assert "state.user = { id: ensureGuestId(), name: \"Guest\", email: \"\" };" in js
+    assert "document.cookie = GUEST_COOKIE_NAME" in js
     assert "void checkAuth();" in js
-    assert "|| !authCheckComplete" in js
-    assert "authPanel.hidden = !root.classList.contains(\"is-open\") || Boolean(state.user);" in js
+    assert "state.user = result.user;" in js
+    assert "state.guest = Boolean(result.guest);" in js
+    assert "await loadPreviousConversation();" in js
 
 
 def test_crara_renderer_normalizes_equations_inside_markdown_lines():

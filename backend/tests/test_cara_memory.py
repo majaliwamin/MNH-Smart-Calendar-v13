@@ -65,6 +65,40 @@ def test_cara_account_memory_is_persistent_and_isolated(monkeypatch, tmp_path):
             other.close()
 
 
+def test_cara_guest_chat_works_without_login(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    from app.class_rep import routes
+
+    monkeypatch.setattr(routes, "reply", lambda message, history, **kwargs:
+                        ("A guest assistant response.", "cloudflare", "test-model", None))
+    with TestClient(app) as client:
+        me = client.get("/api/class-rep/auth/me")
+        assert me.status_code == 200
+        assert me.json()["authenticated"] is False
+        assert me.json()["guest"] is True
+        guest_id = me.json()["user"]["id"]
+        assert guest_id.startswith("guest_")
+        assert client.cookies.get("cara_guest") == guest_id
+
+        chat = client.post("/api/class-rep/chat", json={"message": "Help me draft an announcement."})
+        assert chat.status_code == 200
+        assert chat.json()["reply"] == "A guest assistant response."
+        conversations = client.get("/api/class-rep/conversations").json()["conversations"]
+        assert conversations and conversations[0]["id"] == chat.json()["conversation_id"]
+
+        other = TestClient(app)
+        try:
+            other_me = other.get("/api/class-rep/auth/me").json()
+            assert other_me["guest"] is True
+            assert other_me["user"]["id"] != guest_id
+            other_chat = other.post("/api/class-rep/chat", json={"message": "Hello"})
+            assert other_chat.status_code == 200
+            assert other.get("/api/class-rep/conversations").json()["conversations"][0]["id"] == other_chat.json()["conversation_id"]
+            assert other_chat.json()["conversation_id"] != chat.json()["conversation_id"]
+        finally:
+            other.close()
+
+
 def test_cara_tasks_and_reminders_are_persisted(monkeypatch, tmp_path):
     _test_storage(monkeypatch, tmp_path)
     from app.class_rep import routes

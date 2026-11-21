@@ -215,6 +215,16 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 }
 @media(max-width:390px){.cr-home-back{gap:4px;font-size:11px;}.cr-home-back svg{width:16px;height:16px;}.cr-brand-mark{width:38px;flex-basis:38px;padding-right:6px;}.cr-brand{gap:8px;}.cr-title{font-size:14px!important;}}
 
+/* Optional account access never replaces the chat; it is a small header link. */
+.cr-sign-in{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#f1d58a;font:600 13px/1.2 Arial,Helvetica,sans-serif;white-space:nowrap;cursor:pointer;}
+.cr-sign-in[hidden]{display:none!important}
+.cr-sign-in:hover{color:#fff1c7;}
+.cr-sign-in:focus-visible{outline:2px solid #d7ad45;outline-offset:5px;border-radius:2px;}
+.cr-auth-back{display:block;margin:14px auto 0;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--gold);font:600 13px/1.2 Arial,Helvetica,sans-serif;cursor:pointer;}
+.cr-auth-back:hover{color:var(--text);}
+.cr-auth-back:focus-visible{outline:2px solid var(--gold);outline-offset:4px;}
+@media(max-width:760px){.cr-sign-in{font-size:12px;padding:7px 0;}}
+
 /* Compact CRARA composer on desktop only; mobile sizing and touch controls stay unchanged. */
 @media (min-width:761px){
   .cara-widget.is-open .cr-form{

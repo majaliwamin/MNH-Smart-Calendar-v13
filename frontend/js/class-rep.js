@@ -5,7 +5,26 @@
   root.dataset.ready = "1";
 
   const LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com";
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, conversationId: null, responseLanguage: "EN" };
+  const GUEST_STORAGE_KEY = "crara_guest_id";
+  const GUEST_COOKIE_NAME = "cara_guest";
+  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN" };
+  function newGuestId() {
+    const random = window.crypto && window.crypto.randomUUID
+      ? window.crypto.randomUUID().replace(/-/g, "")
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    return "guest_" + random.slice(0, 64);
+  }
+  function ensureGuestId() {
+    let id = "";
+    try { id = localStorage.getItem(GUEST_STORAGE_KEY) || ""; } catch (_) {}
+    if (!/^guest_[A-Za-z0-9_-]{8,96}$/.test(id)) {
+      id = newGuestId();
+      try { localStorage.setItem(GUEST_STORAGE_KEY, id); } catch (_) {}
+    }
+    document.cookie = GUEST_COOKIE_NAME + "=" + encodeURIComponent(id) + "; Max-Age=2592000; Path=/; SameSite=Lax";
+    return id;
+  }
+  state.user = { id: ensureGuestId(), name: "Guest", email: "" };
   function canUseLanguageToggle(user = state.user) {
     return String(user && user.email || "").trim().toLowerCase() === LANGUAGE_TOGGLE_OWNER_EMAIL;
   }
@@ -45,6 +64,10 @@
   const languageCH = el("button", "cr-language-option", "CH"); languageCH.type = "button"; languageCH.dataset.language = "CH";
   languageSwitch.append(languageEN, languageCH);
   languageSwitch.hidden = true;
+  const signIn = el("button", "cr-sign-in", "Sign in");
+  signIn.type = "button";
+  signIn.setAttribute("aria-label", "Sign in to save CRARA conversations");
+  signIn.addEventListener("click", () => openAuthPanel());
   function renderLanguageChoice() {
     [languageEN, languageCH].forEach(button => {
       const active = button.dataset.language === state.responseLanguage;
@@ -71,7 +94,7 @@
   languageEN.addEventListener("click", () => saveResponseLanguage("EN"));
   languageCH.addEventListener("click", () => saveResponseLanguage("CH"));
   renderLanguageChoice();
-  header.append(brand, languageSwitch, homeBack);
+  header.append(brand, languageSwitch, signIn, homeBack);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -103,7 +126,9 @@
   const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
   const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
   const authFeedback = el("p", "cr-auth-feedback", "");
-  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback);
+  const authBack = el("button", "cr-auth-back", "Back to chat");
+  authBack.type = "button";
+  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback, authBack);
   authPanel.append(authCard);
   root.append(body, authPanel);
   const landingNav = document.getElementById("view-tabs");
@@ -123,7 +148,7 @@
     updateLauncherVisibility();
   };
   updateLauncherVisibility();
-  // Do not mount the assistant hero at all until authentication succeeds.
+  // The chat opens immediately for guests; the header is mounted only while CRARA is open.
   function showHeader(visible) {
     languageSwitch.hidden = !visible || !canUseLanguageToggle();
     if (visible) {
@@ -137,14 +162,35 @@
   root.classList.remove("class-rep-assistant");
   root.classList.add("cara-widget");
   root.classList.remove("is-open");
-  showHeader(false);
-  body.hidden = true;
-  authPanel.hidden = true;
   function setAuthPresentation(active) {
     const enabled = Boolean(active);
     document.documentElement.classList.toggle("cara-auth-open", enabled);
     document.body.classList.toggle("cara-auth-open", enabled);
   }
+  function applyChatPresentation() {
+    const open = root.classList.contains("is-open");
+    setAuthPresentation(false);
+    showHeader(open);
+    body.hidden = !open || !state.user;
+    authPanel.hidden = true;
+    signIn.hidden = !state.guest;
+    updateLauncherVisibility();
+  }
+  function openAuthPanel() {
+    setAuthPresentation(true);
+    showHeader(false);
+    body.hidden = true;
+    authPanel.hidden = false;
+    updateLauncherVisibility();
+    authEmail.focus();
+  }
+  function closeAuthPanel() {
+    setAuthPresentation(false);
+    authPanel.hidden = true;
+    applyChatPresentation();
+    input.focus();
+  }
+  applyChatPresentation();
   function status(text, ready) {
     const node = statusNode;
     node.textContent = text;
@@ -280,9 +326,9 @@
     }
   }
   let authMode = "login";
-  // A temporary network/API failure is not proof that the saved session expired.
-  let retrySessionCheck = false;
-  let authCheckComplete = false;
+  // Guest chat is usable immediately; authentication is optional and only adds
+  // saved conversations and memory. A failed check never shows a login wall.
+  let authCheckComplete = true;
   let authCheckRunning = false;
   function setAuthMode(mode) {
     authMode = mode;
@@ -313,24 +359,13 @@
       const { response, result } = await requestJson("/api/class-rep/auth/me");
       if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
       if (result.storage_ready === false) {
-        authCheckComplete = true; authCheckRunning = false;
-        state.user = null; 
-        showHeader(false); body.hidden = true; authPanel.hidden = !root.classList.contains("is-open"); setAuthPresentation(root.classList.contains("is-open"));
-        authTitle.textContent = "Your private CRARA account is being prepared";
-        authIntro.textContent = result.message || "Persistent storage must be configured before you create an account.";
-        authName.disabled = true; authEmail.disabled = true; authPassword.disabled = true;
-        authSubmit.disabled = true; authSwitch.disabled = true;
+        status("Private CRARA memory is waiting for persistent storage.", false);
         return;
       }
-      authCheckComplete = true; authCheckRunning = false;
-      retrySessionCheck = false;
-      authTitle.textContent = "Your private CRARA account";
-      authIntro.textContent = "Sign in to continue your conversations and access your saved tasks and memories.";
-      authName.hidden = false; authEmail.hidden = false; authPassword.hidden = false;
-      authSwitch.hidden = false; authSubmit.textContent = authMode === "register" ? "Create account" : "Sign in";
-      authName.disabled = false; authEmail.disabled = false; authPassword.disabled = false;
-      authSubmit.disabled = false; authSwitch.disabled = false;
-      state.user = result.authenticated ? result.user : null;
+      if (result.user && result.user.id) {
+        state.user = result.user;
+        state.guest = Boolean(result.guest);
+      }
       if (state.user && canUseLanguageToggle()) {
         try {
           const languageResult = await requestJson("/api/class-rep/language");
@@ -340,33 +375,17 @@
         state.responseLanguage = "EN";
       }
       renderLanguageChoice();
-      showHeader(Boolean(root.classList.contains("is-open") && state.user));
-      setAuthPresentation(root.classList.contains("is-open") && !state.user);
-      authPanel.hidden = !root.classList.contains("is-open") || Boolean(state.user);
-      body.hidden = !state.user || !root.classList.contains("is-open");
-      if (state.user) await loadPreviousConversation();
+      await loadPreviousConversation();
     } catch (error) {
-      // A temporary network/API failure is not proof that the saved session
-      // expired. Do not show the login form or discard the browser session.
-      authCheckComplete = true; authCheckRunning = false;
-      retrySessionCheck = true;
-      showHeader(false); body.hidden = true;
-      authPanel.hidden = !root.classList.contains("is-open");
-      setAuthPresentation(root.classList.contains("is-open"));
-      authTitle.textContent = "Your saved CRARA session is still protected";
-      authIntro.textContent = "CRARA could not verify your saved sign-in because the service is temporarily unreachable. Retry when the connection is available; you will only need to sign in if your session has actually expired.";
-      authName.hidden = true; authEmail.hidden = true; authPassword.hidden = true;
-      authSwitch.hidden = true; authSubmit.textContent = "Retry connection";
-      authFeedback.textContent = "";
-      authSubmit.disabled = false;
+      authFeedback.textContent = error.message || "CRARA services could not be reached.";
+      status("Services unavailable · guest chat cannot start", false);
+    } finally {
+      authCheckComplete = true;
+      authCheckRunning = false;
+      applyChatPresentation();
     }
   }
   async function authenticate() {
-    if (retrySessionCheck) {
-      authSubmit.disabled = true;
-      await checkAuth();
-      return;
-    }
     authSubmit.disabled = true;
     try {
       const payload = { email: authEmail.value.trim(), password: authPassword.value };
@@ -375,7 +394,8 @@
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
-      state.user = result.user; state.history = []; state.conversationId = null;
+      state.user = result.user; state.guest = false;
+      state.history = []; state.conversationId = null;
       if (canUseLanguageToggle()) {
         try {
           const languageResult = await requestJson("/api/class-rep/language");
@@ -385,11 +405,16 @@
         state.responseLanguage = "EN";
       }
       renderLanguageChoice();
-      transcript.replaceChildren(); setAuthPresentation(false); showHeader(true); authPanel.hidden = true; body.hidden = false;
-      authPassword.value = ""; status("Sign in successful", true);
+      transcript.replaceChildren();
+      setAuthMode("login");
+      closeAuthPanel();
+      authPassword.value = "";
+      status("Signed in · saved conversations enabled", true);
+      await loadPreviousConversation();
     } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
     finally { authSubmit.disabled = false; }
   }
+  authBack.addEventListener("click", closeAuthPanel);
   authSubmit.addEventListener("click", authenticate);
   authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
@@ -416,7 +441,7 @@
   }
   async function send(value) {
     const message = String(value || input.value).trim();
-    if (!message || state.busy || !state.user) return;
+    if (!message || state.busy) return;
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = ""; updateComposerAction();
@@ -593,15 +618,14 @@
       root.style.setProperty("--cara-keyboard-inset", "0px");
     }
     root.classList.toggle("is-open", open);
-    setAuthPresentation(Boolean(open && !state.user));
-    showHeader(Boolean(open && state.user)); body.hidden = true; authPanel.hidden = !open || Boolean(state.user) || !authCheckComplete; updateLauncherVisibility();
+    applyChatPresentation();
     launcher.setAttribute("aria-expanded", String(open));
     if (open) { void checkAuth(); }
   }
   setAuthMode("login");
   launcher.addEventListener("click", () => setOpen(true));
-  // Restore a saved account as soon as the app loads, not only after the user opens CRARA.
-  // Keep the login panel hidden while the saved session is being checked.
+  // Open straight into chat with a local guest session. The background check
+  // upgrades a saved account silently; login is only opened on request.
   void checkAuth();
   checkStatus();
 })();

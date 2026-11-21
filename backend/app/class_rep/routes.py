@@ -1,5 +1,5 @@
-"""CRARA API: authenticated chat, private memory, tasks and reminders."""
-import logging, os, re, threading, time, uuid
+"""CRARA API: guest chat, optional accounts, private memory, tasks and reminders."""
+import logging, os, re, secrets, threading, time, uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from collections import deque
@@ -28,6 +28,17 @@ _ANALYTICS_QUERY = re.compile(r"analytics|performance|missed sessions?|attendanc
 _ANALYTICS_ROLES = {"hod", "coordinator", "executive_dean"}
 
 _LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com"
+_GUEST_COOKIE = "cara_guest"
+_GUEST_ID_RE = re.compile(r"^guest_[A-Za-z0-9_-]{8,96}$")
+
+
+def _valid_guest_id(value) -> str:
+    text = str(value or "")
+    return text if _GUEST_ID_RE.fullmatch(text) else ""
+
+
+def _guest_user(guest_id: str) -> dict:
+    return {"id": guest_id, "name": "Guest", "email": ""}
 
 
 def _is_language_toggle_owner(user: dict) -> bool:
@@ -65,15 +76,24 @@ def _require_durable_storage():
 def _user(request: Request):
     _require_durable_storage()
     user = memory.resolve_session(request.cookies.get("cara_session"))
-    if not user:
-        raise HTTPException(401, "Sign in to your CRARA account to use private conversations and memory.")
-    return user
+    if user:
+        return user
+    guest_id = _valid_guest_id(request.cookies.get(_GUEST_COOKIE))
+    if guest_id:
+        return _guest_user(guest_id)
+    raise HTTPException(401, "Start a guest CRARA session before sending a message.")
 
 
 def _cookie(response: Response, token: str):
     production = os.getenv("MNH_ENV", "").lower() == "production" or bool(os.getenv("RENDER"))
     response.set_cookie("cara_session", token, max_age=memory.SESSION_SECONDS,
                         httponly=True, secure=production, samesite="lax", path="/")
+
+
+def _guest_cookie(response: Response, guest_id: str):
+    production = os.getenv("MNH_ENV", "").lower() == "production" or bool(os.getenv("RENDER"))
+    response.set_cookie(_GUEST_COOKIE, guest_id, max_age=memory.SESSION_SECONDS,
+                        httponly=False, secure=production, samesite="lax", path="/")
 
 
 def _admin(token: str | None):
@@ -95,7 +115,7 @@ def register(payload: dict, request: Request, response: Response):
     except memory.MemoryError as exc:
         raise HTTPException(400, str(exc)) from exc
     _cookie(response, memory.create_session(user["id"]))
-    return {"authenticated": True, "user": user}
+    return {"authenticated": True, "guest": False, "user": user}
 
 
 @router.post("/auth/login")
@@ -106,20 +126,20 @@ def login(payload: dict, request: Request, response: Response):
     if not user:
         raise HTTPException(401, "Email or password is incorrect.")
     _cookie(response, memory.create_session(user["id"]))
-    return {"authenticated": True, "user": user}
+    return {"authenticated": True, "guest": False, "user": user}
 
 
 @router.post("/auth/logout")
 def logout(request: Request, response: Response):
     memory.revoke_session(request.cookies.get("cara_session"))
     response.delete_cookie("cara_session", path="/", httponly=True, samesite="lax")
-    return {"authenticated": False}
+    return {"authenticated": False, "guest": True}
 
 
 @router.get("/auth/me")
 def me(request: Request, response: Response):
     if not _durable_storage_ready():
-        return {"authenticated": False, "user": None, "storage_ready": False,
+        return {"authenticated": False, "guest": False, "user": None, "storage_ready": False,
                 "message": "Private CRARA memory is waiting for a persistent database or an attached persistent disk."}
     token = request.cookies.get("cara_session")
     user = memory.resolve_session(token)
@@ -127,7 +147,10 @@ def me(request: Request, response: Response):
         # Keep the browser's persistent cookie expiry aligned with the sliding
         # server-side session expiry, so returning users are not asked to sign in.
         _cookie(response, token)
-    return {"authenticated": bool(user), "user": user, "storage_ready": True}
+        return {"authenticated": True, "guest": False, "user": user, "storage_ready": True}
+    guest_id = _valid_guest_id(request.cookies.get(_GUEST_COOKIE)) or "guest_" + secrets.token_urlsafe(18)
+    _guest_cookie(response, guest_id)
+    return {"authenticated": False, "guest": True, "user": _guest_user(guest_id), "storage_ready": True}
 
 
 @router.get("/diagnostics/provider")
