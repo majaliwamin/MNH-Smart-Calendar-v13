@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-math-fonts-v32"
+    assert build == "2026.11.21-library-topics-v33"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-math-fonts-v32"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-library-topics-v33"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -534,6 +534,50 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "body.python-library-view .bottom-nav" in css
     assert ".python-library-frame" in css
     assert ".python-library-back" in css
+
+
+def test_python_library_topics_are_organized_into_tracks():
+    import re
+
+    resource_dir = ROOT / "frontend" / "resources"
+    library = (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
+    bridge = (resource_dir / "biomedical_api.js").read_text(encoding="utf-8")
+
+    nav = library.split("<nav>", 1)[1].split("</nav>", 1)[0]
+    tracks = re.findall(
+        r'<div class="topic-track" data-track="([^"]+)"><strong>\1</strong>', nav
+    )
+    assert tracks == [
+        "Foundations",
+        "Data handling",
+        "Wrangling, visualisation &amp; aggregation",
+        "Statistical methods &amp; modelling",
+        "Applied biomedical labs",
+        "Projects &amp; reproducibility",
+        "Reference &amp; audit",
+    ]
+
+    links = re.findall(
+        r'<a href="#([^"]+)" data-topic-label="([^"]+)">([^<]+)</a>', nav
+    )
+    assert len(links) == 44
+    assert len({href for href, _, _ in links}) == 44
+    assert all(label == text for _, label, text in links)
+    section_ids = set(re.findall(r'\bid="([^"]+)"', library))
+    assert all(href in section_ids for href, _, _ in links)
+    assert library.count('data-topic-track="') == 44
+
+    # Companions no longer borrow conflicting McKinney chapter numbers.
+    assert "Chapter 4: Cleaning and quality assurance" not in library
+    assert "Chapter 10B: Advanced methods II" not in library
+    assert 'data-topic-label="Coverage &amp; audit"' in library
+    assert 'nav a[href^="#"]' in library
+
+    # The embedded chapter index follows the same seven-track organization.
+    assert "var TOPIC_TRACKS = [" in bridge
+    assert ".bm-chapter-track{margin:10px 0 2px}" in bridge
+    assert "Organized topics (" in bridge
+    assert 'var linkHost = nav.querySelector(".topic-track-links") || nav;' in bridge
 
 
 def test_python_library_windows_setup_simulation_is_additive():

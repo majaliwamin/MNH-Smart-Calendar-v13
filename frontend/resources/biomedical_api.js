@@ -244,6 +244,9 @@
       ".bm-chapter-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}",
       ".bm-chapter-links a{display:block;padding:7px 8px;border:1px solid var(--bd,#cdd8e0);border-radius:6px;background:var(--bg,#fff);color:var(--fg,#1b2a3a);text-decoration:none;font-size:13px;line-height:1.25}",
       ".bm-chapter-links a:hover,.bm-chapter-links a:focus-visible{border-color:var(--ac,#0b5d7a);color:var(--ac,#0b5d7a)}",
+      ".bm-chapter-track{margin:10px 0 2px}",
+      ".bm-chapter-track>strong{display:block;margin-bottom:5px;color:var(--ac,#0b5d7a);font-size:13px}",
+      ".bm-chapter-track .bm-chapter-links{margin-top:0}",
       "@media(max-width:640px){.bm-chapter-index{padding:10px}.bm-chapter-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.bm-chapter-links a{font-size:12px;padding:6px}}",
       "@media print{.bm-panel,.bm-reopen,.bm-run-btn,.bm-file-actions,.bm-chapter-index{display:none!important}}"
     ].join("");
@@ -898,8 +901,9 @@
       link.textContent = "Simulated data";
       link.title = "Choose a simulated dataset for the backend runner";
       wireFocusReading(link);
-      var firstLink = nav.querySelector("a");
-      nav.insertBefore(link, firstLink || null);
+      var linkHost = nav.querySelector(".topic-track-links") || nav;
+      var firstLink = linkHost.querySelector("a");
+      linkHost.insertBefore(link, firstLink || null);
     }
 
     var section = document.createElement("section");
@@ -996,7 +1000,50 @@
     return section;
   }
 
+  var TOPIC_TRACKS = [
+    { label: "Foundations", ids: ["ch0", "ch1", "ch2", "book3"] },
+    { label: "Data handling", ids: ["book4", "book5", "book6", "book7", "supplement_data_quality"] },
+    {
+      label: "Wrangling, visualisation & aggregation",
+      ids: [
+        "book8", "supplement_variable_transformation", "book9", "supplement_visualisation",
+        "book10", "supplement_descriptive_statistics", "book11"
+      ]
+    },
+    {
+      label: "Statistical methods & modelling",
+      ids: [
+        "book12", "supplement_hypothesis_testing", "supplement_mean_rank_tests",
+        "supplement_categorical_correlation", "supplement_correlation_regression",
+        "supplement_advanced_methods", "supplement_sensitivity_validation",
+        "statistical_methodology_review"
+      ]
+    },
+    {
+      label: "Applied biomedical labs",
+      ids: [
+        "Biomedical_practical_workflow", "scientific_imports_numpy_lab", "infectious_disease_lab",
+        "medical_microbiology_lab", "immunology_lab", "longitudinal_biomarker_review",
+        "diagnostic_accuracy_lab", "epidemiology_confounding_lab",
+        "infectious_disease_advanced_lab", "survival_analysis_lab", "predictive_modeling_lab"
+      ]
+    },
+    {
+      label: "Projects & reproducibility",
+      ids: [
+        "book13", "supplement_reporting_ethics", "supplement_reusable_workflows",
+        "Biomedical_project_sequence", "Biomedical_reproducible_project_lab"
+      ]
+    },
+    {
+      label: "Reference & audit",
+      ids: ["appendixA", "appendixB", "sol", "audit_coverage"]
+    }
+  ];
+
   function chapterLabel(section) {
+    var labelled = section.getAttribute("data-topic-label") || "";
+    if (labelled) return labelled.replace(/\s+/g, " ").trim();
     var raw = section.getAttribute("data-chapter-title") || "";
     if (!raw) {
       var heading = section.querySelector("h2");
@@ -1007,29 +1054,45 @@
 
   function createEmbeddedChapterIndex() {
     if (!embeddedMode || document.getElementById("bm-chapter-index")) return;
-    var sections = Array.prototype.slice.call(document.querySelectorAll("section.s[id]"));
+    var sections = Array.prototype.slice.call(document.querySelectorAll("section[data-topic-track][id]"));
     if (!sections.length) return;
+    var byId = {};
+    sections.forEach(function (section) {
+      byId[section.id] = section;
+    });
 
     var index = document.createElement("nav");
     index.id = "bm-chapter-index";
     index.className = "bm-chapter-index";
-    index.setAttribute("aria-label", "Command library chapters");
+    index.setAttribute("aria-label", "Organized command library topics");
 
     var heading = document.createElement("strong");
-    heading.textContent = "Chapters in this library (" + sections.length + ")";
+    heading.textContent = "Organized topics (" + sections.length + ")";
     index.appendChild(heading);
 
-    var links = document.createElement("div");
-    links.className = "bm-chapter-links";
-    sections.forEach(function (section) {
-      var link = document.createElement("a");
-      link.href = "#" + encodeURIComponent(section.id);
-      link.textContent = chapterLabel(section);
-      link.title = "Go to " + chapterLabel(section);
-      wireFocusReading(link);
-      links.appendChild(link);
+    TOPIC_TRACKS.forEach(function (track) {
+      var present = track.ids.filter(function (id) { return byId[id]; });
+      if (!present.length) return;
+      var group = document.createElement("section");
+      group.className = "bm-chapter-track";
+      group.setAttribute("aria-label", track.label);
+      var groupTitle = document.createElement("strong");
+      groupTitle.textContent = track.label;
+      group.appendChild(groupTitle);
+      var links = document.createElement("div");
+      links.className = "bm-chapter-links";
+      present.forEach(function (id) {
+        var section = byId[id];
+        var link = document.createElement("a");
+        link.href = "#" + encodeURIComponent(section.id);
+        link.textContent = chapterLabel(section);
+        link.title = "Go to " + chapterLabel(section);
+        wireFocusReading(link);
+        links.appendChild(link);
+      });
+      group.appendChild(links);
+      index.appendChild(group);
     });
-    index.appendChild(links);
 
     var cover = document.getElementById("designed-cover-page") || document.body.firstElementChild;
     var originalNav = document.querySelector("nav");
