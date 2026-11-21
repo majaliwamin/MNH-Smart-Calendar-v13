@@ -286,6 +286,9 @@ def test_pwa_install_requirements_are_met():
     assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
     assert 'document.documentElement.classList.add("mnh-gate-open")' in html
     assert 'document.documentElement.classList.add("mnh-install-exempt")' in html
+    assert "Android|iPhone|iPad|iPod|Mobile" in html
+    assert "&& !mobile && !forceGate" in html
+    assert "\n ensureDialog();\n" in html
     assert "showInstallDialogOnOpen();" in html
     assert 'accept.textContent="Install";' in html
     dialog_css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
@@ -419,7 +422,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-first-open-permission-gate-v18"
+    assert build == "2026.11.21-mobile-gate-always-v19"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html

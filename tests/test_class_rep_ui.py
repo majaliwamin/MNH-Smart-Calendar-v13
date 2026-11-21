@@ -93,6 +93,9 @@ def test_main_header_stays_frozen_and_install_icon_is_available():
     assert "Download statement permission:" in html
     assert 'id="mnh-install-statement"' in html
     assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
+    assert "Android|iPhone|iPad|iPod|Mobile" in html
+    assert "&& !mobile && !forceGate" in html
+    assert "\n ensureDialog();\n" in html
     assert "showInstallDialogOnOpen();" in html
     assert 'accept.textContent="Install";' in html
     assert ".mnh-install-statement{" in dialog_css

@@ -38,14 +38,16 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-first-open-permission-gate-v18";</script>
+<script>window.MNH_BUILD="2026.11.21-mobile-gate-always-v19";</script>
 <script>
 (function () {
   "use strict";
   var standalone = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
   var installed = false;
   try { installed = localStorage.getItem("mnh_calendar_install_completed") === "1"; } catch (_) {}
-  if (standalone || installed) document.documentElement.classList.add("mnh-install-exempt");
+  var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent || "");
+  var forceGate = new URLSearchParams(window.location.search).has("mnh_force_gate");
+  if ((standalone || installed) && !mobile && !forceGate) document.documentElement.classList.add("mnh-install-exempt");
   else document.documentElement.classList.add("mnh-gate-open");
 })();
 </script>
@@ -102,8 +104,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-first-open-permission-gate-v18">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-first-open-permission-gate-v18">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-mobile-gate-always-v19">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-mobile-gate-always-v19">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -400,15 +402,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-first-open-permission-gate-v18" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-first-open-permission-gate-v18" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-first-open-permission-gate-v18" defer></script>
+<script src="/js/app.js?v=2026.11.21-mobile-gate-always-v19" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-mobile-gate-always-v19" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-mobile-gate-always-v19" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-first-open-permission-gate-v18";
+  const workerUrl = "/service-worker.js?v=2026.11.21-mobile-gate-always-v19";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
@@ -481,6 +483,7 @@
   dialog.addEventListener("click",event=>{if(event.target===dialog)closeInstallGate();});
   return dialog;
  };
+ ensureDialog();
  const openInstallChoice=()=>{
   if(isStandalone())return;
   const box=ensureDialog();
