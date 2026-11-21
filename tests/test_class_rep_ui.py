@@ -88,11 +88,14 @@ def test_main_header_stays_frozen_and_install_icon_is_available():
     assert 'window.addEventListener("beforeinstallprompt"' in html
     assert 'window.addEventListener("appinstalled"' in html
     assert "Download MNH Calendar" not in html
-    assert "Download statement permission:" not in html
     assert '"Show instructions"' not in html
+    assert 'id="mnh-first-open-gate"' in html
+    assert "Download statement permission:" in html
+    assert 'id="mnh-install-statement"' in html
+    assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
     assert "showInstallDialogOnOpen();" in html
     assert 'accept.textContent="Install";' in html
-    assert ".mnh-install-statement{" not in dialog_css
+    assert ".mnh-install-statement{" in dialog_css
     assert ".hd-install-btn{" in css
     # The timetable export menu remains beside the restored install/download button.
     assert 'id="dl-btn"' in html

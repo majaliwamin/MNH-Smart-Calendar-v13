@@ -38,7 +38,17 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-install-button-copy-v17";</script>
+<script>window.MNH_BUILD="2026.11.21-first-open-permission-gate-v18";</script>
+<script>
+(function () {
+  "use strict";
+  var standalone = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  var installed = false;
+  try { installed = localStorage.getItem("mnh_calendar_install_completed") === "1"; } catch (_) {}
+  if (standalone || installed) document.documentElement.classList.add("mnh-install-exempt");
+  else document.documentElement.classList.add("mnh-gate-open");
+})();
+</script>
 <script>
 (function () {
   "use strict";
@@ -92,8 +102,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-install-button-copy-v17">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-install-button-copy-v17">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-first-open-permission-gate-v18">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-first-open-permission-gate-v18">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -117,6 +127,19 @@
   } catch (error) { /* use the default theme if browser storage is unavailable */ }
 })();
 </script>
+
+<div id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Download statement permission" aria-describedby="mnh-install-statement mnh-install-copy">
+ <section class="mnh-install-card">
+  <div class="mnh-install-mark" aria-hidden="true">MNH</div>
+  <p class="mnh-install-statement" id="mnh-install-statement">Download statement permission: choosing Install allows this browser to add MNH Calendar to your device. Choosing Close downloads nothing and you can continue using the app in your browser.</p>
+  <p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p>
+  <p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p>
+  <div class="mnh-install-actions">
+   <button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button>
+   <button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button>
+  </div>
+ </section>
+</div>
 
 <div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
 <header class="site-header" id="site-header">
@@ -377,15 +400,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-install-button-copy-v17" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-install-button-copy-v17" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-install-button-copy-v17" defer></script>
+<script src="/js/app.js?v=2026.11.21-first-open-permission-gate-v18" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-first-open-permission-gate-v18" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-first-open-permission-gate-v18" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-install-button-copy-v17";
+  const workerUrl = "/service-worker.js?v=2026.11.21-first-open-permission-gate-v18";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
@@ -435,18 +458,27 @@
     ? "Your browser may offer “Install app” or “Add to Home screen” from its menu. Choose that option to install."
     : "Choose “Install app” from your browser’s address bar or menu, if available.";
  };
+ const closeInstallGate=()=>{
+  if(dialog)dialog.hidden=true;
+  document.documentElement.classList.remove("mnh-gate-open");
+ };
  const ensureDialog=()=>{
   if(dialog)return dialog;
-  dialog=document.createElement("div");
-  dialog.id="mnh-install-choice";
-  dialog.className="mnh-install-choice";
-  dialog.hidden=true;
-  dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
-  document.body.appendChild(dialog);
+  const gate=document.getElementById("mnh-first-open-gate");
+  if(gate){
+   dialog=gate;
+  }else{
+   dialog=document.createElement("div");
+   dialog.id="mnh-install-choice";
+   dialog.className="mnh-install-choice";
+   dialog.hidden=true;
+   dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Download statement permission" aria-describedby="mnh-install-statement mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p class="mnh-install-statement" id="mnh-install-statement">Download statement permission: choosing Install allows this browser to add MNH Calendar to your device. Choosing Close downloads nothing and you can continue using the app in your browser.</p><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
+   document.body.appendChild(dialog);
+  }
   const accept=dialog.querySelector("#mnh-install-accept"),decline=dialog.querySelector("#mnh-install-decline");
-  decline.addEventListener("click",()=>{dialog.hidden=true;});
+  decline.addEventListener("click",closeInstallGate);
   accept.addEventListener("click",installFromChoice);
-  dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.hidden=true;});
+  dialog.addEventListener("click",event=>{if(event.target===dialog)closeInstallGate();});
   return dialog;
  };
  const openInstallChoice=()=>{
@@ -458,12 +490,13 @@
   accept.disabled=false;
   accept.textContent="Install";
   box.hidden=false;
+  document.documentElement.classList.add("mnh-gate-open");
   accept.focus();
  };
  async function installFromChoice(){
   if(promptOpen)return;
   const accept=dialog&&dialog.querySelector("#mnh-install-accept"),help=dialog&&dialog.querySelector("#mnh-install-help");
-  if(instructionsShown){dialog.hidden=true;return;}
+  if(instructionsShown){closeInstallGate();return;}
   if(deferredPrompt){
    const promptEvent=deferredPrompt;
    deferredPrompt=null;
@@ -476,7 +509,7 @@
      markInstalled();
      hideHeaderInstall();
      hideInstallNotice();
-     dialog.hidden=true;
+     closeInstallGate();
     }else{
      help.textContent="Installation was not completed. You can install later using the download icon or your browser menu.";
      instructionsShown=true;
@@ -519,7 +552,7 @@
  };
 
  if(installButton)installButton.addEventListener("click",openInstallChoice);
- document.addEventListener("keydown",event=>{if(event.key==="Escape"&&dialog&&!dialog.hidden)dialog.hidden=true;});
+ document.addEventListener("keydown",event=>{if(event.key==="Escape"&&dialog&&!dialog.hidden)closeInstallGate();});
 
  if(isStandalone()){
   markInstalled();
@@ -554,7 +587,7 @@
   markInstalled();
   hideHeaderInstall();
   hideInstallNotice();
-  if(dialog)dialog.hidden=true;
+  closeInstallGate();
  });
 })();
 </script>
