@@ -1055,7 +1055,11 @@ function showView(name){
  if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources"),library=document.getElementById("view-python-library"),simulation=document.getElementById("view-python-setup-simulation");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";simulation.hidden=name!=="python-setup-simulation";
- const resourcesMode=name==="resources",libraryMode=name==="python-library"||name==="python-setup-simulation";
+ if(name==="python-setup-simulation"){
+    const simFrame=simulation.querySelector("iframe"),fitSim=()=>{try{simFrame.contentWindow.fit?.()}catch(e){}};
+    requestAnimationFrame(fitSim);setTimeout(fitSim,80);
+  }
+  const resourcesMode=name==="resources",libraryMode=name==="python-library"||name==="python-setup-simulation";
  document.body.classList.toggle("resources-view",resourcesMode);
  document.body.classList.toggle("python-library-view",libraryMode);
  document.body.classList.toggle("python-setup-simulation-view",name==="python-setup-simulation");

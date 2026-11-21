@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Windows Python and JupyterLab setup simulation</title>
+<script>
+if(new URLSearchParams(location.search).get('full')==='1'){document.documentElement.classList.add('full-screen-simulation');}
+</script>
 <style>
 :root{--bg:#eef1f5;--ink:#18212b;--mute:#5b6775;--py:#306998;--yl:#ffd43b;--jp:#f37726;--ok:#1f8a4c}
 *{box-sizing:border-box}
@@ -356,6 +359,26 @@ h1{font-weight:750;color:#152638}
 .ctl #bp{background:#ffd43b;border-color:#e5bb25;color:#222}
 .ctl select{min-width:130px;max-width:160px;padding:5px 7px}
 @media(max-width:560px){.ctl{gap:4px}.ctl button{padding:5px 7px;font-size:10px;min-height:26px}.ctl select{min-width:112px;max-width:135px;font-size:10px}}
+
+/* Full-screen resource mode: the page itself covers every mobile or desktop viewport. */
+html.full-screen-simulation,
+html.full-screen-simulation body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#0b1420}
+html.full-screen-simulation body{font-size:clamp(12px,1.4vw,16px)}
+html.full-screen-simulation .wrap{width:100%;max-width:none;height:100vh;height:100dvh;margin:0;padding:0;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(circle at 50% 18%,#173252,#08111f 72%)}
+html.full-screen-simulation h1,
+html.full-screen-simulation .sub0,
+html.full-screen-simulation .hint,
+html.full-screen-simulation .panel,
+html.full-screen-simulation .chips,
+html.full-screen-simulation .card{display:none!important}
+html.full-screen-simulation .ctl{flex:0 0 auto;width:100%;margin:0;padding:max(8px,env(safe-area-inset-top)) max(104px,calc(env(safe-area-inset-right) + 96px)) 8px max(8px,env(safe-area-inset-left));border:0;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0;background:rgba(6,14,25,.92);backdrop-filter:blur(8px);justify-content:center;box-shadow:none}
+html.full-screen-simulation #zw{flex:1 1 auto;min-height:0;width:100%;overflow:hidden;background:radial-gradient(circle at 50% 40%,#173252,#07101c 78%)}
+html.full-screen-simulation .lid{width:100%;height:100%;padding:0;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+html.full-screen-simulation #zw.z #lid{width:100%;height:100%}
+html.full-screen-simulation .scrw{width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;box-shadow:none;background:transparent}
+html.full-screen-simulation #scr{left:50%;top:50%;margin-left:-360px;margin-top:-225px;transform-origin:center center}
+html.full-screen-simulation .base{display:none!important}
+@media(max-width:560px){html.full-screen-simulation .ctl{padding:max(52px,calc(env(safe-area-inset-top) + 48px)) max(6px,env(safe-area-inset-right)) 6px max(6px,env(safe-area-inset-left));gap:3px}html.full-screen-simulation .ctl button,html.full-screen-simulation .ctl select{min-height:30px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -422,10 +445,13 @@ h1{font-weight:750;color:#152638}
 
 <script>
 var $=function(s){return document.querySelector(s)},$$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
-var tok=0,paused=false,spd=1,idx=0,stageElapsed=0,skipBudget=0;
-/* scale the 720x450 screen to fit */
-function fit(){$('#scr').style.transform='scale('+($('#scrw').clientWidth/720)+')'}
-addEventListener('resize',fit);fit();
+var tok=0,paused=false,spd=1,idx=0,stageElapsed=0,skipBudget=0,zoom=false;
+var fullScreenSimulation=new URLSearchParams(location.search).get('full')==='1';
+/* Scale the 720x450 simulated screen to the available viewport. */
+function screenScale(){var w=$('#scrw').clientWidth||720,h=$('#scrw').clientHeight||450;if(!fullScreenSimulation)return (w/720)||1;var k=zoom?Math.max(w/720,h/450):Math.min(w/720,h/450);return k>0?k:1}
+function fit(){$('#scr').style.transform='scale('+screenScale()+')'}
+addEventListener('resize',fit);addEventListener('load',fit);requestAnimationFrame(fit);fit();
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(fit).observe($('#scrw'));
 setInterval(function(){$('#clk').textContent=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})},1000);
 /* engine */
 function sleep(ms){var my=tok;return new Promise(function(res,rej){var t=0,iv=setInterval(function(){if(my!==tok){clearInterval(iv);rej(0)}else if(!paused){if(skipBudget>0){var step=Math.min(20,skipBudget);skipBudget-=step;stageElapsed+=step;t+=step;if(skipBudget<=0)$('#scr').classList.remove('rewinding')}else{t+=20;stageElapsed+=20}if(t>=ms/spd){clearInterval(iv);res()}}},20)})}
@@ -435,8 +461,8 @@ function acShow(t){var q=t.toLowerCase(),L=POOL.concat(q.length<2?NOISE:[]).filt
  a.innerHTML=L.map(function(x,i){return '<div'+(i?'':' class="hi"')+'>'+x.slice(0,q.length)+'<b>'+x.slice(q.length)+'</b></div>'}).join('');a.style.display=L.length?'block':'none';$('#sbox').classList.toggle('open',L.length>0)}
 async function typAC(el,s,d){for(var i=0;i<s.length;i++){el.textContent+=s[i];acShow(el.textContent);await sleep(d||90)}}
 
-async function pt(e){if(typeof e==='string')e=$(e);var pg=$('#pg'),scrw=$('#scrw');if(pg.contains(e)){var q=scrw.getBoundingClientRect().width/720,a=e.getBoundingClientRect(),b=pg.getBoundingClientRect();pg.scrollTo({top:pg.scrollTop+(a.top-b.top)/q-pg.clientHeight/2+a.height/q/2,behavior:'smooth'});await sleep(700)}var s=scrw.getBoundingClientRect(),r=e.getBoundingClientRect(),k=s.width/720;
- /* Position the cursor tip (not its centre) on the actual target. */ var x=(r.left-s.left+r.width*0.42)/k,y=(r.top-s.top+r.height/2)/k;$('#cur').style.transform='translate('+x+'px,'+y+'px)';if(zoom){var z=$('#zw');z.scrollTo({left:r.left-s.left+r.width/2-z.clientWidth/2+12,behavior:'smooth'})}await sleep(950)}
+async function pt(e){if(typeof e==='string')e=$(e);var pg=$('#pg'),scrw=$('#scrw');if(pg.contains(e)){var q=screenScale(),a=e.getBoundingClientRect(),b=pg.getBoundingClientRect();pg.scrollTo({top:pg.scrollTop+(a.top-b.top)/q-pg.clientHeight/2+a.height/q/2,behavior:'smooth'});await sleep(700)}var s=scrw.getBoundingClientRect(),sr=$('#scr').getBoundingClientRect(),r=e.getBoundingClientRect(),k=screenScale();
+ /* Position the cursor tip (not its centre) on the actual target. */ var x=(r.left-sr.left+r.width*0.42)/k,y=(r.top-sr.top+r.height/2)/k;$('#cur').style.transform='translate('+x+'px,'+y+'px)';if(zoom){var z=$('#zw');z.scrollTo({left:r.left-s.left+r.width/2-z.clientWidth/2+12,behavior:'smooth'})}await sleep(950)}
 async function click(e){if(typeof e==='string')e=$(e);await pt(e);e.classList.add('sim-target');$('#cur').classList.add('ck');await sleep(200);$('#cur').classList.remove('ck');await sleep(100);e.classList.remove('sim-target')}
 function sub(t,w){$('#sb').textContent=t;$('#sw').textContent=w||''}
 function show(){var a=arguments;['br','term','ins'].forEach(function(id){var w=$('#w-'+id),i=[].indexOf.call(a,id);w.classList.toggle('on',i>-1);if(id!=='ins')w.style.zIndex=i+1});
@@ -562,7 +588,7 @@ $('#stageJump').onchange=function(){if(this.value!=='')go(Number(this.value))};
 $('#br0').onclick=function(){go(0)};
 $('#bs').onclick=function(){spd=spd===1?2:spd===2?3:1;this.textContent='Speed '+spd+'×'};
 $('#bn').onclick=function(){go(Math.min(idx+1,stages.length-1))};$('#bv').onclick=function(){go(Math.max(idx-1,0))};
-var zoom=false;$('#bz').onclick=function(){zoom=!zoom;$('#zw').classList.toggle('z',zoom);this.textContent=zoom?'🔍 Fit':'🔍 Zoom';fit()};
+$('#bz').onclick=function(){zoom=!zoom;$('#zw').classList.toggle('z',zoom);document.documentElement.classList.toggle('simulation-zoomed',zoom);this.textContent=zoom?'🔍 Fit':'🔍 Zoom';fit()};
 addEventListener('keydown',function(e){var t=e.target,tag=t&&t.tagName;if(tag==='BUTTON'||tag==='SELECT'||tag==='INPUT'||tag==='TEXTAREA'||(t&&t.isContentEditable))return;if(e.key===' '){e.preventDefault();$('#bp').click()}else if(e.key==='ArrowRight')$('#bn').click();else if(e.key==='ArrowLeft')$('#bv').click()});
 go(0);
 </script>
