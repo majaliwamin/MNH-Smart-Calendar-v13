@@ -2,9 +2,42 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.21-mobile-fresh-v31";
+const BUILD = "2026.11.21-math-fonts-v32";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
-const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js", "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/css/class-rep.css", "/favicon.svg", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png", "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js", "/vendor/marked.min.js", "/vendor/purify.min.js", "/vendor/chart.umd.min.js"];
+// KaTeX splits symbols across many font faces. Caching only the fonts used by
+// the first online render leaves Greek, operator, size and script glyphs blank
+// on an offline phone, so every bundled font is installed with the shell.
+const KATEX_FONTS = [
+  "KaTeX_AMS-Regular.woff", "KaTeX_AMS-Regular.woff2",
+  "KaTeX_Caligraphic-Bold.woff", "KaTeX_Caligraphic-Bold.woff2",
+  "KaTeX_Caligraphic-Regular.woff", "KaTeX_Caligraphic-Regular.woff2",
+  "KaTeX_Fraktur-Bold.woff", "KaTeX_Fraktur-Bold.woff2",
+  "KaTeX_Fraktur-Regular.woff", "KaTeX_Fraktur-Regular.woff2",
+  "KaTeX_Main-Bold.woff", "KaTeX_Main-Bold.woff2",
+  "KaTeX_Main-BoldItalic.woff", "KaTeX_Main-BoldItalic.woff2",
+  "KaTeX_Main-Italic.woff", "KaTeX_Main-Italic.woff2",
+  "KaTeX_Main-Regular.woff", "KaTeX_Main-Regular.woff2",
+  "KaTeX_Math-BoldItalic.woff", "KaTeX_Math-BoldItalic.woff2",
+  "KaTeX_Math-Italic.woff", "KaTeX_Math-Italic.woff2",
+  "KaTeX_SansSerif-Bold.woff", "KaTeX_SansSerif-Bold.woff2",
+  "KaTeX_SansSerif-Italic.woff", "KaTeX_SansSerif-Italic.woff2",
+  "KaTeX_SansSerif-Regular.woff", "KaTeX_SansSerif-Regular.woff2",
+  "KaTeX_Script-Regular.woff", "KaTeX_Script-Regular.woff2",
+  "KaTeX_Size1-Regular.woff", "KaTeX_Size1-Regular.woff2",
+  "KaTeX_Size2-Regular.woff", "KaTeX_Size2-Regular.woff2",
+  "KaTeX_Size3-Regular.woff", "KaTeX_Size3-Regular.woff2",
+  "KaTeX_Size4-Regular.woff", "KaTeX_Size4-Regular.woff2",
+  "KaTeX_Typewriter-Regular.woff", "KaTeX_Typewriter-Regular.woff2"
+];
+const APP_FILES = [
+  "/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js",
+  "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/css/class-rep.css",
+  "/favicon.svg", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png",
+  "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png",
+  "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js",
+  "/vendor/marked.min.js", "/vendor/purify.min.js", "/vendor/chart.umd.min.js",
+  ...KATEX_FONTS.map((name) => "/vendor/katex/fonts/" + name)
+];
 
 async function cacheResponse(key, response) {
   // Cache writes are best-effort: a failed write must never become an unhandled

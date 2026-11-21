@@ -276,6 +276,39 @@ def test_crara_renderer_repairs_math_and_has_readable_fallback():
     assert ".cr-math-fallback" in css
 
 
+def test_service_worker_precaches_every_katex_font():
+    sw = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    font_dir = ROOT / "frontend" / "vendor" / "katex" / "fonts"
+    fonts = sorted(path.name for path in font_dir.iterdir() if path.is_file())
+    assert len(fonts) >= 40
+    assert "const KATEX_FONTS = [" in sw
+    assert "...KATEX_FONTS.map((name) => \"/vendor/katex/fonts/\" + name)" in sw
+    for name in fonts:
+        assert '"' + name + '"' in sw, name
+
+
+def test_crara_wraps_bare_math_notations_in_the_shared_renderer():
+    renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert "function wrapUnicodeNotation(text)" in renderer
+    assert "function wrapProseNotation(text)" in renderer
+    assert "var UNICODE_LATEX = {" in renderer
+    assert "χ" in renderer and "ℝ" in renderer
+    assert "wrapUnicodeNotation(repairProse(part))" in renderer
+    # Mobile and desktop share one renderer; there is no separate phone-only path.
+    assert html.count('src="/js/class-rep-renderer.js') == 1
+    assert "mobile-class-rep" not in html
+
+
+def test_crara_math_fallback_uses_readable_unicode_notation():
+    renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
+    assert "SUPERSCRIPT_DIGITS" in renderer
+    assert "SUBSCRIPT_DIGITS" in renderer
+    assert "function unicodeDigits(value, table)" in renderer
+    assert "√($1)" in renderer
+    assert '"ℝ"' in renderer
+
+
 def test_crara_never_stringifies_validation_errors_as_object_object():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     assert "function readableError(value)" in js

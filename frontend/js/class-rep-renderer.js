@@ -17,6 +17,40 @@
     "\\Pr": "\\Pr"
   };
 
+  // Notations that phones sometimes render with a missing glyph when a model
+  // writes them as plain Unicode. Wrapping them in math delimiters lets KaTeX
+  // draw them with the bundled fonts on both mobile and desktop.
+  var UNICODE_LATEX = {
+    "α":"\\alpha", "β":"\\beta", "γ":"\\gamma", "δ":"\\delta", "ε":"\\varepsilon",
+    "ζ":"\\zeta", "η":"\\eta", "θ":"\\theta", "ι":"\\iota", "κ":"\\kappa",
+    "λ":"\\lambda", "μ":"\\mu", "ν":"\\nu", "ξ":"\\xi", "π":"\\pi",
+    "ρ":"\\rho", "σ":"\\sigma", "τ":"\\tau", "υ":"\\upsilon", "φ":"\\phi",
+    "χ":"\\chi", "ψ":"\\psi", "ω":"\\omega", "Γ":"\\Gamma", "Δ":"\\Delta",
+    "Θ":"\\Theta", "Λ":"\\Lambda", "Ξ":"\\Xi", "Π":"\\Pi", "Σ":"\\sum",
+    "Φ":"\\Phi", "Ψ":"\\Psi", "Ω":"\\Omega", "∞":"\\infty", "≤":"\\le",
+    "≥":"\\ge", "≠":"\\ne", "≈":"\\approx", "≡":"\\equiv", "±":"\\pm",
+    "×":"\\times", "÷":"\\div", "∑":"\\sum", "∏":"\\prod", "∫":"\\int",
+    "→":"\\to", "←":"\\leftarrow", "↔":"\\leftrightarrow", "∈":"\\in",
+    "∉":"\\notin", "⊂":"\\subset", "⊆":"\\subseteq", "∪":"\\cup",
+    "∩":"\\cap", "∅":"\\emptyset", "∂":"\\partial", "∇":"\\nabla",
+    "∝":"\\propto", "ℝ":"\\mathbb{R}", "ℤ":"\\mathbb{Z}", "ℕ":"\\mathbb{N}",
+    "ℚ":"\\mathbb{Q}", "ℂ":"\\mathbb{C}"
+  };
+  var SUPERSCRIPT_DIGITS = {"⁰":"0", "¹":"1", "²":"2", "³":"3", "⁴":"4", "⁵":"5", "⁶":"6", "⁷":"7", "⁸":"8", "⁹":"9"};
+  var SUBSCRIPT_DIGITS = {"₀":"0", "₁":"1", "₂":"2", "₃":"3", "₄":"4", "₅":"5", "₆":"6", "₇":"7", "₈":"8", "₉":"9"};
+
+  function latexForSymbol(symbol) {
+    return UNICODE_LATEX[symbol] || symbol;
+  }
+
+  function unicodeDigits(value, table) {
+    return String(value).split("").map(function (digit) { return table[digit] || digit; }).join("");
+  }
+
+  function wrapLatex(expression) {
+    return "\\(" + expression + "\\)";
+  }
+
   function esc(value) {
     return String(value).replace(/[&<>"']/g, function (c) {
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
@@ -75,9 +109,46 @@
     return out.replace(/\\\|/g, "|").replace(/\\{2,}/g, "\\");
   }
 
+  // Existing math, dollars and inline code are already safe. Only prose is
+  // scanned so a symbol inside a formula or code sample is never wrapped twice.
+  function wrapProseNotation(text) {
+    var out = String(text);
+    out = out.replace(/(χ)\s*(²|2)/g, function () {
+      return wrapLatex("\\chi^2");
+    });
+    out = out.replace(/([αβγδθελμπρστφχψωΔΣΩ])\s*(=|≤|≥|≠|≈)\s*([-+]?\d+(?:\.\d+)?%?)/g, function (_, symbol, operator, number) {
+      return wrapLatex(latexForSymbol(symbol) + " " + latexForSymbol(operator) + " " + number.replace("%", "\\%"));
+    });
+    out = out.replace(/([A-Za-z])([\u0304\u0303\u0302])/g, function (_, letter, mark) {
+      var command = mark === "\u0304" ? "\\bar" : mark === "\u0303" ? "\\tilde" : "\\hat";
+      return wrapLatex(command + "{" + letter + "}");
+    });
+    out = out.replace(/([A-Za-z)])([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, function (_, base, digits) {
+      return wrapLatex(base + "^" + unicodeDigits(digits, SUPERSCRIPT_DIGITS));
+    });
+    out = out.replace(/([A-Za-z)])([₀₁₂₃₄₅₆₇₈₉]+)/g, function (_, base, digits) {
+      return wrapLatex(base + "_" + unicodeDigits(digits, SUBSCRIPT_DIGITS));
+    });
+    out = out.replace(/√\s*([A-Za-z0-9]+|\([^)]+\))/g, function (_, radicand) {
+      return wrapLatex("\\sqrt{" + radicand.replace(/^\(|\)$/g, "") + "}");
+    });
+    out = out.replace(/([αβγδεζηθικλμνξοπρστυφχψωΓΔΘΛΞΠΣΦΨΩ∞≤≥≠≈≡±×÷∑∏∫→←↔∈∉⊂⊆∪∩∅∂∇∝ℝℤℕℚℂ])/g, function (_, symbol) {
+      return wrapLatex(latexForSymbol(symbol));
+    });
+    return out;
+  }
+
+  function wrapUnicodeNotation(text) {
+    var protectedPattern = /(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$[\s\S]*?\$|`[^`]*`)/g;
+    return String(text).split(protectedPattern).map(function (part) {
+      if (!part || /^(\\\(|\\\[|\$|`)/.test(part)) return part;
+      return wrapProseNotation(part);
+    }).join("");
+  }
+
   function repairMath(source) {
     return String(source).split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g).map(function (part) {
-      return /^\s*(```|~~~)/.test(part) ? part : repairProse(part);
+      return /^\s*(```|~~~)/.test(part) ? part : wrapUnicodeNotation(repairProse(part));
     }).join("");
   }
 
@@ -89,13 +160,29 @@
       .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
       .replace(/\\dfrac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
       .replace(/\\sqrt\{([^{}]+)\}/g, "√($1)")
-      .replace(/\\sum/g, "Σ").replace(/\\times/g, "×").replace(/\\pm/g, "±")
-      .replace(/\\le\b/g, "≤").replace(/\\ge\b/g, "≥").replace(/\\neq/g, "≠")
-      .replace(/\\alpha/g, "α").replace(/\\beta/g, "β").replace(/\\mu/g, "μ")
+      .replace(/\\(?:bar|overline)\{([^}]+)\}/g, "$1̄")
+      .replace(/\\hat\{([^}]+)\}/g, "$1̂")
+      .replace(/\\tilde\{([^}]+)\}/g, "$1̃")
+      .replace(/\\mathbb\{([A-Za-z])\}/g, function (_, letter) {
+        return ({"R":"ℝ", "Z":"ℤ", "N":"ℕ", "Q":"ℚ", "C":"ℂ"})[letter] || letter;
+      })
+      .replace(/\\sum/g, "Σ").replace(/\\prod/g, "∏").replace(/\\int/g, "∫")
+      .replace(/\\times/g, "×").replace(/\\div/g, "÷").replace(/\\pm/g, "±")
+      .replace(/\\le\b/g, "≤").replace(/\\ge\b/g, "≥").replace(/\\ne\b/g, "≠").replace(/\\neq/g, "≠")
+      .replace(/\\approx/g, "≈").replace(/\\equiv/g, "≡").replace(/\\to\b/g, "→").replace(/\\rightarrow\b/g, "→")
+      .replace(/\\in\b/g, "∈").replace(/\\cup/g, "∪").replace(/\\cap/g, "∩").replace(/\\emptyset/g, "∅")
+      .replace(/\\alpha/g, "α").replace(/\\beta/g, "β").replace(/\\gamma/g, "γ").replace(/\\delta/g, "δ")
+      .replace(/\\theta/g, "θ").replace(/\\lambda/g, "λ").replace(/\\mu/g, "μ")
       .replace(/\\sigma/g, "σ").replace(/\\chi/g, "χ").replace(/\\pi/g, "π")
       .replace(/\\infty/g, "∞").replace(/\\quad/g, "  ").replace(/\\,/g, " ")
-      .replace(/\^\{([^}]+)\}|\^([A-Za-z0-9])/g, "↑($1$2)")
-      .replace(/_\{([^}]+)\}|_([A-Za-z0-9])/g, "[$1$2]")
+      .replace(/\^\{([^}]+)\}|\^([A-Za-z0-9])/g, function (_, braced, single) {
+        var value = braced || single || "";
+        return /^\d+$/.test(value) ? unicodeDigits(value, SUPERSCRIPT_DIGITS) : "^(" + value + ")";
+      })
+      .replace(/_\{([^}]+)\}|_([A-Za-z0-9])/g, function (_, braced, single) {
+        var value = braced || single || "";
+        return /^\d+$/.test(value) ? unicodeDigits(value, SUBSCRIPT_DIGITS) : "_(" + value + ")";
+      })
       .replace(/[{}]/g, "")
       .replace(/\\/g, "")
       .replace(/\s+/g, " ")
