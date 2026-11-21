@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-mobile-gate-always-v19";</script>
+<script>window.MNH_BUILD="2026.11.21-clean-install-v20";</script>
 <script>
 (function () {
   "use strict";
@@ -104,8 +104,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-mobile-gate-always-v19">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-mobile-gate-always-v19">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-clean-install-v20">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-clean-install-v20">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -130,10 +130,9 @@
 })();
 </script>
 
-<div id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Download statement permission" aria-describedby="mnh-install-statement mnh-install-copy">
+<div id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy">
  <section class="mnh-install-card">
   <div class="mnh-install-mark" aria-hidden="true">MNH</div>
-  <p class="mnh-install-statement" id="mnh-install-statement">Download statement permission: choosing Install allows this browser to add MNH Calendar to your device. Choosing Close downloads nothing and you can continue using the app in your browser.</p>
   <p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p>
   <p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p>
   <div class="mnh-install-actions">
@@ -264,7 +263,7 @@
  <button type="button" class="python-library-back" id="python-library-back" aria-label="Back to Resources">&#8592; Back</button>
  <iframe
   class="python-library-frame"
-  src="/resources/python-command-library.html?runner=off&full=1"
+  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-clean-install-v20"
   title="Python Command Library for biomedical and health sciences"
   loading="eager">
  </iframe>
@@ -402,15 +401,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-mobile-gate-always-v19" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-mobile-gate-always-v19" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-mobile-gate-always-v19" defer></script>
+<script src="/js/app.js?v=2026.11.21-clean-install-v20" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-clean-install-v20" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-clean-install-v20" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-mobile-gate-always-v19";
+  const workerUrl = "/service-worker.js?v=2026.11.21-clean-install-v20";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
@@ -474,7 +473,7 @@
    dialog.id="mnh-install-choice";
    dialog.className="mnh-install-choice";
    dialog.hidden=true;
-   dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Download statement permission" aria-describedby="mnh-install-statement mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p class="mnh-install-statement" id="mnh-install-statement">Download statement permission: choosing Install allows this browser to add MNH Calendar to your device. Choosing Close downloads nothing and you can continue using the app in your browser.</p><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
+   dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
    document.body.appendChild(dialog);
   }
   const accept=dialog.querySelector("#mnh-install-accept"),decline=dialog.querySelector("#mnh-install-decline");

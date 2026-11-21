@@ -274,15 +274,16 @@ def test_pwa_install_requirements_are_met():
     assert "display-mode: standalone" in html
     assert "promptOpen" in html
     assert "mnh-install-choice" in html
-    # A static first-open gate displays the permission statement before the
-    # calendar markup, including on mobile. Installed/standalone sessions skip it.
+    # A static first-open gate appears before the calendar markup, including on
+    # mobile, without the removed download statement. Installed/standalone
+    # sessions skip it.
     assert "Download MNH Calendar" not in html
     assert '"Show instructions"' not in html
+    assert "Download statement permission" not in html
+    assert "Choosing Close downloads nothing" not in html
+    assert 'id="mnh-install-statement"' not in html
     assert 'id="mnh-first-open-gate"' in html
-    assert 'aria-label="Download statement permission"' in html
-    assert "Download statement permission:" in html
-    assert "Choosing Close downloads nothing" in html
-    assert 'id="mnh-install-statement"' in html
+    assert 'aria-label="Install MNH Calendar"' in html
     assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
     assert 'document.documentElement.classList.add("mnh-gate-open")' in html
     assert 'document.documentElement.classList.add("mnh-install-exempt")' in html
@@ -292,7 +293,7 @@ def test_pwa_install_requirements_are_met():
     assert "showInstallDialogOnOpen();" in html
     assert 'accept.textContent="Install";' in html
     dialog_css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
-    assert ".mnh-install-statement{" in dialog_css
+    assert ".mnh-install-statement{" not in dialog_css
     assert ".mnh-install-exempt #mnh-first-open-gate" in dialog_css
     assert '@app.get("/manifest.json", include_in_schema=False)' in main
     assert 'app.mount("/icons"' in main
@@ -422,7 +423,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-mobile-gate-always-v19"
+    assert build == "2026.11.21-clean-install-v20"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -433,7 +434,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-clean-install-v20"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
