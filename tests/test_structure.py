@@ -277,6 +277,18 @@ def test_pwa_install_requirements_are_met():
     assert "markInstalled();\n    closeInstallGate();" in html
     assert "beforeinstallprompt" in html
     assert "event.preventDefault()" in html
+    # Android Chrome needs an uninterrupted root-scoped PWA registration. The
+    # first-load redirect is gone, the event is captured before any reload can
+    # occur, and a captured event is consumed by the install UI immediately.
+    assert "__mnh_open_refresh" not in html
+    assert "window.__mnhDeferredInstallPrompt = null;" in html
+    assert 'window.addEventListener("beforeinstallprompt", function (event)' in html
+    assert "  }, true);" in html
+    assert 'const registerOptions = { scope: "/", updateViaCache: "none" };' in html
+    assert "registerWorker();" in html
+    assert "let deferredPrompt=window.__mnhDeferredInstallPrompt||null;" in html
+    assert "if(deferredPrompt)openInstallChoice();" in html
+    assert "window.__mnhDeferredInstallPrompt=null;" in html
     assert "await promptEvent.prompt();" in html
     assert "userChoice" in html
     assert 'if(choice&&choice.outcome==="accepted"){' in html
@@ -442,7 +454,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-native-install-v22"
+    assert build == "2026.11.21-android-install-v23"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -453,7 +465,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-native-install-v22"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-android-install-v23"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html

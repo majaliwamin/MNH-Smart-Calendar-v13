@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.16-v15.00">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.21-android-install-v23">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.16-v15.00">
+<link rel="manifest" href="/manifest.json?v=2026.11.21-android-install-v23">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,22 +23,17 @@
 <script>
 (function () {
   "use strict";
-  // Always make a fresh network navigation when this shared link is opened.
-  // The one-use URL marker prevents a reload loop, including in email-launched Chrome tabs.
-  var marker = "__mnh_open_refresh";
-  var url = new URL(window.location.href);
-  if (!url.searchParams.has(marker)) {
-    url.searchParams.set(marker, String(Date.now()));
-    window.location.replace(url.toString());
-    return;
-  }
-  url.searchParams.delete(marker);
-  try {
-    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-  } catch (_) {}
+  // Capture the real browser install event before any other page script can
+  // reload or replace the navigation. Chrome/Chromium on Android uses this
+  // event to offer its own install sheet; iOS Safari exposes no such API.
+  window.__mnhDeferredInstallPrompt = null;
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    window.__mnhDeferredInstallPrompt = event;
+  }, true);
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-native-install-v22";</script>
+<script>window.MNH_BUILD="2026.11.21-android-install-v23";</script>
 <script>
 (function () {
   "use strict";
@@ -98,11 +93,11 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
-<script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
+<script src="/js/week-model.js?v=2026.11.21-android-install-v23"></script>
+<script src="/js/api-client.js?v=2026.11.21-android-install-v23"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-native-install-v22">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-native-install-v22">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-android-install-v23">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-android-install-v23">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -256,7 +251,7 @@
  <button type="button" class="python-library-back" id="python-library-back" aria-label="Back to Resources">&#8592; Back</button>
  <iframe
   class="python-library-frame"
-  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-native-install-v22"
+  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-android-install-v23"
   title="Python Command Library for biomedical and health sciences"
   loading="eager">
  </iframe>
@@ -394,30 +389,35 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-native-install-v22" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-native-install-v22" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-native-install-v22" defer></script>
+<script src="/js/app.js?v=2026.11.21-android-install-v23" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-android-install-v23" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-android-install-v23" defer></script>
 <script>
 (function () {
   "use strict";
-  // Register offline support without delaying first paint or forcing a page reload.
+  // Register the root-scoped service worker immediately. Chrome needs an
+  // active fetch-handling worker before it will fire beforeinstallprompt on
+  // Android, so this must not wait for the load event or a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-native-install-v22";
-  const refreshWorker = function () {
-    navigator.serviceWorker.getRegistration().then(function (registration) {
-      if (registration) return registration.update();
-      return navigator.serviceWorker.register(workerUrl, { updateViaCache: "none" });
-    }).catch(function (error) {
-      console.warn("MNH Calendar service-worker update check failed:", error);
-    });
-  };
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register(workerUrl, { updateViaCache: "none" })
+  const workerUrl = "/service-worker.js?v=2026.11.21-android-install-v23";
+  const registerOptions = { scope: "/", updateViaCache: "none" };
+  const registerWorker = function () {
+    navigator.serviceWorker.register(workerUrl, registerOptions)
       .then(function (registration) { return registration.update(); })
       .catch(function (error) {
         console.warn("MNH Calendar service-worker registration failed:", error);
       });
-  }, { once: true });
+  };
+  const refreshWorker = function () {
+    navigator.serviceWorker.getRegistration().then(function (registration) {
+      if (registration) return registration.update();
+      return navigator.serviceWorker.register(workerUrl, registerOptions);
+    }).catch(function (error) {
+      console.warn("MNH Calendar service-worker update check failed:", error);
+    });
+  };
+  registerWorker();
+  window.addEventListener("load", refreshWorker, { once: true });
   window.addEventListener("pageshow", refreshWorker);
   window.addEventListener("focus", refreshWorker);
   document.addEventListener("visibilitychange", function () {
@@ -429,7 +429,7 @@
 <script>
 (function(){
  "use strict";
- let deferredPrompt=null;
+ let deferredPrompt=window.__mnhDeferredInstallPrompt||null;
  let busy=false;
  let userClosed=false;
  let dialog=null;
@@ -493,6 +493,7 @@
    if(deferredPrompt){
     const promptEvent=deferredPrompt;
     deferredPrompt=null;
+    window.__mnhDeferredInstallPrompt=null;
     if(accept)accept.hidden=true;
     await promptEvent.prompt();
     const choice=await promptEvent.userChoice;
@@ -523,13 +524,16 @@
  window.addEventListener("beforeinstallprompt",event=>{
   event.preventDefault();
   deferredPrompt=event;
+  window.__mnhDeferredInstallPrompt=event;
   const accept=dialog&&dialog.querySelector("#mnh-install-accept");
   if(accept)accept.hidden=false;
   openInstallChoice();
  });
+ if(deferredPrompt)openInstallChoice();
 
  window.addEventListener("appinstalled",()=>{
   deferredPrompt=null;
+  window.__mnhDeferredInstallPrompt=null;
   busy=false;
   userClosed=false;
   markInstalled();

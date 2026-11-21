@@ -94,6 +94,10 @@ def test_main_header_stays_frozen_and_download_menu_is_available():
     assert "if(supportsWebInstall)openInstallChoice();" in html
     assert "if(accept)accept.hidden=true;" in html
     assert 'window.addEventListener("beforeinstallprompt"' in html
+    assert '__mnh_open_refresh' not in html
+    assert "window.__mnhDeferredInstallPrompt = null;" in html
+    assert 'const registerOptions = { scope: "/", updateViaCache: "none" };' in html
+    assert "if(deferredPrompt)openInstallChoice();" in html
     assert 'window.addEventListener("appinstalled"' in html
     assert "Download MNH Calendar" not in html
     assert '"Show instructions"' not in html
