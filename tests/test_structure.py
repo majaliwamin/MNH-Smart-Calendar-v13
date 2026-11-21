@@ -258,18 +258,24 @@ def test_pwa_install_requirements_are_met():
             assert (ROOT / "frontend" / icon["src"].lstrip("/")).is_file()
 
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    # The install/download action is available from the header on every viewport,
-    # with the weekly notice retained as a second entry point.
-    assert 'id="install-app-btn"' in html
-    assert 'class="hd-install-btn"' in html
-    assert 'aria-label="Download and install MNH Calendar"' in html
-    assert 'installButton.addEventListener("click",openInstallChoice)' in html
-    assert 'notice.id="install-app-notice"' in html
-    assert 'notice.setAttribute("aria-label","tap here to install")' in html
+    # Installation starts immediately from the first-open dialog. The header
+    # icon, blinking weekly notice, and all fallback instruction text are gone.
+    assert 'id="install-app-btn"' not in html
+    assert 'class="hd-install-btn"' not in html
+    assert 'aria-label="Download and install MNH Calendar"' not in html
+    assert 'notice.id="install-app-notice"' not in html
+    assert "tap here to install" not in html
+    assert "Choose “Install app” from your browser’s address bar or menu" not in html
+    assert "To install on iPhone or iPad" not in html
+    assert "Your browser may offer" not in html
+    assert "Installation was not completed" not in html
+    assert 'id="mnh-install-help"' not in html
     assert "beforeinstallprompt" in html
     assert "event.preventDefault()" in html
     assert "openInstallChoice()" in html
     assert ".prompt()" in html and "userChoice" in html
+    assert "await promptEvent.prompt();" in html
+    assert 'if(choice&&choice.outcome==="accepted")markInstalled();' in html
     assert "appinstalled" in html
     assert "display-mode: standalone" in html
     assert "promptOpen" in html
@@ -293,8 +299,12 @@ def test_pwa_install_requirements_are_met():
     assert "showInstallDialogOnOpen();" in html
     assert 'accept.textContent="Install";' in html
     dialog_css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    app_css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     assert ".mnh-install-statement{" not in dialog_css
+    assert ".mnh-install-help{" not in dialog_css
     assert ".mnh-install-exempt #mnh-first-open-gate" in dialog_css
+    assert ".hd-install-btn{" not in app_css
+    assert "install-app-notice" not in app_css
     assert '@app.get("/manifest.json", include_in_schema=False)' in main
     assert 'app.mount("/icons"' in main
     assert ">\\n<" not in html
@@ -423,7 +433,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-clean-install-v20"
+    assert build == "2026.11.21-direct-install-v21"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -434,7 +444,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-clean-install-v20"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-direct-install-v21"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html

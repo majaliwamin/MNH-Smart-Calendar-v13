@@ -78,13 +78,17 @@ def test_cara_header_and_composer_controls_have_no_button_shapes():
     assert "border-radius:0!important" in css
 
 
-def test_main_header_stays_frozen_and_install_icon_is_available():
+def test_main_header_stays_frozen_and_download_menu_is_available():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     dialog_css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
-    assert 'id="install-app-btn"' in html
-    assert 'class="hd-install-btn"' in html
-    assert 'notice.id="install-app-notice"' in html
+    assert 'id="install-app-btn"' not in html
+    assert 'class="hd-install-btn"' not in html
+    assert 'notice.id="install-app-notice"' not in html
+    assert "tap here to install" not in html
+    assert "Choose “Install app” from your browser’s address bar or menu" not in html
+    assert "To install on iPhone or iPad" not in html
+    assert "Your browser may offer" not in html
     assert 'window.addEventListener("beforeinstallprompt"' in html
     assert 'window.addEventListener("appinstalled"' in html
     assert "Download MNH Calendar" not in html
@@ -101,8 +105,10 @@ def test_main_header_stays_frozen_and_install_icon_is_available():
     assert "showInstallDialogOnOpen();" in html
     assert 'accept.textContent="Install";' in html
     assert ".mnh-install-statement{" not in dialog_css
-    assert ".hd-install-btn{" in css
-    # The timetable export menu remains beside the restored install/download button.
+    assert ".mnh-install-help{" not in dialog_css
+    assert ".hd-install-btn{" not in css
+    assert "install-app-notice" not in css
+    # The timetable export menu remains in the header after removing the install icon.
     assert 'id="dl-btn"' in html
     assert 'id="dl-menu"' in html
     assert 'data-fmt="pdf"' in html

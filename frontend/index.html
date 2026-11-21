@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-clean-install-v20";</script>
+<script>window.MNH_BUILD="2026.11.21-direct-install-v21";</script>
 <script>
 (function () {
   "use strict";
@@ -104,8 +104,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-clean-install-v20">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-clean-install-v20">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-direct-install-v21">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-direct-install-v21">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -134,7 +134,6 @@
  <section class="mnh-install-card">
   <div class="mnh-install-mark" aria-hidden="true">MNH</div>
   <p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p>
-  <p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p>
   <div class="mnh-install-actions">
    <button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button>
    <button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button>
@@ -178,9 +177,6 @@
    <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
-   </button>
-   <button type="button" class="hd-install-btn" id="install-app-btn" aria-label="Download and install MNH Calendar" title="Download and install MNH Calendar" aria-haspopup="dialog" hidden>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10m-4-4 4 4 4-4"/><path d="M5 16v4h14v-4"/></svg>
    </button>
    <div class="hd-dl" id="hd-dl">
     <button type="button" class="hd-dlbtn" id="dl-btn" aria-label="Download" title="Download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-menu">
@@ -263,7 +259,7 @@
  <button type="button" class="python-library-back" id="python-library-back" aria-label="Back to Resources">&#8592; Back</button>
  <iframe
   class="python-library-frame"
-  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-clean-install-v20"
+  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-direct-install-v21"
   title="Python Command Library for biomedical and health sciences"
   loading="eager">
  </iframe>
@@ -401,15 +397,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-clean-install-v20" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-clean-install-v20" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-clean-install-v20" defer></script>
+<script src="/js/app.js?v=2026.11.21-direct-install-v21" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-direct-install-v21" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-direct-install-v21" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-clean-install-v20";
+  const workerUrl = "/service-worker.js?v=2026.11.21-direct-install-v21";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
@@ -438,27 +434,13 @@
  "use strict";
  let deferredPrompt=null;
  let promptOpen=false;
- let notice=null;
  let dialog=null;
- let instructionsShown=false;
- const installButton=document.getElementById("install-app-btn");
 
  const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
  const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
  const INSTALL_DONE_KEY="mnh_calendar_install_completed";
  const hasInstalled=()=>{try{return localStorage.getItem(INSTALL_DONE_KEY)==="1";}catch(e){return false;}};
  const markInstalled=()=>{try{localStorage.setItem(INSTALL_DONE_KEY,"1");}catch(e){}};
- const hideHeaderInstall=()=>{if(installButton)installButton.hidden=true;};
- const showHeaderInstall=()=>{if(installButton&&!isStandalone()&&!hasInstalled())installButton.hidden=false;};
- const hideInstallNotice=()=>{if(notice)notice.classList.remove("is-visible","is-action");};
- const fallbackInstructions=()=>{
-  const ua=navigator.userAgent||"",apple=/iPhone|iPad|iPod/i.test(ua),android=/Android/i.test(ua);
-  return apple
-   ? "To install on iPhone or iPad, open this page in Safari, tap Share, then choose “Add to Home Screen”."
-   : android
-    ? "Your browser may offer “Install app” or “Add to Home screen” from its menu. Choose that option to install."
-    : "Choose “Install app” from your browser’s address bar or menu, if available.";
- };
  const closeInstallGate=()=>{
   if(dialog)dialog.hidden=true;
   document.documentElement.classList.remove("mnh-gate-open");
@@ -473,7 +455,7 @@
    dialog.id="mnh-install-choice";
    dialog.className="mnh-install-choice";
    dialog.hidden=true;
-   dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
+   dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
    document.body.appendChild(dialog);
   }
   const accept=dialog.querySelector("#mnh-install-accept"),decline=dialog.querySelector("#mnh-install-decline");
@@ -486,9 +468,7 @@
  const openInstallChoice=()=>{
   if(isStandalone())return;
   const box=ensureDialog();
-  const accept=box.querySelector("#mnh-install-accept"),help=box.querySelector("#mnh-install-help");
-  instructionsShown=false;
-  help.textContent="";
+  const accept=box.querySelector("#mnh-install-accept");
   accept.disabled=false;
   accept.textContent="Install";
   box.hidden=false;
@@ -497,98 +477,49 @@
  };
  async function installFromChoice(){
   if(promptOpen)return;
-  const accept=dialog&&dialog.querySelector("#mnh-install-accept"),help=dialog&&dialog.querySelector("#mnh-install-help");
-  if(instructionsShown){closeInstallGate();return;}
+  const accept=dialog&&dialog.querySelector("#mnh-install-accept");
   if(deferredPrompt){
    const promptEvent=deferredPrompt;
    deferredPrompt=null;
    promptOpen=true;
-   accept.disabled=true;
+   if(accept)accept.disabled=true;
    try{
     await promptEvent.prompt();
     const choice=await promptEvent.userChoice;
-    if(choice&&choice.outcome==="accepted"){
-     markInstalled();
-     hideHeaderInstall();
-     hideInstallNotice();
-     closeInstallGate();
-    }else{
-     help.textContent="Installation was not completed. You can install later using the download icon or your browser menu.";
-     instructionsShown=true;
-     accept.textContent="Close";
-    }
+    if(choice&&choice.outcome==="accepted")markInstalled();
    }catch(error){
     console.warn("MNH Calendar install prompt failed:",error);
-    help.textContent=fallbackInstructions();
-    instructionsShown=true;
-    accept.textContent="Close";
    }finally{
     promptOpen=false;
-    accept.disabled=false;
+    if(accept)accept.disabled=false;
+    closeInstallGate();
    }
    return;
   }
-  help.textContent=fallbackInstructions();
-  instructionsShown=true;
-  accept.textContent="Close";
+  closeInstallGate();
  }
  const showInstallDialogOnOpen=()=>{
   if(isStandalone()||hasInstalled())return;
   openInstallChoice();
  };
- const showInstallNotice=(message)=>{
-  if(!notice){
-   notice=document.createElement("a");
-   notice.id="install-app-notice";
-   notice.className="install-app-notice";
-   notice.setAttribute("href",window.location.origin+window.location.pathname);
-   notice.setAttribute("aria-label","tap here to install");
-   const tabs=document.getElementById("view-tabs");
-   const weekNav=tabs&&tabs.querySelector(".week-nav");
-   if(weekNav)weekNav.insertAdjacentElement("afterend",notice);
-   else (document.querySelector(".hd-band")||document.querySelector(".site-header")||document.body).appendChild(notice);
-   notice.addEventListener("click",event=>{event.preventDefault();openInstallChoice();});
-  }
-  notice.textContent=message;
-  notice.classList.add("is-action","is-visible");
- };
-
- if(installButton)installButton.addEventListener("click",openInstallChoice);
  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&dialog&&!dialog.hidden)closeInstallGate();});
 
  if(isStandalone()){
   markInstalled();
-  hideHeaderInstall();
-  hideInstallNotice();
   return;
  }
- if(hasInstalled()){
-  hideHeaderInstall();
-  hideInstallNotice();
-  return;
- }
- showHeaderInstall();
- showInstallNotice("tap here to install");
+ if(hasInstalled())return;
  showInstallDialogOnOpen();
 
  window.addEventListener("beforeinstallprompt",event=>{
   event.preventDefault();
   deferredPrompt=event;
-  if(!isStandalone()&&!hasInstalled()){
-   showHeaderInstall();
-   showInstallNotice("tap here to install");
-   const openAccept=dialog&&!dialog.hidden?dialog.querySelector("#mnh-install-accept"):null;
-   if(openAccept&&!instructionsShown)openAccept.textContent="Install";
-  }
  });
 
  window.addEventListener("appinstalled",()=>{
   deferredPrompt=null;
   promptOpen=false;
-  instructionsShown=false;
   markInstalled();
-  hideHeaderInstall();
-  hideInstallNotice();
   closeInstallGate();
  });
 })();
