@@ -271,8 +271,8 @@ def test_pwa_install_requirements_are_met():
     assert "Installation was not completed" not in html
     assert 'id="mnh-install-help"' not in html
     assert 'typeof navigator.install==="function"' in html
-    assert "const canInstall=()=>supportsWebInstall||!!deferredPrompt;" in html
-    assert "if(supportsWebInstall)openInstallChoice();" in html
+    assert "const canInstall=()=>hasWebInstall()||!!deferredPrompt;" in html
+    assert "if(isLikelyAndroid())openInstallChoice();" in html
     assert "await navigator.install();" in html
     assert "markInstalled();\n    closeInstallGate();" in html
     assert "beforeinstallprompt" in html
@@ -454,7 +454,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-install-visible-v25"
+    assert build == "2026.11.21-mobile-gate-v26"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -465,7 +465,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-install-visible-v25"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-mobile-gate-v26"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -601,26 +601,26 @@ def test_schedule_session_outcomes_and_dialog_close_button():
     assert "body.cara-auth-open .activity-marquee-shell" in app_css
 
 
-def test_install_help_page_and_links_exist():
+def test_install_gate_on_android_without_help_links():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
-    help_page = (ROOT / "frontend" / "install-help.html").read_text(encoding="utf-8")
-    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
-
-    assert (ROOT / "frontend" / "install-help.html").is_file()
-    assert 'href="/install-help.html"' in html
-    assert 'class="hd-install-help" href="/install-help.html"' in html
-    assert "Install help" in html
-    assert "How to install on your phone" in html
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
-    assert ".hd-install-help{" in css
-    assert '@app.get("/install-help.html", include_in_schema=False)' in main
-    assert 'FileResponse(FRONTEND_DIR / "install-help.html",' in main
-    assert "Samsung Internet" in help_page
-    assert "known problem creating standalone app installs" in help_page
-    assert "reliable fix is to open the site in" in help_page
-    assert "Install on Apps screen" in help_page
-    assert "Add page to" in help_page
-    assert "Chrome on Android" in help_page
-    assert "iPhone or iPad" in help_page
-    assert "Add to Home Screen" in help_page
-    assert "cannot install the app for you" in help_page
+
+    # Only the first-open Install/Close gate is visible; no help links or popups.
+    assert "/install-help.html" not in html
+    assert "Install help" not in html
+    assert "How to install on your phone" not in html
+    assert ".hd-install-help{" not in css
+    assert 'id="mnh-first-open-gate"' in html
+    assert 'id="mnh-install-accept"' in html
+    assert 'id="mnh-install-decline"' in html
+    assert ">Install<" in html
+    assert ">Close<" in html
+
+    # The gate opens on Android mobile even when no install API exists yet.
+    assert 'const isLikelyAndroid=()=>/Android|SamsungBrowser/i.test(navigator.userAgent)' in html
+    assert "if(isLikelyAndroid())openInstallChoice();" in html
+    assert "if(isStandalone()||hasInstalled()||userClosed||!canInstall())return;" not in html
+    assert "if(isStandalone()||hasInstalled()||userClosed)return;" in html
+    assert "if(hasWebInstall())" in html
+    assert "await navigator.install();" in html
+    assert "await promptEvent.prompt();" in html
