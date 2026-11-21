@@ -247,3 +247,30 @@ def test_crara_language_toggle_is_only_rendered_for_designated_signed_in_email()
     assert 'languageSwitch.hidden = !visible || !canUseLanguageToggle()' in js
     assert 'if (state.user && canUseLanguageToggle())' in js
     assert '.cr-language-switch[hidden]{display:none!important}' in css
+
+
+def test_crara_math_packages_are_served_locally_for_mobile_reliability():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    sw = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+    vendor = ROOT / "frontend" / "vendor"
+    for asset in ("katex/katex.min.js", "katex/katex.min.css", "katex/auto-render.min.js",
+                  "marked.min.js", "purify.min.js", "chart.umd.min.js"):
+        assert (vendor / asset).is_file(), asset
+        assert '/vendor/' + asset in html, asset
+    assert "cdnjs.cloudflare.com/ajax/libs/KaTeX" not in html
+    assert "cdnjs.cloudflare.com/ajax/libs/Chart.js" not in html
+    assert 'app.mount("/vendor"' in main
+    assert 'url.pathname.startsWith("/vendor/")' in sw
+    assert (vendor / "katex" / "fonts" / "KaTeX_Main-Regular.woff2").is_file()
+
+
+def test_crara_renderer_repairs_math_and_has_readable_fallback():
+    renderer = (ROOT / "frontend" / "js" / "class-rep-renderer.js").read_text(encoding="utf-8")
+    assert "function repairMath(source)" in renderer
+    assert "function renderPlainMath(bubble)" in renderer
+    assert "STATS_MACROS" in renderer
+    assert "inline delimiters nested inside display math" in renderer
+    assert "window.katex && window.renderMathInElement" in renderer
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert ".cr-math-fallback" in css

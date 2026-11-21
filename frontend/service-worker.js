@@ -2,9 +2,9 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.21-crara-silver-v29";
+const BUILD = "2026.11.21-crara-math-v30";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
-const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js", "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/css/class-rep.css", "/favicon.svg", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png"];
+const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js", "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/css/class-rep.css", "/favicon.svg", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png", "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js", "/vendor/marked.min.js", "/vendor/purify.min.js", "/vendor/chart.umd.min.js"];
 
 async function cacheResponse(key, response) {
   // Cache writes are best-effort: a failed write must never become an unhandled
@@ -50,7 +50,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/") || url.pathname === "/health" || url.pathname === "/service-worker.js") return;
 
-  const isShell = request.mode === "navigate" || APP_FILES.includes(url.pathname);
+  const isShell = request.mode === "navigate" || APP_FILES.includes(url.pathname) || url.pathname.startsWith("/vendor/");
   if (!isShell) return;
 
   event.respondWith(

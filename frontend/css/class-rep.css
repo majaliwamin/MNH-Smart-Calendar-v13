@@ -170,6 +170,9 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 .cr-assistant :not(pre)>code{padding:2px 5px;border-radius:4px;background:rgba(130,150,175,.16);}
 .cr-assistant a{color:var(--gold);text-decoration:underline;text-underline-offset:2px;}
 .cr-assistant .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding:5px 0;margin:10px 0;}
+.cr-assistant .katex{max-width:100%;white-space:normal;}
+.cr-math-fallback{display:inline-block;max-width:100%;padding:1px 4px;border-radius:4px;background:rgba(203,213,225,.12);font-family:Consolas,Monaco,monospace;font-size:.94em;overflow-wrap:anywhere;white-space:normal;}
+@media(max-width:760px){.cr-assistant .katex-display{overflow-x:auto;-webkit-overflow-scrolling:touch}.cr-assistant .katex{font-size:.96em}}
 .cr-assistant .cr-chart-figure{width:100%;max-width:760px;margin:12px 0;padding:12px;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:rgba(10,20,35,.24);}
 .cr-assistant .cr-chart-title{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--text);}
 .cr-assistant .cr-chart-frame{position:relative;width:100%;height:280px;max-height:52vh;}

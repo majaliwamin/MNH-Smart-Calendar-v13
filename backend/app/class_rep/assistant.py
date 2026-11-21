@@ -12,7 +12,7 @@ from app.class_rep.language_intelligence import (
 from app.class_rep.linguistic_knowledge import linguistic_context, unknown_term_answer
 from app.class_rep.expressive_style import casual_flourish, casual_joke_answer, is_casual_turn
 from app.class_rep.error_hygiene import clean_history, clean_transient_error_text
-from app.class_rep.output_validation import honest_fallback, validate_reply
+from app.class_rep.output_validation import honest_fallback, repair_math_delimiters, validate_reply
 from app.class_rep.translation_engine import (
     TRANSLATION_ENGINE_INSTRUCTIONS,
     build_translation_reference_context,
@@ -51,7 +51,7 @@ CORE RESPONSE BEHAVIOUR
 ACADEMIC FORMATTING, MATHEMATICS AND VISUALS
 - Format comparison data as a real GitHub-Flavoured Markdown table: put each row on its own line, use literal unescaped pipe characters as column separators, and include a separator row such as | --- | --- |. Never print a table as one long line or escape its separator pipes.
 - Use Markdown headings, paragraphs and lists to structure explanations. Use **bold** for key terms and inline code only for literal code.
-- MATHEMATICAL RENDERING IS MANDATORY: every mathematical symbol, variable, statistic and equation must use valid LaTeX delimiters. Use \\( ... \\) for inline expressions and put every standalone equation on its own line between \\[ and \\]. Never use bare square brackets [ ... ] as equation delimiters, and never write symbols as plain parenthesized text such as (\\sigma), (x_i), or (n-1); write \\(\\sigma\\), \\(x_i\\), and \\(n-1\\). Never omit a closing delimiter. Use standard LaTeX commands for Greek letters, subscripts, superscripts, fractions, roots, summations, integrals, matrices, statistical tests, probability, confidence intervals and units. Define symbols in prose with inline math. Example: \\(\\chi^2 = \\sum \\frac{(O_i-E_i)^2}{E_i}\\). For multi-line derivations, use a display-math block with aligned equations inside \\[ ... \\].
+- MATHEMATICAL RENDERING IS MANDATORY: every mathematical symbol, variable, statistic and equation must use valid LaTeX delimiters. Use \\( ... \\) for inline expressions and put every standalone equation on its own line between \\[ and \\]. Never use bare square brackets [ ... ] as equation delimiters, and never write symbols as plain parenthesized text such as (\\sigma), (x_i), or (n-1); write \\(\\sigma\\), \\(x_i\\), and \\(n-1\\). Never omit a closing delimiter. Use standard LaTeX commands for Greek letters, subscripts, superscripts, fractions, roots, summations, integrals, matrices, statistical tests, probability, confidence intervals and units. Define symbols in prose with inline math. Example: \\(\\chi^2 = \\sum \\frac{(O_i-E_i)^2}{E_i}\\). For multi-line derivations, use a display-math block with aligned equations inside \\[ ... \\]. Never mix dollar delimiters with backslash delimiters, never nest inline delimiters inside a display block, and never emit doubled backslashes before a delimiter.
 - When a graph materially improves an explanation and the underlying values are actually available, include a fenced chart block containing valid JSON. Supported types are bar, line, pie, doughnut and scatter. Use this shape: a fenced block labelled chart, then JSON with type, title, labels, and datasets; each dataset has label and data arrays. For scatter, each dataset data array contains {x,y} objects. Keep numeric values faithful to the supplied data or verified application context.
 - Never invent measurements, percentages, sample sizes, p-values or chart values. If no real values are available, either explain that data are needed or clearly label a small example as illustrative rather than presenting it as a finding. Do not create a chart merely for decoration.
 - Tables, equations and charts may appear together in one answer. Explain what each visual means in the surrounding text, and preserve source citations alongside the claims they support.
@@ -178,11 +178,13 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
             messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": message})
     answer, provider, model = complete(messages)
+    answer = repair_math_delimiters(answer)
 
     validation = validate_reply(answer, message, response_language, mode, evidence_available, math_result)
     if not validation.ok:
         messages[0]["content"] += "\n\n" + validation.repair_instruction()
         repaired, repaired_provider, repaired_model = complete(messages)
+        repaired = repair_math_delimiters(repaired)
         repaired_validation = validate_reply(repaired, message, response_language, mode, evidence_available, math_result)
         if repaired_validation.ok:
             answer, provider, model = repaired, repaired_provider + "+validated", repaired_model

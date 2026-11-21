@@ -1,29 +1,131 @@
 (function () {
   "use strict";
+
+  // Common academic/statistical shorthand accepted by KaTeX. The model is
+  // instructed to use standard LaTeX, but these aliases make short replies
+  // such as \chisq or \pval render as conventional notation as well.
+  var STATS_MACROS = {
+    "\\chisq": "\\chi^2",
+    "\\ChiSq": "\\chi^2",
+    "\\hnull": "H_0",
+    "\\halt": "H_a",
+    "\\pval": "p\\text{-value}",
+    "\\E": "\\operatorname{E}",
+    "\\Var": "\\operatorname{Var}",
+    "\\SD": "\\operatorname{SD}",
+    "\\SE": "\\operatorname{SE}",
+    "\\Pr": "\\Pr"
+  };
+
   function esc(value) {
     return String(value).replace(/[&<>"']/g, function (c) {
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
-  function normalize(value) {
-    var fenced = false, fence = String.fromCharCode(96).repeat(3);
-    return String(value).split("\n").map(function (line) {
-      if (line.trim().indexOf(fence) === 0 || /^\s*~~~/.test(line)) { fenced = !fenced; return line; }
-      if (fenced) return line;
-      var normalized = line.replace(/\\\|/g, "|");
-      // Repair equations even when embedded inside a Markdown bullet or sentence.
-      // Only equation-like bracket content is converted; citations and links are left alone.
-      normalized = normalized.replace(/\[\s*([^[\]]*(?:\\[A-Za-z]+|[=^_])[^[\]]*)\s*\]/g, function (_, equation) {
-        return "\\[" + equation.trim() + "\\]";
-      });
-      // Convert model-style ((\mu)), ((s)), ((n-1)) and (\sigma^2) into inline math.
-      normalized = normalized.replace(/\(\s*(?:\(((?:\\[^()]+|[A-Za-z][A-Za-z0-9_{}^+\-*/= ]*))\)|(\\[^()]+))\s*\)/g, function (_, doubled, single) {
-        return "\\(" + (doubled || single).trim() + "\\)";
-      });
-      if (normalized.indexOf("| |") >= 0) normalized = normalized.replace(/\|\s+\|/g, "|\n|");
-      return normalized;
-    }).join("\n");
+
+  function count(text, pattern) {
+    var matches = String(text).match(pattern);
+    return matches ? matches.length : 0;
   }
+
+  // Repair the malformed delimiters language models commonly emit: doubled
+  // backslashes, dollar delimiters, bare bracket equations, stray '$' inside a
+  // formula and inline delimiters nested inside display math. Fenced code is
+  // never touched.
+  function repairProse(text) {
+    var out = String(text);
+    out = out.replace(/\\{2,}/g, "\\");
+    out = out.replace(/\$\$([\s\S]+?)\$\$/g, function (_, equation) {
+      return "\\[" + equation.trim() + "\\]";
+    });
+    out = out.replace(/(^|[^\\])\$([^$\n]+)\$/g, function (whole, prefix, equation) {
+      return /[\\=^_{}]/.test(equation)
+        ? prefix + "\\(" + equation.trim() + "\\)"
+        : whole;
+    });
+    out = out.replace(/\[\s*([^\[\]\n]*(?:\\[A-Za-z]+|[=^_])[^\[\]\n]*)\s\]/g, function (_, equation) {
+      return "\\[" + equation.trim() + "\\]";
+    });
+    out = out.replace(/\(\s*(?:\(((?:\\[^()]+|[A-Za-z][A-Za-z0-9_{}^+\-*/= ]*))\)|(\\[^()]+))\s*\)/g, function (_, doubled, single) {
+      return "\\(" + (doubled || single).trim() + "\\)";
+    });
+    out = out.replace(/(\\\([\s\S]*?)(\\\))/g, function (_, body, close) {
+      return body.replace(/\$/g, "") + close;
+    });
+    out = out.replace(/(\\\[[\s\S]*?)(\\\])/g, function (_, body, close) {
+      return body.replace(/\$/g, "") + close;
+    });
+    out = out.replace(/\\\[([\s\S]*?)\\\]/g, function (_, body) {
+      return "\\[" + body.replace(/\\\(([\s\S]*?)\\\)/g, "$1") + "\\]";
+    });
+    var pairs = [["\\[", "\\]"], ["\\(", "\\)"]];
+    pairs.forEach(function (pair) {
+      var open = count(out, new RegExp(pair[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
+      var close = count(out, new RegExp(pair[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
+      if (open > close) out += "\n" + new Array(open - close + 1).join(pair[1]);
+      while (close > open) {
+        var at = out.lastIndexOf(pair[1]);
+        if (at < 0) break;
+        out = out.slice(0, at) + out.slice(at + 2);
+        close -= 1;
+      }
+    });
+    // Escape pipes only where they are literal content, so Markdown tables are
+    // not broken by the repair pass.
+    return out.replace(/\\\|/g, "|").replace(/\\{2,}/g, "\\");
+  }
+
+  function repairMath(source) {
+    return String(source).split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g).map(function (part) {
+      return /^\s*(```|~~~)/.test(part) ? part : repairProse(part);
+    }).join("");
+  }
+
+  function plainMath(expression, display) {
+    var text = String(expression)
+      .replace(/\\(?:left|right)\b/g, "")
+      .replace(/\\text\{([^}]*)\}/g, "$1")
+      .replace(/\\operatorname\{([^}]*)\}/g, "$1")
+      .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+      .replace(/\\dfrac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+      .replace(/\\sqrt\{([^{}]+)\}/g, "√($1)")
+      .replace(/\\sum/g, "Σ").replace(/\\times/g, "×").replace(/\\pm/g, "±")
+      .replace(/\\le\b/g, "≤").replace(/\\ge\b/g, "≥").replace(/\\neq/g, "≠")
+      .replace(/\\alpha/g, "α").replace(/\\beta/g, "β").replace(/\\mu/g, "μ")
+      .replace(/\\sigma/g, "σ").replace(/\\chi/g, "χ").replace(/\\pi/g, "π")
+      .replace(/\\infty/g, "∞").replace(/\\quad/g, "  ").replace(/\\,/g, " ")
+      .replace(/\^\{([^}]+)\}|\^([A-Za-z0-9])/g, "↑($1$2)")
+      .replace(/_\{([^}]+)\}|_([A-Za-z0-9])/g, "[$1$2]")
+      .replace(/[{}]/g, "")
+      .replace(/\\/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return display ? "  " + text + "  " : text;
+  }
+
+  // Last-resort renderer for devices where KaTeX cannot load: show readable
+  // Unicode notation instead of raw backslash commands.
+  function renderPlainMath(bubble) {
+    var walker = document.createTreeWalker(bubble, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (node) {
+      var text = node.nodeValue;
+      var pattern = /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g;
+      var match, last = 0, fragment = document.createDocumentFragment();
+      while ((match = pattern.exec(text)) !== null) {
+        if (match.index > last) fragment.append(document.createTextNode(text.slice(last, match.index)));
+        var span = document.createElement("span");
+        span.className = "cr-math-fallback";
+        span.textContent = plainMath(match[1] || match[2], Boolean(match[1]));
+        fragment.append(span);
+        last = pattern.lastIndex;
+      }
+      if (last && last < text.length) fragment.append(document.createTextNode(text.slice(last)));
+      if (last) node.parentNode.replaceChild(fragment, node);
+    });
+  }
+
   function valid(c) {
     var t = String(c.type || c.chartType || "").toLowerCase();
     if (["bar","line","pie","doughnut","scatter"].indexOf(t) < 0) return false;
@@ -38,6 +140,7 @@
           d.data.every(function (n) { return Number.isFinite(Number(n)); });
       });
   }
+
   function chart(slot, c) {
     var type = String(c.type || c.chartType).toLowerCase();
     var fig = document.createElement("figure");
@@ -115,11 +218,15 @@
       });
     } catch (_) { frame.remove(); }
   }
+
   function render(bubble, value, transcript) {
-    var source = normalize(value);
-    if (!window.marked || !window.DOMPurify) { bubble.textContent = source; return; }
-    // Marked treats \\[ and \\( as Markdown escapes and strips the backslashes.
-    // Shield math delimiters during Markdown parsing, then restore them before KaTeX.
+    var source = repairMath(value);
+    if (!window.marked || !window.DOMPurify) {
+      bubble.textContent = source;
+      return;
+    }
+    // Marked treats \[ and \( as Markdown escapes. Shield the repaired
+    // delimiters during Markdown parsing, restore them once, then sanitise.
     var mathDelimiters = [];
     source = source.replace(/\\\[|\\\]|\\\(|\\\)/g, function (delimiter) {
       var token = "CRARAMATHDELIMITER" + mathDelimiters.length + "TOKEN";
@@ -136,23 +243,36 @@
       return "<pre><code>" + esc(token.text) + "</code></pre>";
     };
     var html = window.marked.parse(source, {gfm: true, renderer: renderer});
-    bubble.innerHTML = window.DOMPurify.sanitize(html, {USE_PROFILES: {html: true}, ADD_ATTR: ["class","data-chart-slot"]});
     mathDelimiters.forEach(function (item) {
-      bubble.innerHTML = bubble.innerHTML.split(item.token).join(item.delimiter);
+      html = html.split(item.token).join(item.delimiter);
     });
+    bubble.innerHTML = window.DOMPurify.sanitize(html, {USE_PROFILES: {html: true}, ADD_ATTR: ["class","data-chart-slot"]});
     bubble.querySelectorAll("[data-chart-slot]").forEach(function (slot) {
       var i = Number(slot.getAttribute("data-chart-slot"));
       if (Number.isInteger(i) && charts[i]) chart(slot, charts[i]);
     });
-    if (window.renderMathInElement) window.renderMathInElement(bubble, {
-      delimiters: [
-        {left: "$$", right: "$$", display: true},
-        {left: "\\[", right: "\\]", display: true},
-        {left: "\\(", right: "\\)", display: false},
-        {left: "$", right: "$", display: false}
-      ], throwOnError: false, strict: "ignore"
-    });
+    if (window.katex && window.renderMathInElement) {
+      try {
+        window.renderMathInElement(bubble, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "\\[", right: "\\]", display: true},
+            {left: "\\(", right: "\\)", display: false},
+            {left: "$", right: "$", display: false}
+          ],
+          macros: STATS_MACROS,
+          throwOnError: false,
+          strict: "ignore",
+          trust: false
+        });
+      } catch (_) {
+        renderPlainMath(bubble);
+      }
+    } else {
+      renderPlainMath(bubble);
+    }
     if (transcript) transcript.scrollTop = transcript.scrollHeight;
   }
-  window.CRARAResponseRenderer = {render: render};
+
+  window.CRARAResponseRenderer = {render: render, repairMath: repairMath, plainMath: plainMath};
 })();

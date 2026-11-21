@@ -42,6 +42,57 @@ _MATH_OPEN = ("\\(", "\\[")
 _MATH_CLOSE = ("\\)", "\\]")
 
 
+def _repair_math_prose(text: str) -> str:
+    """Normalise the malformed LaTex delimiters that models commonly emit."""
+    out = re.sub(r"\\{2,}", lambda _: "\\", text)
+    out = re.sub(r"\$\$([\s\S]+?)\$\$", lambda m: r"\[" + m.group(1).strip() + r"\]", out)
+    out = re.sub(
+        r"(^|[^\\])\$([^$\n]+)\$",
+        lambda m: m.group(1) + r"\(" + m.group(2).strip() + r"\)"
+        if re.search(r"[\\=^_{}]", m.group(2)) else m.group(0),
+        out,
+    )
+    out = re.sub(
+        r"\[\s*([^\[\]\n]*(?:\\[A-Za-z]+|[=^_])[^\[\]\n]*)\s\]",
+        lambda m: r"\[" + m.group(1).strip() + r"\]",
+        out,
+    )
+    out = re.sub(
+        r"\(\s*(?:\(((?:\\[^()]+|[A-Za-z][A-Za-z0-9_{}^+\-*/= ]*))\)|(\\[^()]+))\s\)",
+        lambda m: r"\(" + (m.group(1) or m.group(2)).strip() + r"\)",
+        out,
+    )
+    out = re.sub(r"(\\\([\s\S]*?)(\\\))", lambda m: m.group(1).replace("$", "") + m.group(2), out)
+    out = re.sub(r"(\\\[[\s\S]*?)(\\\])", lambda m: m.group(1).replace("$", "") + m.group(2), out)
+    out = re.sub(
+        r"\\\[([\s\S]*?)\\\]",
+        lambda m: r"\[" + re.sub(r"\\\(([\s\S]*?)\\\)", r"\1", m.group(1)) + r"\]",
+        out,
+    )
+    for opener, closer in ((r"\[", r"\]"), (r"\(", r"\)")):
+        opened, closed = out.count(opener), out.count(closer)
+        if opened > closed:
+            out += "\n" + closer * (opened - closed)
+        while closed > opened:
+            at = out.rfind(closer)
+            if at < 0:
+                break
+            out = out[:at] + out[at + 2:]
+            closed -= 1
+    return re.sub(r"\\{2,}", lambda _: "\\", out.replace(r"\|", "|"))
+
+
+def repair_math_delimiters(text: str) -> str:
+    """Repair math delimiters in prose while leaving fenced code untouched."""
+    if not text:
+        return text
+    parts = re.split(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)", text)
+    return "".join(
+        part if part.lstrip().startswith(("```", "~~~")) else _repair_math_prose(part)
+        for part in parts
+    )
+
+
 @dataclass
 class ValidationResult:
     ok: bool
