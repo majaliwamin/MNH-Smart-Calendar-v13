@@ -179,6 +179,10 @@ button:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .hd-user .menu-icon{width:clamp(40px,3.5vw,58px);height:clamp(40px,3.5vw,58px);border-radius:9px;background:var(--tab);border:1px solid var(--tab-line);display:flex;align-items:center;justify-content:center}
 .hd-user .menu-icon svg{width:65%;height:65%}
 .hd-user .chev{width:20px;height:20px}
+.hd-install-help{display:flex;align-items:center;gap:5px;min-height:34px;padding:6px 9px;border:1px solid var(--tab-line);border-radius:9px;background:var(--tab);color:#fff;text-decoration:none;font:600 calc(12px * var(--text-scale))/1 Arial,Helvetica,sans-serif;white-space:nowrap}
+.hd-install-help svg{width:16px;height:16px;flex:0 0 auto}
+.hd-install-help:hover{box-shadow:0 0 0 2px #d4ab5588}
+.hd-install-help:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hd-bell:hover,.hd-user:hover .menu-icon{box-shadow:0 0 0 2px #d4ab5588}
 .hd-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-items:stretch;padding:clamp(8px,.8vw,12px) 14px;position:relative;
  background:linear-gradient(90deg,var(--accent),var(--accent) 18%,var(--accent) 50%,var(--accent) 82%,var(--accent)) top left/100% 3px no-repeat,linear-gradient(180deg,var(--tab),var(--panel) 50%,var(--nav))}

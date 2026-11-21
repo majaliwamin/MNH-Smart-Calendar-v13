@@ -454,7 +454,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-install-help-v24"
+    assert build == "2026.11.21-install-visible-v25"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -465,7 +465,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-install-help-v24"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-install-visible-v25"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -608,11 +608,16 @@ def test_install_help_page_and_links_exist():
 
     assert (ROOT / "frontend" / "install-help.html").is_file()
     assert 'href="/install-help.html"' in html
+    assert 'class="hd-install-help" href="/install-help.html"' in html
     assert "Install help" in html
     assert "How to install on your phone" in html
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    assert ".hd-install-help{" in css
     assert '@app.get("/install-help.html", include_in_schema=False)' in main
     assert 'FileResponse(FRONTEND_DIR / "install-help.html",' in main
     assert "Samsung Internet" in help_page
+    assert "known problem creating standalone app installs" in help_page
+    assert "reliable fix is to open the site in" in help_page
     assert "Install on Apps screen" in help_page
     assert "Add page to" in help_page
     assert "Chrome on Android" in help_page
