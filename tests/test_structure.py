@@ -454,7 +454,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-android-install-v23"
+    assert build == "2026.11.21-install-help-v24"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -465,7 +465,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-android-install-v23"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-install-help-v24"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -599,3 +599,23 @@ def test_schedule_session_outcomes_and_dialog_close_button():
     # The global animated upcoming-events strip must not appear in either CRARA state.
     assert "body.cara-open .activity-marquee-shell" in app_css
     assert "body.cara-auth-open .activity-marquee-shell" in app_css
+
+
+def test_install_help_page_and_links_exist():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    help_page = (ROOT / "frontend" / "install-help.html").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+
+    assert (ROOT / "frontend" / "install-help.html").is_file()
+    assert 'href="/install-help.html"' in html
+    assert "Install help" in html
+    assert "How to install on your phone" in html
+    assert '@app.get("/install-help.html", include_in_schema=False)' in main
+    assert 'FileResponse(FRONTEND_DIR / "install-help.html",' in main
+    assert "Samsung Internet" in help_page
+    assert "Install on Apps screen" in help_page
+    assert "Add page to" in help_page
+    assert "Chrome on Android" in help_page
+    assert "iPhone or iPad" in help_page
+    assert "Add to Home Screen" in help_page
+    assert "cannot install the app for you" in help_page

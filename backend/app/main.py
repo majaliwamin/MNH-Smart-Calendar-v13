@@ -135,6 +135,12 @@ async def manifest():
                         headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/install-help.html", include_in_schema=False)
+async def install_help():
+    return FileResponse(FRONTEND_DIR / "install-help.html",
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
 app.mount("/icons", StaticFiles(directory=str(FRONTEND_DIR / "icons")), name="icons")
