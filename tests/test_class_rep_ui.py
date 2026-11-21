@@ -81,11 +81,15 @@ def test_cara_header_and_composer_controls_have_no_button_shapes():
 def test_main_header_stays_frozen_and_install_icon_is_available():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    dialog_css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'id="install-app-btn"' in html
     assert 'class="hd-install-btn"' in html
     assert 'notice.id="install-app-notice"' in html
     assert 'window.addEventListener("beforeinstallprompt"' in html
     assert 'window.addEventListener("appinstalled"' in html
+    assert "Download statement permission:" in html
+    assert "showDownloadStatementOnOpen();" in html
+    assert ".mnh-install-statement{" in dialog_css
     assert ".hd-install-btn{" in css
     # The timetable export menu remains beside the restored install/download button.
     assert 'id="dl-btn"' in html
