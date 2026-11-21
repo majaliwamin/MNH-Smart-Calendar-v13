@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-resource-placeholders-title-v16";</script>
+<script>window.MNH_BUILD="2026.11.21-install-button-copy-v17";</script>
 <script>
 (function () {
   "use strict";
@@ -92,8 +92,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-resource-placeholders-title-v16">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-resource-placeholders-title-v16">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-install-button-copy-v17">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-install-button-copy-v17">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -377,15 +377,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-resource-placeholders-title-v16" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-resource-placeholders-title-v16" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-resource-placeholders-title-v16" defer></script>
+<script src="/js/app.js?v=2026.11.21-install-button-copy-v17" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-install-button-copy-v17" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-install-button-copy-v17" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-resource-placeholders-title-v16";
+  const workerUrl = "/service-worker.js?v=2026.11.21-install-button-copy-v17";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
@@ -441,7 +441,7 @@
   dialog.id="mnh-install-choice";
   dialog.className="mnh-install-choice";
   dialog.hidden=true;
-  dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-labelledby="mnh-install-title" aria-describedby="mnh-install-statement mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><h2 id="mnh-install-title">Download MNH Calendar</h2><p class="mnh-install-statement" id="mnh-install-statement">Download statement permission: choosing Install allows this browser to add MNH Calendar to your device. Choosing Close downloads nothing and you can continue using the app in your browser.</p><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
+  dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p id="mnh-install-copy">Install the app for quicker access from your device. You can also continue using it in your browser.</p><p class="mnh-install-help" id="mnh-install-help" aria-live="polite"></p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
   document.body.appendChild(dialog);
   const accept=dialog.querySelector("#mnh-install-accept"),decline=dialog.querySelector("#mnh-install-decline");
   decline.addEventListener("click",()=>{dialog.hidden=true;});
@@ -456,7 +456,7 @@
   instructionsShown=false;
   help.textContent="";
   accept.disabled=false;
-  accept.textContent=deferredPrompt?"Install":"Show instructions";
+  accept.textContent="Install";
   box.hidden=false;
   accept.focus();
  };
@@ -497,7 +497,7 @@
   instructionsShown=true;
   accept.textContent="Close";
  }
- const showDownloadStatementOnOpen=()=>{
+ const showInstallDialogOnOpen=()=>{
   if(isStandalone()||hasInstalled())return;
   openInstallChoice();
  };
@@ -534,7 +534,7 @@
  }
  showHeaderInstall();
  showInstallNotice("tap here to install");
- showDownloadStatementOnOpen();
+ showInstallDialogOnOpen();
 
  window.addEventListener("beforeinstallprompt",event=>{
   event.preventDefault();

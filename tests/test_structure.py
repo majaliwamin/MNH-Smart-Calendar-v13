@@ -274,12 +274,16 @@ def test_pwa_install_requirements_are_met():
     assert "display-mode: standalone" in html
     assert "promptOpen" in html
     assert "mnh-install-choice" in html
-    # Opening the public link displays the download statement permission before
-    # the user has to discover the install/download control.
-    assert 'id="mnh-install-statement"' in html
-    assert "Download statement permission:" in html
-    assert "showDownloadStatementOnOpen();" in html
-    assert "mnh-install-statement" in (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    # The install dialog still opens on first visit, but the old permission copy
+    # and the misleading "Show instructions" label are gone. Browser security
+    # still controls the actual installation prompt.
+    assert "Download MNH Calendar" not in html
+    assert "Download statement permission:" not in html
+    assert 'id="mnh-install-statement"' not in html
+    assert '"Show instructions"' not in html
+    assert "showInstallDialogOnOpen();" in html
+    assert 'accept.textContent="Install";' in html
+    assert "mnh-install-statement" not in (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert '@app.get("/manifest.json", include_in_schema=False)' in main
     assert 'app.mount("/icons"' in main
     assert ">\\n<" not in html
@@ -408,7 +412,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-resource-placeholders-title-v16"
+    assert build == "2026.11.21-install-button-copy-v17"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
