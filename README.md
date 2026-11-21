@@ -145,7 +145,7 @@ The mobile client reads the same database as the web app. Do not run a separate 
 
 The web client opens on the **Weekly Schedule**. The permanent on-screen tabs are **Dashboard**, **Weekly Schedule** and **Upcoming Academic Activities**; Analytics is a separate protected tab. The hamburger menu contains Monthly Calendar, Modules, Facilitators, Examinations, Recurring Activities, WhatsApp & Communications, Activity History, Export & Sharing, and Settings. Settings is pinned at the bottom of the mobile drawer and separated from the main navigation on the web.
 
-### Python & Jupyter Command Library
+### Python Command Library for biomedical and health sciences
 
 **Library** (bottom tab), **Menu → Python Library**, or the button in **Resources** opens the full 480-card biomedical command library as a dedicated full-screen page with a **← Back** control. A chapter index is shown at the top of the reference on desktop and mobile. The reference content, copy buttons, search and bundled simulated datasets are always available. The backend runner starts disabled (`?runner=off`) so the public calendar does not expose code execution; no backend URL is prefilled on public pages. To use it on a trusted machine, start the separate biomedical FastAPI service, enter its API base URL (for example `http://127.0.0.1:8000/api/v1`) in the runner panel and press **Enable runner**. Local execution uses `local_trusted`; it is not a security sandbox. Do not point it at a public unauthenticated service or use patient data. The three simulated CSV buttons and any uploaded file are loaded into the active kernel as `df`, `DATASET_ID` and `DATASET_NAME`.
 

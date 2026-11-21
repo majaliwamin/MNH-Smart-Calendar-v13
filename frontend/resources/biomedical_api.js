@@ -65,6 +65,7 @@
   var reportTitleEl = null;
   var reportFormatEl = null;
   var reopenButtonEl = null;
+  var LIBRARY_TITLE = "Python Command Library for biomedical and health sciences";
 
   var API = {
     defaultBaseUrl: DEFAULT_BASE,
@@ -1042,7 +1043,16 @@
     return index;
   }
 
+  function renameLibraryTitle() {
+    document.title = LIBRARY_TITLE;
+    var heading = document.querySelector("h1");
+    if (heading && heading.textContent.trim() === "Biomedical Python Command Library") {
+      heading.textContent = LIBRARY_TITLE;
+    }
+  }
+
   function attach() {
+    renameLibraryTitle();
     createPanel();
     createDataFileSection();
     createEmbeddedChapterIndex();

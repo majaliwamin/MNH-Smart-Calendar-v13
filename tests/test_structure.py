@@ -408,7 +408,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-download-statement-permission-v15"
+    assert build == "2026.11.21-resource-placeholders-title-v16"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -424,7 +424,13 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
     assert "Open Python Library full screen" in html
-    assert "Backend execution starts off" in html
+    # The Resources section is a launcher only; its old placeholder copy is gone.
+    assert "Python &amp; Jupyter Command Library" not in html
+    assert "Installation guidance, Python commands and Jupyter Notebook reference." not in html
+    assert "The reference is available in this section." not in html
+    assert "Backend execution starts off" not in html
+    assert 'aria-label="Python Command Library for biomedical and health sciences"' in html
+    assert 'title="Python Command Library for biomedical and health sciences"' in html
     assert 'app.mount("/resources", StaticFiles(directory=str(FRONTEND_DIR / "resources")), name="resources")' in main
     assert (resource_dir / "python-command-library.html").is_file()
     assert (resource_dir / "biomedical_api.js").is_file()
@@ -442,6 +448,9 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "runnerEnabled && !embeddedMode" in bridge
     assert "Enter a trusted backend API URL before enabling the runner." in bridge
     assert "bm-chapter-index" in bridge
+    assert 'var LIBRARY_TITLE = "Python Command Library for biomedical and health sciences";' in bridge
+    assert "function renameLibraryTitle()" in bridge
+    assert "renameLibraryTitle();" in bridge
     assert 'request("/analysis/methods"' in bridge
     assert 'request("/analysis", { method: "POST", body: body })' in bridge
     assert 'request("/notebooks", {' in bridge

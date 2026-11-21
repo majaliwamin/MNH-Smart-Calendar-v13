@@ -38,7 +38,7 @@
   } catch (_) {}
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-download-statement-permission-v15";</script>
+<script>window.MNH_BUILD="2026.11.21-resource-placeholders-title-v16";</script>
 <script>
 (function () {
   "use strict";
@@ -92,8 +92,8 @@
 <script src="/js/week-model.js?v=2026.11.16-v15.00"></script>
 <script src="/js/api-client.js?v=2026.11.16-v15.00"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-download-statement-permission-v15">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-download-statement-permission-v15">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-resource-placeholders-title-v16">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-resource-placeholders-title-v16">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.22/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js" defer></script>
@@ -231,10 +231,7 @@
 <section class="view vw" id="view-resources" hidden>
  <h2>Resources</h2>
  <div id="res-list"></div><div id="res-form-wrap"></div>
- <section class="python-library-section" aria-labelledby="python-library-heading" style="margin-top:24px">
-  <h3 id="python-library-heading">Python &amp; Jupyter Command Library</h3>
-  <p class="lead">Installation guidance, Python commands and Jupyter Notebook reference.</p>
-  <p class="lead">The reference is available in this section. Backend execution starts off; enable it only for a trusted local backend and teaching data.</p>
+ <section class="python-library-section" aria-label="Python Command Library for biomedical and health sciences" style="margin-top:24px">
   <button type="button" class="resources-back" id="open-python-library">Open Python Library full screen</button>
  </section>
 </section>
@@ -243,7 +240,7 @@
  <iframe
   class="python-library-frame"
   src="/resources/python-command-library.html?runner=off&full=1"
-  title="Python and Jupyter Command Library"
+  title="Python Command Library for biomedical and health sciences"
   loading="eager">
  </iframe>
 </section>
@@ -380,15 +377,15 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-download-statement-permission-v15" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-download-statement-permission-v15" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-download-statement-permission-v15" defer></script>
+<script src="/js/app.js?v=2026.11.21-resource-placeholders-title-v16" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-resource-placeholders-title-v16" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-resource-placeholders-title-v16" defer></script>
 <script>
 (function () {
   "use strict";
   // Register offline support without delaying first paint or forcing a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-download-statement-permission-v15";
+  const workerUrl = "/service-worker.js?v=2026.11.21-resource-placeholders-title-v16";
   const refreshWorker = function () {
     navigator.serviceWorker.getRegistration().then(function (registration) {
       if (registration) return registration.update();
