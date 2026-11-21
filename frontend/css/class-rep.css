@@ -1,9 +1,14 @@
 /* CARA — full-screen, minimal chat interface. */
+/* Silver-only CRARA palette. Scoped so the rest of the app keeps its theme. */
+.cara-widget,.view-tabs .cara-launcher{
+  --gold:#cbd5e1;--accent:#cbd5e1;--on-accent:#0b1728;--accentText:#0b1728;
+  --cara-silver:#cbd5e1;--cara-silver-light:#e8eef7;--cara-silver-dark:#94a3b8;--cara-silver-rgb:203,213,225;
+}
 .cr-language-switch[hidden]{display:none!important}
 .cara-widget{position:static;width:0;height:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);pointer-events:none}.cara-widget>*{pointer-events:auto}.cara-widget [hidden],.view-tabs .cara-launcher[hidden]{display:none!important}
 .view-tabs .cara-launcher{position:fixed;left:14px;right:auto;bottom:14px;z-index:2147482999;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:74px;height:38px;margin:0;padding:0 15px;border:1px solid var(--gold);border-radius:8px;background:var(--gold);color:var(--on-accent);font-size:13px;font-weight:800;letter-spacing:.5px;box-shadow:none;cursor:pointer;white-space:nowrap}.view-tabs .cara-launcher:hover{filter:brightness(1.06)}
 .cara-widget.is-open{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;max-width:none;box-sizing:border-box;display:block;background:var(--panel);pointer-events:auto;overflow:hidden;isolation:isolate;overscroll-behavior:none}
-.cr-head{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:20;height:76px;min-height:76px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 22px;background:#171717;color:#f5f5f5;border-bottom:1px solid rgba(212,175,55,.5);border-top:2px solid #c9a43b;box-shadow:0 2px 16px rgba(0,0,0,.28)}.cr-identity{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0}.cr-title{display:block;font-size:16px;letter-spacing:.2px;color:#f5f5f5;line-height:1.3;overflow-wrap:anywhere}.cr-subtitle{font-size:12px;line-height:1.35;color:#c5c5c5}
+.cr-head{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:20;height:76px;min-height:76px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 22px;background:#171717;color:#f5f5f5;border-bottom:1px solid rgba(var(--cara-silver-rgb),.5);border-top:2px solid var(--cara-silver-dark);box-shadow:0 2px 16px rgba(0,0,0,.28)}.cr-identity{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0}.cr-title{display:block;font-size:16px;letter-spacing:.2px;color:#f5f5f5;line-height:1.3;overflow-wrap:anywhere}.cr-subtitle{font-size:12px;line-height:1.35;color:#c5c5c5}
 .cr-toggle{flex:0 0 38px;width:38px;height:38px;border:1px solid #555;border-radius:50%;background:#292929;color:#fff;font-size:24px;line-height:1;cursor:pointer}.cr-toggle:hover,.cr-icon-button:hover{border-color:var(--gold)}
 .cr-body{position:fixed;top:calc(env(safe-area-inset-top,0px) + 76px);right:0;bottom:calc(env(safe-area-inset-bottom,0px) + var(--cara-keyboard-inset,0px));left:0;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1100px;box-sizing:border-box;margin:0 auto;padding:18px 24px max(16px,env(safe-area-inset-bottom));background:var(--panel);color:var(--text)}
 .cr-transcript{flex:1 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column;gap:14px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:8px 4px 20px;scrollbar-width:thin}.cr-message{max-width:min(78%,760px);padding:12px 15px;border-radius:16px;font-size:15px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.cr-message p{margin:0 0 10px}.cr-message p:last-child{margin-bottom:0}.cr-message h3,.cr-message h4{margin:0 0 8px;font-size:1.04em}.cr-message ul,.cr-message ol{margin:5px 0 10px;padding-left:22px}.cr-message li{margin:3px 0}.cr-message blockquote{margin:8px 0;padding-left:12px;border-left:3px solid var(--gold);opacity:.9}.cr-assistant{align-self:flex-start;background:var(--field);border:1px solid var(--line);color:var(--text);border-bottom-left-radius:5px}.cr-user{align-self:flex-end;background:var(--gold);color:var(--on-accent);border-bottom-right-radius:5px}
@@ -181,23 +186,23 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 }
 
 
-/* CRARA professional academic header — preserves the existing dark navy/gold theme. */
+/* CRARA professional academic header — dark navy with a silver-only palette. */
 .cr-head{
   display:flex!important;align-items:center!important;justify-content:space-between!important;gap:20px!important;
   height:106px!important;min-height:106px!important;padding:12px clamp(18px,3vw,42px)!important;
   background:linear-gradient(112deg,#071426 0%,#0b1b30 58%,#071323 100%)!important;
-  border-top:2px solid #d7ad45!important;border-bottom:2px solid #b88b2d!important;
+  border-top:2px solid var(--cara-silver)!important;border-bottom:2px solid var(--cara-silver-dark)!important;
   box-shadow:0 5px 24px rgba(0,0,0,.3)!important;
 }
 .cr-brand{display:flex;align-items:center;gap:20px;min-width:0;}
-.cr-brand-mark{width:68px;height:58px;flex:0 0 68px;display:grid;place-items:center;color:#e8c66d;border-right:2px solid rgba(215,173,69,.8);padding-right:18px;box-sizing:border-box;}
-.cr-brand-mark svg{display:block;filter:drop-shadow(0 2px 5px rgba(215,173,69,.18));}
+.cr-brand-mark{width:68px;height:58px;flex:0 0 68px;display:grid;place-items:center;color:var(--cara-silver);border-right:2px solid rgba(var(--cara-silver-rgb),.8);padding-right:18px;box-sizing:border-box;}
+.cr-brand-mark svg{display:block;filter:drop-shadow(0 2px 5px rgba(var(--cara-silver-rgb),.18));}
 .cr-identity{gap:5px!important;}
-.cr-title{font-family:Georgia,"Times New Roman",serif!important;font-size:clamp(19px,2vw,27px)!important;font-weight:700!important;letter-spacing:-.25px!important;color:#f6f1e6!important;line-height:1.15!important;}
-.cr-subtitle{font-family:Georgia,"Times New Roman",serif!important;font-size:14px!important;font-style:italic;color:#d8d2c6!important;letter-spacing:.1px;}
-.cr-home-back{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#f1d58a;font:600 14px/1.2 Arial,Helvetica,sans-serif;letter-spacing:.1px;white-space:nowrap;cursor:pointer;transition:color .18s ease,transform .18s ease;}
-.cr-home-back:hover{color:#fff1c7;transform:translateX(-2px);}
-.cr-home-back:focus-visible{outline:2px solid #d7ad45;outline-offset:5px;border-radius:2px;}
+.cr-title{font-family:Georgia,"Times New Roman",serif!important;font-size:clamp(19px,2vw,27px)!important;font-weight:700!important;letter-spacing:-.25px!important;color:#e8eef7!important;line-height:1.15!important;}
+.cr-subtitle{font-family:Georgia,"Times New Roman",serif!important;font-size:14px!important;font-style:italic;color:#b9c6d6!important;letter-spacing:.1px;}
+.cr-home-back{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--cara-silver);font:600 14px/1.2 Arial,Helvetica,sans-serif;letter-spacing:.1px;white-space:nowrap;cursor:pointer;transition:color .18s ease,transform .18s ease;}
+.cr-home-back:hover{color:var(--cara-silver-light);transform:translateX(-2px);}
+.cr-home-back:focus-visible{outline:2px solid var(--cara-silver-dark);outline-offset:5px;border-radius:2px;}
 .cr-home-back svg{display:block;flex:0 0 auto;}
 .cara-widget.is-open .cr-body{top:calc(env(safe-area-inset-top,0px) + 106px)!important;}
 .cr-memory-panel{top:calc(env(safe-area-inset-top,0px) + 106px)!important;}
@@ -216,10 +221,10 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 @media(max-width:390px){.cr-home-back{gap:4px;font-size:11px;}.cr-home-back svg{width:16px;height:16px;}.cr-brand-mark{width:38px;flex-basis:38px;padding-right:6px;}.cr-brand{gap:8px;}.cr-title{font-size:14px!important;}}
 
 /* Optional account access never replaces the chat; it is a small header link. */
-.cr-sign-in{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#f1d58a;font:600 13px/1.2 Arial,Helvetica,sans-serif;white-space:nowrap;cursor:pointer;}
+.cr-sign-in{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--cara-silver);font:600 13px/1.2 Arial,Helvetica,sans-serif;white-space:nowrap;cursor:pointer;}
 .cr-sign-in[hidden]{display:none!important}
-.cr-sign-in:hover{color:#fff1c7;}
-.cr-sign-in:focus-visible{outline:2px solid #d7ad45;outline-offset:5px;border-radius:2px;}
+.cr-sign-in:hover{color:var(--cara-silver-light);}
+.cr-sign-in:focus-visible{outline:2px solid var(--cara-silver-dark);outline-offset:5px;border-radius:2px;}
 .cr-auth-back{display:block;margin:14px auto 0;padding:8px 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--gold);font:600 13px/1.2 Arial,Helvetica,sans-serif;cursor:pointer;}
 .cr-auth-back:hover{color:var(--text);}
 .cr-auth-back:focus-visible{outline:2px solid var(--gold);outline-offset:4px;}
@@ -254,8 +259,8 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 
 
 /* CRARA response language selector — affects assistant replies only. */
-.cr-language-switch{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;padding:3px;border:1px solid rgba(212,175,55,.55);border-radius:999px;background:#242424;}
+.cr-language-switch{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;padding:3px;border:1px solid rgba(var(--cara-silver-rgb),.55);border-radius:999px;background:#242424;}
 .cr-language-option{min-width:35px;height:30px;padding:0 9px;border:0;border-radius:999px;background:transparent;color:#ddd;font-size:11px;font-weight:800;letter-spacing:.35px;cursor:pointer;}
-.cr-language-option.is-active{background:#c9a43b;color:#171717;}
-.cr-language-option:focus-visible{outline:2px solid #f5d36d;outline-offset:2px;}
+.cr-language-option.is-active{background:var(--cara-silver);color:#0b1728;}
+.cr-language-option:focus-visible{outline:2px solid var(--cara-silver-light);outline-offset:2px;}
 @media(max-width:760px){.cr-head{gap:7px;padding-left:10px;padding-right:10px}.cr-language-option{min-width:31px;height:28px;padding:0 7px}.cr-home-back{flex:0 0 auto}}

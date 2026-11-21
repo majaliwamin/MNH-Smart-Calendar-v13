@@ -16,8 +16,22 @@ def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
     assert ".cr-head{position:fixed" in css
     assert ".cr-transcript{flex:1 1 auto;min-height:0" in css
     assert ".cara-launcher" in css
-    assert "var(--panel)" in css and "var(--gold)" in css and "var(--text)" in css
+    assert "var(--panel)" in css and "var(--cara-silver)" in css and "var(--text)" in css
     assert "@media(max-width:760px)" in css
+
+
+def test_crara_uses_a_scoped_silver_palette_including_the_graduation_cap():
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert ".cara-widget,.view-tabs .cara-launcher{" in css
+    assert "--gold:#cbd5e1" in css
+    assert "--cara-silver:#cbd5e1" in css
+    assert "--cara-silver-rgb:203,213,225" in css
+    assert "color:var(--cara-silver);border-right:2px solid rgba(var(--cara-silver-rgb),.8)" in css
+    assert "filter:drop-shadow(0 2px 5px rgba(var(--cara-silver-rgb),.18))" in css
+    for legacy in ("#d7ad45", "#c9a43b", "#f1d58a", "#e8c66d", "#b88b2d",
+                   "#f6f1e6", "#d8d2c6", "#fff1c7", "#f5d36d",
+                   "rgba(212,175,55", "rgba(215,173,69"):
+        assert legacy not in css
 
 
 def test_cara_starts_closed_and_has_requested_identity():
