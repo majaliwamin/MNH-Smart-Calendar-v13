@@ -5,7 +5,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
-from fastapi.exceptions import HTTPException
+from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -103,12 +103,31 @@ async def security_headers(request: Request, call_next):
         "no-cache" if request.url.path == "/service-worker.js" else "no-store"
     )
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    # Every response identifies the exact build that produced it. A stale PWA
+    # can compare this with its own build marker and recover automatically.
+    response.headers["X-MNH-Build"] = BUILD_ID
     return response
 
 
 @app.exception_handler(HTTPException)
 async def http_error_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail)}, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(request: Request, exc: RequestValidationError):
+    # FastAPI's default 422 body is a list of objects. Older chat clients stringify
+    # that list as "[object Object]", so return one readable sentence instead.
+    parts = []
+    for item in exc.errors():
+        location = [str(part) for part in item.get("loc", []) if part not in ("body", "query", "path")]
+        field = ".".join(location) or "request"
+        parts.append(field + ": " + str(item.get("msg") or "Invalid value"))
+    detail = "Invalid request. " + "; ".join(parts[:4])
+    if len(parts) > 4:
+        detail += " (and " + str(len(parts) - 4) + " more)"
+    detail = detail[:500]
+    return JSONResponse(status_code=422, content={"detail": detail, "error": detail})
 
 
 app.include_router(router)

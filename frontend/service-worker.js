@@ -2,7 +2,7 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.21-crara-math-v30";
+const BUILD = "2026.11.21-mobile-fresh-v31";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
 const APP_FILES = ["/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js", "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/css/class-rep.css", "/favicon.svg", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png", "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js", "/vendor/marked.min.js", "/vendor/purify.min.js", "/vendor/chart.umd.min.js"];
 
@@ -41,6 +41,9 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
+  if (event.data && event.data.type === "MNH_CLEAR_CACHE") {
+    event.waitUntil(caches.keys().then((names) => Promise.all(names.map((name) => caches.delete(name)))));
+  }
 });
 
 // Network-first: a reachable server always wins, so an update can never be hidden behind stale files.
@@ -56,10 +59,11 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request, { cache: "no-store" })
       .then((response) => {
-        if (response.ok && request.mode !== "navigate") {
-          // Navigation URLs carry one-use reload markers and can redirect; the
-          // stable /index.html copy cached at install is the offline fallback.
-          cacheResponse(url.pathname, response.clone());
+        if (response.ok) {
+          // Store successful navigations under the stable offline key too, so a
+          // phone that goes offline opens the newest page it actually loaded.
+          // Query-string reload markers never become cache keys.
+          cacheResponse(request.mode === "navigate" ? "/index.html" : url.pathname, response.clone());
         }
         return response;
       })

@@ -84,7 +84,7 @@
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ response_language: value })
       });
-      if (!response.ok) throw new Error(result.detail || "Could not save language preference.");
+      if (!response.ok) throw new Error(readableError(result.detail) || "Could not save language preference.");
       state.responseLanguage = result.response_language === "CH" ? "CH" : "EN"; renderLanguageChoice();
     } catch (error) {
       state.responseLanguage = previous; renderLanguageChoice();
@@ -219,6 +219,45 @@
     return { response, result };
   }
 
+  // FastAPI/Pydantic validation errors are arrays of objects. Never let one of
+  // those reach a transcript as "[object Object]"; reduce every error shape to
+  // one short, human-readable sentence.
+  function readableError(value) {
+    if (value instanceof Error) return readableError(value.message);
+    if (Array.isArray(value)) return value.map(readableError).filter(Boolean).join("; ");
+    if (value && typeof value === "object") {
+      for (const key of ["detail", "error", "message", "msg"]) {
+        if (value[key]) return readableError(value[key]);
+      }
+      try {
+        const json = JSON.stringify(value);
+        return json && json !== "{}" ? json.slice(0, 300) : "";
+      } catch (_) { return ""; }
+    }
+    const text = String(value == null ? "" : value).trim();
+    if (!text || /^\[object\b/i.test(text) || /request could not be completed/i.test(text)) return "";
+    return text.replace(/\s+/g, " ").slice(0, 300);
+  }
+
+  function apiError(response, result, fallback) {
+    const status = Number((response && response.status) || 0);
+    if (status === 429) return "Too many CRARA requests. Please wait a minute and try again.";
+    if (status === 401) return "Your CRARA session has expired. Refresh the page to continue.";
+    if (status === 422) return "I couldn't read part of this conversation. Please refresh CRARA and try again.";
+    if (status >= 500) return "CRARA is temporarily unavailable. Please try again shortly.";
+    return readableError(result && (result.detail || result.error || result.message)) || fallback || "CRARA request failed.";
+  }
+
+  function cleanHistory(history, max = 10) {
+    if (!Array.isArray(history)) return [];
+    return history.filter((item) => item &&
+      (item.role === "user" || item.role === "assistant") &&
+      typeof item.content === "string" && item.content.trim() &&
+      !/\[object\b/i.test(item.content))
+      .slice(-max)
+      .map((item) => ({ role: item.role, content: item.content.slice(0, 4000) }));
+  }
+
   function renderInline(parent, value) {
     const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
     let cursor = 0;
@@ -280,13 +319,14 @@
     transcript.scrollTop = transcript.scrollHeight;
   }
   function addMessage(role, text) {
+    const safe = typeof text === "string" ? text : "";
     const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"));
-    if (role === "assistant") renderMarkdown(bubble, text);
-    else bubble.textContent = text;
+    if (role === "assistant") renderMarkdown(bubble, safe);
+    else bubble.textContent = safe;
     transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble;
   }
   async function typeReply(bubble, value) {
-    const answer = String(value || "");
+    const answer = typeof value === "string" ? value : "";
     bubble.classList.remove("cr-thinking");
     bubble.removeAttribute("role");
     bubble.removeAttribute("aria-label");
@@ -313,7 +353,7 @@
   async function checkStatus() {
     try {
       const { response, result } = await requestJson("/api/class-rep/status");
-      if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+      if (!response.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${response.status}`);
       state.ready = Boolean(response.ok && result.ready);
       state.voice = result.voice === "enabled";
       state.uploads = result.document_uploads === "enabled";
@@ -347,7 +387,9 @@
       const latest = (data.conversations || [])[0];
       if (!latest) return;
       state.conversationId = latest.id;
-      state.history = (latest.messages || []).slice(-12).map(m => ({ role: m.role, content: m.content }));
+      // Old saved conversations may contain error bubbles or non-text values.
+      // Drop them before they can be replayed into a prompt or transcript.
+      state.history = cleanHistory(latest.messages, 12);
       transcript.replaceChildren();
       for (const message of state.history) addMessage(message.role, message.content);
     } catch (_) {}
@@ -357,7 +399,7 @@
     authCheckRunning = true;
     try {
       const { response, result } = await requestJson("/api/class-rep/auth/me");
-      if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+      if (!response.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${response.status}`);
       if (result.storage_ready === false) {
         status("Private CRARA memory is waiting for persistent storage.", false);
         return;
@@ -393,7 +435,7 @@
       const { response, result } = await requestJson("/api/class-rep/auth/" + authMode, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(result.detail || result.error || result.message || `Account request failed (HTTP ${response.status}).`);
+      if (!response.ok) throw new Error(readableError(result.detail || result.error || result.message) || `Account request failed (HTTP ${response.status}).`);
       state.user = result.user; state.guest = false;
       state.history = []; state.conversationId = null;
       if (canUseLanguageToggle()) {
@@ -475,7 +517,7 @@
         try {
           response = await fetch("/api/class-rep/chat", {
             method: "POST", headers, credentials: "same-origin", signal: controller.signal,
-            cache: "no-store", body: JSON.stringify({ message, history: state.history.slice(-10), conversation_id: state.conversationId, response_language: state.responseLanguage })
+            cache: "no-store", body: JSON.stringify({ message, history: cleanHistory(state.history), conversation_id: state.conversationId, response_language: state.responseLanguage })
           });
           result = await response.json().catch(() => ({}));
         } catch (requestError) {
@@ -486,12 +528,14 @@
         } finally {
           window.clearTimeout(requestTimer);
         }
-        if (!response.ok) throw new Error(result.detail || result.error || `CRARA request failed (HTTP ${response.status}).`);
-        await typeReply(pending, result.reply);
+        if (!response.ok) throw new Error(apiError(response, result, "CRARA request failed."));
+        const reply = typeof result.reply === "string" ? result.reply.trim() : "";
+        if (!reply) throw new Error("CRARA returned an empty reply. Please try again.");
+        await typeReply(pending, reply);
         state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
-        else { state.history.push({ role: "user", content: message }, { role: "assistant", content: result.reply }); state.history = state.history.slice(-12); }
-        status("AI connected · " + result.provider, true);
+        else { state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: reply.slice(0, 4000) }]), 12); }
+        status("AI connected · " + readableError(result.provider), true);
       } else {
         await typeReply(pending, demoReply(message));
         const saved = await fetch("/api/class-rep/conversation/turn", {
@@ -500,14 +544,16 @@
         }).then(r => r.ok ? r.json() : null).catch(() => null);
         if (saved) {
           state.conversationId = saved.conversation_id;
-          await typeReply(pending, saved.reply);
-          state.history.push({ role: "user", content: message }, { role: "assistant", content: saved.reply });
-          state.history = state.history.slice(-12);
+          const savedReply = typeof saved.reply === "string" ? saved.reply : "";
+          if (savedReply) {
+            await typeReply(pending, savedReply);
+            state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: savedReply.slice(0, 4000) }]), 12);
+          }
         }
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
-      const detail = String(error && error.message || "");
+      const detail = readableError(error);
       if (/password|authorised|analytics/i.test(detail)) {
         state.analyticsPassword = "";
         pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
@@ -533,9 +579,9 @@
         method: "POST", body: data
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || "Upload failed");
+      if (!response.ok) throw new Error(readableError(result.detail) || "Upload failed");
       // Successful indexing is silent; the document is available to CRARA without a toast or transcript message.
-    } catch (error) { status(error.message || "Document indexing failed", false); }
+    } catch (error) { status(readableError(error) || "Document indexing failed", false); }
     finally { attachButton.disabled = false; }
   });
   recordButton.addEventListener("click", async () => {
@@ -558,9 +604,9 @@
         try {
           const response = await fetch("/api/class-rep/transcribe", { method: "POST", body: data });
           const result = await response.json();
-          if (!response.ok) throw new Error(result.detail || "Transcription failed");
+          if (!response.ok) throw new Error(readableError(result.detail) || "Transcription failed");
           input.value = result.text; updateComposerAction(); input.focus(); status("Question transcribed · review and press Enter", true);
-        } catch (error) { status(error.message || "Transcription failed", false); }
+        } catch (error) { status(readableError(error) || "Transcription failed", false); }
         finally { recordButton.disabled = false; }
       };
       state.recorder.start(); state.recording = true;

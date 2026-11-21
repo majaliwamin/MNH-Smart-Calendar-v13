@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-crara-math-v30"
+    assert build == "2026.11.21-mobile-fresh-v31"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-crara-math-v30"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-mobile-fresh-v31"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -574,8 +574,8 @@ def test_service_worker_cache_writes_are_guarded():
 
     assert "async function cacheResponse(key, response)" in worker
     assert "await cache.put(key, response)" in worker
-    assert "cacheResponse(url.pathname, response.clone())" in worker
-    assert 'request.mode !== "navigate"' in worker
+    assert 'cacheResponse(request.mode === "navigate" ? "/index.html" : url.pathname, response.clone())' in worker
+    assert 'request.mode === "navigate" ? "/index.html"' in worker
     assert 'caches.match("/index.html")' in worker
     assert "caches.open(CACHE_NAME).then((cache) => cache.put(" not in worker
 

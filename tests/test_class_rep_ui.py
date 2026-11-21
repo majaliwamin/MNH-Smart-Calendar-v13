@@ -191,7 +191,7 @@ def test_crara_formats_markdown_and_reveals_answers_progressively():
     assert 'token.startsWith("**") ? "strong" : "em"' in js
     assert 'const type = bullet ? "ul" : "ol"' in js
     assert "async function typeReply(bubble, value)" in js
-    assert "await typeReply(pending, result.reply)" in js
+    assert "await typeReply(pending, reply)" in js
     assert ".cr-message ul,.cr-message ol" in css
 
 
@@ -274,3 +274,31 @@ def test_crara_renderer_repairs_math_and_has_readable_fallback():
     assert "window.katex && window.renderMathInElement" in renderer
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert ".cr-math-fallback" in css
+
+
+def test_crara_never_stringifies_validation_errors_as_object_object():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert "function readableError(value)" in js
+    assert "function apiError(response, result, fallback)" in js
+    assert "function cleanHistory(history, max = 10)" in js
+    assert "/^\\[object\\b/i.test(text)" in js
+    assert "history: cleanHistory(state.history)" in js
+    assert "I couldn't read part of this conversation" in js
+    assert "const detail = readableError(error);" in js
+    assert 'const reply = typeof result.reply === "string"' in js
+    assert "state.history = cleanHistory(latest.messages, 12)" in js
+
+
+def test_mobile_pwa_recovers_from_a_stale_cached_page():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    sw = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+    assert "async function recoverStaleBuild(liveBuild)" in html
+    assert 'key.indexOf("mnh_auto_refresh_build_")' in html
+    assert "navigator.serviceWorker.getRegistrations()" in html
+    assert "caches.keys()" in html
+    assert 'params.has("mnh_recover")' in html
+    assert 'request.mode === "navigate" ? "/index.html" : url.pathname' in sw
+    assert 'event.data.type === "MNH_CLEAR_CACHE"' in sw
+    assert 'response.headers["X-MNH-Build"] = BUILD_ID' in main
+    assert "RequestValidationError" in main

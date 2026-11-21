@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
 <title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.21-crara-math-v30">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.21-mobile-fresh-v31">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json?v=2026.11.21-crara-math-v30">
+<link rel="manifest" href="/manifest.json?v=2026.11.21-mobile-fresh-v31">
 <meta name="theme-color" content="#0b1930">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,7 +33,7 @@
   }, true);
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.21-crara-math-v30";</script>
+<script>window.MNH_BUILD="2026.11.21-mobile-fresh-v31";</script>
 <script>
 (function () {
   "use strict";
@@ -50,13 +50,69 @@
 <script>
 (function () {
   "use strict";
-  // Compare the page opened by an email link with the live server build.
-  // Email clients may open links in an embedded browser with its own stale page cache.
+  // A mobile PWA can keep an old offline copy of index.html. Compare it with
+  // the live server on every opportunity and, if one reload is not enough,
+  // remove the service worker and caches before trying again.
   const pageBuild = String(window.MNH_BUILD || "");
+  const RECOVERY_KEY = "mnh_stale_boot_count";
   let checking = false;
 
+  function storageGet(key) {
+    try { return sessionStorage.getItem(key) || ""; } catch (_) { return ""; }
+  }
+  function storageSet(key, value) {
+    try { sessionStorage.setItem(key, value); } catch (_) {}
+  }
+  function clearAutoRefreshGuards() {
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.indexOf("mnh_auto_refresh_build_") === 0) sessionStorage.removeItem(key);
+      }
+    } catch (_) {}
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("mnh_recover") || params.has("mnh_build") || params.has("mnh_reload")) {
+    storageSet(RECOVERY_KEY, "0");
+    params.delete("mnh_recover");
+    params.delete("mnh_build");
+    params.delete("mnh_reload");
+    const clean = window.location.pathname + (params.toString() ? "?" + params.toString() : "") + window.location.hash;
+    window.history.replaceState(null, "", clean);
+  }
+
+  async function recoverStaleBuild(liveBuild) {
+    const count = Number(storageGet(RECOVERY_KEY) || 0) + 1;
+    storageSet(RECOVERY_KEY, String(count));
+    const target = new URL(window.location.href);
+    target.searchParams.delete("mnh_recover");
+    target.searchParams.set("mnh_build", liveBuild || "unknown");
+    target.searchParams.set("mnh_reload", String(Date.now()));
+    if (count >= 2) {
+      // The first reload still served an old page. Clear the stale PWA shell
+      // instead of letting an obsolete page loop behind a one-shot guard.
+      try {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(function (registration) { return registration.unregister(); }));
+        }
+      } catch (_) {}
+      try {
+        if (window.caches && caches.keys) {
+          const names = await caches.keys();
+          await Promise.all(names.map(function (name) { return caches.delete(name); }));
+        }
+      } catch (_) {}
+      clearAutoRefreshGuards();
+      storageSet(RECOVERY_KEY, "0");
+      target.searchParams.set("mnh_recover", "1");
+    }
+    window.location.replace(target.toString());
+  }
+
   async function checkLiveBuild() {
-    if (checking || !pageBuild) return;
+    if (checking) return;
     checking = true;
     try {
       const response = await fetch("/health?mnh_build_check=" + Date.now(), {
@@ -68,18 +124,11 @@
       if (!response.ok) return;
       const info = await response.json();
       const liveBuild = String(info.build || "");
-      if (!liveBuild || liveBuild === pageBuild) return;
-
-      // A query-string cache buster forces email webviews to request the current HTML.
-      const guardKey = "mnh_auto_refresh_build_" + liveBuild;
-      try {
-        if (sessionStorage.getItem(guardKey) === "1") return;
-        sessionStorage.setItem(guardKey, "1");
-      } catch (_) {}
-      const target = new URL(window.location.href);
-      target.searchParams.set("mnh_build", liveBuild);
-      target.searchParams.set("mnh_reload", String(Date.now()));
-      window.location.replace(target.toString());
+      if (!liveBuild || (pageBuild && liveBuild === pageBuild)) {
+        if (pageBuild && liveBuild === pageBuild) storageSet(RECOVERY_KEY, "0");
+        return;
+      }
+      await recoverStaleBuild(liveBuild);
     } catch (error) {
       console.warn("MNH Calendar live-build check will retry:", error);
     } finally {
@@ -97,18 +146,18 @@
   window.setInterval(checkLiveBuild, 60000);
 })();
 </script>
-<script src="/js/week-model.js?v=2026.11.21-crara-math-v30"></script>
-<script src="/js/api-client.js?v=2026.11.21-crara-math-v30"></script>
+<script src="/js/week-model.js?v=2026.11.21-mobile-fresh-v31"></script>
+<script src="/js/api-client.js?v=2026.11.21-mobile-fresh-v31"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-crara-math-v30">
-<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-crara-math-v30">
+  <link rel="stylesheet" href="/css/app.css?v=2026.11.21-mobile-fresh-v31">
+<link rel="stylesheet" href="/css/class-rep.css?v=2026.11.21-mobile-fresh-v31">
 
-<link rel="stylesheet" href="/vendor/katex/katex.min.css?v=2026.11.21-crara-math-v30">
-<script src="/vendor/marked.min.js?v=2026.11.21-crara-math-v30" defer></script>
-<script src="/vendor/purify.min.js?v=2026.11.21-crara-math-v30" defer></script>
-<script src="/vendor/katex/katex.min.js?v=2026.11.21-crara-math-v30" defer></script>
-<script src="/vendor/katex/auto-render.min.js?v=2026.11.21-crara-math-v30" defer></script>
-<script src="/vendor/chart.umd.min.js?v=2026.11.21-crara-math-v30" defer></script>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css?v=2026.11.21-mobile-fresh-v31">
+<script src="/vendor/marked.min.js?v=2026.11.21-mobile-fresh-v31" defer></script>
+<script src="/vendor/purify.min.js?v=2026.11.21-mobile-fresh-v31" defer></script>
+<script src="/vendor/katex/katex.min.js?v=2026.11.21-mobile-fresh-v31" defer></script>
+<script src="/vendor/katex/auto-render.min.js?v=2026.11.21-mobile-fresh-v31" defer></script>
+<script src="/vendor/chart.umd.min.js?v=2026.11.21-mobile-fresh-v31" defer></script>
 </head>
 <body data-theme="dark">
 <script>
@@ -255,7 +304,7 @@
  <button type="button" class="python-library-back" id="python-library-back" aria-label="Back to Resources">&#8592; Back</button>
  <iframe
   class="python-library-frame"
-  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-crara-math-v30"
+  src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-mobile-fresh-v31"
   title="Python Command Library for biomedical and health sciences"
   loading="eager">
  </iframe>
@@ -393,9 +442,9 @@
 
 
 
-<script src="/js/app.js?v=2026.11.21-crara-math-v30" defer></script>
-<script src="/js/class-rep-renderer.js?v=2026.11.21-crara-math-v30" defer></script>
-<script src="/js/class-rep.js?v=2026.11.21-crara-math-v30" defer></script>
+<script src="/js/app.js?v=2026.11.21-mobile-fresh-v31" defer></script>
+<script src="/js/class-rep-renderer.js?v=2026.11.21-mobile-fresh-v31" defer></script>
+<script src="/js/class-rep.js?v=2026.11.21-mobile-fresh-v31" defer></script>
 <script>
 (function () {
   "use strict";
@@ -403,7 +452,7 @@
   // active fetch-handling worker before it will fire beforeinstallprompt on
   // Android, so this must not wait for the load event or a page reload.
   if (!("serviceWorker" in navigator)) return;
-  const workerUrl = "/service-worker.js?v=2026.11.21-crara-math-v30";
+  const workerUrl = "/service-worker.js?v=2026.11.21-mobile-fresh-v31";
   const registerOptions = { scope: "/", updateViaCache: "none" };
   const registerWorker = function () {
     navigator.serviceWorker.register(workerUrl, registerOptions)
