@@ -2030,7 +2030,8 @@ body.python-library-view .bottom-nav,
 body.python-library-view .upcoming-announcements-row,
 body.python-library-view .status{display:none!important}
 body.python-library-view main{margin:0!important;padding:0!important}
-body.python-library-view #view-python-library:not([hidden]){
+body.python-library-view #view-python-library:not([hidden]),
+body.python-library-view #view-python-setup-simulation:not([hidden]){
  box-sizing:border-box;width:100%;max-width:none;margin:0!important;padding:0!important;height:100vh;height:100dvh;overflow:hidden
 }
 .python-library-frame{position:fixed;inset:0;display:block;width:100vw;height:100vh;height:100dvh;border:0;background:#fff;z-index:900}

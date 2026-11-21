@@ -2,7 +2,7 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.21-library-topics-v33";
+const BUILD = "2026.11.21-setup-simulation-v34";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
 // KaTeX splits symbols across many font faces. Caching only the fonts used by
 // the first online render leaves Greek, operator, size and script glyphs blank
@@ -36,6 +36,7 @@ const APP_FILES = [
   "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png",
   "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js",
   "/vendor/marked.min.js", "/vendor/purify.min.js", "/vendor/chart.umd.min.js",
+  "/resources/python-command-library.html", "/resources/python-jupyter-windows-setup-simulation.html",
   ...KATEX_FONTS.map((name) => "/vendor/katex/fonts/" + name)
 ];
 

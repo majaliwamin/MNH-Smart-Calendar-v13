@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-library-topics-v33"
+    assert build == "2026.11.21-setup-simulation-v34"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-library-topics-v33"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-setup-simulation-v34"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -482,7 +482,29 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
+    build = "2026.11.21-setup-simulation-v34"
+    simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
+    assert simulation_path.is_file()
+    simulation = simulation_path.read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    assert f'src="/resources/python-jupyter-windows-setup-simulation.html?full=1&v={build}"' in html
+    assert 'id="view-python-setup-simulation"' in html
+    assert 'id="python-setup-simulation-back"' in html
+    assert '"python-setup-simulation"' in app
+    assert 'MNH_OPEN_SETUP_SIM' in app
+    assert 'body.python-library-view #view-python-setup-simulation:not([hidden])' in css
+    assert '"/resources/python-jupyter-windows-setup-simulation.html"' in worker
+    assert "Windows Python and JupyterLab setup simulation" in simulation
+    assert "Watch simulation" in simulation or "Watch simulation" in (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
+
     library = (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
+    assert "Watch simulation" in library
+    assert ">(Watch simulation)</button>" in library
+    assert "data-open-setup-simulation" in library
+    assert "function openSetupSimulation()" in library
+    assert "MNH_OPEN_SETUP_SIM" in library
     bridge = (resource_dir / "biomedical_api.js").read_text(encoding="utf-8")
     assert '<script src="./biomedical_api.js" defer></script>' in library
     assert "Simulated data 1: anc_cohort.csv" in bridge
