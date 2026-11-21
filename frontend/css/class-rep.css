@@ -87,6 +87,7 @@ html.mnh-gate-open #mnh-first-open-gate:not([hidden])~*{display:none!important;}
 .mnh-install-accept{border:1px solid var(--gold);background:var(--gold);color:#171717;}
 .mnh-install-decline{border:1px solid var(--line);background:transparent;color:var(--text);}
 .mnh-install-actions button:disabled{opacity:.6;cursor:wait;}
+.mnh-install-actions button[hidden]{display:none!important;}
 @media(max-width:480px){.mnh-install-card{padding:22px 18px;border-radius:17px;}.mnh-install-actions{flex-direction:column;}}
 
 

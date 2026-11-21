@@ -258,8 +258,8 @@ def test_pwa_install_requirements_are_met():
             assert (ROOT / "frontend" / icon["src"].lstrip("/")).is_file()
 
     assert 'rel="manifest"' in html and "/manifest.json" in html
-    # Installation starts immediately from the first-open dialog. The header
-    # icon, blinking weekly notice, and all fallback instruction text are gone.
+    # Installation uses only real browser install APIs. The header icon,
+    # blinking weekly notice, and all fallback instruction text are gone.
     assert 'id="install-app-btn"' not in html
     assert 'class="hd-install-btn"' not in html
     assert 'aria-label="Download and install MNH Calendar"' not in html
@@ -270,38 +270,47 @@ def test_pwa_install_requirements_are_met():
     assert "Your browser may offer" not in html
     assert "Installation was not completed" not in html
     assert 'id="mnh-install-help"' not in html
+    assert 'typeof navigator.install==="function"' in html
+    assert "const canInstall=()=>supportsWebInstall||!!deferredPrompt;" in html
+    assert "if(supportsWebInstall)openInstallChoice();" in html
+    assert "await navigator.install();" in html
+    assert "markInstalled();\n    closeInstallGate();" in html
     assert "beforeinstallprompt" in html
     assert "event.preventDefault()" in html
-    assert "openInstallChoice()" in html
-    assert ".prompt()" in html and "userChoice" in html
     assert "await promptEvent.prompt();" in html
-    assert 'if(choice&&choice.outcome==="accepted")markInstalled();' in html
+    assert "userChoice" in html
+    assert 'if(choice&&choice.outcome==="accepted"){' in html
+    assert "if(accept)accept.hidden=true;" in html
+    assert "promptOpen" not in html
+    assert "mnh_force_gate" not in html
     assert "appinstalled" in html
     assert "display-mode: standalone" in html
-    assert "promptOpen" in html
     assert "mnh-install-choice" in html
-    # A static first-open gate appears before the calendar markup, including on
-    # mobile, without the removed download statement. Installed/standalone
-    # sessions skip it.
+    # The static gate starts hidden. It is revealed only when the browser
+    # supplies navigator.install() or a beforeinstallprompt event. No fake
+    # install action is ever shown in browsers that support neither.
     assert "Download MNH Calendar" not in html
     assert '"Show instructions"' not in html
     assert "Download statement permission" not in html
     assert "Choosing Close downloads nothing" not in html
     assert 'id="mnh-install-statement"' not in html
-    assert 'id="mnh-first-open-gate"' in html
+    assert 'id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy" hidden' in html
+    assert 'id="mnh-install-accept" hidden' in html
     assert 'aria-label="Install MNH Calendar"' in html
     assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
-    assert 'document.documentElement.classList.add("mnh-gate-open")' in html
+    assert 'else document.documentElement.classList.add("mnh-gate-open");' not in html
     assert 'document.documentElement.classList.add("mnh-install-exempt")' in html
-    assert "Android|iPhone|iPad|iPod|Mobile" in html
-    assert "&& !mobile && !forceGate" in html
+    assert "Android|iPhone|iPad|iPod|Mobile" not in html
+    assert "&& !mobile && !forceGate" not in html
     assert "\n ensureDialog();\n" in html
-    assert "showInstallDialogOnOpen();" in html
+    assert "openInstallChoice();" in html
+    assert "accept.hidden=false;" in html
     assert 'accept.textContent="Install";' in html
     dialog_css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     app_css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     assert ".mnh-install-statement{" not in dialog_css
     assert ".mnh-install-help{" not in dialog_css
+    assert ".mnh-install-actions button[hidden]" in dialog_css
     assert ".mnh-install-exempt #mnh-first-open-gate" in dialog_css
     assert ".hd-install-btn{" not in app_css
     assert "install-app-notice" not in app_css
@@ -433,7 +442,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.21-direct-install-v21"
+    assert build == "2026.11.21-native-install-v22"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -444,7 +453,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-direct-install-v21"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.21-native-install-v22"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html

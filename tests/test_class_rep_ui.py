@@ -89,6 +89,10 @@ def test_main_header_stays_frozen_and_download_menu_is_available():
     assert "Choose “Install app” from your browser’s address bar or menu" not in html
     assert "To install on iPhone or iPad" not in html
     assert "Your browser may offer" not in html
+    assert 'typeof navigator.install==="function"' in html
+    assert "await navigator.install();" in html
+    assert "if(supportsWebInstall)openInstallChoice();" in html
+    assert "if(accept)accept.hidden=true;" in html
     assert 'window.addEventListener("beforeinstallprompt"' in html
     assert 'window.addEventListener("appinstalled"' in html
     assert "Download MNH Calendar" not in html
@@ -96,16 +100,19 @@ def test_main_header_stays_frozen_and_download_menu_is_available():
     assert "Download statement permission" not in html
     assert "Choosing Close downloads nothing" not in html
     assert 'id="mnh-install-statement"' not in html
-    assert 'id="mnh-first-open-gate"' in html
+    assert 'id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy" hidden' in html
+    assert 'id="mnh-install-accept" hidden' in html
     assert 'aria-label="Install MNH Calendar"' in html
     assert html.index('id="mnh-first-open-gate"') < html.index('class="activity-marquee-shell"')
-    assert "Android|iPhone|iPad|iPod|Mobile" in html
-    assert "&& !mobile && !forceGate" in html
+    assert "Android|iPhone|iPad|iPod|Mobile" not in html
+    assert "mnh_force_gate" not in html
     assert "\n ensureDialog();\n" in html
-    assert "showInstallDialogOnOpen();" in html
+    assert "openInstallChoice();" in html
+    assert "accept.hidden=false;" in html
     assert 'accept.textContent="Install";' in html
     assert ".mnh-install-statement{" not in dialog_css
     assert ".mnh-install-help{" not in dialog_css
+    assert ".mnh-install-actions button[hidden]" in dialog_css
     assert ".hd-install-btn{" not in css
     assert "install-app-notice" not in css
     # The timetable export menu remains in the header after removing the install icon.
