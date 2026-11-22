@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-BUILD = "2026.11.22-statistical-tests-glossary-v39"
+BUILD = "2026.11.22-statistical-tests-glossary-v40"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
 
@@ -912,8 +912,8 @@ import scipy.stats
 
 # SIMULATED TEACHING DATA — not real patient records.
 rng = np.random.default_rng(2026112220)
-gestational_age = rng.normal(28, 5, 80)
-birth_weight = 0.45*gestational_age + rng.normal(0, 2.5, 80)
+gestational_age = rng.normal(32, 3, 80)  # simulated weeks
+birth_weight = 600 + 95*gestational_age + rng.normal(0, 250, 80)  # simulated grams
 
 res = scipy.stats.pearsonr(gestational_age, birth_weight)
 ci = res.confidence_interval(0.95)
@@ -2053,8 +2053,8 @@ FIELD_OVERRIDES: dict[str, dict[str, str]] = {
         "explanation_ny": "ANOVA imathandiza kufufuza ngati pali kusiyana kwakukulu pakati pa ma average a magulu atatu kapena kuposerapo.",
         "analogy_en": "Comparing the average examination scores of students from three different classes.",
         "analogy_ny": "Kuyerekeza avareji a mphambu za mayeso za ophunzira ochokera m'makalasi atatu osiyana.",
-        "code_explanation_en": "scipy.stats.f_oneway(group1, group2, group3) runs the one-way ANOVA F test. F is the ratio of between-group to within-group variation, and the p-value tests the null that all means are equal.",
-        "code_explanation_ny": "scipy.stats.f_oneway(group1, group2, group3) imayesa ANOVA ya magulu atatu. F ndi chiŵerengero cha kusiyana pakati pa magulu ndi kusiyana mkati mwa magulu; p imayesa lingaliro loti avareji zonse zili zofanana.",
+        "code_explanation_en": "scipy.stats.f_oneway(group1, group2, group3) runs the one-way ANOVA F test. F is the ratio of the between-group mean square to the within-group mean square, and the p-value tests the null that all means are equal.",
+        "code_explanation_ny": "scipy.stats.f_oneway(group1, group2, group3) imayesa ANOVA ya magulu atatu. F ndi chiŵerengero cha mean square yapakati pa magulu ndi ya mkati mwa magulu; p imayesa lingaliro loti avareji zonse zili zofanana.",
         "application_en": "Testing whether mean birth weight differs across standard, low-dose and high-dose care groups.",
         "application_ny": "Kuyesa kuti avareji ya kulemera kwa makanda imasiyana pakati pa chisamaliro cha standard, low-dose ndi high-dose.",
         "misconception_en": "A significant ANOVA result does not tell us exactly which groups differ. Post-hoc comparisons may be needed.",
@@ -2391,6 +2391,7 @@ body[data-lang="en"] .lang.ny,body[data-lang="ny"] .lang.en{{display:none}}
 pre{{margin:0;padding:13px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.86rem;line-height:1.5}}
 .output-wrap pre{{color:#c9f7e8;background:#07120f}}
 .empty{{display:none;border:1px dashed var(--line);border-radius:14px;padding:24px;text-align:center;color:var(--muted)}}
+.result-count{{color:var(--muted);font-size:.85rem;margin:8px 0 0;font-variant-numeric:tabular-nums}}
 footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;padding-top:18px;margin-top:34px}}
 @media(max-width:640px){{main{{padding:18px 12px 60px}}.topbar{{padding:10px 12px}}.brand{{width:100%;margin-right:0}}input[type=search]{{width:100%}}.controls{{width:100%}}.entry{{padding:14px}}}}
 @media print{{.topbar,.categories,.copy-btn{{display:none}}body{{background:#fff;color:#111}}.entry,.hero{{background:#fff;color:#111;border-color:#aaa}}.field-label,.eyebrow{{color:#5b4600}}.output-wrap pre{{background:#f5f5f5;color:#111}}}}
@@ -2412,6 +2413,7 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
 <main>
   <section class="hero">
     <span class="badge">{BUILD}</span>
+    <p id="result-count" class="result-count" aria-live="polite" aria-atomic="true"><span class="lang en">Showing 46 of 46 terms</span><span class="lang ny">Kuwonetsa mawu 46 pa 46</span></p>
     <h1><span class="lang en">Statistical tests and modelling glossary</span><span class="lang ny">Mndandanda wa mawu a ziwerengero ndi kuyerekeza</span></h1>
     <p class="lang en">This is a searchable glossary, not a textbook. Each term has an English definition, a natural Chichewa explanation, an analogy, a short Python example where applicable, a code explanation, a practical use and a common misconception. Conceptual umbrella terms may omit code.</p>
     <p class="lang ny">Uwu ndi mndandanda wa mawu wosakika, osati buku la phunziro. Mawu aliwonse ali ndi tanthauzo mu Chingerezi, kufotokozera kwachilengedwe mu Chichewa, fanizo, chitsanzo chachifupi cha Python ngati chikugwiritsidwa ntchito, kufotokozera kwa code, kagwiritsidwe ntchito ndi chikhulupiriro chofala cholakwika. Mawu akulu a lingaliro angakhale opanda code.</p>
@@ -2434,6 +2436,9 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
   var search=document.getElementById('search');
   var lang=document.getElementById('lang');
   var empty=document.getElementById('empty');
+  var count=document.getElementById('result-count');
+  var countEn=count.querySelector('.lang.en');
+  var countNy=count.querySelector('.lang.ny');
   var entries=Array.prototype.slice.call(document.querySelectorAll('.entry'));
   function apply(){{
     var q=(search.value||'').trim().toLowerCase();
@@ -2450,9 +2455,12 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
       sec.style.display=any?'':'none';
     }});
     empty.style.display=shown?'none':'block';
+    countEn.textContent='Showing '+shown+' of '+entries.length+' terms';
+    countNy.textContent='Kuwonetsa mawu '+shown+' pa '+entries.length;
   }}
   search.addEventListener('input',apply);
   lang.addEventListener('change',function(){{body.setAttribute('data-lang',lang.value);}});
+  apply();
   document.addEventListener('click',function(ev){{
     var btn=ev.target.closest('.copy-btn');
     if(!btn) return;
@@ -2527,7 +2535,7 @@ def main() -> None:
     OUTPUT.write_text(render_page(), encoding="utf-8")
     code_count = sum(1 for entry in glossary_entries if entry["code"])
     print(
-        f"Wrote {OUTPUT.relative_to(ROOT)} with {len(glossary_entries)} glossary "
+        f"Wrote {OUTPUT.name} with {len(glossary_entries)} glossary "
         f"entries ({code_count} with executed code) ({BUILD})."
     )
 

@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.22-statistical-tests-glossary-v39"
+    assert build == "2026.11.22-statistical-tests-glossary-v40"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v39"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v40"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -482,7 +482,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
-    build = "2026.11.22-statistical-tests-glossary-v39"
+    build = "2026.11.22-statistical-tests-glossary-v40"
     simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
     assert simulation_path.is_file()
     simulation = simulation_path.read_text(encoding="utf-8")
@@ -709,7 +709,7 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
-    build = "2026.11.22-statistical-tests-glossary-v39"
+    build = "2026.11.22-statistical-tests-glossary-v40"
     assert f'BUILD_ID = "{build}"' in backend_config
     assert f'window.MNH_BUILD="{build}"' in index
     assert f'const BUILD = "{build}"' in worker
@@ -796,3 +796,156 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     assert "Open bilingual statistics reference" in library
     assert "function openStatisticalGlossary()" in library
     assert "'/resources/python-statistical-tests-glossary.html'" in library
+
+
+def test_supplied_statistical_glossary_wording_is_preserved():
+    import html
+    import re
+
+    glossary = html.unescape(
+        (ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html")
+        .read_text(encoding="utf-8")
+    )
+    cards = {}
+    for card in re.findall(r'<article class="entry".*?</article>', glossary, re.S):
+        match = re.search(r'<h3 id="term-\d+"><span class="lang en">(.*?)</span>', card)
+        if match:
+            cards[match.group(1)] = card
+
+    expected = {
+        "Analysis of Variance (ANOVA)": [
+            "A statistical method used to compare the means of three or more independent groups.",
+            "ANOVA imathandiza kufufuza ngati pali kusiyana kwakukulu pakati pa ma average a magulu atatu kapena kuposerapo.",
+            "Comparing the average examination scores of students from three different classes.",
+            "scipy.stats.f_oneway(group1, group2, group3)",
+            "A significant ANOVA result does not tell us exactly which groups differ. Post-hoc comparisons may be needed.",
+        ],
+        "Mann–Whitney U Test": [
+            "A non-parametric test for comparing two independent groups using the ranks of their observations.",
+            "Mayesowa amafananitsa magulu awiri osadalirana pogwiritsa ntchito malo amene ma observations awo ali nawo akasanjidwa kuyambira pa ochepa kufika pa ambiri.",
+            "Comparing the rankings of two groups rather than comparing their raw averages.",
+            "scipy.stats.mannwhitneyu(group1, group2)",
+            "It is not automatically a test of differences in medians; its interpretation depends on the distributions.",
+        ],
+        "Wilcoxon Signed-Rank Test": [
+            "A non-parametric test for comparing two related measurements.",
+            "Mayesowa amafananitsa miyeso iwiri yokhudzana, monga kulemera kwa mwana asanalandire chithandizo ndi pambuyo pake, pogwiritsa ntchito kusiyana ndi ma rank ake.",
+            "Examining how each participant's measurement changes rather than treating the two groups as unrelated.",
+            "scipy.stats.wilcoxon(before, after)",
+            "It is not suitable for two independent groups.",
+        ],
+        "Pearson Correlation": [
+            "Measures the strength and direction of a linear relationship between two continuous variables.",
+            "Pearson correlation imasonyeza mmene variables ziwiri zimayendera limodzi pa ubale wa mzere wowongoka (linear relationship), komanso mphamvu ndi direction ya ubalewo.",
+            "Examining whether birth weight tends to increase as gestational age increases.",
+            "scipy.stats.pearsonr(gestational_age, birth_weight)",
+            "Correlation does not establish causation.",
+        ],
+        "Spearman Rank Correlation": [
+            "Measures the strength and direction of a monotonic relationship using ranked observations.",
+            "Spearman correlation imagwiritsa ntchito ma rank a observations kuti ifufuze ngati variable imodzi imakonda kukwera kapena kutsika pamene ina ikusintha.",
+            "Comparing participants' positions in two rankings rather than their actual numerical measurements.",
+            "scipy.stats.spearmanr(variable1, variable2)",
+            "Spearman correlation does not require a linear relationship, but it still does not prove causation.",
+        ],
+    }
+    for term, snippets in expected.items():
+        assert term in cards, term
+        for snippet in snippets:
+            assert snippet in cards[term], (term, snippet)
+
+
+def test_revised_example_outputs_stay_in_expected_ranges():
+    import html
+    import re
+
+    glossary = html.unescape(
+        (ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html")
+        .read_text(encoding="utf-8")
+    )
+    cards = {}
+    for card in re.findall(r'<article class="entry".*?</article>', glossary, re.S):
+        match = re.search(r'<h3 id="term-\d+"><span class="lang en">(.*?)</span>', card)
+        if match:
+            cards[match.group(1)] = card
+
+    def output_for(term):
+        card = cards[term]
+        match = re.search(r'<div class="output-wrap">.*?<pre>(.*?)</pre>', card, re.S)
+        assert match, term
+        return match.group(1).strip()
+
+    def number(pattern, text, term):
+        match = re.search(pattern, text)
+        assert match, (term, pattern)
+        return float(match.group(1))
+
+    anova = output_for("Analysis of Variance (ANOVA)")
+    f = number(r"F = ([0-9.]+)", anova, "ANOVA")
+    p = number(r"p = ([0-9.eE+-]+)", anova, "ANOVA")
+    assert 11.0 <= f <= 12.0
+    assert 0 < p < 0.001
+
+    mann = output_for("Mann–Whitney U Test")
+    u = number(r"U = ([0-9.]+)", mann, "Mann–Whitney")
+    p = number(r"p = ([0-9.eE+-]+)", mann, "Mann–Whitney")
+    effect = number(r"rank-biserial effect = (-?[0-9.]+)", mann, "Mann–Whitney")
+    assert 650 <= u <= 800
+    assert 0.15 <= p <= 0.40
+    assert -0.25 <= effect <= 0.0
+
+    wilcoxon = output_for("Wilcoxon Signed-Rank Test")
+    w = number(r"W = ([0-9.]+)", wilcoxon, "Wilcoxon")
+    p = number(r"p = ([0-9.eE+-]+)", wilcoxon, "Wilcoxon")
+    median = number(r"median change = (-?[0-9.]+)", wilcoxon, "Wilcoxon")
+    assert 140 <= w <= 180
+    assert 0 < p <= 0.02
+    assert median < 0
+
+    pearson = output_for("Pearson Correlation")
+    r = number(r"Pearson r = ([0-9.]+)", pearson, "Pearson")
+    ci = re.search(r"95% CI = ([0-9.]+) to ([0-9.]+)", pearson)
+    assert ci
+    low, high = float(ci.group(1)), float(ci.group(2))
+    assert 0.70 <= r <= 0.82
+    assert 0.60 <= low <= 0.70
+    assert 0.80 <= high <= 0.88
+
+    spearman = output_for("Spearman Rank Correlation")
+    rho = number(r"Spearman rho = ([0-9.]+)", spearman, "Spearman")
+    ci = re.search(r"approx 95% CI = ([0-9.]+) to ([0-9.]+)", spearman)
+    assert ci
+    low, high = float(ci.group(1)), float(ci.group(2))
+    assert 0.95 <= rho <= 0.99
+    assert 0.94 <= low <= 0.97
+    assert 0.97 <= high <= 0.99
+
+
+def test_generated_glossary_matches_generator_output(tmp_path):
+    import importlib.util
+
+    generator_path = ROOT / "scripts" / "build_statistical_glossary.py"
+    spec = importlib.util.spec_from_file_location("statistical_glossary_generator", generator_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    generated = tmp_path / "python-statistical-tests-glossary.html"
+    module.OUTPUT = generated
+    module.main()
+    committed = (
+        ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
+    ).read_bytes()
+    assert generated.read_bytes() == committed
+
+
+def test_glossary_search_result_count_is_live():
+    generator = (ROOT / "scripts" / "build_statistical_glossary.py").read_text(encoding="utf-8")
+    rendered = (
+        ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
+    ).read_text(encoding="utf-8")
+    assert 'id="result-count"' in generator
+    assert 'aria-live="polite"' in generator
+    assert "countEn.textContent='Showing '" in generator
+    assert "countNy.textContent='Kuwonetsa mawu '" in generator
+    assert 'id="result-count"' in rendered
+    assert 'aria-live="polite"' in rendered
