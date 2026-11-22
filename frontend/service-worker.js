@@ -2,7 +2,7 @@
 
 // Bump BUILD whenever the front end changes. It must match BUILD_ID in backend/app/config.py
 // and window.MNH_BUILD in index.html. Old caches are deleted on activation.
-const BUILD = "2026.11.22-statistical-tests-glossary-v40";
+const BUILD = "2026.11.22-statistical-tests-glossary-v41";
 const CACHE_NAME = "mnh-calendar-shell-" + BUILD;
 // KaTeX splits symbols across many font faces. Caching only the fonts used by
 // the first online render leaves Greek, operator, size and script glyphs blank
