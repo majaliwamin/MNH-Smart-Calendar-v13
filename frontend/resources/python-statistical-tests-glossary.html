@@ -66,7 +66,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;padd
 </header>
 <main>
   <section class="hero">
-    <span class="badge">2026.11.22-statistical-tests-glossary-v38</span>
+    <span class="badge">2026.11.22-statistical-tests-glossary-v39</span>
     <h1><span class="lang en">Statistical tests and modelling glossary</span><span class="lang ny">Mndandanda wa mawu a ziwerengero ndi kuyerekeza</span></h1>
     <p class="lang en">This is a searchable glossary, not a textbook. Each term has an English definition, a natural Chichewa explanation, an analogy, a short Python example where applicable, a code explanation, a practical use and a common misconception. Conceptual umbrella terms may omit code.</p>
     <p class="lang ny">Uwu ndi mndandanda wa mawu wosakika, osati buku la phunziro. Mawu aliwonse ali ndi tanthauzo mu Chingerezi, kufotokozera kwachilengedwe mu Chichewa, fanizo, chitsanzo chachifupi cha Python ngati chikugwiritsidwa ntchito, kufotokozera kwa code, kagwiritsidwe ntchito ndi chikhulupiriro chofala cholakwika. Mawu akulu a lingaliro angakhale opanda code.</p>
@@ -493,64 +493,64 @@ t = -2.348 p = 0.0235
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
 <span class="lang en">The unit of analysis is the pair, not each separate measurement. Treating repeated observations as independent observations produces invalid standard errors.</span><span class="lang ny">Chinthu chowunikiridwa ndi awiriwiri, osati miyeso yosiyana. Kutenga ma observation obwerezabwereza ngati odziyimira pawokha kumapanga standard errors zolakwika.</span></p>
 </article>
-<article class="entry" data-category="groups" data-search="mann–whitney u test mann–whitney u test the mann–whitney u test is a rank-based test for two independent groups. it asks whether a randomly chosen observation from one group tends to be larger than one from the other. m&#x27;malo moyerekeza avareji, mann–whitney imasintha ma value kukhala ma rank ndikufunsa kuti gulu liti lili ndi ma rank apamwamba kwambiri. izi zithandiza ngati deta ili yopendekerera kapena yosanjidwa. instead of comparing total exam marks, line students up by rank and ask whether one class tends to stand higher in the queue. m&#x27;malo kuyerekeza chiwerengero chonse cha mayeso, ikani ophunzira mzere potengera masanjidwe ndikufunsa kuti gulu limodzi limakonda kukhala patsogolo kuposa linzake. mannwhitneyu() compares the rank sums and returns u and p. rank-biserial converts u to a -1 to 1 effect measure describing the tendency for one group to exceed the other. mannwhitneyu() imayerekeza kuchuluka kwa ma rank ndikupereka u ndi p. rank-biserial imasintha u kukhala muyezo wa -1 mpaka 1 wofotokoza kukonda kwa gulu limodzi kuposa linzake. comparing ordinal pain scores or skewed biomarker concentrations between two independent groups. kuyerekeza masanjidwe a ululu kapena kuchuluka kwa biomarker kopendekerera pakati pa magulu awiri odziyimira pawokha. it is not automatically a test of medians; unequal distribution shapes can give a significant result even with equal medians. it also does not adjust for covariates. si mayeso wa medians nthawi zonse; mawonekedwe osiyana angapangitse zotsatira kukhala zofunika ngakhale medians zili zofanana. sichotsanso zinthu zosokoneza. mann whitney mann-whitney wilcoxon rank sum rank sum test 2. comparing groups">
+<article class="entry" data-category="groups" data-search="mann–whitney u test mann–whitney u test a non-parametric test for comparing two independent groups using the ranks of their observations. mayesowa amafananitsa magulu awiri osadalirana pogwiritsa ntchito malo amene ma observations awo ali nawo akasanjidwa kuyambira pa ochepa kufika pa ambiri. comparing the rankings of two groups rather than comparing their raw averages. kuyerekeza masanjidwe a magulu awiri m&#x27;malo moyerekeza avareji awo osasinthidwa. scipy.stats.mannwhitneyu(group1, group2) ranks the pooled observations and returns u with a two-sided p-value. the rank-biserial effect describes how often a group1 value exceeds a group2 value. scipy.stats.mannwhitneyu(group1, group2) imasintha ma value onse kukhala ma rank ndikupereka u ndi p ya mbali ziwiri. rank-biserial imafotokoza kuchuluka komwe mtengo wa group1 umaposa wa group2. comparing ordinal pain scores or skewed biomarker concentrations between two independent groups. kuyerekeza masanjidwe a ululu kapena kuchuluka kwa biomarker kopendekerera pakati pa magulu awiri odziyimira pawokha. it is not automatically a test of differences in medians; its interpretation depends on the distributions. si mayeso wa kusiyana kwa medians nthawi zonse; kutanthauzira kwake kumadalira mawonekedwe a kufalikira kwa deta. mann whitney mann-whitney mann–whitney u test wilcoxon rank sum rank sum test 2. comparing groups">
   <div class="entry-head">
     <div>
       <div class="eyebrow">2. Comparing groups</div>
-      <h3 id="term-10"><span class="lang en">Mann–Whitney U test</span><span class="lang ny">Mann–Whitney U test</span></h3>
+      <h3 id="term-10"><span class="lang en">Mann–Whitney U Test</span><span class="lang ny">Mann–Whitney U Test</span></h3>
     </div>
     <span class="num">10</span>
   </div>
-  <p class="field lang en"><span class="field-label">English definition</span>The Mann–Whitney U test is a rank-based test for two independent groups. It asks whether a randomly chosen observation from one group tends to be larger than one from the other.</p>
-  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>M&#x27;malo moyerekeza avareji, Mann–Whitney imasintha ma value kukhala ma rank ndikufunsa kuti gulu liti lili ndi ma rank apamwamba kwambiri. Izi zithandiza ngati deta ili yopendekerera kapena yosanjidwa.</p>
+  <p class="field lang en"><span class="field-label">English definition</span>A non-parametric test for comparing two independent groups using the ranks of their observations.</p>
+  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Mayesowa amafananitsa magulu awiri osadalirana pogwiritsa ntchito malo amene ma observations awo ali nawo akasanjidwa kuyambira pa ochepa kufika pa ambiri.</p>
   <p class="field"><span class="field-label"><span class="lang en">Analogy</span><span class="lang ny">Fanizo</span></span>
-<span class="lang en">Instead of comparing total exam marks, line students up by rank and ask whether one class tends to stand higher in the queue.</span><span class="lang ny">M&#x27;malo kuyerekeza chiwerengero chonse cha mayeso, ikani ophunzira mzere potengera masanjidwe ndikufunsa kuti gulu limodzi limakonda kukhala patsogolo kuposa linzake.</span></p>
+<span class="lang en">Comparing the rankings of two groups rather than comparing their raw averages.</span><span class="lang ny">Kuyerekeza masanjidwe a magulu awiri m&#x27;malo moyerekeza avareji awo osasinthidwa.</span></p>
   <div class="code-wrap">
     <div class="code-head"><span class="lang en">Python example</span><span class="lang ny">Chitsanzo cha Python</span><button class="copy-btn" type="button" data-target="code-10" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
     <pre id="code-10"><code>import numpy as np
-from scipy import stats
+import scipy.stats
 
 # SIMULATED TEACHING DATA — not real patient records.
 rng = np.random.default_rng(2026112209)
-group_a = rng.lognormal(2.2, 0.8, 40)
-group_b = rng.lognormal(2.6, 0.8, 42)
+group1 = rng.lognormal(2.2, 0.8, 40)
+group2 = rng.lognormal(2.6, 0.8, 42)
 
-u = stats.mannwhitneyu(group_b, group_a, alternative=&quot;two-sided&quot;)
-rank_biserial = 2*u.statistic/(len(group_b)*len(group_a)) - 1
-print(&quot;medians =&quot;, round(float(np.median(group_a)), 2), &quot;and&quot;,
-      round(float(np.median(group_b)), 2))
+u = scipy.stats.mannwhitneyu(group1, group2)
+rank_biserial = 2*u.statistic/(len(group1)*len(group2)) - 1
+print(&quot;medians =&quot;, round(float(np.median(group1)), 2), &quot;and&quot;,
+      round(float(np.median(group2)), 2))
 print(&quot;U =&quot;, round(float(u.statistic), 1), &quot;p =&quot;, round(float(u.pvalue), 4))
 print(&quot;rank-biserial effect =&quot;, round(float(rank_biserial), 3))</code></pre>
   </div>
   <div class="output-wrap">
     <div class="out-head"><span class="lang en">Actual output from the fixed-seed example</span><span class="lang ny">Zotsatira zenizeni za chitsanzo chokhala ndi seed yokhazikika</span></div>
     <pre>medians = 10.17 and 11.23
-U = 958.0 p = 0.2757
-rank-biserial effect = 0.14</pre>
+U = 722.0 p = 0.2757
+rank-biserial effect = -0.14</pre>
   </div>
   <p class="field"><span class="field-label"><span class="lang en">Code explanation</span><span class="lang ny">Kufotokozera kwa code</span></span>
-<span class="lang en">mannwhitneyu() compares the rank sums and returns U and p. rank-biserial converts U to a -1 to 1 effect measure describing the tendency for one group to exceed the other.</span><span class="lang ny">mannwhitneyu() imayerekeza kuchuluka kwa ma rank ndikupereka U ndi p. rank-biserial imasintha U kukhala muyezo wa -1 mpaka 1 wofotokoza kukonda kwa gulu limodzi kuposa linzake.</span></p>
+<span class="lang en">scipy.stats.mannwhitneyu(group1, group2) ranks the pooled observations and returns U with a two-sided p-value. The rank-biserial effect describes how often a group1 value exceeds a group2 value.</span><span class="lang ny">scipy.stats.mannwhitneyu(group1, group2) imasintha ma value onse kukhala ma rank ndikupereka U ndi p ya mbali ziwiri. Rank-biserial imafotokoza kuchuluka komwe mtengo wa group1 umaposa wa group2.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Practical application</span><span class="lang ny">Kugwiritsa ntchito</span></span>
 <span class="lang en">Comparing ordinal pain scores or skewed biomarker concentrations between two independent groups.</span><span class="lang ny">Kuyerekeza masanjidwe a ululu kapena kuchuluka kwa biomarker kopendekerera pakati pa magulu awiri odziyimira pawokha.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
-<span class="lang en">It is not automatically a test of medians; unequal distribution shapes can give a significant result even with equal medians. It also does not adjust for covariates.</span><span class="lang ny">Si mayeso wa medians nthawi zonse; mawonekedwe osiyana angapangitse zotsatira kukhala zofunika ngakhale medians zili zofanana. Sichotsanso zinthu zosokoneza.</span></p>
+<span class="lang en">It is not automatically a test of differences in medians; its interpretation depends on the distributions.</span><span class="lang ny">Si mayeso wa kusiyana kwa medians nthawi zonse; kutanthauzira kwake kumadalira mawonekedwe a kufalikira kwa deta.</span></p>
 </article>
-<article class="entry" data-category="groups" data-search="wilcoxon signed-rank test wilcoxon signed-rank test the wilcoxon signed-rank test analyses paired or single-sample continuous data by ranking the absolute differences and retaining their signs. it tests symmetry or a median-related hypothesis, not necessarily a mean. monga paired t-test, imayang&#x27;ana kusiyana kwa munthu aliyense. koma m&#x27;malo kugwiritsa ntchito avareji ya kusiyana, imagwiritsa ntchito ma rank ndi zizindikiro za + kapena -, kotero imalolera deta yosakhala normal. ranking who improved most, then noting whether each ranked change was an improvement or a worsening. kusanja omwe apindula kwambiri, kenako kulemba kuti kusinthako kunali kupindula kapena kuipa. wilcoxon(after, before) ranks the nonzero differences, keeps their signs and returns w and p. the median change describes the typical direction and size. wilcoxon(after, before) imasankha kusiyana kosakhala zero, kusunga zizindikiro ndikupereka w ndi p. kusintha kwa median kukufotokoza njira ndi kukula kwamba. analysing before-after symptom scores when the differences are skewed. kusanthula masanjidwe a zizindikiro musanayambe ndi mutalandira chithandizo pamene kusiyana kuli kopendekerera. strong asymmetry invalidates the signed-rank interpretation. complete pairs are required, and the test does not model covariates or missing paired observations. kusafanana kwa mbali kumawononga tanthauzo la signed-rank. pamafunika awiriawiri athunthu, ndipo mayesowo sutsanzo zinthu zosokoneza kapena kusowa kwa mbali imodzi. wilcoxon signed rank signed rank paired rank test 2. comparing groups">
+<article class="entry" data-category="groups" data-search="wilcoxon signed-rank test wilcoxon signed-rank test a non-parametric test for comparing two related measurements. mayesowa amafananitsa miyeso iwiri yokhudzana, monga kulemera kwa mwana asanalandire chithandizo ndi pambuyo pake, pogwiritsa ntchito kusiyana ndi ma rank ake. examining how each participant&#x27;s measurement changes rather than treating the two groups as unrelated. kuyang&#x27;ana mmene muyeso wa munthu aliyense umasinthira, osati kuona magulu awiri ngati osagwirizana. scipy.stats.wilcoxon(before, after) ranks the absolute paired differences and keeps their signs. w and p test whether positive and negative ranks are balanced; the median change shows the typical direction. scipy.stats.wilcoxon(before, after) imasankha kukula kwa kusiyana kwa awiriawiri ndikusunga zizindikiro. w ndi p zimayesa kuti ma rank abwino ndi oyipa ali oyenerana; kusintha kwa median kukusonyeza njira yamba. analysing before-after symptom scores when the differences are skewed. kusanthula masanjidwe a zizindikiro musanayambe ndi mutalandira chithandizo pamene kusiyana kuli kopendekerera. it is not suitable for two independent groups. si yoyenera magulu awiri odziyimira pawokha; pamafunika awiriawiri kapena muyeso wobwerezabwereza pa chinthu chimodzi. wilcoxon signed rank wilcoxon signed-rank test signed rank paired rank test 2. comparing groups">
   <div class="entry-head">
     <div>
       <div class="eyebrow">2. Comparing groups</div>
-      <h3 id="term-11"><span class="lang en">Wilcoxon signed-rank test</span><span class="lang ny">Wilcoxon signed-rank test</span></h3>
+      <h3 id="term-11"><span class="lang en">Wilcoxon Signed-Rank Test</span><span class="lang ny">Wilcoxon Signed-Rank Test</span></h3>
     </div>
     <span class="num">11</span>
   </div>
-  <p class="field lang en"><span class="field-label">English definition</span>The Wilcoxon signed-rank test analyses paired or single-sample continuous data by ranking the absolute differences and retaining their signs. It tests symmetry or a median-related hypothesis, not necessarily a mean.</p>
-  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Monga paired t-test, imayang&#x27;ana kusiyana kwa munthu aliyense. Koma m&#x27;malo kugwiritsa ntchito avareji ya kusiyana, imagwiritsa ntchito ma rank ndi zizindikiro za + kapena -, kotero imalolera deta yosakhala normal.</p>
+  <p class="field lang en"><span class="field-label">English definition</span>A non-parametric test for comparing two related measurements.</p>
+  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Mayesowa amafananitsa miyeso iwiri yokhudzana, monga kulemera kwa mwana asanalandire chithandizo ndi pambuyo pake, pogwiritsa ntchito kusiyana ndi ma rank ake.</p>
   <p class="field"><span class="field-label"><span class="lang en">Analogy</span><span class="lang ny">Fanizo</span></span>
-<span class="lang en">Ranking who improved most, then noting whether each ranked change was an improvement or a worsening.</span><span class="lang ny">Kusanja omwe apindula kwambiri, kenako kulemba kuti kusinthako kunali kupindula kapena kuipa.</span></p>
+<span class="lang en">Examining how each participant&#x27;s measurement changes rather than treating the two groups as unrelated.</span><span class="lang ny">Kuyang&#x27;ana mmene muyeso wa munthu aliyense umasinthira, osati kuona magulu awiri ngati osagwirizana.</span></p>
   <div class="code-wrap">
     <div class="code-head"><span class="lang en">Python example</span><span class="lang ny">Chitsanzo cha Python</span><button class="copy-btn" type="button" data-target="code-11" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
     <pre id="code-11"><code>import numpy as np
-from scipy import stats
+import scipy.stats
 
 # SIMULATED TEACHING DATA — not real patient records.
 rng = np.random.default_rng(2026112210)
@@ -558,7 +558,7 @@ before = rng.lognormal(4.0, 0.5, 36)
 after = before * rng.lognormal(-0.18, 0.35, 36)
 diff = after - before
 
-res = stats.wilcoxon(after, before, alternative=&quot;two-sided&quot;)
+res = scipy.stats.wilcoxon(before, after)
 print(&quot;median change =&quot;, round(float(np.median(diff)), 3))
 print(&quot;W =&quot;, round(float(res.statistic), 1), &quot;p =&quot;, round(float(res.pvalue), 4))
 print(&quot;nonzero differences =&quot;, int(np.sum(diff != 0)))</code></pre>
@@ -570,67 +570,52 @@ W = 162.0 p = 0.0063
 nonzero differences = 36</pre>
   </div>
   <p class="field"><span class="field-label"><span class="lang en">Code explanation</span><span class="lang ny">Kufotokozera kwa code</span></span>
-<span class="lang en">wilcoxon(after, before) ranks the nonzero differences, keeps their signs and returns W and p. The median change describes the typical direction and size.</span><span class="lang ny">wilcoxon(after, before) imasankha kusiyana kosakhala zero, kusunga zizindikiro ndikupereka W ndi p. Kusintha kwa median kukufotokoza njira ndi kukula kwamba.</span></p>
+<span class="lang en">scipy.stats.wilcoxon(before, after) ranks the absolute paired differences and keeps their signs. W and p test whether positive and negative ranks are balanced; the median change shows the typical direction.</span><span class="lang ny">scipy.stats.wilcoxon(before, after) imasankha kukula kwa kusiyana kwa awiriawiri ndikusunga zizindikiro. W ndi p zimayesa kuti ma rank abwino ndi oyipa ali oyenerana; kusintha kwa median kukusonyeza njira yamba.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Practical application</span><span class="lang ny">Kugwiritsa ntchito</span></span>
 <span class="lang en">Analysing before-after symptom scores when the differences are skewed.</span><span class="lang ny">Kusanthula masanjidwe a zizindikiro musanayambe ndi mutalandira chithandizo pamene kusiyana kuli kopendekerera.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
-<span class="lang en">Strong asymmetry invalidates the signed-rank interpretation. Complete pairs are required, and the test does not model covariates or missing paired observations.</span><span class="lang ny">Kusafanana kwa mbali kumawononga tanthauzo la signed-rank. Pamafunika awiriawiri athunthu, ndipo mayesowo sutsanzo zinthu zosokoneza kapena kusowa kwa mbali imodzi.</span></p>
+<span class="lang en">It is not suitable for two independent groups.</span><span class="lang ny">Si yoyenera magulu awiri odziyimira pawokha; pamafunika awiriawiri kapena muyeso wobwerezabwereza pa chinthu chimodzi.</span></p>
 </article>
-<article class="entry" data-category="groups" data-search="analysis of variance (anova) kusanthula kwa kusiyana (anova) analysis of variance (anova) compares means across three or more independent groups by partitioning total variation into between-group and within-group components and testing their ratio with an f statistic. anova imafunsa kuti kusiyana pakati pa avareji a magulu n&#x27;kwakukulu kuposa kusiyana kwamba mkati mwa gulu lililonse. f yayikulu imatanthauza kuti magulu sangakhale ndi avareji yofanana. tukey amatsatira kuti adziwe magulu ati omwe akusiyana. comparing several teaching methods by asking whether the gap between class averages is larger than the usual spread of marks inside each class. kuyerekeza njira zingapo zophunzitsira potengera kuti kusiyana pakati pa avareji a makalasi n&#x27;kwakukulu kuposa kufalikira kwa mphambu mkati mwa kalasi iliyonse. ols() fits the group model, anova_lm() extracts the f test, and pairwise_tukeyhsd() makes all pairwise comparisons while controlling the family-wise error rate. ols() imayika model ya magulu, anova_lm() imatulutsa mayeso a f, ndipo pairwise_tukeyhsd() imayerekeza magulu awiri awiri ndikulamulira mwayi wa zolakwika zilizonse. testing whether mean birth weight differs across standard, low-dose and high-dose care groups. kuyesa kuti avareji ya kulemera kwa makanda imasiyana pakati pa chisamaliro cha standard, low-dose ndi high-dose. a significant omnibus f does not say which groups differ. classical anova assumes equal variances; it compares means, not entire distributions, and does not adjust for covariates. f yofunika sikuuza kuti magulu ati akusiyana. anova yakale imaganizira variances zofanana; uyerekeza avareji, osati kufalikira kwathunthu, ndipo suchotsa zinthu zosokoneza. anova analysis of variance one way anova f test tukey 2. comparing groups">
+<article class="entry" data-category="groups" data-search="analysis of variance (anova) kusanthula kwa kusiyana (anova) a statistical method used to compare the means of three or more independent groups. anova imathandiza kufufuza ngati pali kusiyana kwakukulu pakati pa ma average a magulu atatu kapena kuposerapo. comparing the average examination scores of students from three different classes. kuyerekeza avareji a mphambu za mayeso za ophunzira ochokera m&#x27;makalasi atatu osiyana. scipy.stats.f_oneway(group1, group2, group3) runs the one-way anova f test. f is the ratio of between-group to within-group variation, and the p-value tests the null that all means are equal. scipy.stats.f_oneway(group1, group2, group3) imayesa anova ya magulu atatu. f ndi chiŵerengero cha kusiyana pakati pa magulu ndi kusiyana mkati mwa magulu; p imayesa lingaliro loti avareji zonse zili zofanana. testing whether mean birth weight differs across standard, low-dose and high-dose care groups. kuyesa kuti avareji ya kulemera kwa makanda imasiyana pakati pa chisamaliro cha standard, low-dose ndi high-dose. a significant anova result does not tell us exactly which groups differ. post-hoc comparisons may be needed. zotsatira za anova zofunika siziuza momveka kuti magulu ati akusiyana. pangafunike mayeso otsatira a post-hoc kuti adziwe. anova analysis of variance analysis of variance (anova) one way anova f test tukey 2. comparing groups">
   <div class="entry-head">
     <div>
       <div class="eyebrow">2. Comparing groups</div>
-      <h3 id="term-12"><span class="lang en">Analysis of variance (ANOVA)</span><span class="lang ny">Kusanthula kwa kusiyana (ANOVA)</span></h3>
+      <h3 id="term-12"><span class="lang en">Analysis of Variance (ANOVA)</span><span class="lang ny">Kusanthula kwa Kusiyana (ANOVA)</span></h3>
     </div>
     <span class="num">12</span>
   </div>
-  <p class="field lang en"><span class="field-label">English definition</span>Analysis of variance (ANOVA) compares means across three or more independent groups by partitioning total variation into between-group and within-group components and testing their ratio with an F statistic.</p>
-  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>ANOVA imafunsa kuti kusiyana pakati pa avareji a magulu n&#x27;kwakukulu kuposa kusiyana kwamba mkati mwa gulu lililonse. F yayikulu imatanthauza kuti magulu sangakhale ndi avareji yofanana. Tukey amatsatira kuti adziwe magulu ati omwe akusiyana.</p>
+  <p class="field lang en"><span class="field-label">English definition</span>A statistical method used to compare the means of three or more independent groups.</p>
+  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>ANOVA imathandiza kufufuza ngati pali kusiyana kwakukulu pakati pa ma average a magulu atatu kapena kuposerapo.</p>
   <p class="field"><span class="field-label"><span class="lang en">Analogy</span><span class="lang ny">Fanizo</span></span>
-<span class="lang en">Comparing several teaching methods by asking whether the gap between class averages is larger than the usual spread of marks inside each class.</span><span class="lang ny">Kuyerekeza njira zingapo zophunzitsira potengera kuti kusiyana pakati pa avareji a makalasi n&#x27;kwakukulu kuposa kufalikira kwa mphambu mkati mwa kalasi iliyonse.</span></p>
+<span class="lang en">Comparing the average examination scores of students from three different classes.</span><span class="lang ny">Kuyerekeza avareji a mphambu za mayeso za ophunzira ochokera m&#x27;makalasi atatu osiyana.</span></p>
   <div class="code-wrap">
     <div class="code-head"><span class="lang en">Python example</span><span class="lang ny">Chitsanzo cha Python</span><button class="copy-btn" type="button" data-target="code-12" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
     <pre id="code-12"><code>import numpy as np
-import pandas as pd
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
+import scipy.stats
 
 # SIMULATED TEACHING DATA — not real patient records.
 rng = np.random.default_rng(2026112211)
-rows = []
-for group, shift in [(&quot;standard&quot;, 0), (&quot;low_dose&quot;, 150), (&quot;high_dose&quot;, 300)]:
-    values = rng.normal(3100 + shift, 250, 45)
-    rows.extend([(group, float(v)) for v in values])
-df = pd.DataFrame(rows, columns=[&quot;group&quot;, &quot;birth_weight&quot;])
+group1 = rng.normal(3100, 250, 45)
+group2 = rng.normal(3250, 250, 45)
+group3 = rng.normal(3400, 250, 45)
 
-model = ols(&quot;birth_weight ~ C(group)&quot;, data=df).fit()
-aov = sm.stats.anova_lm(model, typ=2)
-f_row = aov.loc[&quot;C(group)&quot;]
-print(&quot;ANOVA F =&quot;, round(float(f_row[&quot;F&quot;]), 3),
-      &quot;p =&quot;, format(float(f_row[&quot;PR(&gt;F)&quot;]), &quot;.3g&quot;))
-tukey = pairwise_tukeyhsd(df[&quot;birth_weight&quot;], df[&quot;group&quot;], alpha=0.05)
-for i in range(len(tukey.meandiffs)):
-    print(tukey.group_c[i], &quot;vs&quot;, tukey.group_t[i],
-          &quot;mean difference =&quot;, round(float(tukey.meandiffs[i]), 1),
-          &quot;adjusted p =&quot;, format(float(tukey.pvalues[i]), &quot;.3g&quot;),
-          &quot;95% CI&quot;, round(float(tukey.confint[i][0]), 1), &quot;to&quot;,
-          round(float(tukey.confint[i][1]), 1),
-          &quot;reject =&quot;, bool(tukey.reject[i]))</code></pre>
+result = scipy.stats.f_oneway(group1, group2, group3)
+print(&quot;group means =&quot;,
+      [round(float(np.mean(g)), 1) for g in (group1, group2, group3)])
+print(&quot;F =&quot;, round(float(result.statistic), 3),
+      &quot;p =&quot;, format(float(result.pvalue), &quot;.3g&quot;))</code></pre>
   </div>
   <div class="output-wrap">
     <div class="out-head"><span class="lang en">Actual output from the fixed-seed example</span><span class="lang ny">Zotsatira zenizeni za chitsanzo chokhala ndi seed yokhazikika</span></div>
-    <pre>ANOVA F = 11.51 p = 2.47e-05
-high_dose vs low_dose mean difference = -129.6 adjusted p = 0.0693 95% CI -267.2 to 7.9 reject = False
-high_dose vs standard mean difference = -278.2 adjusted p = 1.29e-05 95% CI -415.8 to -140.7 reject = True
-low_dose vs standard mean difference = -148.6 adjusted p = 0.0309 95% CI -286.2 to -11.0 reject = True</pre>
+    <pre>group means = [3134.4, 3283.0, 3412.6]
+F = 11.51 p = 2.47e-05</pre>
   </div>
   <p class="field"><span class="field-label"><span class="lang en">Code explanation</span><span class="lang ny">Kufotokozera kwa code</span></span>
-<span class="lang en">ols() fits the group model, anova_lm() extracts the F test, and pairwise_tukeyhsd() makes all pairwise comparisons while controlling the family-wise error rate.</span><span class="lang ny">ols() imayika model ya magulu, anova_lm() imatulutsa mayeso a F, ndipo pairwise_tukeyhsd() imayerekeza magulu awiri awiri ndikulamulira mwayi wa zolakwika zilizonse.</span></p>
+<span class="lang en">scipy.stats.f_oneway(group1, group2, group3) runs the one-way ANOVA F test. F is the ratio of between-group to within-group variation, and the p-value tests the null that all means are equal.</span><span class="lang ny">scipy.stats.f_oneway(group1, group2, group3) imayesa ANOVA ya magulu atatu. F ndi chiŵerengero cha kusiyana pakati pa magulu ndi kusiyana mkati mwa magulu; p imayesa lingaliro loti avareji zonse zili zofanana.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Practical application</span><span class="lang ny">Kugwiritsa ntchito</span></span>
 <span class="lang en">Testing whether mean birth weight differs across standard, low-dose and high-dose care groups.</span><span class="lang ny">Kuyesa kuti avareji ya kulemera kwa makanda imasiyana pakati pa chisamaliro cha standard, low-dose ndi high-dose.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
-<span class="lang en">A significant omnibus F does not say which groups differ. Classical ANOVA assumes equal variances; it compares means, not entire distributions, and does not adjust for covariates.</span><span class="lang ny">F yofunika sikuuza kuti magulu ati akusiyana. ANOVA yakale imaganizira variances zofanana; uyerekeza avareji, osati kufalikira kwathunthu, ndipo suchotsa zinthu zosokoneza.</span></p>
+<span class="lang en">A significant ANOVA result does not tell us exactly which groups differ. Post-hoc comparisons may be needed.</span><span class="lang ny">Zotsatira za ANOVA zofunika siziuza momveka kuti magulu ati akusiyana. Pangafunike mayeso otsatira a post-hoc kuti adziwe.</span></p>
 </article>
 <article class="entry" data-category="groups" data-search="kruskal-wallis test kruskal-wallis test use as a rank-based alternative to one-way anova when comparing three or more independent groups with ordinal or skewed continuous outcomes. kruskal-wallis ndiye mtundu wa anova wogwiritsa ntchito ma rank. imayang&#x27;ana kuti magulu atatu kapena kuposerapo ali ndi ma rank ofanana kapena ayi. gwiritsani ntchito m&#x27;malo mwa one-way anova potengera ma rank poyerekeza magulu atatu kapena kuposerapo odziyimira pawokha okhala ndi zotsatira zosanjidwa kapena zopendekerera. it is like ranking all horses from several stables and asking whether the stables are mixed throughout the ranking or clustered at different ends. zili ngati kusanja mahatchi onse ochokera m&#x27;magulu angapo ndikufunsa kuti maguluwo asanganikirana muzotsatira kapena amaonekera mbali zosiyanasiyana za mzere. a small p-value says the groups do not all have the same rank distribution. it does not say which groups differ, so follow with clearly planned pairwise comparisons and a multiplicity adjustment. p ikachepa, magulu onse alibe kufalikira kwa ma rank kofanana. sizitiuza kuti magulu ati amasiyana, choncho tsatirani ndi kuyerekeza kwapawiri kokonzedwa ndi kukonza kwa mayeso ambiri. comparing skewed parasite counts across three treatment arms. kuyerekeza kuchuluka kwa tizirombo topendekerera m&#x27;magulu atatu a chithandizo. like mann-whitney, shape differences can mimic location differences. it does not provide an adjusted mean difference. monga mann-whitney, kusiyana kwa mawonekedwe kukhoza kuwoneka ngati kusiyana kwa malo. sipereka kusiyana kwa avareji koyendetsedwa. 2. comparing groups">
   <div class="entry-head">
@@ -1052,29 +1037,29 @@ chi2 = 1.667 df = 2 p = 0.4346</pre>
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
 <span class="lang en">With very large samples, trivial deviations become significant. With small expected counts, the approximation is poor.</span><span class="lang ny">Ndi deta yayikulu kwambiri, kusiyana kochepa kumakhala kofunika. Ndi kuchuluka koyembekezeka kochepa, kuyerekezako kumakhala koyipa.</span></p>
 </article></section>
-<section class="category" id="cat-association"><h2><span class="lang en">4. Association and correlation</span><span class="lang ny">Ubale ndi kulumikizana</span></h2><article class="entry" data-category="association" data-search="pearson correlation pearson correlation pearson correlation is the standardised covariance of two continuous variables. its coefficient r ranges from -1 to 1 and measures the strength and direction of their linear association. pearson imayesa kuti zinthu ziwiri zikuyenda limodzi m&#x27;njira yowongoka. ngati imodzi ikwera pamene ina ikukwera, r ndi yabwino; ngati imodzi ikutsika pamene ina ikukwera, r ndi yoipa. checking whether taller students tend to have larger shoe sizes. the pattern can be strong, but height does not cause shoe size in a simple experimental sense. kuyang&#x27;ana kuti ophunzira azitali amakonda kukhala ndi nsapato zazikulu. ubale ukhoza kukhala wamphamvu, koma kutalika sikumayambitsa kukula kwa nsapato m&#x27;njira yosavuta. pearsonr() returns r, its p-value and a confidence interval. r squared is the proportion of variance shared in a simple linear model; it is not a causal measure. pearsonr() imapereka r, p ndi confidence interval. r squared ndi gawo la kusiyana lomwe limagawidwa mu model yosavuta; sizoyeza causality. exploring the linear association between maternal age and a continuous biomarker before regression. kufufuza ubale wa mzere pakati pa zaka za amayi ndi biomarker ya manambala musanayike regression. a strong nonlinear relationship can have r near zero, and one influential point can create or destroy r. correlation does not measure agreement or adjust for confounders. ubale wamphamvu koma wosakhala wa mzere ukhoza kukhala ndi r pafupi ndi zero, ndipo point imodzi ingapange kapena kuwononga r. correlation siyiyeza kuvomerezana kapena kuchotsa zosokoneza. pearson r linear correlation r 4. association and correlation">
+<section class="category" id="cat-association"><h2><span class="lang en">4. Association and correlation</span><span class="lang ny">Ubale ndi kulumikizana</span></h2><article class="entry" data-category="association" data-search="pearson correlation pearson correlation measures the strength and direction of a linear relationship between two continuous variables. pearson correlation imasonyeza mmene variables ziwiri zimayendera limodzi pa ubale wa mzere wowongoka (linear relationship), komanso mphamvu ndi direction ya ubalewo. examining whether birth weight tends to increase as gestational age increases. kuyang&#x27;ana kuti kulemera kwa mwana kumakonda kuwonjezeka pamene msinkhu wa mimba ukukwera. scipy.stats.pearsonr(gestational_age, birth_weight) returns r, its p-value and a 95% confidence interval. r ranges from -1 to 1; r squared is shared variance in a simple linear model, not a causal measure. scipy.stats.pearsonr(gestational_age, birth_weight) imapereka r, p ndi 95% ci. r ili pakati pa -1 ndi 1; r squared ndi gawo la kusiyana lomwe limagawidwa mu model yosavuta, osati muyezo wa causality. exploring whether birth weight rises with gestational age in a cohort before fitting a regression model. kufufuza kuti kulemera kwa makanda kumakwera ndi msinkhu wa mimba mu gulu la kafukufuku musanayike regression. correlation does not establish causation. ubale (correlation) sikutsimikizira kuti chinthu chimodzi chinayambitsa chinacho (causation). pearson correlation pearson r linear correlation r 4. association and correlation">
   <div class="entry-head">
     <div>
       <div class="eyebrow">4. Association and correlation</div>
-      <h3 id="term-22"><span class="lang en">Pearson correlation</span><span class="lang ny">Pearson correlation</span></h3>
+      <h3 id="term-22"><span class="lang en">Pearson Correlation</span><span class="lang ny">Pearson Correlation</span></h3>
     </div>
     <span class="num">22</span>
   </div>
-  <p class="field lang en"><span class="field-label">English definition</span>Pearson correlation is the standardised covariance of two continuous variables. Its coefficient r ranges from -1 to 1 and measures the strength and direction of their linear association.</p>
-  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Pearson imayesa kuti zinthu ziwiri zikuyenda limodzi m&#x27;njira yowongoka. Ngati imodzi ikwera pamene ina ikukwera, r ndi yabwino; ngati imodzi ikutsika pamene ina ikukwera, r ndi yoipa.</p>
+  <p class="field lang en"><span class="field-label">English definition</span>Measures the strength and direction of a linear relationship between two continuous variables.</p>
+  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Pearson correlation imasonyeza mmene variables ziwiri zimayendera limodzi pa ubale wa mzere wowongoka (linear relationship), komanso mphamvu ndi direction ya ubalewo.</p>
   <p class="field"><span class="field-label"><span class="lang en">Analogy</span><span class="lang ny">Fanizo</span></span>
-<span class="lang en">Checking whether taller students tend to have larger shoe sizes. The pattern can be strong, but height does not cause shoe size in a simple experimental sense.</span><span class="lang ny">Kuyang&#x27;ana kuti ophunzira azitali amakonda kukhala ndi nsapato zazikulu. Ubale ukhoza kukhala wamphamvu, koma kutalika sikumayambitsa kukula kwa nsapato m&#x27;njira yosavuta.</span></p>
+<span class="lang en">Examining whether birth weight tends to increase as gestational age increases.</span><span class="lang ny">Kuyang&#x27;ana kuti kulemera kwa mwana kumakonda kuwonjezeka pamene msinkhu wa mimba ukukwera.</span></p>
   <div class="code-wrap">
     <div class="code-head"><span class="lang en">Python example</span><span class="lang ny">Chitsanzo cha Python</span><button class="copy-btn" type="button" data-target="code-22" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
     <pre id="code-22"><code>import numpy as np
-from scipy import stats
+import scipy.stats
 
 # SIMULATED TEACHING DATA — not real patient records.
 rng = np.random.default_rng(2026112220)
-x = rng.normal(28, 5, 80)
-y = 0.45*x + rng.normal(0, 2.5, 80)
+gestational_age = rng.normal(28, 5, 80)
+birth_weight = 0.45*gestational_age + rng.normal(0, 2.5, 80)
 
-res = stats.pearsonr(x, y)
+res = scipy.stats.pearsonr(gestational_age, birth_weight)
 ci = res.confidence_interval(0.95)
 print(&quot;Pearson r =&quot;, round(float(res.statistic), 3))
 print(&quot;95% CI =&quot;, round(float(ci.low), 3), &quot;to&quot;, round(float(ci.high), 3))
@@ -1089,38 +1074,38 @@ p = 0.0
 r squared = 0.453</pre>
   </div>
   <p class="field"><span class="field-label"><span class="lang en">Code explanation</span><span class="lang ny">Kufotokozera kwa code</span></span>
-<span class="lang en">pearsonr() returns r, its p-value and a confidence interval. r squared is the proportion of variance shared in a simple linear model; it is not a causal measure.</span><span class="lang ny">pearsonr() imapereka r, p ndi confidence interval. r squared ndi gawo la kusiyana lomwe limagawidwa mu model yosavuta; sizoyeza causality.</span></p>
+<span class="lang en">scipy.stats.pearsonr(gestational_age, birth_weight) returns r, its p-value and a 95% confidence interval. r ranges from -1 to 1; r squared is shared variance in a simple linear model, not a causal measure.</span><span class="lang ny">scipy.stats.pearsonr(gestational_age, birth_weight) imapereka r, p ndi 95% CI. r ili pakati pa -1 ndi 1; r squared ndi gawo la kusiyana lomwe limagawidwa mu model yosavuta, osati muyezo wa causality.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Practical application</span><span class="lang ny">Kugwiritsa ntchito</span></span>
-<span class="lang en">Exploring the linear association between maternal age and a continuous biomarker before regression.</span><span class="lang ny">Kufufuza ubale wa mzere pakati pa zaka za amayi ndi biomarker ya manambala musanayike regression.</span></p>
+<span class="lang en">Exploring whether birth weight rises with gestational age in a cohort before fitting a regression model.</span><span class="lang ny">Kufufuza kuti kulemera kwa makanda kumakwera ndi msinkhu wa mimba mu gulu la kafukufuku musanayike regression.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
-<span class="lang en">A strong nonlinear relationship can have r near zero, and one influential point can create or destroy r. Correlation does not measure agreement or adjust for confounders.</span><span class="lang ny">Ubale wamphamvu koma wosakhala wa mzere ukhoza kukhala ndi r pafupi ndi zero, ndipo point imodzi ingapange kapena kuwononga r. Correlation siyiyeza kuvomerezana kapena kuchotsa zosokoneza.</span></p>
+<span class="lang en">Correlation does not establish causation.</span><span class="lang ny">Ubale (correlation) sikutsimikizira kuti chinthu chimodzi chinayambitsa chinacho (causation).</span></p>
 </article>
-<article class="entry" data-category="association" data-search="spearman correlation spearman correlation spearman correlation is a rank-based measure of monotonic association. it uses the ranks of two variables rather than their raw values, so it is robust to monotone transformations. spearman imasintha ma value kukhala ma rank. choncho ngati munthu wachiwiri ndi wapamwamba kuposa woyamba pa zonse, ubale wake uli pafupi ndi 1 ngakhale kusiyana kwenikweni kuli kosiyana. comparing race finishing positions rather than exact times. the order matters more than how many seconds separated runners. kuyerekeza malo omwe othamanga adamaliza osati nthawi yeniyeni. dongosolo ndilo lofunika kwambiri osati masekondi pakati pawo. spearmanr() returns rho from ranked data. the fisher-style z transformation gives an approximate interval; it is least reliable with many ties or small samples. spearmanr() imapereka rho kuchokera ku ma rank. kusintha kwa fisher z kumapanga interval yoyerekeza; si yodalirika ngati ma value ofanana ndi ambiri kapena deta ili yochepa. associating an ordinal adherence score with a skewed biomarker. kugwirizanitsa masanjidwe a kumvera malangizo ndi biomarker wopendekerera. spearman measures monotone ordering, not calibration or agreement. it ignores the size of gaps between values and does not imply causation. spearman imayeza dongosolo lokwera kapena kutsika, osati kuti miyeso ikugwirizana bwino. sinyalanyaza kukula kwa mipata pakati pa ma value ndipo sikutanthauza causality. spearman rho spearman rank rank correlation 4. association and correlation">
+<article class="entry" data-category="association" data-search="spearman rank correlation spearman rank correlation measures the strength and direction of a monotonic relationship using ranked observations. spearman correlation imagwiritsa ntchito ma rank a observations kuti ifufuze ngati variable imodzi imakonda kukwera kapena kutsika pamene ina ikusintha. comparing participants&#x27; positions in two rankings rather than their actual numerical measurements. kuyerekeza malo a omwe atengapo mbali mu mindandanda iwiri ya masanjidwe, osati miyeso yao yeniyeni. scipy.stats.spearmanr(variable1, variable2) computes rho from the ranks of the two variables. the fisher-style z interval is approximate and is less reliable with many ties or small samples. scipy.stats.spearmanr(variable1, variable2) imawerengera rho kuchokera ku ma rank a zinthu ziwirizo. interval ya fisher z ndi yongoyerekeza ndipo si yodalirika ngati ma value ofanana ndi ambiri kapena deta ili yochepa. associating an ordinal adherence score with a skewed biomarker. kugwirizanitsa masanjidwe a kumvera malangizo ndi biomarker wopendekerera. spearman correlation does not require a linear relationship, but it still does not prove causation. spearman correlation safuna ubale wa mzere wowongoka, koma sikutsimikizirabe kuti chinthu chimodzi chinayambitsa chinacho. spearman correlation spearman rho spearman rank rank correlation 4. association and correlation">
   <div class="entry-head">
     <div>
       <div class="eyebrow">4. Association and correlation</div>
-      <h3 id="term-23"><span class="lang en">Spearman correlation</span><span class="lang ny">Spearman correlation</span></h3>
+      <h3 id="term-23"><span class="lang en">Spearman Rank Correlation</span><span class="lang ny">Spearman Rank Correlation</span></h3>
     </div>
     <span class="num">23</span>
   </div>
-  <p class="field lang en"><span class="field-label">English definition</span>Spearman correlation is a rank-based measure of monotonic association. It uses the ranks of two variables rather than their raw values, so it is robust to monotone transformations.</p>
-  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Spearman imasintha ma value kukhala ma rank. Choncho ngati munthu wachiwiri ndi wapamwamba kuposa woyamba pa zonse, ubale wake uli pafupi ndi 1 ngakhale kusiyana kwenikweni kuli kosiyana.</p>
+  <p class="field lang en"><span class="field-label">English definition</span>Measures the strength and direction of a monotonic relationship using ranked observations.</p>
+  <p class="field lang ny"><span class="field-label">Kufotokozera mu Chichewa</span>Spearman correlation imagwiritsa ntchito ma rank a observations kuti ifufuze ngati variable imodzi imakonda kukwera kapena kutsika pamene ina ikusintha.</p>
   <p class="field"><span class="field-label"><span class="lang en">Analogy</span><span class="lang ny">Fanizo</span></span>
-<span class="lang en">Comparing race finishing positions rather than exact times. The order matters more than how many seconds separated runners.</span><span class="lang ny">Kuyerekeza malo omwe othamanga adamaliza osati nthawi yeniyeni. Dongosolo ndilo lofunika kwambiri osati masekondi pakati pawo.</span></p>
+<span class="lang en">Comparing participants&#x27; positions in two rankings rather than their actual numerical measurements.</span><span class="lang ny">Kuyerekeza malo a omwe atengapo mbali mu mindandanda iwiri ya masanjidwe, osati miyeso yao yeniyeni.</span></p>
   <div class="code-wrap">
     <div class="code-head"><span class="lang en">Python example</span><span class="lang ny">Chitsanzo cha Python</span><button class="copy-btn" type="button" data-target="code-23" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
     <pre id="code-23"><code>import numpy as np
-from scipy import stats
+import scipy.stats
 
 # SIMULATED TEACHING DATA — not real patient records.
 rng = np.random.default_rng(2026112221)
-score = rng.integers(1, 6, 90)
-outcome = 2.2*score + rng.lognormal(0, 0.5, 90)
+variable1 = rng.integers(1, 6, 90)
+variable2 = 2.2*variable1 + rng.lognormal(0, 0.5, 90)
 
-res = stats.spearmanr(score, outcome)
+res = scipy.stats.spearmanr(variable1, variable2)
 rho = float(res.statistic)
 z = np.arctanh(rho)
-se = 1/np.sqrt(len(score)-3)
+se = 1/np.sqrt(len(variable1)-3)
 lo, hi = np.tanh(z - 1.96*se), np.tanh(z + 1.96*se)
 print(&quot;Spearman rho =&quot;, round(rho, 3))
 print(&quot;approx 95% CI =&quot;, round(float(lo), 3), &quot;to&quot;, round(float(hi), 3))
@@ -1133,11 +1118,11 @@ approx 95% CI = 0.959 to 0.982
 p = 0.0</pre>
   </div>
   <p class="field"><span class="field-label"><span class="lang en">Code explanation</span><span class="lang ny">Kufotokozera kwa code</span></span>
-<span class="lang en">spearmanr() returns rho from ranked data. The Fisher-style z transformation gives an approximate interval; it is least reliable with many ties or small samples.</span><span class="lang ny">spearmanr() imapereka rho kuchokera ku ma rank. Kusintha kwa Fisher z kumapanga interval yoyerekeza; si yodalirika ngati ma value ofanana ndi ambiri kapena deta ili yochepa.</span></p>
+<span class="lang en">scipy.stats.spearmanr(variable1, variable2) computes rho from the ranks of the two variables. The Fisher-style z interval is approximate and is less reliable with many ties or small samples.</span><span class="lang ny">scipy.stats.spearmanr(variable1, variable2) imawerengera rho kuchokera ku ma rank a zinthu ziwirizo. Interval ya Fisher z ndi yongoyerekeza ndipo si yodalirika ngati ma value ofanana ndi ambiri kapena deta ili yochepa.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Practical application</span><span class="lang ny">Kugwiritsa ntchito</span></span>
 <span class="lang en">Associating an ordinal adherence score with a skewed biomarker.</span><span class="lang ny">Kugwirizanitsa masanjidwe a kumvera malangizo ndi biomarker wopendekerera.</span></p>
   <p class="field"><span class="field-label"><span class="lang en">Common misconception</span><span class="lang ny">Chikhulupiriro chofala cholakwika</span></span>
-<span class="lang en">Spearman measures monotone ordering, not calibration or agreement. It ignores the size of gaps between values and does not imply causation.</span><span class="lang ny">Spearman imayeza dongosolo lokwera kapena kutsika, osati kuti miyeso ikugwirizana bwino. Sinyalanyaza kukula kwa mipata pakati pa ma value ndipo sikutanthauza causality.</span></p>
+<span class="lang en">Spearman correlation does not require a linear relationship, but it still does not prove causation.</span><span class="lang ny">Spearman correlation safuna ubale wa mzere wowongoka, koma sikutsimikizirabe kuti chinthu chimodzi chinayambitsa chinacho.</span></p>
 </article>
 <article class="entry" data-category="association" data-search="kendall tau-b kendall tau-b use as another rank-based association measure when you want an interpretable concordance probability and have many tied ranks or a modest sample. kendall amayang&#x27;ana awiriawiri a anthu. ngati munthu woyamba ali pamwamba pa winayo pa zinthu zonse ziwiri, awiriwiriwo amagwirizana; ngati dongosolo lisinthika, amasagwirizana. gwiritsani ntchito ngati muyezo wina wa ma rank pamene mukufuna kumvetsetsa mwayi wogwirizana wa ma pairs ndipo muli ndi ma rank ofanana ambiri kapena deta yochepa. it is like asking, for every pair of runners, whether the two judges ranked them in the same order. zili ngati kufunsa, pa othamanga awiri alionse, kuti owerenga awiri adawasanja m&#x27;dongosolo lomwelo kapena ayi. positive tau means more pairs are concordant than discordant. it can be read as the difference between the probabilities that a randomly chosen pair is concordant or discordant. tau yabwino imatanthauza kuti pali awiriawiri ogwirizana kwambiri kuposa osagwirizana. itha kuwerengedwa ngati kusiyana pakati pa mwayi woti awiriwiri asankhidwe mwachisawawa agwirizane kapena ayi. comparing two ordinal scoring systems with many repeated scores. kuyerekeza machitidwe awiri a masanjidwe okhala ndi zotsatira zobwerezabwereza. it is not a slope and has no simple units. different tie structures affect comparison across studies. si slope ndipo ilibe mayunitsi osavuta. kusiyana kwa ma value ofanana kumakhudza kuyerekeza pakati pa maphunziro. 4. association and correlation">
   <div class="entry-head">

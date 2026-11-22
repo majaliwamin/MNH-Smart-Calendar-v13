@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.22-statistical-tests-glossary-v38"
+    assert build == "2026.11.22-statistical-tests-glossary-v39"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v38"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v39"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -482,7 +482,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
-    build = "2026.11.22-statistical-tests-glossary-v38"
+    build = "2026.11.22-statistical-tests-glossary-v39"
     simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
     assert simulation_path.is_file()
     simulation = simulation_path.read_text(encoding="utf-8")
@@ -709,7 +709,7 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
-    build = "2026.11.22-statistical-tests-glossary-v38"
+    build = "2026.11.22-statistical-tests-glossary-v39"
     assert f'BUILD_ID = "{build}"' in backend_config
     assert f'window.MNH_BUILD="{build}"' in index
     assert f'const BUILD = "{build}"' in worker
@@ -762,9 +762,9 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
 
     requested = [
         "Independent samples t-test", "Paired samples t-test", "Welch’s t-test",
-        "Chi-square test", "Fisher’s exact test", "Analysis of variance (ANOVA)",
-        "Mann–Whitney U test",
-        "Wilcoxon signed-rank test", "Pearson correlation", "Spearman correlation",
+        "Chi-square test", "Fisher’s exact test", "Analysis of Variance (ANOVA)",
+        "Mann–Whitney U Test",
+        "Wilcoxon Signed-Rank Test", "Pearson Correlation", "Spearman Rank Correlation",
         "Linear regression", "Logistic regression", "Odds ratio", "Risk ratio",
         "Hazard ratio", "Confounding", "Interaction", "Multicollinearity",
         "Survival analysis",
@@ -777,6 +777,8 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
         "2x2 table, risk ratio and odds ratio",
         "Chi-square test of independence and Cramer's V", "Fisher exact test",
         "Fisher's exact test", "ANOVA", "Spearman rank correlation",
+        "Analysis of variance (ANOVA)", "Mann–Whitney U test",
+        "Wilcoxon signed-rank test", "Pearson correlation", "Spearman correlation",
         "Simple linear regression", "Logistic regression and odds ratios",
         "Confounding and crude versus adjusted effect",
         "Interaction and effect modification", "Multicollinearity and VIF",
