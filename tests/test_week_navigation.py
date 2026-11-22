@@ -92,22 +92,28 @@ def test_other_views_use_the_selected_week_dates():
     assert 'id="schedule-lead"' in HTML
 
 
-def test_saturday_and_sunday_have_separate_readable_foreground_colours():
-    assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]' in APP
-    assert 'weekendClass=index=>index===5?"weekend-saturday":index===6?"weekend-sunday":""' in APP
+def test_days_are_short_and_weekends_share_a_grey_editable_column():
+    assert 'const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]' in APP
+    assert 'const dayNames=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]' in APP
+    assert 'weekendClass=index=>index>=5?"weekend-day":""' in APP
     assert 'th.className="daycell "+weekendClass(c)' in APP
     assert 'td.className=weekendClass(dayIndex)' in APP
-    assert "--saturday-ink:#ffd166;--sunday-ink:#ff9db0" in CSS
-    assert 'body[data-theme="white"],body[data-theme="red"]{--saturday-ink:#7a4a00;--sunday-ink:#a11737}' in CSS
-    assert "#view-weekly thead th.daycell.weekend-saturday:not(.today-day)" in CSS
-    assert "#view-weekly thead th.daycell.weekend-sunday:not(.today-day)" in CSS
-    assert "#view-weekly tbody td.weekend-saturday .activity.day-ink" in CSS
-    assert "#view-weekly tbody td.weekend-sunday .activity.day-ink" in CSS
-    assert "thead th.daycell.today-day.weekend-saturday{color:var(--saturday-ink)!important}" in CSS
-    assert "thead th.daycell.today-day.weekend-sunday{color:var(--sunday-ink)!important}" in CSS
+    assert "--weekend-ink:#aab4c2;--weekend-bg:#222b36;--weekend-head-bg:#2c3643" in CSS
+    assert 'body[data-theme="white"],body[data-theme="red"]{--weekend-ink:#4b5563;--weekend-bg:#eef1f5;--weekend-head-bg:#e2e7ed}' in CSS
+    assert "#view-weekly thead th.daycell.weekend-day," in CSS
+    assert "#view-weekly thead th.daycell.today-day.weekend-day" in CSS
+    assert "#view-weekly tbody td.weekend-day," in CSS
+    assert "#view-weekly tbody td.weekend-day .activity{pointer-events:auto;cursor:pointer}" in CSS
+    assert "#view-weekly .wrap tbody td.weekend-day," in CSS
+    assert "background-color:var(--weekend-bg)!important" in CSS
+    assert "#view-weekly .wrap tbody td.weekend-day .activity-name," in CSS
+    assert "thead th.daycell.today-day.weekend-saturday" not in CSS
+    assert "thead th.daycell.today-day.weekend-sunday" not in CSS
+    assert "--saturday-ink" not in CSS and "--sunday-ink" not in CSS
     assert 'const cssVar=(n,el=document.documentElement)=>getComputedStyle(el).getPropertyValue(n).trim()' in APP
     assert 'const acroColor=c=>({ch1:c[0],ch2:c[1],ch3:c[2]})' in APP
     assert "f.color=acroColor(cellInk)" in APP
-    assert 'cssVar("--saturday-ink",document.body)' in APP
-    assert 'cssVar("--sunday-ink",document.body)' in APP
+    assert 'cssVar("--weekend-ink",document.body)' in APP
+    assert 'cssVar("--weekend-bg",document.body)' in APP
     assert "WEEKEND_HEADER_INK" in SERVER_PDF
+    assert "WEEKEND_BG" in SERVER_PDF

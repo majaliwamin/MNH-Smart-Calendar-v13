@@ -354,6 +354,28 @@ def test_practical_view_is_additive_to_the_existing_full_screen_pattern():
         assert f'"{path}"' in worker
 
 
+def test_stat8100_companion_is_english_only():
+    assert not (RESOURCES / "stat8100_practical_companion_ny.html").exists()
+    assert not (ROOT / "scripts" / "stat8100_chichewa.py").exists()
+
+    companion = COMPANION.read_text(encoding="utf-8")
+    assert "stat8100_practical_companion_ny" not in companion
+    assert "Chichewa version" not in companion
+    assert "lang-ny" not in companion
+
+    index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert "stat8100_practical_companion_ny" not in index
+    assert "Open Chichewa STAT 8100 Companion" not in index
+
+    worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    assert "/resources/stat8100_practical_companion_ny.html" not in worker.split("const REMOVED_APP_FILES")[0]
+
+    builder = (ROOT / "scripts" / "build_stat8100_practical.py").read_text(encoding="utf-8")
+    assert "stat8100_chichewa" not in builder
+    assert "stat8100_practical_companion_ny" not in builder
+    assert "_localize_document" not in builder
+
+
 def test_generators_and_dev_dependencies_are_present():
     scripts = ROOT / "scripts"
     for name in (
@@ -367,7 +389,7 @@ def test_generators_and_dev_dependencies_are_present():
     builder = (scripts / "build_stat8100_practical.py").read_text(encoding="utf-8")
     runner = (scripts / "execute_stat8100_practical.py").read_text(encoding="utf-8")
     assert "def build_notebook()" in builder
-    assert 'def build_html(results=None, lang="en")' in builder
+    assert "def build_html(results=None):" in builder
     assert "from stat8100_reporting import work_report, worked_template_examples" in builder
     assert "nbformat.write(" in runner
     assert "NotebookClient(" in runner

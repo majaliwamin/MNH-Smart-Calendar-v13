@@ -89,12 +89,16 @@ def test_excel_workbook_is_valid_monday_to_sunday_with_half_height_merged_lunch_
     wb = openpyxl.load_workbook(io.BytesIO(payload))
     ws = wb["Weekly Timetable"]
     header = [str(c.value) for c in ws[2]][1:]
-    assert [h.split("\n")[0] for h in header] == list(schedule.WEEKDAY_NAMES)
+    assert [h.split("\n")[0] for h in header] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     assert "3rd Block" in str(ws["A1"].value)
     everything = " ".join(str(c.value) for sheet in wb for row in sheet.iter_rows() for c in row if c.value).lower()
     assert "saturday" in everything and "sunday" in everything
-    assert str(ws.cell(2, 7).font.color.rgb).endswith("FCD34D")
-    assert str(ws.cell(2, 8).font.color.rgb).endswith("FDA4AF")
+    assert str(ws.cell(2, 7).font.color.rgb).endswith("D1D5DB")
+    assert str(ws.cell(2, 8).font.color.rgb).endswith("D1D5DB")
+    assert str(ws.cell(2, 7).fill.fgColor.rgb).endswith("E5E7EB")
+    assert str(ws.cell(2, 8).fill.fgColor.rgb).endswith("E5E7EB")
+    assert str(ws.cell(3, 7).fill.fgColor.rgb).endswith("E5E7EB")
+    assert str(ws.cell(3, 8).fill.fgColor.rgb).endswith("E5E7EB")
     # The header band is the only merged part; the timetable itself is a plain grid.
     merged = {str(m) for m in ws.merged_cells.ranges}
     assert merged == {"A1:H1"}

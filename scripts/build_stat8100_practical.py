@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import html
 import json
-import sys
-from html.parser import HTMLParser
 from pathlib import Path
 
 from stat8100_code_cells import CODE, QUESTION_CODE, QUESTION_TITLES
@@ -16,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_DIR = ROOT / "frontend" / "resources"
 NOTEBOOK_PATH = RESOURCE_DIR / "stat8100_biostatistics_epidemiology_practical.ipynb"
 HTML_PATH = RESOURCE_DIR / "stat8100_practical_companion.html"
-NY_HTML_PATH = RESOURCE_DIR / "stat8100_practical_companion_ny.html"
 RESULTS_PATH = RESOURCE_DIR / "stat8100_practical_results.json"
 
 BUILD_LABEL = "STAT 8100 · Lectures 1–6 · simulated teaching datasets"
@@ -436,141 +433,30 @@ RESULTS_PLACEHOLDER = {}
 JS_LABELS = {}
 
 
-class _ChichewaBridge:
-    """Small adapter around the validated translation module."""
-
-    def __init__(self):
-        scripts_dir = str(Path(__file__).resolve().parent)
-        if scripts_dir not in sys.path:
-            sys.path.insert(0, scripts_dir)
-        import stat8100_chichewa as ny  # imported only when the Nyasa copy is built
-
-        self.module = ny
-
-    def translate(self, text):
-        return self.module.translate(text)
-
-    def ui(self, text):
-        return self.module.UI.get(text, self.translate(text))
-
-
-class _TextTranslator(HTMLParser):
-    """Translate visible text nodes while preserving code, data and markup."""
-
-    SKIP_TAGS = {"script", "style"}
-
-    def __init__(self, translate):
-        super().__init__(convert_charrefs=True)
-        self._translate = translate
-        self._parts = []
-        self._skip = []
-
-    def handle_starttag(self, tag, attrs):
-        attributes = dict(attrs)
-        classes = attributes.get("class", "").split()
-        skip = tag in self.SKIP_TAGS
-        if tag == "pre" and "verified-output" in classes:
-            skip = True
-        if tag == "code" and "language-python" in classes:
-            skip = True
-        if skip:
-            self._skip.append(tag)
-        self._parts.append(self.get_starttag_text())
-
-    def handle_startendtag(self, tag, attrs):
-        self._parts.append(self.get_starttag_text())
-
-    def handle_endtag(self, tag):
-        if self._skip and self._skip[-1] == tag:
-            self._skip.pop()
-        self._parts.append(f"</{tag}>")
-
-    def handle_data(self, data):
-        if not data.strip():
-            self._parts.append(data)
-            return
-        if self._skip:
-            if any(tag in {"pre", "code"} for tag in self._skip):
-                self._parts.append(html.escape(data, quote=True))
-            else:
-                self._parts.append(data)
-            return
-        leading = data[: len(data) - len(data.lstrip())]
-        trailing = data[len(data.rstrip()) :]
-        core = data[len(leading) : len(data) - len(trailing)]
-        translated = html.escape(str(self._translate(core)), quote=False)
-        self._parts.append(leading + translated + trailing)
-
-    def handle_entityref(self, name):
-        self._parts.append(f"&{name};")
-
-    def handle_charref(self, name):
-        self._parts.append(f"&#{name};")
-
-    def handle_comment(self, data):
-        self._parts.append(f"<!--{data}-->")
-
-    def handle_decl(self, decl):
-        self._parts.append(f"<!{decl}>")
-
-    def result(self):
-        return "".join(self._parts)
-
-
 def _js_string(value):
     return json.dumps(value, ensure_ascii=False)
 
 
-def _prepare_language(lang):
+def _prepare_labels():
     global JS_LABELS
-    bridge = _ChichewaBridge() if lang == "ny" else None
-
-    def label(text):
-        return bridge.ui(text) if bridge else text
-
     JS_LABELS = {
-        "copied": _js_string(label("Copied ✓")),
-        "copy_failed": _js_string(label("Copy failed")),
-        "copy_code": _js_string(label("Copy code")),
-        "copy_setup_cell": _js_string(label("Copy setup + cell")),
-        "copy_cell_only": _js_string(label("Copy cell only")),
-        "completed": _js_string(label("Completed ✓")),
-        "mark_complete": _js_string(label("Mark complete")),
-        "progress": _js_string(label("{n} of {cards.length} subquestions marked complete.")),
-        "result_count": _js_string(label("{shown} of {cards.length} subquestions visible.")),
+        "copied": _js_string("Copied ✓"),
+        "copy_failed": _js_string("Copy failed"),
+        "copy_code": _js_string("Copy code"),
+        "copy_setup_cell": _js_string("Copy setup + cell"),
+        "copy_cell_only": _js_string("Copy cell only"),
+        "completed": _js_string("Completed ✓"),
+        "mark_complete": _js_string("Mark complete"),
+        "progress": _js_string("{n} of {cards.length} subquestions marked complete."),
+        "result_count": _js_string("{shown} of {cards.length} subquestions visible."),
     }
-    return bridge
 
 
-def _localize_document(document, bridge):
-    parser = _TextTranslator(bridge.ui)
-    parser.feed(document)
-    parser.close()
-    translated = parser.result()
-    translated = translated.replace('<html lang="en">', '<html lang="ny">', 1)
-    attribute_labels = [
-        ("placeholder", "Search all questions, code and guidance…"),
-        ("aria-label", "Search practical"),
-        ("aria-label", "Companion theme"),
-        ("aria-label", "Completion state"),
-        ("title", "STAT 8100 Biostatistics and Epidemiology Practical Companion"),
-    ]
-    for attribute, english in attribute_labels:
-        old = f'{attribute}="{html.escape(english, quote=True)}"'
-        new = f'{attribute}="{html.escape(bridge.ui(english), quote=True)}"'
-        translated = translated.replace(old, new)
-    translated = translated.replace(
-        ".lang-ny{display:none}",
-        ".lang-en{display:none}.lang-ny{display:inline-block}",
-    )
-    return translated
-
-
-def build_html(results=None, lang="en"):
+def build_html(results=None):
     results = results if results is not None else {}
     global RESULTS_PLACEHOLDER
     RESULTS_PLACEHOLDER = results
-    bridge = _prepare_language(lang)
+    _prepare_labels()
 
     nav_rows = []
     for qid, guide in GUIDES.items():
@@ -639,7 +525,6 @@ header.top p{{margin:4px 0;max-width:900px;color:#e7f0fb}}
 .badge{{display:inline-block;border:1px solid #ffffff66;border-radius:999px;padding:3px 10px;font-size:.78rem;margin-right:8px}}
 .header-actions{{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}}
 .header-actions a{{background:#fff;color:var(--navy);border-radius:8px;padding:8px 12px;font-weight:700;text-decoration:none}}
-.lang-ny{{display:none}}
 .layout{{display:grid;grid-template-columns:280px minmax(0,1fr);gap:22px;max-width:1500px;margin:0 auto;padding:22px}}
 aside{{position:sticky;top:12px;align-self:start;max-height:calc(100vh - 24px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}}
 aside h2{{font-size:1rem;margin:0 0 10px;text-transform:uppercase;letter-spacing:.08em;color:var(--navy)}}
@@ -734,8 +619,6 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
     <a href="./stat8100_biostatistics_epidemiology_practical.ipynb" download>Download the notebook</a>
     <a href="./stat8100_practical_results.json" download>Download verified results</a>
     <a href="#nav-table">Jump to full navigation table</a>
-    <a class="lang-en" href="./stat8100_practical_companion_ny.html">Chichewa version</a>
-    <a class="lang-ny" href="./stat8100_practical_companion.html">English version</a>
   </div>
 </header>
 <div class="layout">
@@ -909,19 +792,13 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
 </body>
 </html>
 """
-    if lang == "ny":
-        document = _localize_document(document, bridge)
-        target = NY_HTML_PATH
-    else:
-        target = HTML_PATH
-    target.write_text(document, encoding="utf-8", newline="\n")
-    if results and lang == "en":
+    HTML_PATH.write_text(document, encoding="utf-8", newline="\n")
+    if results:
         RESULTS_PATH.write_text(
             json.dumps(results, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n",
         )
-        build_html(results, "ny")
-    return target
+    return HTML_PATH
 
 
 if __name__ == "__main__":

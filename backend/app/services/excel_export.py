@@ -17,7 +17,8 @@ GRID = "9DB2C8"
 LUNCH_FILL = "F6E7C1"
 
 COLUMNS = 1 + len(WEEKDAY_NAMES)  # Time + Monday to Sunday
-WEEKEND_HEADER_INK = {5: "FCD34D", 6: "FDA4AF"}
+WEEKEND_HEADER_INK = "D1D5DB"
+WEEKEND_FILL = "E5E7EB"
 
 # The three programme modules every export must be able to include (the web app
 # defines the same defaults in the browser; they are repeated here so exports
@@ -87,12 +88,12 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
     ws.row_dimensions[1].height = 30
 
     # ---- Day header row: one ordinary cell per day ---------------------------
-    headers = ["Time"] + [f"{name}\n{(week_start + timedelta(days=i)).strftime('%d %b %Y')}"
+    headers = ["Time"] + [f"{name[:3]}\n{(week_start + timedelta(days=i)).strftime('%d %b %Y')}"
                           for i, name in enumerate(WEEKDAY_NAMES)]
     for col, text in enumerate(headers, start=1):
         c = ws.cell(2, col, text)
-        c.font = Font(bold=True, size=12, color=WEEKEND_HEADER_INK.get(col - 2, WHITE))
-        c.fill = PatternFill("solid", fgColor=BLUE)
+        c.font = Font(bold=True, size=12, color=WEEKEND_HEADER_INK if col - 2 >= 5 else WHITE)
+        c.fill = PatternFill("solid", fgColor=WEEKEND_FILL if col - 2 >= 5 else BLUE)
         c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         c.border = box
     ws.row_dimensions[2].height = 40
@@ -159,6 +160,8 @@ def build_timetable_workbook(collections: dict, selected_modules: list | None = 
                     cell.comment = Comment(
                         f"{s['start']}–{s['end']} · {s['mode']}\nLecturer: {s['lecturer'] or 'not assigned'}",
                         "MNH Calendar")
+                if col - 2 >= 5:
+                    cell.fill = PatternFill("solid", fgColor=WEEKEND_FILL)
             ws.row_dimensions[row].height = 64
         row += 1
 

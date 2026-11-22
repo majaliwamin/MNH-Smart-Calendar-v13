@@ -359,7 +359,7 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         weekly = workbook["Weekly Timetable"]
         details = workbook["Session Details"]
         headers = [str(weekly.cell(2, col).value).split("\n")[0] for col in range(1, 9)]
-        assert all(name in headers for name in ("Saturday", "Sunday"))
+        assert all(name in headers for name in ("Sat", "Sun"))
         assert details[3][5].value == "MIPN 8100"
         assert details[3][6].value == "Medical Imaging in Pregnancy and Neonates"
         assert details[3][7].value == "Dr Example"

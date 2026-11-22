@@ -39,11 +39,11 @@ const APP_FILES = [
   "/resources/python-command-library.html", "/resources/python-jupyter-windows-setup-simulation.html",
   "/resources/python-statistical-tests-glossary.html",
   "/resources/stat8100_practical_companion.html",
-  "/resources/stat8100_practical_companion_ny.html",
   "/resources/stat8100_biostatistics_epidemiology_practical.ipynb",
   "/resources/stat8100_practical_results.json",
   ...KATEX_FONTS.map((name) => "/vendor/katex/fonts/" + name)
 ];
+const REMOVED_APP_FILES = ["/resources/stat8100_practical_companion_ny.html"];
 
 async function cacheResponse(key, response) {
   // Cache writes are best-effort: a failed write must never become an unhandled
@@ -74,6 +74,10 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(async () => {
+        const cache = await caches.open(CACHE_NAME);
+        await Promise.all(REMOVED_APP_FILES.map((path) => cache.delete(path)));
+      })
       .then(() => self.clients.claim()),
   );
 });

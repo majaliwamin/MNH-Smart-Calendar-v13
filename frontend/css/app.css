@@ -6,9 +6,9 @@
  --text:#ffffff;--muted:#e2e8f0;--field:#1a2431;--control:#ffffff;--controlText:#101720;
  --nav:#0b1017;--nav-line:#f2c14e;--tab:#151d27;--tab-line:#4a5868;
  --tab-active:#f2c14e;--on-tab-active:#101720;--cell:#1a2431;--shadow:#00000066;
- --saturday-ink:#ffd166;--sunday-ink:#ff9db0;
+ --weekend-ink:#aab4c2;--weekend-bg:#222b36;--weekend-head-bg:#2c3643;
 }
-body[data-theme="white"],body[data-theme="red"]{--saturday-ink:#7a4a00;--sunday-ink:#a11737}
+body[data-theme="white"],body[data-theme="red"]{--weekend-ink:#4b5563;--weekend-bg:#eef1f5;--weekend-head-bg:#e2e7ed}
 body[data-theme="dark"]{
  --page:#0b1017;--panel:#151d27;--head:#0b1017;--line:#4a5868;
  --gold:#f2c14e;--accent:#f2c14e;--on-accent:#101720;--accentText:#101720;
@@ -908,31 +908,26 @@ tbody th.time{padding:8px 4px!important;vertical-align:middle}
  .ana-report{display:block!important}
 }
 
-/* Live Malawi-local day and time shading; Saturday and Sunday have distinct foreground colours. */
-#view-weekly thead th.daycell.weekend-saturday:not(.today-day),
-#view-weekly tbody td.weekend-saturday{color:var(--saturday-ink)!important}
-#view-weekly thead th.daycell.weekend-sunday:not(.today-day),
-#view-weekly tbody td.weekend-sunday{color:var(--sunday-ink)!important}
-#view-weekly thead th.daycell.weekend-saturday .day,
-#view-weekly thead th.daycell.weekend-saturday .date,
-#view-weekly thead th.daycell.weekend-sunday .day,
-#view-weekly thead th.daycell.weekend-sunday .date{color:inherit!important}
-#view-weekly tbody td.weekend-saturday .activity.day-ink,
-#view-weekly tbody td.weekend-saturday .empty-activity{color:var(--saturday-ink)!important}
-#view-weekly tbody td.weekend-sunday .activity.day-ink,
-#view-weekly tbody td.weekend-sunday .empty-activity{color:var(--sunday-ink)!important}
+/* Saturday and Sunday share one grey treatment; their cells stay fully editable. */
 thead th.daycell.today-day{background:var(--accent)!important;color:var(--page)!important;border-bottom:3px solid var(--gold)}
 thead th.daycell.today-day .date{color:var(--page)!important;font-weight:800}
 body[data-theme="midnight"] thead th.daycell.today-day .date,body[data-theme="silver"] thead th.daycell.today-day .date{color:#fff!important}
-/* A weekend day keeps its own foreground even when it is also today. */
-thead th.daycell.today-day.weekend-saturday{color:var(--saturday-ink)!important}
-thead th.daycell.today-day.weekend-sunday{color:var(--sunday-ink)!important}
-thead th.daycell.today-day.weekend-saturday .date,
-thead th.daycell.today-day.weekend-sunday .date{color:inherit!important}
 tbody td.today-column{background:rgba(203,166,88,.10)!important}
 tbody tr.current-time-row th.time,thead th.time.current-time-label{background:var(--gold)!important;color:var(--page)!important;box-shadow:inset 0 0 0 2px #fff4}
 tbody tr.current-time-row td.current-slot{background:rgba(203,166,88,.24)!important;box-shadow:inset 0 0 0 2px var(--gold)}
 tbody tr.current-time-row td.current-slot .activity{border-color:var(--gold)!important;box-shadow:0 0 0 1px var(--gold)}
+#view-weekly thead th.daycell.weekend-day,
+#view-weekly thead th.daycell.today-day.weekend-day{background:var(--weekend-head-bg)!important;color:var(--weekend-ink)!important;border-bottom:3px solid var(--gold)}
+#view-weekly thead th.daycell.weekend-day .day,
+#view-weekly thead th.daycell.weekend-day .date,
+#view-weekly thead th.daycell.today-day.weekend-day .day,
+#view-weekly thead th.daycell.today-day.weekend-day .date{color:var(--weekend-ink)!important}
+#view-weekly tbody td.weekend-day,
+#view-weekly tbody td.weekend-day.today-column,
+#view-weekly tbody tr.current-time-row td.weekend-day.current-slot{background:var(--weekend-bg)!important;color:var(--weekend-ink)!important}
+#view-weekly tbody td.weekend-day .activity.day-ink,
+#view-weekly tbody td.weekend-day .empty-activity{color:var(--weekend-ink)!important;border-color:var(--weekend-ink)!important}
+#view-weekly tbody td.weekend-day .activity{pointer-events:auto;cursor:pointer}
 .month-day.today{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);background:rgba(203,166,88,.13)}
 
 
@@ -2504,4 +2499,42 @@ html body .colour-dialog .dialog-card h2{
 @media(max-height:620px){
   html body .colour-dialog{padding-top:calc(6px + env(safe-area-inset-top, 0px))!important;padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px))!important}
   html body .colour-dialog .dialog-card{max-height:calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))!important;padding:16px!important}
+}
+
+/* FINAL WEEKEND OVERRIDE: SAT and SUN must share one grey, editable column.
+   These selectors come after every theme/frozen-layout rule so the earlier
+   !important cell backgrounds cannot restore the ordinary weekday colour. */
+#view-weekly .wrap thead th.daycell.weekend-day,
+#view-weekly .wrap thead th.daycell.today-day.weekend-day{
+  background-color:var(--weekend-head-bg)!important;
+  background-image:none!important;
+  color:var(--weekend-ink)!important;
+}
+#view-weekly .wrap thead th.daycell.weekend-day .day,
+#view-weekly .wrap thead th.daycell.weekend-day .date,
+#view-weekly .wrap thead th.daycell.today-day.weekend-day .day,
+#view-weekly .wrap thead th.daycell.today-day.weekend-day .date{
+  color:var(--weekend-ink)!important;
+}
+#view-weekly .wrap tbody td.weekend-day,
+#view-weekly .wrap tbody td.weekend-day.today-column,
+#view-weekly .wrap tbody tr.current-time-row td.weekend-day.current-slot{
+  background-color:var(--weekend-bg)!important;
+  background-image:none!important;
+  color:var(--weekend-ink)!important;
+}
+#view-weekly .wrap tbody td.weekend-day .cell,
+#view-weekly .wrap tbody td.weekend-day .activity,
+#view-weekly .wrap tbody td.weekend-day .activity.empty-activity{
+  background-color:var(--weekend-bg)!important;
+  background-image:none!important;
+  color:var(--weekend-ink)!important;
+  border-color:var(--weekend-ink)!important;
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  opacity:1!important;
+}
+#view-weekly .wrap tbody td.weekend-day .activity-name,
+#view-weekly .wrap tbody td.weekend-day .activity-lecturer{
+  color:var(--weekend-ink)!important;
 }

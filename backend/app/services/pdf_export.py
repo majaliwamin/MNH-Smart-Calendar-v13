@@ -74,11 +74,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     TIME_BG = colors.HexColor(time_hex)
     LUNCH_BG = colors.HexColor(lunch_hex)
     LUNCH_TEXT = colors.HexColor(lunch_text_hex)
-    # Distinct, readable weekend foregrounds; light themes need darker ink.
-    WEEKEND_HEADER_INK = {
-        5: colors.HexColor("#7A4A00" if theme == "white" else "#FCD34D"),
-        6: colors.HexColor("#A11737" if theme == "white" else "#FDA4AF"),
-    }
+    # Saturday and Sunday share one grey header ink and one grey column fill.
+    WEEKEND_HEADER_INK = colors.HexColor("#4B5563" if theme == "white" else "#CBD5E1")
+    WEEKEND_BG = colors.HexColor("#EEF1F5" if theme == "white" else "#2C3643")
     week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
     selected_codes = set(selection)
@@ -193,16 +191,16 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.roundRect(x, bottom, card_w, card_h, 2.5 * mm, stroke=0, fill=1)
         pdf.setFillColor(PURPLE)
         pdf.roundRect(x, top_y - header_h, card_w, header_h, 2 * mm, stroke=0, fill=1)
-        pdf.setFillColor(WEEKEND_HEADER_INK.get(day_index, WHITE))
+        pdf.setFillColor(WEEKEND_HEADER_INK if day_index >= 5 else WHITE)
         set_font("Helvetica-Bold", 20)
         pdf.drawString(x + 4 * mm, top_y - 8 * mm,
-                       f"{day_date.strftime('%a').upper()}  |  {day_date.strftime('%d %B %Y')}")
+                       f"{day_date.strftime('%a')}  |  {day_date.strftime('%d %B %Y')}")
         time_w = 43 * mm
         row_top = top_y - header_h
         for slot_index, (start, end) in enumerate(TIME_SLOTS):
             row_y = row_top - (slot_index + 1) * row_h
             is_lunch = abs(start - 12) < 0.01
-            bg = LUNCH_BG if is_lunch else (PAGE if slot_index % 2 == 0 else PALE)
+            bg = LUNCH_BG if is_lunch else (WEEKEND_BG if day_index >= 5 else (PAGE if slot_index % 2 == 0 else PALE))
             pdf.setFillColor(bg)
             pdf.roundRect(x + 1.5 * mm, row_y + .5 * mm, card_w - 3 * mm, row_h - .8 * mm,
                           1 * mm, stroke=0, fill=1)
@@ -239,6 +237,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 f"wk_{day_index}_{int(start * 60)}", f"{day_name} {_slot_label(start, end)}",
                 x + time_w + 2 * mm, row_y + 1.0 * mm, card_w - time_w - 6 * mm, row_h - 1.8 * mm,
                 preset, font_size=16,
+                fill=WEEKEND_BG if day_index >= 5 else None,
             )
         return bottom - 5 * mm
 
@@ -265,10 +264,13 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     for day_index in range(len(WEEKDAY_NAMES)):
         day_x = table_x + time_w + day_index * day_w
         day_date = week_start + timedelta(days=day_index)
-        pdf.setFillColor(WEEKEND_HEADER_INK.get(day_index, WHITE))
+        if day_index >= 5:
+            pdf.setFillColor(WEEKEND_BG)
+            pdf.rect(day_x, header_bottom, day_w, header_h, stroke=0, fill=1)
+        pdf.setFillColor(WEEKEND_HEADER_INK if day_index >= 5 else WHITE)
         set_font("Helvetica-Bold", 20)
         pdf.drawCentredString(day_x + day_w / 2, header_bottom + 10.5 * mm,
-                              day_date.strftime("%a").upper())
+                              day_date.strftime("%a"))
         set_font("Helvetica", 6.5)
         pdf.drawCentredString(day_x + day_w / 2, header_bottom + 3.0 * mm,
                               day_date.strftime("%d %b %Y"))
@@ -306,6 +308,9 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
 
         for day_index in range(len(WEEKDAY_NAMES)):
             cell_x = table_x + time_w + day_index * day_w
+            if day_index >= 5:
+                pdf.setFillColor(WEEKEND_BG)
+                pdf.rect(cell_x, row_y, day_w, row_h, stroke=0, fill=1)
             if day_index:
                 pdf.setStrokeColor(LINE)
                 pdf.line(cell_x, row_y, cell_x, row_top)
@@ -329,6 +334,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                 cell_x + 1 * mm, row_y + 1.5 * mm,
                 day_w - 2 * mm, row_h - 3 * mm,
                 preset, font_size=EDIT_FIELD_FONT_SIZE, multiline=True,
+                fill=WEEKEND_BG if day_index >= 5 else None,
             )
 
     footer()

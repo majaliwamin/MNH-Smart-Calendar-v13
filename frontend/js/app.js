@@ -5,8 +5,9 @@ let weekOffset=WK.currentOffset();
 let autoWeekOffset=weekOffset;
 let dates=WK.dateLabels(weekOffset);
 const LEGACY_ROW_MAP={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:6};
-const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-const weekendClass=index=>index===5?"weekend-saturday":index===6?"weekend-sunday":"";
+const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const dayNames=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const weekendClass=index=>index>=5?"weekend-day":"";
 let modules={
  "MIPN 8100":{title:"Medical Imaging in Pregnancy and Neonates",facilitator:"Not specified"},
  "ARMN – 8100":{title:"Antimicrobial Resistance in Maternal & Neonatal Health",facilitator:"G Bandawe"},
@@ -85,7 +86,7 @@ function getSessionEntries(offset=weekOffset){
   result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[moduleCode]?.title||""),facilitator:String(data.facilitatorOverride||"").trim()||(moduleCode?facilitatorFor(moduleCode):"")||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
  });
  recurringRecords.filter(row=>row.data?.enabled!==false).forEach(row=>{
-  const data=row.data||{},range=parseRange(data.time),dayIndex=days.indexOf(String(data.day||""));
+  const data=row.data||{},range=parseRange(data.time),dayIndex=dayNames.indexOf(String(data.day||""));
   if(dayIndex<0||!range)return;
   const start=parseClock(range.startTime),end=parseClock(range.endTime);
   if(start===null||end===null||end<=start)return;
@@ -293,7 +294,7 @@ function build(){
   const toggle=()=>{selectedTime=selectedTime===index?-1:index;tbody.querySelectorAll("th.time:not(.lunch-time)").forEach((node,i)=>node.classList.toggle("highlight",i===selectedTime));};th.addEventListener("click",toggle);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});tr.appendChild(th);
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.className=weekendClass(dayIndex);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
-   const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
+   const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${dayNames[dayIndex]}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${dayNames[dayIndex]} at ${start}`);
    if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}else if(weekendClass(dayIndex)){area.classList.add("day-ink");}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
@@ -489,7 +490,8 @@ async function downloadPdf(){
   const cssVar=(n,el=document.documentElement)=>getComputedStyle(el).getPropertyValue(n).trim();
   const parse=c=>{const r=rgb(c);if(r)return r;const h=String(c||"").replace("#","").trim();if(h.length>=6){const n=parseInt(h.slice(0,6),16);return[(n>>16)&255,(n>>8)&255,n&255];}return null;};
   // Read from body so light-theme overrides are honoured in the exported PDF.
-  const weekendInk=[parse(cssVar("--saturday-ink",document.body))||[255,209,102],parse(cssVar("--sunday-ink",document.body))||[255,157,176]];
+  const weekendInk=parse(cssVar("--weekend-ink",document.body))||[107,114,128];
+  const weekendBg=parse(cssVar("--weekend-bg",document.body))||[229,231,235];
   const line=parse(cssVar("--gridline"))||[120,135,150];
   const ink=rgb(cs(document.body,"color"))||[255,255,255];
   const cyan=ink,white=ink;
@@ -511,13 +513,15 @@ async function downloadPdf(){
   pdf.setDrawColor(...line);pdf.setLineWidth(.4);
   head.forEach((th,i)=>{
    const x=i===0?M:M+cw0+(i-1)*cw,w=i===0?cw0:cw;
-   pdf.setFillColor(...hBg);pdf.rect(x,top,w,hh,"FD");
+   const weekend=i>5;
+   const headerBg=weekend?weekendBg:hBg;
+    pdf.setFillColor(...headerBg);pdf.rect(x,top,w,hh,"FD");
    if(i===0){
     pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));
     txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});
    }else{
     const c=i-1;
-    const headerInk=weekendInk[c-5]||rgb(cs(th,"color"))||inkOn(hBg);
+    const headerInk=weekend?weekendInk:(rgb(cs(th,"color"))||inkOn(headerBg));
     pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...headerInk);
     txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
     pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...headerInk);

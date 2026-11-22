@@ -62,8 +62,9 @@ def test_weekly_calendar_is_monday_to_sunday_and_supports_custom_sessions():
     assert 'class="week-nav"' in html
     assert 'id="view-my-schedule"' in html
     assert 'id="session-day"' in html and 'id="session-start"' in html and 'id="session-end"' in html
-    assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]' in app
-    assert '<option value="5">Saturday</option><option value="6">Sunday</option>' in html
+    assert 'const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]' in app
+    assert 'const dayNames=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]' in app
+    assert '<option value="5">Sat</option><option value="6">Sun</option>' in html
     assert 'dayIndex,startTime,endTime' in app
     assert 'showView("weekly")' in app
     assert 'history.replaceState(null,"",location.pathname+location.search)' in app
