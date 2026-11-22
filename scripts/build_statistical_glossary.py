@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-BUILD = "2026.11.22-statistical-tests-glossary-v41"
+BUILD = "2026.11.22-statistical-tests-glossary-v42"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
 

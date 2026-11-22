@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.22-statistical-tests-glossary-v41"
+    assert build == "2026.11.22-statistical-tests-glossary-v42"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v41"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v42"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -482,7 +482,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
-    build = "2026.11.22-statistical-tests-glossary-v41"
+    build = "2026.11.22-statistical-tests-glossary-v42"
     simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
     assert simulation_path.is_file()
     simulation = simulation_path.read_text(encoding="utf-8")
@@ -709,7 +709,7 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
-    build = "2026.11.22-statistical-tests-glossary-v41"
+    build = "2026.11.22-statistical-tests-glossary-v42"
     assert f'BUILD_ID = "{build}"' in backend_config
     assert f'window.MNH_BUILD="{build}"' in index
     assert f'const BUILD = "{build}"' in worker
@@ -960,8 +960,9 @@ def test_cover_page_has_requested_subtitle_and_no_microscope():
         encoding="utf-8"
     )
     assert "For biomedical and health sciences research" in library
-    assert "methodological review v41" in library
+    assert "methodological review v42" in library
     assert "no microscope illustration" in library
+    assert "no course-name labels" in library
 
     # Ignore embedded image data when checking source copy: base64 text can
     # contain incidental letter sequences.
@@ -973,4 +974,4 @@ def test_cover_page_has_requested_subtitle_and_no_microscope():
     match = re.search(r"data:image/png;base64,([A-Za-z0-9+/=]+)", library)
     assert match
     digest = hashlib.sha256(base64.b64decode(match.group(1))).hexdigest().upper()
-    assert digest == "56DF7BD6748BB21DC271CA953BED3FD57FADDD8B369EB981E852C1D063D4A930"
+    assert digest == "D27A3AA94DFFD4548FBFB44B3A6B18771155E436EFD0E5B9ADC97CF25BCBA1DA"
