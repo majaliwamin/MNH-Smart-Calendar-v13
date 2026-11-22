@@ -179,6 +179,7 @@ def test_image_exports_include_a_header_and_use_larger_fonts():
         'setProperty("--text-scale","1.85","important")',
         'setProperty("font-size","28px","important")',
         'exportWidth=1200',
+        'setTimeout(finish,250)',
     ):
         assert token in export_code, token
 

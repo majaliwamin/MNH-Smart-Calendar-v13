@@ -1827,7 +1827,7 @@ async function downloadTimetableImage(mime){
  try{
   status.className="status";status.textContent="Rendering high-resolution timetable image…";
   build();weekly.hidden=false;
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  await new Promise(resolve=>{let done=false;const finish=()=>{if(!done){done=true;resolve();}};requestAnimationFrame(()=>requestAnimationFrame(finish));setTimeout(finish,250);});
   const target=weekly.querySelector(".wrap");if(!target)throw new Error("The weekly timetable is not available.");
   const cs=getComputedStyle(document.body),variable=name=>cs.getPropertyValue(name).trim();
   const headerTitle=(document.getElementById("hd-title")?.textContent||"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block").trim();
