@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Build the additive bilingual statistical-tests reference page.
+"""Build the additive bilingual statistical-tests glossary page.
 
-Every entry is a self-contained notebook cell with fixed-seed synthetic data.
-Examples are executed here and their real stdout is embedded in the static
-HTML, so no clinical threshold, empirical result or invented number is
-hard-coded into the teaching page.
+Each glossary card uses the same short structure: term, English definition,
+Chichewa explanation, analogy, Python example where applicable, code
+explanation, practical application and common misconception. Code-bearing
+entries remain self-contained notebook cells with fixed-seed synthetic data;
+they are executed here and their real stdout is embedded in the static HTML,
+so no clinical threshold, empirical result or invented number is hard-coded.
+Conceptual terms may intentionally have no code example.
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-BUILD = "2026.11.22-statistical-tests-glossary-v36"
+BUILD = "2026.11.22-statistical-tests-glossary-v37"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
 
@@ -42,7 +45,7 @@ def E(
     use_ny: str,
     assumptions_en: str,
     assumptions_ny: str,
-    code: str,
+    code: str | None,
     interpretation_en: str,
     interpretation_ny: str,
     limits_en: str,
@@ -59,20 +62,22 @@ def E(
     """Register one entry after validating and executing its example."""
     if category not in {item[0] for item in CATEGORIES}:
         raise ValueError(f"Unknown category: {category}")
-    if "SIMULATED TEACHING DATA" not in code:
-        raise ValueError(f"{term}: missing simulation label")
-    if "default_rng(" not in code:
-        raise ValueError(f"{term}: missing fixed-seed generator")
-    if "http://" in code or "https://" in code or "requests." in code:
-        raise ValueError(f"{term}: network access is not allowed")
-    buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        exec(compile(code, f"<{term}>", "exec"), {"__name__": "__main__"})
-    output = buffer.getvalue().rstrip()
-    if not output:
-        raise ValueError(f"{term}: example printed no output")
-    if re.search(r"\b(?:nan|inf|infinity)\b", output, re.I):
-        raise ValueError(f"{term}: example printed a non-finite result")
+    output = ""
+    if code is not None:
+        if "SIMULATED TEACHING DATA" not in code:
+            raise ValueError(f"{term}: missing simulation label")
+        if "default_rng(" not in code:
+            raise ValueError(f"{term}: missing fixed-seed generator")
+        if "http://" in code or "https://" in code or "requests." in code:
+            raise ValueError(f"{term}: network access is not allowed")
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            exec(compile(code, f"<{term}>", "exec"), {"__name__": "__main__"})
+        output = buffer.getvalue().rstrip()
+        if not output:
+            raise ValueError(f"{term}: example printed no output")
+        if re.search(r"\b(?:nan|inf|infinity)\b", output, re.I):
+            raise ValueError(f"{term}: example printed a non-finite result")
     ENTRIES.append(
         {
             "category": category,
@@ -82,8 +87,8 @@ def E(
             "use_ny": use_ny,
             "assumptions_en": assumptions_en,
             "assumptions_ny": assumptions_ny,
-            "code": code.strip(),
-            "output": output,
+            "code": code.strip() if code is not None else None,
+            "output": output or None,
             "interpretation_en": interpretation_en,
             "interpretation_ny": interpretation_ny,
             "limits_en": limits_en,
@@ -331,6 +336,43 @@ print("two-sided permutation p =", round((count + 1)/(B + 1), 4))''',
     report_ny="Nenani chiwerengero choyesedwa, kuchuluka kwa kusinthana, chifukwa chomwe kusinthana kumavomerezeka ndi kaya mayesowo anali amodzi kapena awiri.",
     application_en="Comparing a small pilot group with a control when a parametric assumption is doubtful.",
     application_ny="Kuyerekeza gulu laling'ono la pilot ndi gulu lolamulira pamene mfundo za parametric zikukayikiridwa.",
+)
+
+E(
+    category="groups",
+    term="Independent samples t-test",
+    term_ny="t-test ya magulu odziyimira pawokha",
+    use_en="Use Student's independent-samples t-test to compare the means of two unrelated groups when a common within-group variance is a defensible model.",
+    use_ny="Gwiritsani ntchito Student's t-test ya magulu odziyimira pawokha poyerekeza avareji a magulu awiri osagwirizana pamene kufalikira kofanana mkati mwa magulu kuli kovomerezeka.",
+    assumptions_en="Observations are independent between and within groups; the outcome is continuous; group means are approximately normal, especially with small samples; the two groups have similar variances and no dominant outlier.",
+    assumptions_ny="Ma observation ndi odziyimira pawokha mkati ndi pakati pa magulu; zotsatira ndi za manambala; avareji a magulu ali pafupifupi normal, makamaka ngati deta ndi yochepa; magulu awiriwo ali ndi variances zofanana komanso palibe outlier wamkulu.",
+    code='''import numpy as np
+from scipy import stats
+
+# SIMULATED TEACHING DATA — not real patient records.
+rng = np.random.default_rng(2026112240)
+standard = rng.normal(3200, 380, 55)
+new_care = rng.normal(3330, 390, 48)
+
+res = stats.ttest_ind(new_care, standard, equal_var=True)
+ci = res.confidence_interval(0.95)
+print("means =", round(float(standard.mean()), 1), "and",
+      round(float(new_care.mean()), 1))
+print("pooled t =", round(float(res.statistic), 3),
+      "df =", round(float(res.df), 1), "p =", round(float(res.pvalue), 4))
+print("95% CI for difference =", round(float(ci.low), 1), "to",
+      round(float(ci.high), 1))''',
+    interpretation_en="equal_var=True asks SciPy to pool the two variances into one common estimate. The t statistic is the mean difference divided by its pooled standard error; the interval shows the plausible size of that difference.",
+    interpretation_ny="equal_var=True imauza SciPy kuti igwirizanitse variances ziwirizo kukhala chimodzi. t ndi kusiyana kwa avareji kogawidwa ndi standard error yophatikizidwa; interval imasonyeza kukula kotheka kwa kusiyana.",
+    limits_en="If variances differ markedly, Welch's t-test is usually safer. This test compares means only; it does not adjust for confounding and it is invalid for paired data.",
+    limits_ny="Ngati variances zasiyana kwambiri, Welch's t-test nthawi zambiri ndi yotetezeka. Mayesowa uyerekeza avareji okha; suchotsa zinthu zosokoneza ndipo si woyenera deta yophatikizidwa.",
+    explanation_ny="Independent samples t-test imafunsa kuti avareji a magulu awiri osiyana ndi osiyana kwambiri poyerekeza ndi kufalikira kwa deta mkati mwa gulu lililonse. 'Independent' kutanthauza kuti munthu aliyense ali mugulu limodzi lokha.",
+    analogy_en="It is like comparing the average harvest of two separate farms. Each farm contributes its own yield once, and the comparison asks whether the difference is larger than ordinary farm-to-farm variation.",
+    analogy_ny="Zili ngati kuyerekeza zokolola zapakati pa mafakitale awiri osiyana. Famu iliyonse imapereka zokolola zake kamodzi, ndipo kuyerekezako kumafunsa kuti kusiyana kwake n'kwakukulu kuposa kusiyana kwamba.",
+    report_en="Report each group's n, mean and SD, the mean difference with 95% CI, pooled t, df and p. Name the equal-variance assumption.",
+    report_ny="Nenani n, avareji ndi SD ya gulu lililonse, kusiyana kwa avareji ndi 95% CI, pooled t, df ndi p. Tchulani mfundo ya variances zofanana.",
+    application_en="Comparing mean birth weight between two independently sampled regions when spread is comparable.",
+    application_ny="Kuyerekeza avareji ya kulemera kwa makanda pakati pa madera awiri osiyana pamene kufalikira kuli kofanana.",
 )
 
 E(
@@ -639,6 +681,43 @@ print("odds ratio =", round(float(res.oddsratio), 3),
     report_ny="Fotokozani momwe table yakonzedwera, tanthauzo la chochitika ndi nthawi. Nenani muyezo wosankhidwa ndi 95% CI, ndi kuti ndi wosakonzedwa kapena wosinthidwa.",
     application_en="Summarising the association between an exposure and a binary outcome before fitting logistic regression.",
     application_ny="Kufotokoza ubale pakati pa chinthu chowonekera ndi zotsatira za binary musanayike logistic regression.",
+)
+
+E(
+    category="categories",
+    term="Odds ratio",
+    term_ny="Odds ratio",
+    use_en="Use an odds ratio to compare the odds of an event between two groups, especially for binary outcomes in case-control studies and logistic regression.",
+    use_ny="Gwiritsani ntchito odds ratio poyerekeza ma odds a chochitika pakati pa magulu awiri, makamaka pa zotsatira za binary mu kafukufuku wa case-control ndi logistic regression.",
+    assumptions_en="The 2x2 table has a consistent orientation and a defined event and time window. Observations are independent. For adjusted odds ratios, the logistic model must be correctly specified with no separation.",
+    assumptions_ny="Table 2x2 ili ndi dongosolo lokhazikika, chochitika chomveka ndi nthawi yofotokozedwa. Ma observation ndi odziyimira pawokha. Pa odds ratio wosinthidwa, model ya logistic iyenera kukhala yolondola popanda kulekanitsa.",
+    code='''import numpy as np
+from statsmodels.stats.contingency_tables import Table2x2
+
+# SIMULATED TEACHING DATA — not real patient records.
+rng = np.random.default_rng(2026112241)
+exposed_event = rng.binomial(1, 0.40, 90).sum()
+unexposed_event = rng.binomial(1, 0.20, 90).sum()
+table = np.array([[exposed_event, 90-exposed_event],
+                  [unexposed_event, 90-unexposed_event]])
+res = Table2x2(table)
+ci = res.oddsratio_confint()
+
+print("table [event, no event] rows: exposed, unexposed")
+print(table)
+print("odds ratio =", round(float(res.oddsratio), 3),
+      "95% CI", round(float(ci[0]), 3), "to", round(float(ci[1]), 3))''',
+    interpretation_en="Odds are event count divided by non-event count. The odds ratio divides the exposed odds by the unexposed odds. A value above 1 means higher odds in the exposed row, but it is not the same as a risk ratio when events are common.",
+    interpretation_ny="Ma odds ndi kuchuluka kwa zochitika kogawidwa ndi kosachitika. Odds ratio imagawa ma odds a gulu lowonekera ndi a gulu losawonekera. Mtengo woposa 1 ukutanthauza ma odds apamwamba, koma si wofanana ndi risk ratio zochitika zikachuluka.",
+    limits_en="A crude odds ratio does not adjust for confounding. It can look farther from 1 than the corresponding risk ratio for common outcomes. Sparse cells give wide intervals and zero cells can make the estimate unstable.",
+    limits_ny="Odds ratio yosakonzedwa suchotsa zinthu zosokoneza. Zochitika zikachuluka, imatha kuwoneka kutali ndi 1 kuposa risk ratio. Maselo ochepa amapanga ma interval otakata ndipo selo la zero lingapangitse kuyerekezako kusakhazikika.",
+    explanation_ny="Odds ratio uyerekeza ma odds, osati mwayi weniweni. Ngati gulu limodzi lili ndi ma odds apamwamba kawiri, izi sizitanthauza kuti mwayi wochitika unawirikizeka, makamaka ngati chochitikacho chili chofala.",
+    analogy_en="Risk is like the fraction of a class that passes; odds are the ratio of passers to non-passers. An odds ratio compares those pass-to-fail ratios, not the pass fractions themselves.",
+    analogy_ny="Risk ili ngati gawo la kalasi lomwe ladutsa; ma odds ndi chiŵerengero cha odutsa ndi osadutsa. Odds ratio uyerekeza chiŵerengerocho, osati magawo a odutsa.",
+    report_en="State the table orientation, event definition and time window. Report the odds ratio with 95% CI and say whether it is crude or model-adjusted.",
+    report_ny="Fotokozani momwe table yakonzedwera, tanthauzo la chochitika ndi nthawi. Nenani odds ratio ndi 95% CI ndi kuti ndi wosakonzedwa kapena wosinthidwa ndi model.",
+    application_en="Summarising an exposure-outcome association in a case-control study or reporting a logistic regression coefficient as an adjusted odds ratio.",
+    application_ny="Kufotokoza ubale wa exposure ndi zotsatira mu kafukufuku wa case-control kapena kunena coefficient ya logistic regression ngati odds ratio wosinthidwa.",
 )
 
 E(
@@ -1476,6 +1555,28 @@ print("n clusters =", df["id"].nunique())''',
 
 E(
     category="advanced",
+    term="Survival analysis",
+    term_ny="Kusanthula kwa nthawi mpaka chochitika",
+    use_en="Use survival analysis for time-to-event outcomes, especially when some participants are censored before the event of interest is observed.",
+    use_ny="Gwiritsani ntchito kusanthula kwa nthawi mpaka chochitika pamene chochitika chimatenga nthawi kuchitika, makamaka ngati ena atayika asanachitike chochitikacho.",
+    assumptions_en="Time zero and the event must be defined consistently. Censoring should be independent of event risk conditional on the variables in the model. The chosen method must match the question: description, comparison or adjusted modelling.",
+    assumptions_ny="Nthawi yoyambira ndi chochitika ziyenera kufotokozedwa mofanana. Kutayika kwa deta kuyenera kukhala kosagwirizana ndi chiopsezo potengera zinthu zili mu model. Njira yosankhidwa igwirizane ndi funso: kufotokoza, kuyerekeza kapena kuyimba model.",
+    code=None,
+    interpretation_en="No standalone code is needed for this umbrella term. The Kaplan-Meier entry estimates the event-free curve, while the Cox regression entry estimates adjusted hazard ratios from the same kind of time-to-event data.",
+    interpretation_ny="Mawu akuluwa safuna code payokha. Cholemba cha Kaplan-Meier chimayerekeza mphepete yopanda chochitika, pamene cholemba cha Cox chimayerekeza ma hazard ratio osinthidwa kuchokera ku deta yamtunduwu.",
+    limits_en="Ignoring censoring or treating censored participants as event-free forever biases the estimate. A survival method does not by itself establish causation, and competing events need explicit handling.",
+    limits_ny="Kunyalanyaza kutayika kwa deta kapena kuona omwe atayika ngati opanda chochitika mpaka kalekale kumakondera zotsatira. Njira yopulumuka yokha sikutsimikizira causality, ndipo zochitika zopikisana zifunika kuyendetsedwa momveka.",
+    explanation_ny="Survival analysis siyongotanthauza imfa. Imaphunzira nthawi kuyambira poyambira mpaka chochitika, monga kutuluka m'chipatala, kuyambiranso kwa matenda kapena kulephera kwa chida. Anthu omwe sanachitike chochitika mpaka kafukufuku utha amadziwika kuti censored.",
+    analogy_en="It is like following a cohort of light bulbs until each fails, while some bulbs are still working when the study ends. Those still working do not count as failures, but they do contribute their observed working time.",
+    analogy_ny="Zili ngati kutsata gulu la mababu mpaka awonongeke, pamene ena akadagwira ntchito kafukufuku akatha. Omwe akadagwira ntchito sawerengedwa kuti awonongeka, koma nthawi yawo yogwira ntchito imathandizira.",
+    report_en="Define time zero, the event and censoring. Name the method used and report estimates with uncertainty and numbers at risk or events.",
+    report_ny="Fotokozani nthawi yoyambira, chochitika ndi kutayika kwa deta. Tchulani njira yomwe mugwiritsa ntchito ndipo nenani zoyerekeza ndi kusatsimikizika komanso kuchuluka kwa omwe ali pachiwopsezo kapena zochitika.",
+    application_en="Time from treatment start to relapse, from birth to a neonatal outcome, or from device insertion to failure.",
+    application_ny="Nthawi kuchokera pachiyambi cha chithandizo mpaka matenda abwerera, kuchokera pakubadwa mpaka zotsatira za makanda, kapena kuchokera kuikidwa kwa chida mpaka chawonongeka.",
+)
+
+E(
+    category="advanced",
     term="Kaplan-Meier survival estimate",
     term_ny="Kaplan-Meier survival estimate",
     use_en="Use to estimate the probability of remaining event-free over time when some participants are censored before the event occurs.",
@@ -1557,6 +1658,28 @@ print("events =", int(df["event"].sum()))''',
     report_ny="Nenani ma HR ndi 95% CI, kuchuluka kwa zochitika, zinthu zosinthidwa ndi momwe proportionality idawunikidwira. Pewani kuyitcha HR kuti chiŵerengero cha mwayi.",
     application_en="Modelling time to an event after adjustment for age and group.",
     application_ny="Kuyerekeza nthawi mpaka chochitika mutasintha zaka ndi gulu.",
+)
+
+E(
+    category="advanced",
+    term="Hazard ratio",
+    term_ny="Hazard ratio",
+    use_en="Use a hazard ratio to summarise the relative instantaneous event rate between groups in a proportional-hazards model, usually a Cox regression.",
+    use_ny="Gwiritsani ntchito hazard ratio kufotokoza kuchuluka kwa chiopsezo cha chochitika pakati pa magulu mu model ya proportional-hazards, nthawi zambiri Cox regression.",
+    assumptions_en="Hazards are proportional over follow-up; censoring is independent; event status and time are coded correctly. The hazard ratio is a rate ratio, not a probability ratio.",
+    assumptions_ny="Kuchuluka kwa ngozi kumafanana pa nthawi yotsatira; kutayika kwa deta kodziyimira pawokha; nthawi ndi status za chochitika zalembedwa bwino. Hazard ratio ndi chiŵerengero cha mitengo, osati cha mwayi.",
+    code=None,
+    interpretation_en="No standalone code is needed here. In the Cox regression entry, each hazard ratio is obtained as exp(coefficient); the sign and size of the coefficient describe the relative hazard while the baseline hazard stays unspecified.",
+    interpretation_ny="Apa palibe code payokha. Mu cholemba cha Cox regression, hazard ratio iliyonse imapezeka ngati exp(coefficient); chizindikiro ndi kukula kwa coefficient zikufotokoza chiopsezo chofanana pamene baseline hazard sinafotokozedwe.",
+    limits_en="If hazards cross or change over time, one hazard ratio can hide the true pattern. It is not a risk ratio, an odds ratio or a ratio of median survival times. Competing risks require different methods.",
+    limits_ny="Ngati ma hazard adutsana kapena kusintha pakapita nthawi, hazard ratio imodzi ikhoza kubisa mawonekedwe enieni. Si risk ratio, odds ratio kapena chiŵerengero cha median survival. Zochitika zopikisana zifunika njira zina.",
+    explanation_ny="Hazard ndi chiopsezo chachindunji chakumana ndi chochitika pa nthawi inayake, ngati munthu wafika pa nthawiyo popanda chochitika. Hazard ratio uyerekeza chiopsekochi pakati pa magulu awiri.",
+    analogy_en="Imagine two cars on the same road. The hazard ratio compares their instant-by-instant risk of a breakdown, assuming that relative risk stays constant throughout the journey.",
+    analogy_ny="Tangoganizani magalimoto awiri panjira imodzi. Hazard ratio uyerekeza chiopsezo chawo cha kuwonongeka pa nthawi iliyonse, poganiza kuti kusiyana kwawo kumakhalabe kofanana pa ulendo wonse.",
+    report_en="Report the hazard ratio with 95% CI, the event count, the adjustment set and how proportional hazards was checked. Never call it a probability ratio.",
+    report_ny="Nenani hazard ratio ndi 95% CI, kuchuluka kwa zochitika, zinthu zosinthidwa ndi momwe proportionality idayesedwera. Musayitchule kuti chiŵerengero cha mwayi.",
+    application_en="Comparing time to relapse between treatment groups after adjusting for baseline prognosis.",
+    application_ny="Kuyerekeza nthawi mpaka matenda abwerera pakati pa magulu a chithandizo mutasintha zinthu zoyambirira zokhudza zotsatira.",
 )
 
 E(
@@ -1782,29 +1905,400 @@ for delta in [-1.0, 0.0, 1.0]:
     application_ny="Kuyesa kuti kuyerekeza kwa magulu kumadalira mfundo za zotsatira zosowa.",
 )
 
-def para(label_en: str, label_ny: str, en: str, ny: str) -> str:
+TERM_RENAMES: dict[str, tuple[str, str]] = {
+    "Welch two-sample t-test": ("Welch's t-test", "Welch's t-test ya magulu awiri"),
+    "Paired t-test": ("Paired samples t-test", "t-test ya deta yophatikizidwa"),
+    "Mann-Whitney U test": ("Mann–Whitney U test", "Mann–Whitney U test"),
+    "One-way ANOVA with Tukey follow-up": (
+        "ANOVA",
+        "ANOVA (kusanthula kusiyana pakati pa magulu)",
+    ),
+    "2x2 table, risk ratio and odds ratio": ("Risk ratio", "Risk ratio"),
+    "Chi-square test of independence and Cramer's V": (
+        "Chi-square test",
+        "Chi-square test",
+    ),
+    "Fisher exact test": ("Fisher's exact test", "Fisher's exact test"),
+    "Spearman rank correlation": ("Spearman correlation", "Spearman correlation"),
+    "Simple linear regression": ("Linear regression", "Linear regression"),
+    "Logistic regression and odds ratios": ("Logistic regression", "Logistic regression"),
+    "Confounding and crude versus adjusted effect": ("Confounding", "Kusokoneza"),
+    "Interaction and effect modification": ("Interaction", "Kuyanjana"),
+    "Multicollinearity and VIF": ("Multicollinearity", "Multicollinearity"),
+}
+
+ALIASES: dict[str, list[str]] = {
+    "Independent samples t-test": [
+        "student t test", "student's t test", "equal variance t test",
+        "two sample t test", "independent t test",
+    ],
+    "Paired samples t-test": [
+        "dependent t test", "within subject t test", "before after t test",
+    ],
+    "Welch's t-test": [
+        "welch t test", "unequal variance t test", "independent t test",
+    ],
+    "Chi-square test": [
+        "chi square", "chi-squared", "contingency table test",
+        "test of independence", "cramer v",
+    ],
+    "Fisher's exact test": ["fisher exact", "exact test", "small table"],
+    "ANOVA": [
+        "analysis of variance", "one way anova", "f test", "tukey",
+    ],
+    "Mann–Whitney U test": [
+        "mann whitney", "mann-whitney", "wilcoxon rank sum", "rank sum test",
+    ],
+    "Wilcoxon signed-rank test": [
+        "wilcoxon signed rank", "signed rank", "paired rank test",
+    ],
+    "Pearson correlation": ["pearson r", "linear correlation", "r"],
+    "Spearman correlation": [
+        "spearman rho", "spearman rank", "rank correlation",
+    ],
+    "Linear regression": [
+        "simple linear regression", "ols", "slope", "least squares",
+    ],
+    "Logistic regression": [
+        "logit", "binary regression", "log odds", "adjusted odds ratio",
+    ],
+    "Odds ratio": ["or", "odds", "case control", "2x2 table"],
+    "Risk ratio": [
+        "relative risk", "rr", "cohort", "2x2 table",
+    ],
+    "Hazard ratio": [
+        "hr", "cox", "proportional hazards", "instantaneous rate",
+    ],
+    "Confounding": [
+        "confounder", "crude", "adjusted", "third variable",
+    ],
+    "Interaction": [
+        "effect modification", "product term", "subgroup", "effect modifier",
+    ],
+    "Multicollinearity": [
+        "vif", "variance inflation factor", "correlated predictors",
+    ],
+    "Survival analysis": [
+        "time to event", "censoring", "kaplan meier", "cox regression",
+    ],
+}
+
+FIELD_OVERRIDES: dict[str, dict[str, str]] = {
+    "Independent samples t-test": {
+        "definition_en": "Student's independent-samples t-test compares the means of two unrelated groups by dividing their mean difference by a pooled standard error. It assumes a common within-group variance.",
+        "explanation_ny": "Mayesowa uyerekeza avareji a magulu awiri osiyana. 'Independent' kutanthauza kuti munthu aliyense ali mugulu limodzi lokha, kotero palibe awiriawiri ofanana pakati pa maguluwo. Umagwiritsa ntchito kufalikira kwa magulu onse kuti uone kusiyana kwa avareji kuli kwakukulu kuposa phokoso la deta.",
+        "analogy_en": "Like comparing the average harvest of two separate farms: each farm contributes one yield per plot, and the question is whether the gap exceeds ordinary variation between plots.",
+        "analogy_ny": "Zili ngati kuyerekeza zokolola zapakati pa mafakitale awiri osiyana: famu iliyonse imapereka zokolola kamodzi pa malo aliwonse, ndipo funso ndi kuti kusiyana kwake kuli kwakukulu kuposa kusiyana kwamba.",
+        "code_explanation_en": "equal_var=True pools the two variances. ttest_ind returns the t statistic, degrees of freedom and p-value; confidence_interval() adds the plausible range for the mean difference.",
+        "code_explanation_ny": "equal_var=True imaphatikiza variances ziwirizo kukhala chimodzi. ttest_ind imapereka t, degrees of freedom ndi p; confidence_interval() imawonjezera mtunda wotheka wa kusiyana kwa avareji.",
+        "application_en": "Comparing mean birth weight between two independently sampled regions when their spreads are similar.",
+        "application_ny": "Kuyerekeza avareji ya kulemera kwa makanda pakati pa madera awiri osiyana pamene kufalikira kwawo kuli kofanana.",
+        "misconception_en": "It is not a paired test, and equal variances are an assumption rather than a guaranteed fact. A significant result does not prove that the groups differ for causal reasons.",
+        "misconception_ny": "Si paired test, ndipo variances zofanana ndi mfundo yongoganizira, osati yotsimikizika. Zotsatira zofunika sizikutsimikizira kuti kusiyana kunachitika chifukwa cha chinthu chinachake.",
+    },
+    "Paired samples t-test": {
+        "definition_en": "The paired samples t-test tests whether the mean of within-pair differences is zero. It is used when the same units are measured twice or when units are deliberately matched.",
+        "explanation_ny": "Pa paired t-test, munthu aliyense amakhala control wake. Timayang'ana kusiyana pakati pa before ndi after, osati kuyerekeza magulu awiri osiyana. Izi zimachotsa kusiyana kwachilengedwe pakati pa anthu.",
+        "analogy_en": "Weighing the same patient before and after treatment: the patient's usual body size cancels out, leaving the change to be studied.",
+        "analogy_ny": "Kuyeza wodwala yemweyo asanalandire chithandizo ndi atalandira: kukula kwake kwamba kumachotsedwa, kotero kusintha kokha kumatsala kuti kuunikidwe.",
+        "code_explanation_en": "diff stores follow_up minus baseline. ttest_rel performs the one-sample t-test on those differences; the reported mean change and CI describe the paired effect.",
+        "code_explanation_ny": "diff imasunga follow_up opanda baseline. ttest_rel imachita t-test ya gulu limodzi pa kusiyana kumeneko; kusintha kwa avareji ndi CI zikufotokoza zotsatira za awiriawiri.",
+        "application_en": "Assessing change in blood pressure before and after an intervention in the same participants.",
+        "application_ny": "Kuwona kusintha kwa kuthamanga kwa magazi musanayambe ndi mutalandira chithandizo mwa omwewo.",
+        "misconception_en": "The unit of analysis is the pair, not each separate measurement. Treating repeated observations as independent observations produces invalid standard errors.",
+        "misconception_ny": "Chinthu chowunikiridwa ndi awiriwiri, osati miyeso yosiyana. Kutenga ma observation obwerezabwereza ngati odziyimira pawokha kumapanga standard errors zolakwika.",
+    },
+    "Welch's t-test": {
+        "definition_en": "Welch's t-test compares the means of two independent groups without assuming equal variances. It adjusts the degrees of freedom to account for unequal spread.",
+        "explanation_ny": "Welch imafunsa kuti avareji ya magulu awiri odziyimira pawokha ndi yosiyana kwambiri poyerekeza ndi kufalikira kwa deta. Simafuna kuti magulu awiriwo akhale ndi variances zofanana, choncho ndi yotetezeka pa deta yeniyeni.",
+        "analogy_en": "Comparing two classrooms with different spreads of marks: Welch adjusts for the fact that one class may be much more variable than the other.",
+        "analogy_ny": "Kuyerekeza makalasi awiri omwe mphambu zawo zimafalikira mosiyanasiyana: Welch imaganizira kuti kalasi imodzi ikhoza kukhala yosiyana kwambiri ndi inzake.",
+        "code_explanation_en": "equal_var=False switches off pooling. SciPy computes Welch's adjusted df and a confidence interval for the mean difference using the two separate variances.",
+        "code_explanation_ny": "equal_var=False imaletsa kuphatikiza variances. SciPy imawerengera df yosinthidwa ya Welch ndi CI ya kusiyana kwa avareji pogwiritsa ntchito variances ziwiri zosiyana.",
+        "application_en": "Comparing mean birth weight between infants from two independently sampled regions with unequal spread.",
+        "application_ny": "Kuyerekeza avareji ya kulemera kwa makanda ochokera kumadera awiri osiyana omwe kufalikira kwawo kusiyana.",
+        "misconception_en": "Welch compares means, not whole distributions. Two groups can differ in shape or spread while having similar means, and the test does not adjust for confounding.",
+        "misconception_ny": "Welch uyerekeza avareji, osati kufalikira kwathunthu. Magulu awiri angasiyane mawonekedwe kapena kufalikira koma avareji yawo ikhale yofanana, ndipo mayesowo suchotsa zinthu zosokoneza.",
+    },
+    "Chi-square test": {
+        "definition_en": "A chi-square test of independence assesses whether two categorical variables are associated by comparing observed contingency-table counts with counts expected under independence.",
+        "explanation_ny": "Chi-square imafanizira zomwe tawona ndi zomwe tikadayembekezera ngati palibe ubale pakati pa makategori. Ngati kusiyana kwake kuli kwakukulu, p imachepa ndipo tikukayikira kuti palibe ubale. Cramer's V imatiuza mphamvu ya ubalewo.",
+        "analogy_en": "Checking whether drink choices differ by age group more than random mixing would produce. Chi-square flags the pattern; Cramer's V says how pronounced it is.",
+        "analogy_ny": "Kuyang'ana kuti zakumwa zosankhidwa zimasiyana m'magulu azaka kuposa momwe kusakaniza mwachisawawa kungapangire. Chi-square imazindikira mawonekedwe; Cramer's V imatiuza kuti ndi yamphamvu bwanji.",
+        "code_explanation_en": "crosstab() builds the table. chi2_contingency() returns the statistic, p-value, degrees of freedom and expected counts. Cramer's V is computed from chi-square and sample size as a 0–1 strength measure.",
+        "code_explanation_ny": "crosstab() imapanga table. chi2_contingency() imapereka chi-square, p, degrees of freedom ndi kuchuluka koyembekezeka. Cramer's V imawerengedwa kuchokera ku chi-square ndi kuchuluka kwa deta ngati muyezo wa 0–1.",
+        "application_en": "Testing whether malaria positivity category differs by specimen type.",
+        "application_ny": "Kuyesa kuti gulu la malungo limasiyana ndi mtundu wa zitsanzo.",
+        "misconception_en": "A small p-value does not prove causation or describe strength. Expected counts that are too small make the asymptotic p unreliable; use an exact method when needed.",
+        "misconception_ny": "p yochepa sikutsimikizira causality kapena kufotokoza mphamvu ya ubale. Kuchuluka koyembekezeka kochepa kumapangitsa p kusadalirika; gwiritsani ntchito njira yeniyeni ngati kuli koyenera.",
+    },
+    "Fisher's exact test": {
+        "definition_en": "Fisher's exact test computes an exact p-value for association in a 2x2 table by enumerating tables with the same margins, rather than relying on a large-sample approximation.",
+        "explanation_ny": "Ngati makutu ali ochepa, chi-square si yodalirika. Fisher imawerengera mwayi wa table yotere mwachindunji potengera makutu omwe alipo, osati kugwiritsa ntchito mawonekedwe a belu.",
+        "analogy_en": "Instead of approximating with a bell curve, Fisher enumerates all possible arrangements of a small deck and counts how extreme yours is.",
+        "analogy_ny": "M'malo kugwiritsa ntchito kuyerekeza kwa mawonekedwe a belu, Fisher imawerenga makonzedwe onse a makadi ochepa ndikuwerengera kuti anu ndi otani.",
+        "code_explanation_en": "fisher_exact(table) uses the fixed margins to enumerate arrangements and returns the conditional odds ratio and two-sided p-value. The raw table is printed because sparse odds ratios can be unstable.",
+        "code_explanation_ny": "fisher_exact(table) imagwiritsa ntchito m'mphepete lokhazikika kuwerenga makonzedwe onse ndikupereka conditional odds ratio ndi p ya mbali ziwiri. Table yoyambirira imasindikizidwa chifukwa ma odds ratio a makutu ochepa angakhale osakhazikika.",
+        "application_en": "Analysing a rare outcome in a small pilot study.",
+        "application_ny": "Kusanthula zotsatira zosowa mu kafukufuku wawung'ono wa pilot.",
+        "misconception_en": "Exact does not mean automatically better for large tables. It gives an unadjusted association and can be conservative; a zero cell can make the odds ratio infinite.",
+        "misconception_ny": "Kukhala 'exact' sikutanthauza kuti kuli bwino nthawi zonse pa table yayikulu. Sipereka zotsatira zosinthidwa ndipo ikhoza kukhala yodziletsa kwambiri; selo la zero lingapangitse odds ratio kukhala yopanda malire.",
+    },
+    "ANOVA": {
+        "definition_en": "ANOVA (analysis of variance) compares means across three or more independent groups by partitioning total variation into between-group and within-group components and testing their ratio with an F statistic.",
+        "explanation_ny": "ANOVA imafunsa kuti kusiyana pakati pa avareji a magulu n'kwakukulu kuposa kusiyana kwamba mkati mwa gulu lililonse. F yayikulu imatanthauza kuti magulu sangakhale ndi avareji yofanana. Tukey amatsatira kuti adziwe magulu ati omwe akusiyana.",
+        "analogy_en": "Comparing several teaching methods by asking whether the gap between class averages is larger than the usual spread of marks inside each class.",
+        "analogy_ny": "Kuyerekeza njira zingapo zophunzitsira potengera kuti kusiyana pakati pa avareji a makalasi n'kwakukulu kuposa kufalikira kwa mphambu mkati mwa kalasi iliyonse.",
+        "code_explanation_en": "ols() fits the group model, anova_lm() extracts the F test, and pairwise_tukeyhsd() makes all pairwise comparisons while controlling the family-wise error rate.",
+        "code_explanation_ny": "ols() imayika model ya magulu, anova_lm() imatulutsa mayeso a F, ndipo pairwise_tukeyhsd() imayerekeza magulu awiri awiri ndikulamulira mwayi wa zolakwika zilizonse.",
+        "application_en": "Testing whether mean birth weight differs across standard, low-dose and high-dose care groups.",
+        "application_ny": "Kuyesa kuti avareji ya kulemera kwa makanda imasiyana pakati pa chisamaliro cha standard, low-dose ndi high-dose.",
+        "misconception_en": "A significant omnibus F does not say which groups differ. Classical ANOVA assumes equal variances; it compares means, not entire distributions, and does not adjust for covariates.",
+        "misconception_ny": "F yofunika sikuuza kuti magulu ati akusiyana. ANOVA yakale imaganizira variances zofanana; uyerekeza avareji, osati kufalikira kwathunthu, ndipo suchotsa zinthu zosokoneza.",
+    },
+    "Mann–Whitney U test": {
+        "definition_en": "The Mann–Whitney U test is a rank-based test for two independent groups. It asks whether a randomly chosen observation from one group tends to be larger than one from the other.",
+        "explanation_ny": "M'malo moyerekeza avareji, Mann–Whitney imasintha ma value kukhala ma rank ndikufunsa kuti gulu liti lili ndi ma rank apamwamba kwambiri. Izi zithandiza ngati deta ili yopendekerera kapena yosanjidwa.",
+        "analogy_en": "Instead of comparing total exam marks, line students up by rank and ask whether one class tends to stand higher in the queue.",
+        "analogy_ny": "M'malo kuyerekeza chiwerengero chonse cha mayeso, ikani ophunzira mzere potengera masanjidwe ndikufunsa kuti gulu limodzi limakonda kukhala patsogolo kuposa linzake.",
+        "code_explanation_en": "mannwhitneyu() compares the rank sums and returns U and p. rank-biserial converts U to a -1 to 1 effect measure describing the tendency for one group to exceed the other.",
+        "code_explanation_ny": "mannwhitneyu() imayerekeza kuchuluka kwa ma rank ndikupereka U ndi p. rank-biserial imasintha U kukhala muyezo wa -1 mpaka 1 wofotokoza kukonda kwa gulu limodzi kuposa linzake.",
+        "application_en": "Comparing ordinal pain scores or skewed biomarker concentrations between two independent groups.",
+        "application_ny": "Kuyerekeza masanjidwe a ululu kapena kuchuluka kwa biomarker kopendekerera pakati pa magulu awiri odziyimira pawokha.",
+        "misconception_en": "It is not automatically a test of medians; unequal distribution shapes can give a significant result even with equal medians. It also does not adjust for covariates.",
+        "misconception_ny": "Si mayeso wa medians nthawi zonse; mawonekedwe osiyana angapangitse zotsatira kukhala zofunika ngakhale medians zili zofanana. Sichotsanso zinthu zosokoneza.",
+    },
+    "Wilcoxon signed-rank test": {
+        "definition_en": "The Wilcoxon signed-rank test analyses paired or single-sample continuous data by ranking the absolute differences and retaining their signs. It tests symmetry or a median-related hypothesis, not necessarily a mean.",
+        "explanation_ny": "Monga paired t-test, imayang'ana kusiyana kwa munthu aliyense. Koma m'malo kugwiritsa ntchito avareji ya kusiyana, imagwiritsa ntchito ma rank ndi zizindikiro za + kapena -, kotero imalolera deta yosakhala normal.",
+        "analogy_en": "Ranking who improved most, then noting whether each ranked change was an improvement or a worsening.",
+        "analogy_ny": "Kusanja omwe apindula kwambiri, kenako kulemba kuti kusinthako kunali kupindula kapena kuipa.",
+        "code_explanation_en": "wilcoxon(after, before) ranks the nonzero differences, keeps their signs and returns W and p. The median change describes the typical direction and size.",
+        "code_explanation_ny": "wilcoxon(after, before) imasankha kusiyana kosakhala zero, kusunga zizindikiro ndikupereka W ndi p. Kusintha kwa median kukufotokoza njira ndi kukula kwamba.",
+        "application_en": "Analysing before-after symptom scores when the differences are skewed.",
+        "application_ny": "Kusanthula masanjidwe a zizindikiro musanayambe ndi mutalandira chithandizo pamene kusiyana kuli kopendekerera.",
+        "misconception_en": "Strong asymmetry invalidates the signed-rank interpretation. Complete pairs are required, and the test does not model covariates or missing paired observations.",
+        "misconception_ny": "Kusafanana kwa mbali kumawononga tanthauzo la signed-rank. Pamafunika awiriawiri athunthu, ndipo mayesowo sutsanzo zinthu zosokoneza kapena kusowa kwa mbali imodzi.",
+    },
+    "Pearson correlation": {
+        "definition_en": "Pearson correlation is the standardised covariance of two continuous variables. Its coefficient r ranges from -1 to 1 and measures the strength and direction of their linear association.",
+        "explanation_ny": "Pearson imayesa kuti zinthu ziwiri zikuyenda limodzi m'njira yowongoka. Ngati imodzi ikwera pamene ina ikukwera, r ndi yabwino; ngati imodzi ikutsika pamene ina ikukwera, r ndi yoipa.",
+        "analogy_en": "Checking whether taller students tend to have larger shoe sizes. The pattern can be strong, but height does not cause shoe size in a simple experimental sense.",
+        "analogy_ny": "Kuyang'ana kuti ophunzira azitali amakonda kukhala ndi nsapato zazikulu. Ubale ukhoza kukhala wamphamvu, koma kutalika sikumayambitsa kukula kwa nsapato m'njira yosavuta.",
+        "code_explanation_en": "pearsonr() returns r, its p-value and a confidence interval. r squared is the proportion of variance shared in a simple linear model; it is not a causal measure.",
+        "code_explanation_ny": "pearsonr() imapereka r, p ndi confidence interval. r squared ndi gawo la kusiyana lomwe limagawidwa mu model yosavuta; sizoyeza causality.",
+        "application_en": "Exploring the linear association between maternal age and a continuous biomarker before regression.",
+        "application_ny": "Kufufuza ubale wa mzere pakati pa zaka za amayi ndi biomarker ya manambala musanayike regression.",
+        "misconception_en": "A strong nonlinear relationship can have r near zero, and one influential point can create or destroy r. Correlation does not measure agreement or adjust for confounders.",
+        "misconception_ny": "Ubale wamphamvu koma wosakhala wa mzere ukhoza kukhala ndi r pafupi ndi zero, ndipo point imodzi ingapange kapena kuwononga r. Correlation siyiyeza kuvomerezana kapena kuchotsa zosokoneza.",
+    },
+    "Spearman correlation": {
+        "definition_en": "Spearman correlation is a rank-based measure of monotonic association. It uses the ranks of two variables rather than their raw values, so it is robust to monotone transformations.",
+        "explanation_ny": "Spearman imasintha ma value kukhala ma rank. Choncho ngati munthu wachiwiri ndi wapamwamba kuposa woyamba pa zonse, ubale wake uli pafupi ndi 1 ngakhale kusiyana kwenikweni kuli kosiyana.",
+        "analogy_en": "Comparing race finishing positions rather than exact times. The order matters more than how many seconds separated runners.",
+        "analogy_ny": "Kuyerekeza malo omwe othamanga adamaliza osati nthawi yeniyeni. Dongosolo ndilo lofunika kwambiri osati masekondi pakati pawo.",
+        "code_explanation_en": "spearmanr() returns rho from ranked data. The Fisher-style z transformation gives an approximate interval; it is least reliable with many ties or small samples.",
+        "code_explanation_ny": "spearmanr() imapereka rho kuchokera ku ma rank. Kusintha kwa Fisher z kumapanga interval yoyerekeza; si yodalirika ngati ma value ofanana ndi ambiri kapena deta ili yochepa.",
+        "application_en": "Associating an ordinal adherence score with a skewed biomarker.",
+        "application_ny": "Kugwirizanitsa masanjidwe a kumvera malangizo ndi biomarker wopendekerera.",
+        "misconception_en": "Spearman measures monotone ordering, not calibration or agreement. It ignores the size of gaps between values and does not imply causation.",
+        "misconception_ny": "Spearman imayeza dongosolo lokwera kapena kutsika, osati kuti miyeso ikugwirizana bwino. Sinyalanyaza kukula kwa mipata pakati pa ma value ndipo sikutanthauza causality.",
+    },
+    "Linear regression": {
+        "definition_en": "Linear regression models the mean of a continuous outcome as a linear function of one or more predictors. A coefficient estimates the expected change in the outcome for a one-unit change in its predictor, holding other terms fixed.",
+        "explanation_ny": "Linear regression imajambula mzere wabwino kwambiri wodutsa pa deta. Slope imatiuza kuti zotsatira zikusintha bwanji pamene chinthu cholosera chikuwonjezeka, pamene zinthu zina zakhazikitsidwa.",
+        "analogy_en": "Fitting a straight edge to a scatter of points: the slope tells you how much the line rises for each step sideways.",
+        "analogy_ny": "Kuyika mzere wowongoka pamfundo zambiri: slope imatiuza kuti mzerewo ukukwera bwanji pa sitepe iliyonse yopita mbali.",
+        "code_explanation_en": "ols() fits the straight-line model. The slope, its confidence interval and p-value describe the predictor association; R squared describes the proportion of outcome variance explained.",
+        "code_explanation_ny": "ols() imayika model ya mzere wowongoka. Slope, CI ndi p zikufotokoza ubale wa predictor; R squared ikufotokoza gawo la kusiyana kwa zotsatira lofotokozedwa.",
+        "application_en": "Estimating the expected change in birth weight associated with gestational age.",
+        "application_ny": "Kuyerekeza kusintha koyembekezeka kwa kulemera kwa makanda mogwirizana ndi msinkhu wa mimba.",
+        "misconception_en": "Association is not causation. Extrapolation beyond the observed predictor range is unsafe, and a significant slope can still be small. Residual diagnostics matter.",
+        "misconception_ny": "Ubale si causality. Kuyerekeza kunja kwa mtundu wa predictor wowonedwa n'kotetezeka, ndipo slope yofunika ikhoza kukhala yaying'ono. Macheke a residual ndi ofunika.",
+    },
+    "Logistic regression": {
+        "definition_en": "Logistic regression models the probability of a binary outcome by fitting a linear model to the log-odds. Exponentiating a coefficient gives an odds ratio for a one-unit predictor increase.",
+        "explanation_ny": "Logistic regression imagwira ntchito ndi mwayi wa chochitika cha binary. M'malo moyerekeza kusiyana kwa manambala, imayerekeza kuti ma odds achulukana kangati zinthu zina zili zofanana.",
+        "analogy_en": "If a treatment changes the odds from 1 in 9 to 2 in 9, the odds ratio is 2, but the risk itself did not double. Odds and probability are different scales.",
+        "analogy_ny": "Ngati chithandizo chasintha ma odds kuchokera 1 mwa 9 kufika 2 mwa 9, odds ratio ndi 2, koma mwayiwo sunawirikizeke. Ma odds ndi probability zili pa miyezo yosiyana.",
+        "code_explanation_en": "logit() fits the log-odds model. np.exp(coefficient) converts each coefficient to an adjusted odds ratio; np.exp(conf_int()) converts its interval to the same scale.",
+        "code_explanation_ny": "logit() imayika model ya log-odds. np.exp(coefficient) imasintha coefficient kukhala odds ratio wosinthidwa; np.exp(conf_int()) imasintha interval yake ku muyezo womwewo.",
+        "application_en": "Modelling the odds of a neonatal outcome after exposure adjustment.",
+        "application_ny": "Kuyerekeza ma odds a zotsatira za makanda pambuyo posintha zinthu zosokoneza.",
+        "misconception_en": "An odds ratio is not a risk ratio, especially for common outcomes. Separation produces huge coefficients and invalid p-values; model estimates are associations unless the design supports causality.",
+        "misconception_ny": "Odds ratio si risk ratio, makamaka ngati zochitika zili zofala. Kulekanitsa kumapanga coefficient zazikulu ndi p zosadalirika; zotsatira za model ndi ubale pokhapokha kapangidwe kathandizira causality.",
+    },
+    "Odds ratio": {
+        "definition_en": "An odds ratio is the ratio of the odds of an event in one group to the odds in another. Odds are event count divided by non-event count, so the measure is not the same as a risk ratio.",
+        "explanation_ny": "Odds ratio uyerekeza ma odds, osati mwayi weniweni. Ngati gulu limodzi lili ndi ma odds apamwamba kawiri, izi sizitanthauza kuti mwayi wochitika unawirikizeka, makamaka ngati chochitikacho chili chofala.",
+        "analogy_en": "Risk is the fraction of a class that passes; odds are passers divided by non-passers. An odds ratio compares pass-to-fail ratios, not pass fractions.",
+        "analogy_ny": "Risk ndi gawo la kalasi lomwe ladutsa; ma odds ndi odutsa ogawidwa ndi osadutsa. Odds ratio uyerekeza chiŵerengerocho, osati magawo a odutsa.",
+        "code_explanation_en": "Table2x2(table) treats rows as exposure groups and columns as event/no event. riskratio and oddsratio_confint() return the two different effect measures from the same counts.",
+        "code_explanation_ny": "Table2x2(table) imatenga mizere ngati magulu a exposure ndi mizati ngati chochitika/chosachitika. riskratio ndi oddsratio_confint() zimapereka miyezo iwiri yosiyana kuchokera ku makutu omwewo.",
+        "application_en": "Summarising an exposure-outcome association in a case-control study or reporting an adjusted logistic regression coefficient.",
+        "application_ny": "Kufotokoza ubale wa exposure ndi zotsatira mu kafukufuku wa case-control kapena kunena coefficient ya logistic regression wosinthidwa.",
+        "misconception_en": "Do not call an odds ratio 'times more likely' for a common outcome. Crude odds ratios do not adjust for confounding, and sparse cells give unstable estimates.",
+        "misconception_ny": "Musatchule odds ratio kuti 'katheŵa kuchuluka mwayi' ngati chochitika chili chofala. Odds ratio yosakonzedwa suchotsa zosokoneza, ndipo makutu ochepa amapanga kuyerekeza kosakhazikika.",
+    },
+    "Risk ratio": {
+        "definition_en": "A risk ratio, or relative risk, is the probability of an event in one group divided by the probability in another. It is a direct comparison of event risks over a defined time window.",
+        "explanation_ny": "Risk ratio uyerekeza mwayi weniweni wa chochitika m'magulu awiri. Ngati RR ili 2, chochitikacho chimachitika kawiri pafupipafupi m'gulu loyamba pa nthawi yofotokozedwa, osati kuti ma odds anakwera kawiri.",
+        "analogy_en": "Risk is the fraction of a group that crosses a finish line; a risk ratio compares those fractions directly.",
+        "analogy_ny": "Risk ndi gawo la gulu lomwe ladutsa mzere womaliza; risk ratio uyerekeza magawo amenewo mwachindunji.",
+        "code_explanation_en": "Table2x2(table) computes riskratio from the event probability in each row. riskratio_confint() returns its interval; odds ratio is printed beside it to highlight the distinction.",
+        "code_explanation_ny": "Table2x2(table) imawerengera riskratio kuchokera ku mwayi wa chochitika mu mzere uliwonse. riskratio_confint() imapereka interval; odds ratio imasindikizidwa pafupi kusonyeza kusiyana.",
+        "application_en": "Comparing event risk between exposed and unexposed groups in a cohort with a fixed follow-up window.",
+        "application_ny": "Kuyerekeza chiopsezo cha chochitika pakati pa gulu lowonekera ndi losawonekera mu kafukufuku wa cohort ndi nthawi yotsatira yokhazikika.",
+        "misconception_en": "A case-control study usually cannot estimate a risk ratio directly because group sizes are fixed by sampling. A crude risk ratio also does not adjust for confounding.",
+        "misconception_ny": "Kafukufuku wa case-control nthawi zambiri sungathe kuyerekeza risk ratio mwachindunji chifukua kuchuluka kwa magulu kumakhazikitsidwa ndi kusankha. Risk ratio yosakonzedwa suchotsanso zosokoneza.",
+    },
+    "Hazard ratio": {
+        "definition_en": "A hazard ratio is the ratio of two instantaneous event rates under a proportional-hazards model. It is usually obtained as exp(coefficient) from a Cox regression.",
+        "explanation_ny": "Hazard ndi chiopsezo chachindunji chakumana ndi chochitika pa nthawi inayake, ngati munthu wafika pa nthawiyo popanda chochitika. Hazard ratio uyerekeza chiopsekochi pakati pa magulu awiri.",
+        "analogy_en": "Two cars on the same road: the hazard ratio compares their instant-by-instant risk of a breakdown, assuming that relative risk stays constant throughout the journey.",
+        "analogy_ny": "Magalimoto awiri panjira imodzi: hazard ratio uyerekeza chiopsezo chawo cha kuwonongeka pa nthawi iliyonse, poganiza kuti kusiyana kwawo kumakhalabe kofanana pa ulendo wonse.",
+        "code_explanation_en": "No standalone code is needed for this definition. In the Cox regression entry, exp(coefficient) produces each hazard ratio while the baseline hazard remains unspecified.",
+        "code_explanation_ny": "Apa palibe code payokha. Mu cholemba cha Cox regression, exp(coefficient) imapereka hazard ratio iliyonse pamene baseline hazard sinafotokozedwe.",
+        "application_en": "Comparing time to relapse between treatment groups after adjusting for baseline prognosis.",
+        "application_ny": "Kuyerekeza nthawi mpaka matenda abwerera pakati pa magulu a chithandizo mutasintha zinthu zoyambirira zokhudza zotsatira.",
+        "misconception_en": "A hazard ratio is not a risk ratio, odds ratio or ratio of median survival times. If hazards change over time, one summary ratio can be misleading.",
+        "misconception_ny": "Hazard ratio si risk ratio, odds ratio kapena chiŵerengero cha median survival. Ngati ma hazard asintha pakapita nthawi, chiŵerengero chimodzi chikhoza kusokeretsa.",
+    },
+    "Confounding": {
+        "definition_en": "Confounding occurs when a third variable is associated with the exposure and independently affects the outcome, causing the crude exposure-outcome association to be distorted.",
+        "explanation_ny": "Kusokoneza kumachitika ngati chinthu chachitatu chikugwirizana ndi exposure ndi zotsatira. Mwachitsanzo, zaka zingapangitse munthu kukhala ndi exposure komanso kukhala pachiwopsezocho, kotero kusiyana kowonedwa kungakhale kwa zaka osati kwa exposure.",
+        "analogy_en": "Ice cream sales and drowning both rise in summer. Summer is the confounder; banning ice cream would not prevent drowning.",
+        "analogy_ny": "Kugulitsa ayisikilimu ndi kumira m'madzi zimawonjezeka chilimwe. Chilimwe ndi chosokoneza; kuletsa ayisikilimu sikungaletse kumira.",
+        "code_explanation_en": "The crude logistic model contains exposure only; the adjusted model adds age. Comparing the two odds ratios shows how much of the crude association was explained by age in this simulated cohort.",
+        "code_explanation_ny": "Model ya logistic yosakonzedwa ili ndi exposure yokha; yosinthidwa imawonjezera zaka. Kuyerekeza ma odds ratio awiri kukusonyeza kuchuluka kwa ubale wosakonzedwa womwe unafotokozedwa ndi zaka mu gulu lopangidwali.",
+        "application_en": "Comparing crude and age-adjusted exposure effects in an observational cohort.",
+        "application_ny": "Kuyerekeza zotsatira za exposure zosakonzedwa ndi zosinthidwa ndi zaka mu gulu la observational.",
+        "misconception_en": "Not every third variable is a confounder. Adjusting for a collider or mediator can create bias, and unmeasured confounders cannot be fixed by a model. Choose variables from subject knowledge or a causal diagram.",
+        "misconception_ny": "Si chinthu chilichonse chachitatu chomwe ndi chosokoneza. Kusintha collider kapena mediator kungabweretse kukondera, ndipo chosokoneza chosayezedwa sizingakonzedwe ndi model. Sankhani zinthu pogwiritsa ntchito chidziwitso kapena chithunzi cha causality.",
+    },
+    "Interaction": {
+        "definition_en": "Interaction, or effect modification, means that the effect of one predictor on the outcome differs according to the level of another predictor. It is modelled with a product term in addition to main effects.",
+        "explanation_ny": "Interaction imafunsa kuti mankhwala amagwira ntchito mofanana kwa aliyense kapena ayi. Mwachitsanzo, zotsatira zake zikhoza kukhala zazikulu kwa amuna kuposa azimayi, kotero avareji imodzi imabisala kusiyana kofunika.",
+        "analogy_en": "A fertiliser that works well in wet soil but not in dry soil. The average effect hides an important interaction with soil condition.",
+        "analogy_ny": "Feteleza wogwira bwino m'nthaka yonyowa koma osagwira m'nthaka youma. Zotsatira za avareji zimabisala kuyanjana kwakukulu ndi mtunda wa nthaka.",
+        "code_explanation_en": "The model formula group * sex adds both main effects and the group:sex product term. Its p-value tests whether the group effect differs by sex; exp() converts coefficients and sums to stratum-specific odds ratios.",
+        "code_explanation_ny": "Fomula group * sex imawonjezera main effects ndi product term group:sex. p yake imayesa kuti zotsatira za gulu zimasiyana ndi jenda; exp() imasintha coefficient ndi kuchuluka kwawo kukhala odds ratio za gulu lililonse.",
+        "application_en": "Testing whether an intervention effect differs by participant group or sex.",
+        "application_ny": "Kuyesa kuti zotsatira za chithandizo zimasiyana ndi gulu la omwe atengapo mbali kapena jenda.",
+        "misconception_en": "A non-significant interaction does not prove effects are identical. Interaction is scale-dependent, and mining many subgroups without a prespecified hypothesis produces false positives.",
+        "misconception_ny": "Kusowa kwa interaction yofunika sikutsimikizira kuti zotsatira zili zofanana. Kuyanjana kumadalira muyezo wogwiritsidwa ntchito, ndipo kusaka magulu ambiri popanda lingaliro lokonzedweratu kumapanga zopezeka zabodza.",
+    },
+    "Multicollinearity": {
+        "definition_en": "Multicollinearity is a situation in which predictors in a regression model are highly linearly related, making individual coefficients unstable and their standard errors large even when predictions may be adequate.",
+        "explanation_ny": "Ngati zinthu zolosera ziwiri zikunena pafupifupi zinthu zomwezo, model imavutika kudziwa kuti ndi iti yomwe ikuyambitsa kusintha. VIF imatiuza kuti vutolo lili bwanji.",
+        "analogy_en": "Two witnesses who give identical testimony. Their agreement does not provide two independent pieces of evidence, and the court cannot tell which one drives the conclusion.",
+        "analogy_ny": "Mboni ziwiri zopereka umboni wofanana. Kuvomerezana kwawo sikupereka umboni wawiri wodziyimira pawokha, ndipo khoti silikudziwa kuti ndani akuyendetsa chigamulo.",
+        "code_explanation_en": "variance_inflation_factor() regresses each predictor on the others. A high VIF means that predictor is largely redundant, so its individual coefficient is poorly determined.",
+        "code_explanation_ny": "variance_inflation_factor() imayika predictor iliyonse pa ena. VIF yapamwamba imatanthauza kuti predictor imodzi imafotokozedwa kwambiri ndi ena, kotero coefficient yake payokha siyodalirika.",
+        "application_en": "Checking correlated predictors before interpreting an adjusted regression model.",
+        "application_ny": "Kuyang'ana zinthu zolosera zogwirizana musanatanthauzire model ya regression yosinthidwa.",
+        "misconception_en": "High VIF does not bias predictions or invalidate the overall model. Dropping a confounder merely to lower VIF can introduce bias; centring helps polynomial terms, not genuine redundancy.",
+        "misconception_ny": "VIF yapamwamba siyikondera zolosera kapena kuwononga model yonse. Kuchotsa chinthu chosokoneza kungoti VIF itsike kungabweretse kukondera; kuyika pakati kumathandiza polynomial, osati kusiyana kwachilengedwe.",
+    },
+    "Survival analysis": {
+        "definition_en": "Survival analysis is the set of methods for analysing time-to-event data, where the outcome is the time until an event and some subjects may be censored before that event is observed.",
+        "explanation_ny": "Survival analysis siyongotanthauza imfa. Imaphunzira nthawi kuyambira poyambira mpaka chochitika, monga kutuluka m'chipatala kapena kuyambiranso kwa matenda. Anthu omwe sanachitike chochitika mpaka kafukufuku utha amadziwika kuti censored.",
+        "analogy_en": "Following light bulbs until each fails, while some bulbs are still working when the study ends. Those still working do not count as failures, but their observed working time still contributes.",
+        "analogy_ny": "Kutsata mababu mpaka awonongeke, pamene ena akadagwira ntchito kafukufuku akatha. Omwe akadagwira ntchito sawerengedwa kuti awonongeka, koma nthawi yawo yogwira ntchito imathandizira.",
+        "code_explanation_en": "No standalone code is needed for this umbrella term. The Kaplan-Meier entry uses SurvfuncRight for the event-free curve; the Cox entry uses PHReg for adjusted hazard ratios.",
+        "code_explanation_ny": "Mawu akuluwa safuna code payokha. Cholemba cha Kaplan-Meier chimagwiritsa ntchito SurvfuncRight pa mphepete yopanda chochitika; cholemba cha Cox chimagwiritsa ntchito PHReg pa ma hazard ratio osinthidwa.",
+        "application_en": "Time from treatment start to relapse, from birth to a neonatal outcome, or from device insertion to failure.",
+        "application_ny": "Nthawi kuchokera pachiyambi cha chithandizo mpaka matenda abwerera, kuchokera pakubadwa mpaka zotsatira za makanda, kapena kuchokera kuikidwa kwa chida mpaka chawonongeka.",
+        "misconception_en": "Ignoring censoring, or treating censored subjects as event-free forever, biases the estimate. A survival curve alone is not a causal effect, and competing events need explicit methods.",
+        "misconception_ny": "Kunyalanyaza kutayika kwa deta, kapena kuona omwe atayika ngati opanda chochitika mpaka kalekale, kumakondera zotsatira. Mphepete yokha si zotsatira za causality, ndipo zochitika zopikisana zifunika njira zapadera.",
+    },
+}
+
+
+def first_sentences(text: str, count: int) -> str:
+    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    return " ".join(parts[:count])
+
+
+def normalise_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    old_term = entry["term"]
+    term, term_ny = TERM_RENAMES.get(old_term, (old_term, entry["term_ny"]))
+    override = FIELD_OVERRIDES.get(term, {})
+    explanation_ny = override.get(
+        "explanation_ny",
+        first_sentences(entry["explanation_ny"] + " " + entry["use_ny"], 3),
+    )
+    aliases = ALIASES.get(term, [])
+    return {
+        "category": entry["category"],
+        "term": term,
+        "term_ny": term_ny,
+        "definition_en": override.get(
+            "definition_en", first_sentences(entry["use_en"], 2)
+        ),
+        "explanation_ny": explanation_ny,
+        "analogy_en": override.get("analogy_en", entry["analogy_en"]),
+        "analogy_ny": override.get("analogy_ny", entry["analogy_ny"]),
+        "code": entry["code"],
+        "output": entry["output"],
+        "code_explanation_en": override.get(
+            "code_explanation_en",
+            first_sentences(entry["interpretation_en"], 2),
+        ),
+        "code_explanation_ny": override.get(
+            "code_explanation_ny",
+            first_sentences(entry["interpretation_ny"], 2),
+        ),
+        "application_en": override.get(
+            "application_en", first_sentences(entry["application_en"], 1)
+        ),
+        "application_ny": override.get(
+            "application_ny", first_sentences(entry["application_ny"], 1)
+        ),
+        "misconception_en": override.get(
+            "misconception_en", first_sentences(entry["limits_en"], 2)
+        ),
+        "misconception_ny": override.get(
+            "misconception_ny", first_sentences(entry["limits_ny"], 2)
+        ),
+        "aliases": aliases,
+    }
+
+
+def field_pair(label_en: str, label_ny: str, en: str, ny: str) -> str:
     return f"""<p class="field"><span class="field-label"><span class="lang en">{html.escape(label_en)}</span><span class="lang ny">{html.escape(label_ny)}</span></span>
 <span class="lang en">{html.escape(en)}</span><span class="lang ny">{html.escape(ny)}</span></p>"""
+
+
+def field_lang(lang: str, label: str, text: str) -> str:
+    return f"""<p class="field lang {lang}"><span class="field-label">{html.escape(label)}</span>{html.escape(text)}</p>"""
 
 
 def render_entry(entry: dict[str, Any], index: int) -> str:
     category_title = next(
         (title for key, title, _ in CATEGORIES if key == entry["category"]), ""
     )
-    searchable = " ".join(
-        [
-            entry["term"], entry["term_ny"], category_title,
-            entry["use_en"], entry["use_ny"],
-            entry["assumptions_en"], entry["assumptions_ny"],
-            entry["interpretation_en"], entry["interpretation_ny"],
-            entry["limits_en"], entry["limits_ny"],
-            entry["explanation_en"], entry["explanation_ny"],
-            entry["analogy_en"], entry["analogy_ny"],
-            entry["application_en"], entry["application_ny"],
-        ]
-    ).lower()
-    searchable = re.sub(r"\s+", " ", searchable)
-    code_id = f"code-{index}"
+    values = [
+        entry["term"], entry["term_ny"], entry["definition_en"],
+        entry["explanation_ny"], entry["analogy_en"], entry["analogy_ny"],
+        entry["code_explanation_en"], entry["code_explanation_ny"],
+        entry["application_en"], entry["application_ny"],
+        entry["misconception_en"], entry["misconception_ny"],
+        *entry["aliases"], category_title,
+    ]
+    searchable = re.sub(r"\s+", " ", " ".join(str(v) for v in values)).lower()
+    code_html = ""
+    if entry["code"] and entry["output"]:
+        code_id = f"code-{index}"
+        code_html = f"""  <div class="code-wrap">
+    <div class="code-head"><span class="lang en">Python example</span><span class="lang ny">Chitsanzo cha Python</span><button class="copy-btn" type="button" data-target="{code_id}" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
+    <pre id="{code_id}"><code>{html.escape(entry['code'])}</code></pre>
+  </div>
+  <div class="output-wrap">
+    <div class="out-head"><span class="lang en">Actual output from the fixed-seed example</span><span class="lang ny">Zotsatira zenizeni za chitsanzo chokhala ndi seed yokhazikika</span></div>
+    <pre>{html.escape(entry['output'])}</pre>
+  </div>
+"""
     return f"""<article class="entry" data-category="{html.escape(entry['category'])}" data-search="{html.escape(searchable, quote=True)}">
   <div class="entry-head">
     <div>
@@ -1813,28 +2307,19 @@ def render_entry(entry: dict[str, Any], index: int) -> str:
     </div>
     <span class="num">{index:02d}</span>
   </div>
-  {para('Use when', 'Gwiritsani ntchito pamene', entry['use_en'], entry['use_ny'])}
-  {para('Assumptions / design checks', 'Mfundo zofunikira / kuyang\'ana kapangidwe', entry['assumptions_en'], entry['assumptions_ny'])}
-  <div class="code-wrap">
-    <div class="code-head"><span class="lang en">Self-contained Python example</span><span class="lang ny">Chitsanzo cha Python chodziyimira pawokha</span><button class="copy-btn" type="button" data-target="{code_id}" aria-label="Copy example code">⧉ <span class="lang en">Copy</span><span class="lang ny">Koperani</span></button></div>
-    <pre id="{code_id}"><code>{html.escape(entry['code'])}</code></pre>
-  </div>
-  <div class="output-wrap">
-    <div class="out-head"><span class="lang en">Actual output from the fixed-seed example</span><span class="lang ny">Zotsatira zenizeni za chitsanzo chokhala ndi seed yokhazikika</span></div>
-    <pre>{html.escape(entry['output'])}</pre>
-  </div>
-  {para('What the output means', 'Tanthauzo la zotsatira', entry['interpretation_en'], entry['interpretation_ny'])}
-  {para('Limitations and mistakes to avoid', 'Malire ndi zolakwika zoyenera kupewa', entry['limits_en'], entry['limits_ny'])}
-  {para('Plain-language idea', 'Lingaliro m\'mawu osavuta', entry['explanation_en'], entry['explanation_ny'])}
-  {para('Useful analogy', 'Fanizo lothandiza', entry['analogy_en'], entry['analogy_ny'])}
-  {para('How to report it', 'Momwe mungafotokozere', entry['report_en'], entry['report_ny'])}
-  {para('Biomedical application', 'Kugwiritsa ntchito pa zaumoyo', entry['application_en'], entry['application_ny'])}
+  {field_lang('en', 'English definition', entry['definition_en'])}
+  {field_lang('ny', 'Kufotokozera mu Chichewa', entry['explanation_ny'])}
+  {field_pair('Analogy', 'Fanizo', entry['analogy_en'], entry['analogy_ny'])}
+{code_html}  {field_pair('Code explanation', 'Kufotokozera kwa code', entry['code_explanation_en'], entry['code_explanation_ny'])}
+  {field_pair('Practical application', 'Kugwiritsa ntchito', entry['application_en'], entry['application_ny'])}
+  {field_pair('Common misconception', 'Chikhulupiriro chofala cholakwika', entry['misconception_en'], entry['misconception_ny'])}
 </article>"""
 
 
 def render_page() -> str:
+    glossary_entries = [normalise_entry(entry) for entry in ENTRIES]
     counts = {key: 0 for key, _, _ in CATEGORIES}
-    for entry in ENTRIES:
+    for entry in glossary_entries:
         counts[entry["category"]] += 1
     nav = "\n".join(
         f'<a href="#cat-{key}"><span class="lang en">{html.escape(title)}</span><span class="lang ny">{html.escape(ny_title)}</span><b>{counts[key]}</b></a>'
@@ -1843,7 +2328,7 @@ def render_page() -> str:
     body_parts: list[str] = []
     index_offset = 0
     for category_key, _, _ in CATEGORIES:
-        category_entries = [e for e in ENTRIES if e["category"] == category_key]
+        category_entries = [e for e in glossary_entries if e["category"] == category_key]
         cards = "\n".join(
             render_entry(entry, index_offset + i + 1)
             for i, entry in enumerate(category_entries)
@@ -1860,7 +2345,7 @@ def render_page() -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>Next phase — Statistical tests and modelling</title>
+<title>Statistical tests and modelling — bilingual glossary</title>
 <style>
 :root{{--bg:#070b12;--panel:#101827;--panel2:#0d1420;--line:#26344a;--ink:#eef4ff;--muted:#aebbd0;--gold:#f5c451;--gold2:#ffe19a;--teal:#6ee7d2;--danger:#ff9e9e}}
 *{{box-sizing:border-box}}
@@ -1909,7 +2394,7 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
 </head>
 <body data-lang="both">
 <header class="topbar">
-  <div class="brand">Next phase — Statistical tests and modelling<small>Bilingual reference · fixed-seed simulated teaching data</small></div>
+  <div class="brand">Statistical tests and modelling<small>Bilingual glossary · fixed-seed simulated teaching data</small></div>
   <div class="controls">
     <input id="search" type="search" placeholder="Search terms / Sakani mawu" aria-label="Search statistical entries">
     <select id="lang" aria-label="Choose language">
@@ -1923,9 +2408,9 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
 <main>
   <section class="hero">
     <span class="badge">{BUILD}</span>
-    <h1><span class="lang en">Statistical tests and modelling, strengthened</span><span class="lang ny">Kuyeza kwa ziwerengero ndi kuyerekeza, kolimbikitsidwa</span></h1>
-    <p class="lang en">Each entry answers six questions: when to use it, what must be true, what the runnable Python example does, what the real output means, where the method can fail, and how to report it. All examples use fixed-seed synthetic teaching data and no real participant records.</p>
-    <p class="lang ny">Chigawo chilichonse chikuyankha mafunso asanu ndi limodzi: kuchigwiritsa ntchito liti, zomwe ziyenera kukhala zowona, chitsanzo cha Python chikuchita chiyani, zotsatira zenizeni zikutanthauza chiyani, njirayo ingalephere kuti, ndi momwe mungafotokozere. Zitsanzo zonse zimagwiritsa ntchito deta yophunzitsira yopangidwa ndi seed yokhazikika ndipo palibe deta yeniyeni ya odwala.</p>
+    <h1><span class="lang en">Statistical tests and modelling glossary</span><span class="lang ny">Mndandanda wa mawu a ziwerengero ndi kuyerekeza</span></h1>
+    <p class="lang en">This is a searchable glossary, not a textbook. Each term has an English definition, a natural Chichewa explanation, an analogy, a short Python example where applicable, a code explanation, a practical use and a common misconception. Conceptual umbrella terms may omit code.</p>
+    <p class="lang ny">Uwu ndi mndandanda wa mawu wosakika, osati buku la phunziro. Mawu aliwonse ali ndi tanthauzo mu Chingerezi, kufotokozera kwachilengedwe mu Chichewa, fanizo, chitsanzo chachifupi cha Python ngati chikugwiritsidwa ntchito, kufotokozera kwa code, kagwiritsidwe ntchito ndi chikhulupiriro chofala cholakwika. Mawu akulu a lingaliro angakhale opanda code.</p>
     <p class="lang en">This resource is additive. It does not change the Chapter 0 setup lab, the command interpreter allow-list, CRARA, the install gate, navigation order or any earlier build behavior.</p>
     <p class="lang ny">Chothandizira ichi ndi chowonjezera chokha. Sichisintha labu ya Chapter 0, mndandanda wa malamulo ovomerezeka, CRARA, chipata cha install, dongosolo la navigation kapena machitidwe a ma build akale.</p>
   </section>
@@ -1935,8 +2420,8 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
   </div>
   <div class="empty" id="empty"><span class="lang en">No entries match that search.</span><span class="lang ny">Palibe zolemba zogwirizana ndi sakani.</span></div>
   <footer>
-    <span class="lang en">Generated from self-contained examples executed by <code>scripts/build_statistical_glossary.py</code>. Outputs are simulated teaching results, not biomedical findings. Use free/open-source Python packages only.</span>
-    <span class="lang ny">Zopangidwa kuchokera ku zitsanzo zodziyimira pawokha zomwe <code>scripts/build_statistical_glossary.py</code> inayendetsa. Zotsatira ndi za maphunziro opangidwa, osati zomwe anapeza pa odwala. Gwiritsani ntchito mapaketi a Python aulere ndi otseguka okha.</span>
+    <span class="lang en">Generated by <code>scripts/build_statistical_glossary.py</code>. Code-bearing cards were executed at build time with fixed-seed simulated teaching data; conceptual cards are intentionally code-free. Outputs are not biomedical findings. Free/open-source Python packages only.</span>
+    <span class="lang ny">Zopangidwa ndi <code>scripts/build_statistical_glossary.py</code>. Makadi okhala ndi code anayendetsedwa popanga tsamba ndi seed yokhazikika ndi deta yophunzitsira; makadi a lingaliro alibe code mwadala. Zotsatira sizomwe anapeza pa odwala. Mapaketi a Python aulere ndi otseguka okha.</span>
   </footer>
 </main>
 <script>
@@ -1988,11 +2473,59 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
 
 
 def main() -> None:
-    if len(ENTRIES) != 42:
-        raise SystemExit(f"Expected 42 entries, found {len(ENTRIES)}")
+    glossary_entries = [normalise_entry(entry) for entry in ENTRIES]
+    if len(glossary_entries) != 46:
+        raise SystemExit(f"Expected 46 entries, found {len(glossary_entries)}")
+
+    requested = [
+        "Independent samples t-test",
+        "Paired samples t-test",
+        "Welch's t-test",
+        "Chi-square test",
+        "Fisher's exact test",
+        "ANOVA",
+        "Mann–Whitney U test",
+        "Wilcoxon signed-rank test",
+        "Pearson correlation",
+        "Spearman correlation",
+        "Linear regression",
+        "Logistic regression",
+        "Odds ratio",
+        "Risk ratio",
+        "Hazard ratio",
+        "Confounding",
+        "Interaction",
+        "Multicollinearity",
+        "Survival analysis",
+    ]
+    terms = {entry["term"] for entry in glossary_entries}
+    missing = [term for term in requested if term not in terms]
+    if missing:
+        raise SystemExit(f"Missing requested glossary terms: {missing}")
+    leftover_grouped = [term for term in TERM_RENAMES if term in terms]
+    if leftover_grouped:
+        raise SystemExit(f"Grouped lesson titles remain: {leftover_grouped}")
+    if sum(1 for entry in glossary_entries if not entry["code"]) < 2:
+        raise SystemExit("At least two conceptual entries should be code-free")
+
+    required_fields = (
+        "term", "term_ny", "definition_en", "explanation_ny", "analogy_en",
+        "analogy_ny", "code_explanation_en", "code_explanation_ny",
+        "application_en", "application_ny", "misconception_en",
+        "misconception_ny",
+    )
+    for entry in glossary_entries:
+        for field in required_fields:
+            if not str(entry[field]).strip():
+                raise SystemExit(f"{entry['term']}: empty field {field}")
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(render_page(), encoding="utf-8")
-    print(f"Wrote {OUTPUT.relative_to(ROOT)} with {len(ENTRIES)} entries ({BUILD}).")
+    code_count = sum(1 for entry in glossary_entries if entry["code"])
+    print(
+        f"Wrote {OUTPUT.relative_to(ROOT)} with {len(glossary_entries)} glossary "
+        f"entries ({code_count} with executed code) ({BUILD})."
+    )
 
 
 if __name__ == "__main__":

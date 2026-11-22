@@ -453,7 +453,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.22-statistical-tests-glossary-v36"
+    assert build == "2026.11.22-statistical-tests-glossary-v37"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +464,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v36"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v37"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -482,7 +482,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
-    build = "2026.11.22-statistical-tests-glossary-v36"
+    build = "2026.11.22-statistical-tests-glossary-v37"
     simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
     assert simulation_path.is_file()
     simulation = simulation_path.read_text(encoding="utf-8")
@@ -709,19 +709,21 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
-    build = "2026.11.22-statistical-tests-glossary-v36"
+    build = "2026.11.22-statistical-tests-glossary-v37"
     assert f'BUILD_ID = "{build}"' in backend_config
     assert f'window.MNH_BUILD="{build}"' in index
     assert f'const BUILD = "{build}"' in worker
     assert '"/resources/python-statistical-tests-glossary.html"' in worker
     assert glossary_path.is_file()
 
-    glossary = glossary_path.read_text(encoding="utf-8")
-    assert build in glossary
-    assert glossary.count('<article class="entry"') == 42
-
     import html
     import re
+
+    glossary = glossary_path.read_text(encoding="utf-8")
+    plain = html.unescape(glossary)
+    assert build in glossary
+    assert glossary.count('<article class="entry"') == 46
+
     code_blocks = [
         html.unescape(block)
         for block in re.findall(r'<pre id="code-\d+"><code>(.*?)</code></pre>', glossary, re.S)
@@ -730,28 +732,63 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
         html.unescape(block).strip()
         for block in re.findall(r'<div class="output-wrap">.*?<pre>(.*?)</pre>', glossary, re.S)
     ]
-    assert len(code_blocks) == len(output_blocks) == 42
+    assert len(code_blocks) == len(output_blocks) == 44
     term_ids = re.findall(r'<h3 id="(term-\d+)"', glossary)
-    assert len(term_ids) == len(set(term_ids)) == 42
+    assert len(term_ids) == len(set(term_ids)) == 46
     assert all("SIMULATED TEACHING DATA" in block for block in code_blocks)
     assert all("default_rng(" in block for block in code_blocks)
     assert all(block and not re.search(r"\b(?:nan|inf|infinity)\b", block, re.I)
                for block in output_blocks)
     for category in ("foundations", "groups", "categories", "association", "regression", "advanced"):
         assert f'id="cat-{category}"' in glossary
-    assert "When to use" in glossary or "Use when" in glossary
-    assert "Assumptions / design checks" in glossary
-    assert "Actual output from the fixed-seed example" in glossary
-    assert "Limitations and mistakes to avoid" in glossary
-    assert "Lingaliro m&#x27;mawu osavuta" in glossary or "Lingaliro m'mawu osavuta" in glossary
-    assert "Fanizo lothandiza" in glossary
+    for label in (
+        "English definition",
+        "Kufotokozera mu Chichewa",
+        "Analogy",
+        "Python example",
+        "Code explanation",
+        "Practical application",
+        "Common misconception",
+    ):
+        assert label in glossary
+    assert "Fanizo" in glossary
+    assert "When to use" not in plain
+    assert "Assumptions / design checks" not in plain
+    assert "Limitations and mistakes to avoid" not in plain
+    assert "Plain-language idea" not in plain
+    assert "How to report it" not in plain
+    assert ">None<" not in glossary
+    assert "searchable glossary, not a textbook" in plain
+
+    requested = [
+        "Independent samples t-test", "Paired samples t-test", "Welch's t-test",
+        "Chi-square test", "Fisher's exact test", "ANOVA", "Mann–Whitney U test",
+        "Wilcoxon signed-rank test", "Pearson correlation", "Spearman correlation",
+        "Linear regression", "Logistic regression", "Odds ratio", "Risk ratio",
+        "Hazard ratio", "Confounding", "Interaction", "Multicollinearity",
+        "Survival analysis",
+    ]
+    for term in requested:
+        assert f'>{term}</span>' in plain, term
+    for grouped in (
+        "Welch two-sample t-test", "Paired t-test</span>", "Mann-Whitney U test",
+        "One-way ANOVA with Tukey follow-up", "2x2 table, risk ratio and odds ratio",
+        "Chi-square test of independence and Cramer's V", "Fisher exact test",
+        "Spearman rank correlation", "Simple linear regression",
+        "Logistic regression and odds ratios",
+        "Confounding and crude versus adjusted effect",
+        "Interaction and effect modification", "Multicollinearity and VIF",
+    ):
+        assert f'>{grouped}</span>' not in plain, grouped
     assert "SIMULATED TEACHING DATA" in glossary
-    assert "no real participant records" in glossary or "palibe deta yeniyeni ya odwala" in glossary
+    assert "fixed-seed simulated teaching data" in plain
     assert "lifelines" not in generator
     assert "import requests" not in generator
-    assert "Expected 42 entries" in generator
+    assert "Expected 46 entries" in generator
+    assert "code=None" in generator
 
     assert "Next phase — Statistical tests and modelling" in library
+    assert "46 individual terms" in library
     assert "Open bilingual statistics reference" in library
     assert "function openStatisticalGlossary()" in library
     assert "'/resources/python-statistical-tests-glossary.html'" in library
