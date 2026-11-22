@@ -217,6 +217,8 @@ def test_html_companion_has_searchable_navigation_and_exact_layout():
     assert companion.count("Worked example from ") >= len(TEMPLATE_TITLES)
     assert 'id="reporting-templates"' in companion
     assert "Placeholders must be replaced with actual values" not in companion
+    assert "Lectures 1–6 · Questions 1–10" not in companion
+    assert "Output executed against the uploaded CSVs" not in companion
     for qid in QUESTION_IDS:
         card = _card(companion, qid)
         assert "<h4>Worked report — verified from the executed notebook</h4>" in card
