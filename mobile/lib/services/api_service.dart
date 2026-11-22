@@ -6,7 +6,7 @@ class ApiService {
   static final ApiService instance = ApiService._();
   static const String baseUrl = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.0.2.2:8000');
+      defaultValue: 'https://mnh-smart-calendar-v13.onrender.com');
 
   Map<String, String> _headers() => {
         'Accept': 'application/json',

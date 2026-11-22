@@ -15,6 +15,8 @@ from app.database.connection import connect, database
 from app.api.routes import router
 from app.api.comm_routes import router as comm_router
 from app.class_rep.routes import router as class_rep_router
+from app.ai_intelligence.routes import router as ai_router
+from app.ai_intelligence import evaluation as ai_evaluation
 from app.services.backup_service import backup_worker, make_backup, list_backups
 from app.services.reminders import reminder_worker
 from app.services import comm_service
@@ -67,6 +69,12 @@ async def lifespan(app: FastAPI):
                         print(f"AI trigger: {outcome}", flush=True)
                 if ari_service.configured():
                     ari_service.sync_live_calls()
+                # Once per calendar day, test the live timetable pipeline and
+                # persist a trend. Failures here never affect timetable service.
+                try:
+                    ai_evaluation.maybe_run_daily()
+                except Exception as ai_error:
+                    print(f"AI daily evaluation warning: {ai_error}", flush=True)
             except Exception as error:
                 print(f"Communications worker warning: {error}", flush=True)
 
@@ -91,7 +99,7 @@ app = FastAPI(title="MNH Calendar API", version=APP_VERSION, lifespan=lifespan,
 if CORS_ORIGINS:
     app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
                        allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                       allow_headers=["Content-Type", "Authorization"])
+                       allow_headers=["Content-Type", "Authorization", "X-CARA-Analytics-Password", "X-MNH-AI-Admin-Token"])
 
 
 @app.middleware("http")
@@ -133,6 +141,7 @@ async def request_validation_error_handler(request: Request, exc: RequestValidat
 app.include_router(router)
 app.include_router(comm_router)
 app.include_router(class_rep_router)
+app.include_router(ai_router)
 
 
 @app.get("/", include_in_schema=False)

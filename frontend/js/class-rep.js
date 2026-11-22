@@ -325,6 +325,39 @@
     else bubble.textContent = safe;
     transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble;
   }
+  function attachFeedbackControl(bubble, query, response) {
+    if (!bubble || !query || !response) return;
+    const button = el("button", "cr-feedback-button", "Report an incorrect answer");
+    button.type = "button";
+    button.setAttribute("aria-label", "Report a correction for this answer");
+    button.addEventListener("click", async () => {
+      const correction = window.prompt("Enter the corrected answer for this question:");
+      if (!correction || !correction.trim()) return;
+      button.disabled = true;
+      button.textContent = "Saving correction…";
+      try {
+        const responseResult = await fetch("/api/ai/feedback", {
+          method: "POST", credentials: "same-origin", cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query, original_response: response,
+            correction: correction.trim(), response_language: state.responseLanguage,
+            conversation_id: state.conversationId
+          })
+        });
+        const result = await responseResult.json().catch(() => ({}));
+        if (!responseResult.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${responseResult.status}`);
+        button.textContent = result.learning_status === "accepted"
+          ? "Correction saved for learning"
+          : "Correction saved for review";
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "Report an incorrect answer";
+        status(readableError(error) || "Could not save the correction.", false);
+      }
+    });
+    bubble.append(button);
+  }
   async function typeReply(bubble, value) {
     const answer = typeof value === "string" ? value : "";
     bubble.classList.remove("cr-thinking");
@@ -532,6 +565,7 @@
         const reply = typeof result.reply === "string" ? result.reply.trim() : "";
         if (!reply) throw new Error("CRARA returned an empty reply. Please try again.");
         await typeReply(pending, reply);
+        attachFeedbackControl(pending, message, reply);
         state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: reply.slice(0, 4000) }]), 12); }

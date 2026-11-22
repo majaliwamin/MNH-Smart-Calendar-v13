@@ -741,7 +741,7 @@ window.addEventListener("mnh:offline-synced",()=>{
 const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
 let WEEK_START=WK.startParts(weekOffset);   // Monday of the academic week currently on screen
 const baseTitle=document.title;
-let alarm={on:false,lead:10,voice:true,voiceOption:0,sound:0},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,speechTimer=null,titleTimer=null,ringing=null,alarmUserName="",alarmUserPromise=null;
+let alarm={on:false,lead:10,voice:true,voiceOption:0,sound:0},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,speechTimer=null,titleTimer=null,ringing=null;
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 function pad2(n){return String(n).padStart(2,"0");}
 function hhmm(d){return WK.timeText(d);}
@@ -779,21 +779,6 @@ function playCycle(){
  });
  try{if(navigator.vibrate)navigator.vibrate([240,180,240]);}catch(e){}
 }
-async function getAlarmUserName(){
- if(alarmUserName)return alarmUserName;
- if(alarmUserPromise)return alarmUserPromise;
- alarmUserPromise=(async()=>{
-  try{
-   const response=await fetch("/api/class-rep/auth/me",{credentials:"same-origin",cache:"no-store"});
-   if(!response.ok)return "";
-   const result=await response.json();
-   alarmUserName=result&&result.authenticated&&result.user?String(result.user.name||"").trim():"";
-  }catch(e){alarmUserName="";}
-  if(!alarmUserName)alarmUserPromise=null;
-  return alarmUserName;
- })();
- return alarmUserPromise;
-}
 function availableAlarmVoices(){
  if(!window.speechSynthesis)return [];
  const all=window.speechSynthesis.getVoices()||[];
@@ -806,15 +791,30 @@ function refreshAlarmVoiceOptions(){
  select.innerHTML=labels.map((label,i)=>'<option value="'+i+'">'+esc(voices[i]?label+" · "+voices[i].name:label)+'</option>').join("");
  select.value=String(alarm.voiceOption||0);
 }
-async function speakAlarm(ev){
+function alarmGreeting(){
+ const hour=WK.localNow().hour;
+ const byTime=hour<12?"Good morning":(hour<17?"Good afternoon":"Good evening");
+ return [byTime,"Hello","Hi"][Math.floor(Math.random()*3)];
+}
+function alarmReminderMessage(ev){
+ const greeting=alarmGreeting(),sessionName=[ev.label,ev.sub].filter(Boolean).join(", ");
+ if(ev.test)return greeting+", this is a gentle test of your timetable reminder.";
+ const mins=Math.max(0,Math.round((ev.start.getTime()-Date.now())/60000));
+ const start=mins>0?"in "+mins+" minute"+(mins===1?"":"s"):"now";
+ const templates=[
+  greeting+", "+sessionName+" class is starting "+start+". Please be prepared.",
+  greeting+", the "+sessionName+" class begins "+start+". Please be prepared.",
+  greeting+", please get ready for "+sessionName+" class, starting "+start+". Please be prepared.",
+  greeting+", "+sessionName+" class will start "+start+". Please be prepared.",
+  greeting+", prepare now for "+sessionName+" class, due to start "+start+". Please be prepared.",
+  greeting+", the "+sessionName+" class is starting "+start+". Please be prepared."
+ ];
+ return templates[Math.floor(Math.random()*templates.length)];
+}
+function speakAlarm(ev){
  if(!alarm.voice||!window.speechSynthesis||!window.SpeechSynthesisUtterance)return;
- const userName=await getAlarmUserName();
  if(ringing!==ev||!alarm.voice)return;
- const greeting=userName?userName+", ":"";
- const sessionName=[ev.label,ev.sub].filter(Boolean).join(", ");
- const lecturer=ev.facilitator?" The lecturer is "+ev.facilitator+".":"";
- const time=ev.test?"":" The session starts at "+hhmm(ev.start)+".";
- const message=ev.test?greeting+"This is a gentle test of your timetable reminder.":greeting+"your "+sessionName+" session is about to start."+time+lecturer+" Please get ready.";
+ const message=alarmReminderMessage(ev);
  try{
   window.speechSynthesis.cancel();
   const voices=availableAlarmVoices(),choice=Math.max(0,Math.min(4,Number(alarm.voiceOption)||0));

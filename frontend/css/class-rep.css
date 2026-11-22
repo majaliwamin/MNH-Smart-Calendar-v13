@@ -267,3 +267,8 @@ body.cara-open #class-rep-assistant.cara-widget.is-open{
 .cr-language-option.is-active{background:var(--cara-silver);color:#0b1728;}
 .cr-language-option:focus-visible{outline:2px solid var(--cara-silver-light);outline-offset:2px;}
 @media(max-width:760px){.cr-head{gap:7px;padding-left:10px;padding-right:10px}.cr-language-option{min-width:31px;height:28px;padding:0 7px}.cr-home-back{flex:0 0 auto}}
+
+/* Verified-correction reporting: small, quiet control inside assistant answers. */
+.cr-feedback-button{display:inline-block;margin-top:10px;padding:4px 9px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);font-size:11px;line-height:1.3;cursor:pointer;}
+.cr-feedback-button:hover,.cr-feedback-button:focus-visible{color:var(--gold);border-color:var(--gold);}
+.cr-feedback-button:disabled{cursor:default;opacity:.75;}

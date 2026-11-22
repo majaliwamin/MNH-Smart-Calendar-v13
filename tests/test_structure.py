@@ -53,6 +53,26 @@ def test_alarm_system_configurations_navigation_opens_existing_alarm_controls():
     assert 'document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");})' in app
     assert 'document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"))' in app
 
+def test_talking_alarm_uses_random_time_greetings_without_a_user_name():
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    alarm_code = app[app.index("// ---- Alarms"):app.index("function startRing")]
+    for forbidden in ("getAlarmUserName", "alarmUserName", "alarmUserPromise", "/api/class-rep/auth/me", "user.name"):
+        assert forbidden not in alarm_code
+    for token in (
+        'const hour=WK.localNow().hour;',
+        'hour<12?"Good morning":(hour<17?"Good afternoon":"Good evening")',
+        '[byTime,"Hello","Hi"][Math.floor(Math.random()*3)]',
+        'sessionName=[ev.label,ev.sub].filter(Boolean).join(", ")',
+        'const mins=Math.max(0,Math.round((ev.start.getTime()-Date.now())/60000))',
+        'const start=mins>0?"in "+mins+" minute"+(mins===1?"":"s"):"now"',
+        'const templates=[',
+        'Math.floor(Math.random()*templates.length)',
+        'const message=alarmReminderMessage(ev)',
+    ):
+        assert token in alarm_code, token
+    assert alarm_code.count("Please be prepared.") == 6
+
+
 def test_weekly_calendar_is_monday_to_sunday_and_supports_custom_sessions():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")

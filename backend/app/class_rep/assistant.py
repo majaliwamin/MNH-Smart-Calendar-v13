@@ -31,6 +31,8 @@ from app.class_rep.math_engine.presentation import (
     deterministic_math_answer,
     math_contract_instruction,
 )
+from app.ai_intelligence.retrieval import is_timetable_question
+from app.ai_intelligence.service import answer_timetable_question
 
 SYSTEM_PROMPT = """You are CRARA (Class Rep & Academic Relations Assistant) for the PhD in Maternal and Neonatal Health programme in Malawi. Help the class representative and students coordinate academic communication clearly, accurately and professionally, and support their academic learning.
 
@@ -117,6 +119,18 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
         if joke_answer is not None:
             return joke_answer, "curated-casual", "deterministic-joke-v1", None
 
+    # Preserve the existing context timestamp contract even on the grounded
+    # timetable path. Casual social turns are never hijacked by topic keywords.
+    context, updated = build_calendar_context(message)
+    if is_timetable_question(message) and not is_casual_turn(mode, tone):
+        grounded = answer_timetable_question(
+            message,
+            response_language=response_language,
+            completer=complete,
+            memory_context=memory_context,
+        )
+        return grounded["answer"], grounded["provider"], grounded["model"], updated
+
     lexical_evidence = linguistic_context(message)
     local_evidence = local_teaching_context(message, response_language)
     explicit_translation_mode = mode in ("translate_into_chichewa", "translate_into_english")
@@ -129,7 +143,6 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     translation_request = explicit_translation_mode or is_translation_or_interpretation_request(message)
     translation_references = build_translation_reference_context(message, owner_id=owner_id) if translation_request else ""
 
-    context, updated = build_calendar_context(message)
     documents = search_documents(message, limit=4, owner_id=owner_id)
     document_context = json.dumps(documents, ensure_ascii=False) if documents else "No relevant uploaded document passages were retrieved."
     document_source = "\n".join(str(item.get("text", "")) for item in documents if isinstance(item, dict))
