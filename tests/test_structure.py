@@ -185,6 +185,29 @@ def test_image_exports_include_a_header_and_use_larger_fonts():
         assert token in export_code, token
 
 
+def test_image_export_captures_the_full_timetable_without_clipping():
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    start = app.index("async function downloadTimetableImage")
+    end = app.index("window.downloadTimetableImage=downloadTimetableImage", start)
+    export_code = app[start:end]
+    for token in (
+        "const exportWidth=1200,exportPadding=24,tableWidth=exportWidth-(exportPadding*2);",
+        "const captureHeight=Math.max(1800,Math.ceil(target.scrollHeight*3)+600);",
+        "windowWidth:exportWidth,windowHeight:captureHeight",
+        'const force=(node,prop,value)=>node.style.setProperty(prop,value,"important");',
+        'force(wrap,"box-sizing","border-box")',
+        'force(wrap,"overflow","visible")',
+        'force(table,"width",tableWidth+"px")',
+        "timeWidth=130,dayWidth=Math.floor((tableWidth-timeWidth)/7)",
+        'force(cell,"position","static")',
+        'const weekendBg=variable("--weekend-bg")||cellBg',
+        'force(table,"font-family","Arial,Helvetica,sans-serif")',
+        'force(cell,"background-color",weekendBg)',
+        'force(button,"border-color",onWeekend?weekendInk:line)',
+    ):
+        assert token in export_code, token
+
+
 def test_timetable_places_lecturer_directly_after_module_code_and_theme_reaches_footer():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")

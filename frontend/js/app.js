@@ -1839,27 +1839,69 @@ async function downloadTimetableImage(mime){
   const weekLine=[WK.label(weekOffset),`Monday–Sunday, ${WK.range(weekOffset)}`].filter(Boolean).join(" · ");
   const pageBg=cs.backgroundColor||"#0b1017",ink=variable("--text")||cs.color||"#ffffff";
   const muted=variable("--muted")||ink,accent=variable("--gold")||"#f2c14e",panel=variable("--panel")||pageBg;
-  const exportWidth=1200;
-  const canvas=await window.html2canvas(target,{scale:4,useCORS:true,backgroundColor:pageBg,logging:false,windowWidth:Math.max(document.documentElement.clientWidth,exportWidth),onclone:doc=>{
+  const field=variable("--field")||panel,line=variable("--line")||muted,headBg=variable("--head-shade")||variable("--head")||panel,cellBg=variable("--cell-bg")||pageBg,onAccent=variable("--on-accent")||"#fff";
+  const weekendBg=variable("--weekend-bg")||cellBg,weekendHeadBg=variable("--weekend-head-bg")||headBg,weekendInk=variable("--weekend-ink")||ink;
+  const exportWidth=1200,exportPadding=24,tableWidth=exportWidth-(exportPadding*2);
+  const captureHeight=Math.max(1800,Math.ceil(target.scrollHeight*3)+600);
+  const canvas=await window.html2canvas(target,{scale:4,useCORS:true,backgroundColor:pageBg,logging:false,windowWidth:exportWidth,windowHeight:captureHeight,onclone:doc=>{
     const cloned=doc.querySelector("#view-weekly");if(cloned)cloned.hidden=false;
     const wrap=doc.querySelector("#view-weekly .wrap");if(!wrap)return;
-    wrap.style.setProperty("--text-scale","1.85","important");
-    wrap.style.overflow="visible";wrap.style.width=exportWidth+"px";wrap.style.maxWidth="none";wrap.style.padding="16px";wrap.style.background=pageBg;
+    const force=(node,prop,value)=>node.style.setProperty(prop,value,"important");
+    force(doc.documentElement,"width",exportWidth+"px");force(doc.body,"width",exportWidth+"px");
+    force(doc.body,"margin","0");force(doc.body,"overflow","visible");
+    force(wrap,"box-sizing","border-box");force(wrap,"width",exportWidth+"px");force(wrap,"min-width",exportWidth+"px");force(wrap,"max-width","none");
+    force(wrap,"height","auto");force(wrap,"min-height","0");force(wrap,"margin","0");force(wrap,"padding",exportPadding+"px");
+    force(wrap,"overflow","visible");force(wrap,"overflow-x","visible");force(wrap,"overflow-y","visible");
+    force(wrap,"position","static");force(wrap,"display","block");force(wrap,"isolation","auto");force(wrap,"transform","none");force(wrap,"scrollbar-gutter","auto");
+    wrap.style.setProperty("--text-scale","1.85","important");wrap.scrollLeft=0;wrap.scrollTop=0;
+    wrap.querySelectorAll("*").forEach(node=>force(node,"box-sizing","border-box"));
     const banner=doc.createElement("div");
     banner.style.cssText=`box-sizing:border-box;width:100%;margin:0 0 16px;padding:18px 22px;background:${panel};border:2px solid ${accent};border-radius:10px;`;
     const brand=doc.createElement("div");brand.textContent="MNH SMART TIMETABLE";brand.style.cssText=`color:${accent};font:800 17px/1.2 Arial,Helvetica,sans-serif;letter-spacing:1.4px;`;
     const heading=doc.createElement("div");heading.textContent=headerTitle;heading.style.cssText=`color:${ink};font:800 30px/1.15 Arial,Helvetica,sans-serif;margin-top:6px;`;
     const meta=doc.createElement("div");meta.textContent=[headerSubtitle,weekLine].filter(Boolean).join(" · ");meta.style.cssText=`color:${muted};font:600 19px/1.35 Arial,Helvetica,sans-serif;margin-top:8px;`;
     banner.appendChild(brand);banner.appendChild(heading);banner.appendChild(meta);wrap.insertBefore(banner,wrap.firstChild);
-    const table=wrap.querySelector("table");if(table){table.style.width=exportWidth+"px";table.style.minWidth=exportWidth+"px";table.style.maxWidth="none";}
-    wrap.querySelectorAll("thead th, tbody th, td").forEach(cell=>{cell.style.setProperty("padding","8px 6px","important");cell.style.setProperty("height","auto","important");cell.style.setProperty("white-space","normal","important");});
-    wrap.querySelectorAll(".activity").forEach(button=>{button.style.setProperty("height","auto","important");button.style.setProperty("min-height","74px","important");button.style.setProperty("padding","10px","important");button.style.setProperty("font-size","26px","important");});
-    wrap.querySelectorAll(".activity-name").forEach(node=>node.style.setProperty("font-size","28px","important"));
-    wrap.querySelectorAll(".activity-lecturer").forEach(node=>node.style.setProperty("font-size","20px","important"));
-    wrap.querySelectorAll("thead th.corner, thead th.time, tbody th.time").forEach(node=>node.style.setProperty("font-size","20px","important"));
-    wrap.querySelectorAll("thead th.daycell .day, tbody th.daycell .day").forEach(node=>node.style.setProperty("font-size","24px","important"));
-    wrap.querySelectorAll("thead th.daycell .date, tbody th.daycell .date").forEach(node=>node.style.setProperty("font-size","18px","important"));
-    wrap.querySelectorAll(".lunch-label").forEach(node=>{node.style.setProperty("font-size","20px","important");node.style.setProperty("letter-spacing","2px","important");});
+    const table=wrap.querySelector("table");
+    if(table){
+      force(table,"box-sizing","border-box");force(table,"width",tableWidth+"px");force(table,"min-width",tableWidth+"px");force(table,"max-width","none");
+      force(table,"margin","0 auto");force(table,"table-layout","fixed");force(table,"border-collapse","collapse");force(table,"border-spacing","0");
+      force(table,"position","static");force(table,"isolation","auto");force(table,"transform","none");
+      force(table,"font-family","Arial,Helvetica,sans-serif");force(table,"color",ink);force(table,"background-color",panel);
+      const timeWidth=130,dayWidth=Math.floor((tableWidth-timeWidth)/7);
+      const corner=table.querySelector("thead th.corner");
+      if(corner){force(corner,"width",timeWidth+"px");force(corner,"min-width",timeWidth+"px");force(corner,"max-width",timeWidth+"px");}
+      table.querySelectorAll("thead th.daycell").forEach(cell=>{force(cell,"width",dayWidth+"px");force(cell,"min-width",dayWidth+"px");force(cell,"max-width",dayWidth+"px");});
+      table.querySelectorAll("thead th, tbody th, td").forEach(cell=>{
+        force(cell,"height","auto");force(cell,"min-height","0");force(cell,"padding","8px 6px");force(cell,"white-space","normal");force(cell,"overflow","visible");
+        force(cell,"position","static");force(cell,"vertical-align","middle");force(cell,"color",ink);force(cell,"border","1px solid "+line);
+      });
+      table.querySelectorAll("thead th, tbody th.time").forEach(cell=>{force(cell,"background-color",headBg);});
+      table.querySelectorAll("tbody td").forEach(cell=>{force(cell,"background-color",cellBg);});
+      table.querySelectorAll("tbody th.time.highlight, tbody th.time.current-time-label, tbody tr.current-time-row th.time").forEach(cell=>{force(cell,"background-color",accent);force(cell,"color",onAccent);});
+      table.querySelectorAll("thead th.daycell.weekend-day").forEach(cell=>{force(cell,"background-color",weekendHeadBg);force(cell,"color",weekendInk);});
+      table.querySelectorAll("tbody td.weekend-day").forEach(cell=>{force(cell,"background-color",weekendBg);force(cell,"color",weekendInk);});
+      table.querySelectorAll("thead th.daycell .day, tbody th.daycell .day, thead th.daycell .date, tbody th.daycell .date").forEach(node=>force(node,"color",accent));
+      table.querySelectorAll(".weekend-day .day, .weekend-day .date").forEach(node=>force(node,"color",weekendInk));
+      table.querySelectorAll("thead th, tbody th.time").forEach(cell=>{
+        force(cell,"position","static");force(cell,"top","auto");force(cell,"left","auto");force(cell,"right","auto");force(cell,"bottom","auto");
+        force(cell,"z-index","auto");force(cell,"transform","none");force(cell,"box-shadow","none");force(cell,"white-space","nowrap");
+        cell.style.setProperty("font-size","20px","important");
+      });
+    }
+    wrap.querySelectorAll(".cell").forEach(node=>{force(node,"display","flex");force(node,"flex-direction","column");force(node,"width","100%");force(node,"height","auto");force(node,"min-height","74px");force(node,"gap","3px");});
+    wrap.querySelectorAll(".activity").forEach(button=>{
+      const onWeekend=!!button.closest("td.weekend-day");
+      if(!button.style.backgroundColor)force(button,"background-color",onWeekend?weekendBg:field);
+      if(!button.style.color)force(button,"color",onWeekend?weekendInk:ink);
+      force(button,"border-color",onWeekend?weekendInk:line);
+      force(button,"display","flex");force(button,"height","auto");force(button,"min-height","74px");force(button,"max-height","none");force(button,"padding","10px");force(button,"font-size","26px");force(button,"line-height","1.2");force(button,"overflow","visible");force(button,"white-space","normal");
+    });
+    wrap.querySelectorAll(".activity-name").forEach(node=>{force(node,"display","block");node.style.setProperty("font-size","28px","important");});
+    wrap.querySelectorAll(".activity-lecturer").forEach(node=>{force(node,"display","block");force(node,"font-size","20px");});
+    wrap.querySelectorAll("td.weekend-day .activity-name, td.weekend-day .activity-lecturer").forEach(node=>force(node,"color",weekendInk));
+    wrap.querySelectorAll("thead th.daycell .day, tbody th.daycell .day").forEach(node=>{force(node,"display","block");force(node,"font-size","24px");});
+    wrap.querySelectorAll("thead th.daycell .date, tbody th.daycell .date").forEach(node=>{force(node,"display","block");force(node,"font-size","18px");});
+    wrap.querySelectorAll(".lunch-label").forEach(node=>{force(node,"font-size","20px");force(node,"letter-spacing","2px");force(node,"color",accent);});
   }});
   const actualMime=mime==="image/webp"&&!canvas.toDataURL("image/webp").startsWith("data:image/webp")?"image/png":mime;
   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("The browser could not encode this image.")),actualMime,actualMime==="image/png"?undefined:.98));
