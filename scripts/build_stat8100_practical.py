@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import html
 import json
+import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 import nbformat as nbf
@@ -16,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_DIR = ROOT / "frontend" / "resources"
 NOTEBOOK_PATH = RESOURCE_DIR / "stat8100_biostatistics_epidemiology_practical.ipynb"
 HTML_PATH = RESOURCE_DIR / "stat8100_practical_companion.html"
+NY_HTML_PATH = RESOURCE_DIR / "stat8100_practical_companion_ny.html"
 RESULTS_PATH = RESOURCE_DIR / "stat8100_practical_results.json"
 
 BUILD_LABEL = "STAT 8100 · Lectures 1–6 · simulated teaching datasets"
@@ -177,7 +180,7 @@ def build_notebook():
         "",
         "## How to use this notebook",
         "",
-        "- Run **Reusable setup** once.",
+        "- Run **Reusable setup** once before any question code cell. Question cells reuse `anc`, `record()` and the other objects created there; running one alone now gives a clear prerequisite error.",
         "- Run **Dataset audit** once to reproduce the verification recorded below.",
         "- For each question, read the learning guide, run the listed code cell(s), inspect the output, then write your own interpretation and report.",
         "- The `mark_done` cell at the end of each question updates the progress indicator.",
@@ -302,10 +305,28 @@ def build_notebook():
 
 def _code_block(key):
     code = html.escape(CODE[key].rstrip())
+    requires_setup = key != "setup"
+    attrs = f' data-cell="{html.escape(key)}"'
+    if requires_setup:
+        attrs += ' data-requires-setup="true"'
+    label = "Code cell <code>" + html.escape(key) + "</code>"
+    if requires_setup:
+        label += " <span class=\"code-prereq\">· requires Reusable setup</span>"
+        buttons = (
+            '<span class="code-actions">'
+            '<button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button>'
+            '<button class="copy-cell-only" type="button">Copy cell only</button>'
+            '</span>'
+        )
+    else:
+        buttons = (
+            '<span class="code-actions">'
+            '<button class="copy-code" type="button" data-copy-mode="cell">Copy code</button>'
+            '</span>'
+        )
     return (
-        '<div class="code-wrap">'
-        '<div class="code-head"><span>Code cell <code>' + html.escape(key) +
-        '</code></span><button class="copy-code" type="button">Copy code</button></div>'
+        '<div class="code-wrap"' + attrs + '>'
+        '<div class="code-head"><span>' + label + '</span>' + buttons + '</div>'
         '<pre><code class="language-python">' + code + '</code></pre></div>'
     )
 
@@ -335,9 +356,16 @@ def _guide_html(qid, results):
                 for row in rows
             ) + '</tbody></table></div></section>'
         )
-    codes = "".join(_code_block(key) for key in QUESTION_CODE[qid]) or (
+    question_codes = "".join(_code_block(key) for key in QUESTION_CODE[qid])
+    codes = question_codes or (
         '<p class="no-code">No code cell is required for this task.</p>'
     )
+    if question_codes:
+        codes = (
+            '<p class="setup-note"><strong>Run setup first:</strong> '
+            'the reusable setup cell creates <code>anc</code> and <code>record()</code>. '
+            '“Copy setup + cell” includes it automatically.</p>' + codes
+        )
     badge_class = {
         "Code": "tag-code", "Interpretation": "tag-interp",
         "Conceptual": "tag-concept", "Calculation": "tag-calc",
@@ -405,12 +433,144 @@ def _guide_html(qid, results):
 
 
 RESULTS_PLACEHOLDER = {}
+JS_LABELS = {}
 
 
-def build_html(results=None):
+class _ChichewaBridge:
+    """Small adapter around the validated translation module."""
+
+    def __init__(self):
+        scripts_dir = str(Path(__file__).resolve().parent)
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import stat8100_chichewa as ny  # imported only when the Nyasa copy is built
+
+        self.module = ny
+
+    def translate(self, text):
+        return self.module.translate(text)
+
+    def ui(self, text):
+        return self.module.UI.get(text, self.translate(text))
+
+
+class _TextTranslator(HTMLParser):
+    """Translate visible text nodes while preserving code, data and markup."""
+
+    SKIP_TAGS = {"script", "style"}
+
+    def __init__(self, translate):
+        super().__init__(convert_charrefs=True)
+        self._translate = translate
+        self._parts = []
+        self._skip = []
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        classes = attributes.get("class", "").split()
+        skip = tag in self.SKIP_TAGS
+        if tag == "pre" and "verified-output" in classes:
+            skip = True
+        if tag == "code" and "language-python" in classes:
+            skip = True
+        if skip:
+            self._skip.append(tag)
+        self._parts.append(self.get_starttag_text())
+
+    def handle_startendtag(self, tag, attrs):
+        self._parts.append(self.get_starttag_text())
+
+    def handle_endtag(self, tag):
+        if self._skip and self._skip[-1] == tag:
+            self._skip.pop()
+        self._parts.append(f"</{tag}>")
+
+    def handle_data(self, data):
+        if not data.strip():
+            self._parts.append(data)
+            return
+        if self._skip:
+            if any(tag in {"pre", "code"} for tag in self._skip):
+                self._parts.append(html.escape(data, quote=True))
+            else:
+                self._parts.append(data)
+            return
+        leading = data[: len(data) - len(data.lstrip())]
+        trailing = data[len(data.rstrip()) :]
+        core = data[len(leading) : len(data) - len(trailing)]
+        translated = html.escape(str(self._translate(core)), quote=False)
+        self._parts.append(leading + translated + trailing)
+
+    def handle_entityref(self, name):
+        self._parts.append(f"&{name};")
+
+    def handle_charref(self, name):
+        self._parts.append(f"&#{name};")
+
+    def handle_comment(self, data):
+        self._parts.append(f"<!--{data}-->")
+
+    def handle_decl(self, decl):
+        self._parts.append(f"<!{decl}>")
+
+    def result(self):
+        return "".join(self._parts)
+
+
+def _js_string(value):
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _prepare_language(lang):
+    global JS_LABELS
+    bridge = _ChichewaBridge() if lang == "ny" else None
+
+    def label(text):
+        return bridge.ui(text) if bridge else text
+
+    JS_LABELS = {
+        "copied": _js_string(label("Copied ✓")),
+        "copy_failed": _js_string(label("Copy failed")),
+        "copy_code": _js_string(label("Copy code")),
+        "copy_setup_cell": _js_string(label("Copy setup + cell")),
+        "copy_cell_only": _js_string(label("Copy cell only")),
+        "completed": _js_string(label("Completed ✓")),
+        "mark_complete": _js_string(label("Mark complete")),
+        "progress": _js_string(label("{n} of {cards.length} subquestions marked complete.")),
+        "result_count": _js_string(label("{shown} of {cards.length} subquestions visible.")),
+    }
+    return bridge
+
+
+def _localize_document(document, bridge):
+    parser = _TextTranslator(bridge.ui)
+    parser.feed(document)
+    parser.close()
+    translated = parser.result()
+    translated = translated.replace('<html lang="en">', '<html lang="ny">', 1)
+    attribute_labels = [
+        ("placeholder", "Search all questions, code and guidance…"),
+        ("aria-label", "Search practical"),
+        ("aria-label", "Companion theme"),
+        ("aria-label", "Completion state"),
+        ("title", "STAT 8100 Biostatistics and Epidemiology Practical Companion"),
+    ]
+    for attribute, english in attribute_labels:
+        old = f'{attribute}="{html.escape(english, quote=True)}"'
+        new = f'{attribute}="{html.escape(bridge.ui(english), quote=True)}"'
+        translated = translated.replace(old, new)
+    translated = translated.replace(
+        ".lang-ny{display:none}",
+        ".lang-en{display:none}.lang-ny{display:inline-block}",
+    )
+    return translated
+
+
+def build_html(results=None, lang="en"):
     results = results if results is not None else {}
     global RESULTS_PLACEHOLDER
     RESULTS_PLACEHOLDER = results
+    bridge = _prepare_language(lang)
 
     nav_rows = []
     for qid, guide in GUIDES.items():
@@ -468,9 +628,10 @@ def build_html(results=None):
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>STAT 8100 Practical Companion</title>
 <style>
-:root{{--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--code:#0b1b2e}}
+:root{{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--summary:#fbfdff;--subtle:#f1f5f9;--code:#0b1b2e;--code-head:#132947;--code-ink:#e6edf7;--on-navy:#fff;--warning-bg:#fff8e8;--worked-bg:#f8fbff;--worked-line:#c8dcf2;--hover-bg:#eaf2fb;--progress-bg:#dbe4ef;--tag-code-bg:#e4f0ff;--tag-code-ink:#0b4f8a;--tag-concept-bg:#f3e9ff;--tag-concept-ink:#6b21a8;--tag-calc-bg:#e8f7ee;--tag-calc-ink:#166534;--tag-report-bg:#fff4d8;--tag-report-ink:#8a5a00}}
+body[data-companion-theme="dark"]{{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--summary:#15243a;--subtle:#17263a;--code:#070f1c;--code-head:#10233c;--code-ink:#eaf1f9;--on-navy:#0b1220;--warning-bg:#3b2f13;--worked-bg:#132842;--worked-line:#31547b;--hover-bg:#1d3554;--progress-bg:#23344a;--tag-code-bg:#15365a;--tag-code-ink:#bfdbfe;--tag-concept-bg:#352057;--tag-concept-ink:#e9d5ff;--tag-calc-bg:#16452c;--tag-calc-ink:#bbf7d0;--tag-report-bg:#4a3410;--tag-report-ink:#fde68a}}
 *{{box-sizing:border-box}}
-body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif}}
+body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility}}
 a{{color:var(--blue)}}
 header.top{{background:linear-gradient(135deg,#082f6b,#0d5b9f);color:#fff;padding:26px 28px 22px}}
 header.top h1{{margin:0 0 6px;font-size:1.8rem}}
@@ -478,80 +639,103 @@ header.top p{{margin:4px 0;max-width:900px;color:#e7f0fb}}
 .badge{{display:inline-block;border:1px solid #ffffff66;border-radius:999px;padding:3px 10px;font-size:.78rem;margin-right:8px}}
 .header-actions{{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}}
 .header-actions a{{background:#fff;color:var(--navy);border-radius:8px;padding:8px 12px;font-weight:700;text-decoration:none}}
+.lang-ny{{display:none}}
 .layout{{display:grid;grid-template-columns:280px minmax(0,1fr);gap:22px;max-width:1500px;margin:0 auto;padding:22px}}
 aside{{position:sticky;top:12px;align-self:start;max-height:calc(100vh - 24px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}}
 aside h2{{font-size:1rem;margin:0 0 10px;text-transform:uppercase;letter-spacing:.08em;color:var(--navy)}}
 aside nav a{{display:block;padding:6px 8px;border-radius:7px;text-decoration:none;color:var(--ink);font-size:.88rem}}
-aside nav a:hover{{background:#eaf2fb}}
+aside nav a:hover{{background:var(--hover-bg)}}
 aside nav a span{{display:inline-block;min-width:42px;font-weight:800;color:var(--blue)}}
 main{{min-width:0}}
 .panel{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}}
 .search-row{{display:flex;gap:10px;flex-wrap:wrap;align-items:center}}
 input[type=search]{{flex:1;min-width:220px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:1rem}}
-.chip{{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;cursor:pointer;font-size:.85rem}}
-.chip.active{{background:var(--navy);color:#fff;border-color:var(--navy)}}
-.progress-line{{height:12px;border-radius:999px;background:#dbe4ef;overflow:hidden;margin:12px 0 6px}}
+.chip{{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:.85rem}}
+.chip.active{{background:var(--navy);color:var(--on-navy);border-color:var(--navy)}}
+.progress-line{{height:12px;border-radius:999px;background:var(--progress-bg);overflow:hidden;margin:12px 0 6px}}
 .progress-fill{{height:100%;width:0;background:linear-gradient(90deg,var(--navy),var(--blue));transition:width .2s}}
 .muted{{color:var(--muted)}}
 .question-heading{{margin:28px 0 10px;color:var(--navy);font-size:1.35rem;border-bottom:2px solid var(--line);padding-bottom:7px}}
 .question-card{{background:var(--card);border:1px solid var(--line);border-radius:13px;margin:10px 0;overflow:hidden}}
 .question-card[hidden]{{display:none}}
-.question-card>summary{{cursor:pointer;padding:14px 16px;display:flex;gap:10px;align-items:center;list-style:none;background:#fbfdff}}
+.question-card>summary{{cursor:pointer;padding:14px 16px;display:flex;gap:10px;align-items:center;list-style:none;background:var(--summary);color:var(--ink)}}
 .question-card>summary::-webkit-details-marker{{display:none}}
 .qid{{font-weight:800;color:var(--navy);min-width:46px}}
 .qtitle{{flex:1;font-weight:650}}
 .tag{{font-size:.72rem;border-radius:999px;padding:3px 9px;font-weight:700;white-space:nowrap}}
-.tag-code,.tag-mixed{{background:#e4f0ff;color:#0b4f8a}}
-.tag-concept,.tag-interp{{background:#f3e9ff;color:#6b21a8}}
-.tag-calc{{background:#e8f7ee;color:#166534}}
-.tag-report{{background:#fff4d8;color:#8a5a00}}
+.tag-code,.tag-mixed{{background:var(--tag-code-bg);color:var(--tag-code-ink)}}
+.tag-concept,.tag-interp{{background:var(--tag-concept-bg);color:var(--tag-concept-ink)}}
+.tag-calc{{background:var(--tag-calc-bg);color:var(--tag-calc-ink)}}
+.tag-report{{background:var(--tag-report-bg);color:var(--tag-report-ink)}}
 .done-state{{color:var(--gold);font-size:1.2rem}}
 .card-body{{border-top:1px solid var(--line);padding:4px 16px 16px}}
-.card-section{{padding:12px 0;border-bottom:1px solid #edf1f6}}
+.card-section{{padding:12px 0;border-bottom:1px solid var(--line)}}
 .card-section:last-of-type{{border-bottom:0}}
 .card-section h4{{margin:0 0 8px;font-size:.92rem;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)}}
 .card-section p{{margin:6px 0}}
 .learning{{margin:0;padding-left:22px}}
 .learning li{{margin:4px 0}}
 .two-col{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
-.warning{{background:#fff8e8;border-left:4px solid var(--gold);padding:9px 12px;border-radius:6px}}
-.worked-report{{background:#f8fbff;border:1px solid #c8dcf2;border-left:4px solid var(--blue);border-radius:8px;padding:11px 13px}}
+.warning{{background:var(--warning-bg);color:var(--ink);border-left:4px solid var(--gold);padding:9px 12px;border-radius:6px}}
+.worked-report{{background:var(--worked-bg);color:var(--ink);border:1px solid var(--worked-line);border-left:4px solid var(--blue);border-radius:8px;padding:11px 13px}}
 .worked-report p:first-of-type{{margin-top:0}}
-.template-example{{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:#fff}}
+.template-example{{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:var(--card)}}
 .template-example h5{{margin:12px 0 5px;color:var(--navy);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}}
-.code-wrap{{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid #0b1b2e}}
-.code-head{{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#132947;color:#dbeafe;font-size:.82rem}}
+.code-wrap{{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid var(--code)}}
+.code-head{{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--code-head);color:#dbeafe;font-size:.82rem}}
 .code-head code{{color:#fff}}
 .copy-code{{background:#1d4ed8;color:#fff;border:0;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}}
 pre{{margin:0;overflow:auto}}
 .code-wrap pre{{padding:13px;max-height:420px}}
-pre code{{font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:#e6edf7}}
-.verified-output{{background:#f1f5f9;border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;padding:12px;max-height:340px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 "Cascadia Code",Consolas,monospace}}
+pre code{{font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:var(--code-ink)}}
+.verified-output{{background:var(--subtle);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;padding:12px;max-height:340px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 "Cascadia Code",Consolas,monospace}}
 .no-code{{color:var(--muted);font-style:italic}}
 .card-actions{{display:flex;gap:12px;align-items:center;margin-top:12px}}
 .jump{{font-size:.85rem}}
-.mark-complete{{margin-left:auto;background:var(--navy);color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}}
+.mark-complete{{margin-left:auto;background:var(--navy);color:var(--on-navy);border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}}
 details>summary{{cursor:pointer;font-weight:700;color:var(--navy)}}
-details pre{{background:#f1f5f9;border-radius:8px;padding:10px;margin-top:8px}}
+details pre{{background:var(--subtle);color:var(--ink);border-radius:8px;padding:10px;margin-top:8px}}
 table{{border-collapse:collapse;width:100%;font-size:.88rem}}
 th,td{{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}}
-th{{background:#f1f5fb;color:var(--navy)}}
+th{{background:var(--subtle);color:var(--navy)}}
 code{{font-family:"Cascadia Code",Consolas,monospace}}
 .tok-comment{{color:#7dd3fc}}
 .tok-string{{color:#fbbf24}}
 .tok-keyword{{color:#c084fc}}
 .tok-number{{color:#86efac}}
+.code-actions{{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}}
+.code-prereq{{font-size:.74rem;font-weight:600;color:#cfe0f7}}
+.copy-cell-only{{background:#334155;color:#fff;border:1px solid #64748b;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}}
+.setup-note{{margin:0 0 10px;padding:8px 11px;border-left:4px solid var(--gold);background:var(--subtle);border-radius:6px;color:var(--muted);font-size:.88rem}}
+.theme-switch{{display:flex;gap:6px;align-items:center;margin-left:auto}}
+.theme-switch button{{background:#ffffff22;color:#fff;border:1px solid #ffffff66;border-radius:999px;padding:5px 11px;cursor:pointer;font-size:.78rem;font-weight:700}}
+.theme-switch button.active{{background:#fff;color:var(--navy)}}
+body[data-companion-theme="dark"] .theme-switch button{{background:#ffffff14;color:#eaf1f9;border-color:#ffffff44}}
+body[data-companion-theme="dark"] .theme-switch button.active{{background:#eaf1f9;color:#0b1220}}
+@media(prefers-contrast:more){{.card-section,.question-card,.panel,aside{{border-width:2px}}.muted{{color:var(--ink)}}.tok-comment,.tok-string,.tok-keyword,.tok-number{{color:#fff}}}}
+@media(forced-colors:active){{
+  .code-wrap,.verified-output,.warning,.worked-report,.question-card,.panel,aside{{border:1px solid CanvasText!important}}
+  .copy-code,.copy-cell-only,.chip,.mark-complete,.theme-switch button{{border:1px solid ButtonText!important}}
+  pre code,.tok-comment,.tok-string,.tok-keyword,.tok-number{{color:CanvasText!important;forced-color-adjust:auto}}
+  .done-state{{color:CanvasText!important}}
+}}
 footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);font-size:.86rem}}
-@media(max-width:960px){{.layout{{grid-template-columns:1fr}}aside{{position:static;max-height:none}}.two-col{{grid-template-columns:1fr}}header.top{{padding:20px}}}}
+@media(max-width:960px){{.layout{{grid-template-columns:1fr}}aside{{position:static;max-height:none}}.two-col{{grid-template-columns:1fr}}header.top{{padding:20px}}.code-actions{{justify-content:flex-start}}}}
 </style>
 </head>
 <body>
 <header class="top">
   <h1>STAT 8100 Biostatistics &amp; Epidemiology Practical Companion</h1>
+  <div class="theme-switch" aria-label="Companion theme">
+    <button type="button" data-companion-theme-btn="light" class="active">White</button>
+    <button type="button" data-companion-theme-btn="dark">Dark</button>
+  </div>
   <div class="header-actions">
     <a href="./stat8100_biostatistics_epidemiology_practical.ipynb" download>Download the notebook</a>
     <a href="./stat8100_practical_results.json" download>Download verified results</a>
     <a href="#nav-table">Jump to full navigation table</a>
+    <a class="lang-en" href="./stat8100_practical_companion_ny.html">Chichewa version</a>
+    <a class="lang-ny" href="./stat8100_practical_companion.html">English version</a>
   </div>
 </header>
 <div class="layout">
@@ -573,6 +757,7 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
       <div class="progress-line"><div class="progress-fill" id="progress-fill"></div></div>
       <p class="muted" id="progress-text">0 of 28 subquestions marked complete.</p>
       <p class="muted" id="result-count"></p>
+      <p class="muted"><strong>Before running question code:</strong> run the <a href="#setup-cell">Reusable setup cell</a> once in the same Jupyter kernel.</p>
     </section>
 
     <section class="panel">
@@ -593,7 +778,7 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="setup-cell">
       <h2>Reusable setup cell</h2>
       {_code_block('setup')}
     </section>
@@ -636,11 +821,11 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
     cards.forEach(c=>{{
       const on=!!done[c.dataset.qid];
       c.querySelector('.done-state').textContent=on?'●':'○';
-      c.querySelector('.mark-complete').textContent=on?'Completed ✓':'Mark complete';
+      c.querySelector('.mark-complete').textContent=on?{JS_LABELS['completed']}:{JS_LABELS['mark_complete']};
     }});
     const n=Object.keys(done).filter(k=>cards.some(c=>c.dataset.qid===k)).length;
     fill.style.width=(n/cards.length*100)+'%';
-    ptext.textContent=n+' of '+cards.length+' subquestions marked complete.';
+    ptext.textContent={JS_LABELS['progress']}.replace('{{n}}',n).replace('{{cards.length}}',cards.length);
   }}
   function highlight(code){{
     const source=code.textContent;
@@ -672,19 +857,47 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
       card.hidden=!visible;
       if(visible)shown++;
     }});
-    count.textContent=shown+' of '+cards.length+' subquestions visible.';
+    count.textContent={JS_LABELS['result_count']}.replace('{{shown}}',shown).replace('{{cards.length}}',cards.length);
   }}
   search.addEventListener('input',filter);
   chips.forEach(chip=>chip.addEventListener('click',()=>{{
     chips.forEach(c=>c.classList.remove('active'));
     chip.classList.add('active');active=chip.dataset.filter;filter();
   }}));
+  const setupCode=document.querySelector('.code-wrap[data-cell="setup"] pre code');
+  async function copyText(text,btn,label){{
+    try{{await navigator.clipboard.writeText(text);btn.textContent={JS_LABELS['copied']}}}
+    catch(e){{btn.textContent={JS_LABELS['copy_failed']}}}
+    setTimeout(()=>btn.textContent=label,1400);
+  }}
   document.querySelectorAll('.copy-code').forEach(btn=>btn.addEventListener('click',async()=>{{
-    const code=btn.closest('.code-wrap').querySelector('code');
-    try{{await navigator.clipboard.writeText(code.textContent);btn.textContent='Copied ✓'}}
-    catch(e){{btn.textContent='Copy failed'}}
-    setTimeout(()=>btn.textContent='Copy code',1400);
+    const wrap=btn.closest('.code-wrap');
+    const code=wrap.querySelector('pre code');
+    let text=code.textContent;
+    if(wrap.dataset.requiresSetup==='true'&&setupCode){{
+      text=setupCode.textContent+'\\n\\n'+text;
+    }}
+    await copyText(text,btn,btn.dataset.copyMode==='with-setup'?{JS_LABELS['copy_setup_cell']}:{JS_LABELS['copy_code']});
   }}));
+  document.querySelectorAll('.copy-cell-only').forEach(btn=>btn.addEventListener('click',async()=>{{
+    const code=btn.closest('.code-wrap').querySelector('pre code');
+    await copyText(code.textContent,btn,{JS_LABELS['copy_cell_only']});
+  }}));
+  const themeKey='mnh-stat8100-theme-v1';
+  let theme='light';
+  try{{theme=localStorage.getItem(themeKey)||'light'}}catch(e){{}}
+  function paintTheme(){{
+    document.body.dataset.companionTheme=theme;
+    document.querySelectorAll('[data-companion-theme-btn]').forEach(b=>{{
+      b.classList.toggle('active',b.dataset.companionThemeBtn===theme);
+    }});
+  }}
+  document.querySelectorAll('[data-companion-theme-btn]').forEach(b=>b.addEventListener('click',()=>{{
+    theme=b.dataset.companionThemeBtn;
+    try{{localStorage.setItem(themeKey,theme)}}catch(e){{}}
+    paintTheme();
+  }}));
+  paintTheme();
   document.querySelectorAll('.mark-complete').forEach(btn=>btn.addEventListener('click',()=>{{
     const id=btn.dataset.qid;
     if(done[id])delete done[id];else done[id]=true;
@@ -696,13 +909,19 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
 </body>
 </html>
 """
-    HTML_PATH.write_text(document, encoding="utf-8", newline="\n")
-    if results:
+    if lang == "ny":
+        document = _localize_document(document, bridge)
+        target = NY_HTML_PATH
+    else:
+        target = HTML_PATH
+    target.write_text(document, encoding="utf-8", newline="\n")
+    if results and lang == "en":
         RESULTS_PATH.write_text(
             json.dumps(results, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n",
         )
-    return HTML_PATH
+        build_html(results, "ny")
+    return target
 
 
 if __name__ == "__main__":

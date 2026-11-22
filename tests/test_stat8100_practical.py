@@ -252,11 +252,18 @@ def test_html_code_is_copyable_but_manual_tasks_have_no_code_cell():
     )
     assert len(code_blocks) == 27
     assert companion.count('<button class="copy-code"') == 27
+    assert companion.count('data-requires-setup="true"') == 26
+    assert companion.count('<button class="copy-cell-only"') == 26
     assert all("language-python" not in _card(companion, qid) for qid in ("Q2a", "Q3c"))
     assert all("No code cell is required" in _card(companion, qid) for qid in ("Q2a", "Q3c"))
 
     q1a = _card(companion, "Q1a")
     assert "language-python" in q1a
+    assert 'data-requires-setup="true"' in q1a
+    assert "Copy setup + cell" in q1a
+    assert "Copy cell only" in q1a
+    assert "setupCode=document.querySelector('.code-wrap[data-cell=\"setup\"] pre code')" in companion
+    assert "wrap.querySelector('pre code')" in companion
     assert "class=\"verified-output\"" in q1a
     assert "<h4>Interpretation guidance</h4>" in q1a
     assert "<h4>Reporting guidance</h4>" in q1a
@@ -279,6 +286,35 @@ def test_html_code_is_copyable_but_manual_tasks_have_no_code_cell():
         assert marker in "\n".join(decoded)
 
 
+def test_question_cells_explain_the_setup_prerequisite():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from stat8100_code_cells import CODE
+
+    namespace = {}
+    raised = None
+    try:
+        exec(CODE["q1a"], namespace)
+    except RuntimeError as exc:
+        raised = exc
+    assert raised is not None
+    assert "Run the 'Reusable setup' cell" in str(raised)
+    assert "record()" in str(raised)
+    assert "Reusable setup" in CODE["q1a"].splitlines()[0]
+
+
+def test_companion_light_and_high_contrast_rendering_is_explicit():
+    companion = COMPANION.read_text(encoding="utf-8")
+    assert 'color-scheme:light' in companion
+    assert 'data-companion-theme="dark"' in companion
+    assert '@media(forced-colors:active)' in companion
+    assert '@media(prefers-contrast:more)' in companion
+    assert 'CanvasText' in companion
+    assert 'data-companion-theme-btn="light"' in companion
+    assert 'data-companion-theme-btn="dark"' in companion
+
+
 def test_practical_view_is_additive_to_the_existing_full_screen_pattern():
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
@@ -298,7 +334,7 @@ def test_practical_view_is_additive_to_the_existing_full_screen_pattern():
     assert 'id="open-stat8100-practical"' in index
     assert 'id="stat8100-practical-back"' in index
     assert 'data-view="stat8100-practical"' in index
-    assert 'src="/resources/stat8100_practical_companion.html?v=2026.11.22-stat8100-practical-v1"' in index
+    assert 'src="/resources/stat8100_practical_companion.html?v=2026.11.22-stat8100-practical-v2"' in index
     assert 'title="STAT 8100 Biostatistics and Epidemiology Practical Companion"' in index
 
     assert '"stat8100-practical"' in app
@@ -331,7 +367,7 @@ def test_generators_and_dev_dependencies_are_present():
     builder = (scripts / "build_stat8100_practical.py").read_text(encoding="utf-8")
     runner = (scripts / "execute_stat8100_practical.py").read_text(encoding="utf-8")
     assert "def build_notebook()" in builder
-    assert "def build_html(results=None)" in builder
+    assert 'def build_html(results=None, lang="en")' in builder
     assert "from stat8100_reporting import work_report, worked_template_examples" in builder
     assert "nbformat.write(" in runner
     assert "NotebookClient(" in runner

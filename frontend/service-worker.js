@@ -39,6 +39,7 @@ const APP_FILES = [
   "/resources/python-command-library.html", "/resources/python-jupyter-windows-setup-simulation.html",
   "/resources/python-statistical-tests-glossary.html",
   "/resources/stat8100_practical_companion.html",
+  "/resources/stat8100_practical_companion_ny.html",
   "/resources/stat8100_biostatistics_epidemiology_practical.ipynb",
   "/resources/stat8100_practical_results.json",
   ...KATEX_FONTS.map((name) => "/vendor/katex/fonts/" + name)

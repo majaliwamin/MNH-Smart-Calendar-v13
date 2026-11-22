@@ -1110,6 +1110,25 @@ CODE["results"] = dedent(r'''
           json.dumps(RESULTS, ensure_ascii=False, sort_keys=True, default=str))
 ''').strip() + "\n"
 
+# Every non-setup cell depends on objects created by the setup cell.  A clear
+# runtime error is preferable to a bare NameError when a learner copies only
+# one question cell from the companion into a fresh Jupyter kernel.
+SETUP_GUARD = dedent(r'''
+    # Prerequisite: run the "Reusable setup" cell once in this kernel.
+    try:
+        anc
+        record
+    except NameError as exc:
+        raise RuntimeError(
+            "Run the 'Reusable setup' cell before this cell. It creates "
+            "anc, bp, surv, RESULTS and record(); this question cell reuses them."
+        ) from exc
+''').strip() + "\n\n"
+
+for _key in list(CODE):
+    if _key != "setup":
+        CODE[_key] = SETUP_GUARD + CODE[_key]
+
 # Which code cells appear inside each navigation card.
 QUESTION_CODE = {
     "Q1a": ["q1a"], "Q1b": ["q1b"],

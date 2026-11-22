@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>STAT 8100 Practical Companion</title>
 <style>
-:root{--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--code:#0b1b2e}
+:root{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--summary:#fbfdff;--subtle:#f1f5f9;--code:#0b1b2e;--code-head:#132947;--code-ink:#e6edf7;--on-navy:#fff;--warning-bg:#fff8e8;--worked-bg:#f8fbff;--worked-line:#c8dcf2;--hover-bg:#eaf2fb;--progress-bg:#dbe4ef;--tag-code-bg:#e4f0ff;--tag-code-ink:#0b4f8a;--tag-concept-bg:#f3e9ff;--tag-concept-ink:#6b21a8;--tag-calc-bg:#e8f7ee;--tag-calc-ink:#166534;--tag-report-bg:#fff4d8;--tag-report-ink:#8a5a00}
+body[data-companion-theme="dark"]{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--summary:#15243a;--subtle:#17263a;--code:#070f1c;--code-head:#10233c;--code-ink:#eaf1f9;--on-navy:#0b1220;--warning-bg:#3b2f13;--worked-bg:#132842;--worked-line:#31547b;--hover-bg:#1d3554;--progress-bg:#23344a;--tag-code-bg:#15365a;--tag-code-ink:#bfdbfe;--tag-concept-bg:#352057;--tag-concept-ink:#e9d5ff;--tag-calc-bg:#16452c;--tag-calc-ink:#bbf7d0;--tag-report-bg:#4a3410;--tag-report-ink:#fde68a}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility}
 a{color:var(--blue)}
 header.top{background:linear-gradient(135deg,#082f6b,#0d5b9f);color:#fff;padding:26px 28px 22px}
 header.top h1{margin:0 0 6px;font-size:1.8rem}
@@ -15,80 +16,103 @@ header.top p{margin:4px 0;max-width:900px;color:#e7f0fb}
 .badge{display:inline-block;border:1px solid #ffffff66;border-radius:999px;padding:3px 10px;font-size:.78rem;margin-right:8px}
 .header-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .header-actions a{background:#fff;color:var(--navy);border-radius:8px;padding:8px 12px;font-weight:700;text-decoration:none}
+.lang-ny{display:none}
 .layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:22px;max-width:1500px;margin:0 auto;padding:22px}
 aside{position:sticky;top:12px;align-self:start;max-height:calc(100vh - 24px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
 aside h2{font-size:1rem;margin:0 0 10px;text-transform:uppercase;letter-spacing:.08em;color:var(--navy)}
 aside nav a{display:block;padding:6px 8px;border-radius:7px;text-decoration:none;color:var(--ink);font-size:.88rem}
-aside nav a:hover{background:#eaf2fb}
+aside nav a:hover{background:var(--hover-bg)}
 aside nav a span{display:inline-block;min-width:42px;font-weight:800;color:var(--blue)}
 main{min-width:0}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
 .search-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 input[type=search]{flex:1;min-width:220px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:1rem}
-.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;cursor:pointer;font-size:.85rem}
-.chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
-.progress-line{height:12px;border-radius:999px;background:#dbe4ef;overflow:hidden;margin:12px 0 6px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:.85rem}
+.chip.active{background:var(--navy);color:var(--on-navy);border-color:var(--navy)}
+.progress-line{height:12px;border-radius:999px;background:var(--progress-bg);overflow:hidden;margin:12px 0 6px}
 .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--navy),var(--blue));transition:width .2s}
 .muted{color:var(--muted)}
 .question-heading{margin:28px 0 10px;color:var(--navy);font-size:1.35rem;border-bottom:2px solid var(--line);padding-bottom:7px}
 .question-card{background:var(--card);border:1px solid var(--line);border-radius:13px;margin:10px 0;overflow:hidden}
 .question-card[hidden]{display:none}
-.question-card>summary{cursor:pointer;padding:14px 16px;display:flex;gap:10px;align-items:center;list-style:none;background:#fbfdff}
+.question-card>summary{cursor:pointer;padding:14px 16px;display:flex;gap:10px;align-items:center;list-style:none;background:var(--summary);color:var(--ink)}
 .question-card>summary::-webkit-details-marker{display:none}
 .qid{font-weight:800;color:var(--navy);min-width:46px}
 .qtitle{flex:1;font-weight:650}
 .tag{font-size:.72rem;border-radius:999px;padding:3px 9px;font-weight:700;white-space:nowrap}
-.tag-code,.tag-mixed{background:#e4f0ff;color:#0b4f8a}
-.tag-concept,.tag-interp{background:#f3e9ff;color:#6b21a8}
-.tag-calc{background:#e8f7ee;color:#166534}
-.tag-report{background:#fff4d8;color:#8a5a00}
+.tag-code,.tag-mixed{background:var(--tag-code-bg);color:var(--tag-code-ink)}
+.tag-concept,.tag-interp{background:var(--tag-concept-bg);color:var(--tag-concept-ink)}
+.tag-calc{background:var(--tag-calc-bg);color:var(--tag-calc-ink)}
+.tag-report{background:var(--tag-report-bg);color:var(--tag-report-ink)}
 .done-state{color:var(--gold);font-size:1.2rem}
 .card-body{border-top:1px solid var(--line);padding:4px 16px 16px}
-.card-section{padding:12px 0;border-bottom:1px solid #edf1f6}
+.card-section{padding:12px 0;border-bottom:1px solid var(--line)}
 .card-section:last-of-type{border-bottom:0}
 .card-section h4{margin:0 0 8px;font-size:.92rem;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)}
 .card-section p{margin:6px 0}
 .learning{margin:0;padding-left:22px}
 .learning li{margin:4px 0}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.warning{background:#fff8e8;border-left:4px solid var(--gold);padding:9px 12px;border-radius:6px}
-.worked-report{background:#f8fbff;border:1px solid #c8dcf2;border-left:4px solid var(--blue);border-radius:8px;padding:11px 13px}
+.warning{background:var(--warning-bg);color:var(--ink);border-left:4px solid var(--gold);padding:9px 12px;border-radius:6px}
+.worked-report{background:var(--worked-bg);color:var(--ink);border:1px solid var(--worked-line);border-left:4px solid var(--blue);border-radius:8px;padding:11px 13px}
 .worked-report p:first-of-type{margin-top:0}
-.template-example{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:#fff}
+.template-example{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:var(--card)}
 .template-example h5{margin:12px 0 5px;color:var(--navy);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}
-.code-wrap{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid #0b1b2e}
-.code-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#132947;color:#dbeafe;font-size:.82rem}
+.code-wrap{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid var(--code)}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--code-head);color:#dbeafe;font-size:.82rem}
 .code-head code{color:#fff}
 .copy-code{background:#1d4ed8;color:#fff;border:0;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}
 pre{margin:0;overflow:auto}
 .code-wrap pre{padding:13px;max-height:420px}
-pre code{font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:#e6edf7}
-.verified-output{background:#f1f5f9;border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;padding:12px;max-height:340px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 "Cascadia Code",Consolas,monospace}
+pre code{font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:var(--code-ink)}
+.verified-output{background:var(--subtle);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;padding:12px;max-height:340px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 "Cascadia Code",Consolas,monospace}
 .no-code{color:var(--muted);font-style:italic}
 .card-actions{display:flex;gap:12px;align-items:center;margin-top:12px}
 .jump{font-size:.85rem}
-.mark-complete{margin-left:auto;background:var(--navy);color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
+.mark-complete{margin-left:auto;background:var(--navy);color:var(--on-navy);border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
 details>summary{cursor:pointer;font-weight:700;color:var(--navy)}
-details pre{background:#f1f5f9;border-radius:8px;padding:10px;margin-top:8px}
+details pre{background:var(--subtle);color:var(--ink);border-radius:8px;padding:10px;margin-top:8px}
 table{border-collapse:collapse;width:100%;font-size:.88rem}
 th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
-th{background:#f1f5fb;color:var(--navy)}
+th{background:var(--subtle);color:var(--navy)}
 code{font-family:"Cascadia Code",Consolas,monospace}
 .tok-comment{color:#7dd3fc}
 .tok-string{color:#fbbf24}
 .tok-keyword{color:#c084fc}
 .tok-number{color:#86efac}
+.code-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.code-prereq{font-size:.74rem;font-weight:600;color:#cfe0f7}
+.copy-cell-only{background:#334155;color:#fff;border:1px solid #64748b;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}
+.setup-note{margin:0 0 10px;padding:8px 11px;border-left:4px solid var(--gold);background:var(--subtle);border-radius:6px;color:var(--muted);font-size:.88rem}
+.theme-switch{display:flex;gap:6px;align-items:center;margin-left:auto}
+.theme-switch button{background:#ffffff22;color:#fff;border:1px solid #ffffff66;border-radius:999px;padding:5px 11px;cursor:pointer;font-size:.78rem;font-weight:700}
+.theme-switch button.active{background:#fff;color:var(--navy)}
+body[data-companion-theme="dark"] .theme-switch button{background:#ffffff14;color:#eaf1f9;border-color:#ffffff44}
+body[data-companion-theme="dark"] .theme-switch button.active{background:#eaf1f9;color:#0b1220}
+@media(prefers-contrast:more){.card-section,.question-card,.panel,aside{border-width:2px}.muted{color:var(--ink)}.tok-comment,.tok-string,.tok-keyword,.tok-number{color:#fff}}
+@media(forced-colors:active){
+  .code-wrap,.verified-output,.warning,.worked-report,.question-card,.panel,aside{border:1px solid CanvasText!important}
+  .copy-code,.copy-cell-only,.chip,.mark-complete,.theme-switch button{border:1px solid ButtonText!important}
+  pre code,.tok-comment,.tok-string,.tok-keyword,.tok-number{color:CanvasText!important;forced-color-adjust:auto}
+  .done-state{color:CanvasText!important}
+}
 footer{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);font-size:.86rem}
-@media(max-width:960px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none}.two-col{grid-template-columns:1fr}header.top{padding:20px}}
+@media(max-width:960px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none}.two-col{grid-template-columns:1fr}header.top{padding:20px}.code-actions{justify-content:flex-start}}
 </style>
 </head>
 <body>
 <header class="top">
   <h1>STAT 8100 Biostatistics &amp; Epidemiology Practical Companion</h1>
+  <div class="theme-switch" aria-label="Companion theme">
+    <button type="button" data-companion-theme-btn="light" class="active">White</button>
+    <button type="button" data-companion-theme-btn="dark">Dark</button>
+  </div>
   <div class="header-actions">
     <a href="./stat8100_biostatistics_epidemiology_practical.ipynb" download>Download the notebook</a>
     <a href="./stat8100_practical_results.json" download>Download verified results</a>
     <a href="#nav-table">Jump to full navigation table</a>
+    <a class="lang-en" href="./stat8100_practical_companion_ny.html">Chichewa version</a>
+    <a class="lang-ny" href="./stat8100_practical_companion.html">English version</a>
   </div>
 </header>
 <div class="layout">
@@ -110,6 +134,7 @@ footer{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);
       <div class="progress-line"><div class="progress-fill" id="progress-fill"></div></div>
       <p class="muted" id="progress-text">0 of 28 subquestions marked complete.</p>
       <p class="muted" id="result-count"></p>
+      <p class="muted"><strong>Before running question code:</strong> run the <a href="#setup-cell">Reusable setup cell</a> once in the same Jupyter kernel.</p>
     </section>
 
     <section class="panel">
@@ -130,9 +155,9 @@ footer{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="setup-cell">
       <h2>Reusable setup cell</h2>
-      <div class="code-wrap"><div class="code-head"><span>Code cell <code>setup</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python"># Reusable setup — run this once before any question.
+      <div class="code-wrap" data-cell="setup"><div class="code-head"><span>Code cell <code>setup</code></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="cell">Copy code</button></span></div><pre><code class="language-python"># Reusable setup — run this once before any question.
 from pathlib import Path
 import json
 import math
@@ -295,7 +320,17 @@ show_progress()</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q1a</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">n_anc = int(anc[&quot;preterm&quot;].notna().sum())
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q1a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q1a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+n_anc = int(anc[&quot;preterm&quot;].notna().sum())
 p_preterm = float(anc[&quot;preterm&quot;].mean())
 p_lowbw = float(anc[&quot;low_bw&quot;].mean())
 q1a_table = pd.DataFrame({
@@ -374,7 +409,17 @@ record(&quot;Q1a&quot;, q1a_table.to_dict(orient=&quot;records&quot;))</code></p
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q1b</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">preterm_group = anc.loc[anc[&quot;preterm&quot;] == 1, &quot;low_bw&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q1b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q1b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+preterm_group = anc.loc[anc[&quot;preterm&quot;] == 1, &quot;low_bw&quot;]
 term_group = anc.loc[anc[&quot;preterm&quot;] == 0, &quot;low_bw&quot;]
 p_lb_given_preterm = float(preterm_group.mean())
 p_lb_given_term = float(term_group.mean())
@@ -540,7 +585,17 @@ record(&quot;Q1b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q2b</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">desc_columns = [&quot;age&quot;, &quot;bmi&quot;, &quot;hb&quot;, &quot;gest_age&quot;, &quot;birthweight&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q2b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+desc_columns = [&quot;age&quot;, &quot;bmi&quot;, &quot;hb&quot;, &quot;gest_age&quot;, &quot;birthweight&quot;]
 rows = []
 for column in desc_columns:
     series = anc[column]
@@ -656,7 +711,17 @@ record(&quot;Q2b&quot;, q2b_summary.to_dict(orient=&quot;records&quot;))</code><
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q2c</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">dist_columns = [&quot;birthweight&quot;, &quot;gest_age&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q2c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+dist_columns = [&quot;birthweight&quot;, &quot;gest_age&quot;]
 fig, axes = plt.subplots(1, 2, figsize=(12, 4.2))
 dist_rows = []
 for axis, column in zip(axes, dist_columns):
@@ -759,7 +824,17 @@ record(&quot;Q2c&quot;, q2c_summary.to_dict(orient=&quot;records&quot;))</code><
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q2d</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">corr_data = anc[[&quot;gest_age&quot;, &quot;birthweight&quot;]].dropna()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q2d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+corr_data = anc[[&quot;gest_age&quot;, &quot;birthweight&quot;]].dropna()
 pearson = st.pearsonr(corr_data[&quot;gest_age&quot;], corr_data[&quot;birthweight&quot;])
 spearman = st.spearmanr(corr_data[&quot;gest_age&quot;], corr_data[&quot;birthweight&quot;])
 pearson_ci = pearson.confidence_interval(confidence_level=0.95)
@@ -846,7 +921,17 @@ record(&quot;Q2d&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q3a</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">bw = anc[&quot;birthweight&quot;].dropna()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q3a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+bw = anc[&quot;birthweight&quot;].dropna()
 n = int(bw.size)
 mean_bw = float(bw.mean())
 sd_bw = float(bw.std(ddof=1))
@@ -938,7 +1023,17 @@ record(&quot;Q3a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q3b</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">anaemia = anc[&quot;anaemia&quot;].dropna().astype(int)
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q3b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+anaemia = anc[&quot;anaemia&quot;].dropna().astype(int)
 events = int(anaemia.sum())
 denominator = int(anaemia.size)
 prevalence = events / denominator
@@ -1070,7 +1165,17 @@ record(&quot;Q3b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q3d</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">facility_order = [&quot;Urban&quot;, &quot;Peri-urban&quot;, &quot;Rural&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q3d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+facility_order = [&quot;Urban&quot;, &quot;Peri-urban&quot;, &quot;Rural&quot;]
 facility_rows = []
 for facility in facility_order:
     values = anc.loc[anc[&quot;facility_type&quot;] == facility, &quot;birthweight&quot;].dropna()
@@ -1175,7 +1280,17 @@ record(&quot;Q3d&quot;, facility_summary.to_dict(orient=&quot;records&quot;))</c
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q4</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">yes = anc.loc[anc[&quot;iptp3&quot;] == &quot;Yes&quot;, &quot;birthweight&quot;].dropna()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q4" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q4</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+yes = anc.loc[anc[&quot;iptp3&quot;] == &quot;Yes&quot;, &quot;birthweight&quot;].dropna()
 no = anc.loc[anc[&quot;iptp3&quot;] == &quot;No&quot;, &quot;birthweight&quot;].dropna()
 group_summary = pd.DataFrame({
     &quot;iptp3&quot;: [&quot;Yes&quot;, &quot;No&quot;],
@@ -1302,7 +1417,17 @@ record(&quot;Q4&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q5</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">paired = bp.copy()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q5" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q5</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+paired = bp.copy()
 paired[&quot;diff_36wk_minus_booking&quot;] = paired[&quot;sbp_36wk&quot;] - paired[&quot;sbp_booking&quot;]
 diff = paired[&quot;diff_36wk_minus_booking&quot;]
 bp_summary = pd.DataFrame({
@@ -1435,7 +1560,17 @@ record(&quot;Q5&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q6</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">facility_order = [&quot;Urban&quot;, &quot;Peri-urban&quot;, &quot;Rural&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q6" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q6</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+facility_order = [&quot;Urban&quot;, &quot;Peri-urban&quot;, &quot;Rural&quot;]
 hb_groups = [anc.loc[anc[&quot;facility_type&quot;] == f, &quot;hb&quot;].dropna()
              for f in facility_order]
 hb_summary = pd.DataFrame({
@@ -1604,7 +1739,17 @@ record(&quot;Q6&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q7a</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">edu_order = [&quot;None&quot;, &quot;Primary&quot;, &quot;Secondary+&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q7a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+edu_order = [&quot;None&quot;, &quot;Primary&quot;, &quot;Secondary+&quot;]
 edu = anc.dropna(subset=[&quot;education&quot;, &quot;anaemia&quot;]).copy()
 edu[&quot;education&quot;] = pd.Categorical(edu[&quot;education&quot;], categories=edu_order, ordered=True)
 observed = pd.crosstab(edu[&quot;education&quot;], edu[&quot;anaemia&quot;])
@@ -1769,7 +1914,17 @@ record(&quot;Q7a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q7b</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">anaemia_complete = anc[&quot;anaemia&quot;].dropna().astype(int)
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q7b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+anaemia_complete = anc[&quot;anaemia&quot;].dropna().astype(int)
 x = int(anaemia_complete.sum())
 n = int(anaemia_complete.size)
 p_hat = x / n
@@ -1847,7 +2002,17 @@ record(&quot;Q7b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q7c</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">sub = anc.dropna(subset=[&quot;anaemia&quot;]).copy()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q7c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+sub = anc.dropna(subset=[&quot;anaemia&quot;]).copy()
 sub[&quot;anaemia&quot;] = sub[&quot;anaemia&quot;].astype(int)
 exposed = sub.loc[sub[&quot;anaemia&quot;] == 1, &quot;preterm&quot;]
 unexposed = sub.loc[sub[&quot;anaemia&quot;] == 0, &quot;preterm&quot;]
@@ -1952,7 +2117,17 @@ record(&quot;Q7c&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q8a</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">model_simple = smf.ols(&quot;birthweight ~ gest_age&quot;, data=anc).fit()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+model_simple = smf.ols(&quot;birthweight ~ gest_age&quot;, data=anc).fit()
 simple_ci = model_simple.conf_int()
 simple_terms = pd.DataFrame({
     &quot;term&quot;: model_simple.params.index,
@@ -2050,7 +2225,17 @@ record(&quot;Q8a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q8b</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">anc_model = anc.dropna(subset=[&quot;bmi&quot;]).copy()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+anc_model = anc.dropna(subset=[&quot;bmi&quot;]).copy()
 formula_base = (
     &quot;birthweight ~ gest_age + bmi + &quot;
     &quot;C(iptp3, Treatment(reference=&#x27;No&#x27;)) + anc_visits&quot;
@@ -2177,7 +2362,17 @@ record(&quot;Q8b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q8c</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">influence = model_multi.get_influence()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+influence = model_multi.get_influence()
 fitted = model_multi.fittedvalues
 residuals = model_multi.resid
 student_resid = influence.resid_studentized_internal
@@ -2277,7 +2472,17 @@ record(&quot;Q8c&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q8d</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">formula_extended = formula_base + (
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+formula_extended = formula_base + (
     &quot; + C(facility_type, Treatment(reference=&#x27;Urban&#x27;))&quot;
 )
 model_extended = smf.ols(formula_extended, data=anc_model).fit()
@@ -2361,7 +2566,17 @@ record(&quot;Q8d&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q8e</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">hypothetical = pd.DataFrame({
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8e" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8e</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+hypothetical = pd.DataFrame({
     &quot;gest_age&quot;: [39.0], &quot;bmi&quot;: [22.0], &quot;iptp3&quot;: [&quot;Yes&quot;], &quot;anc_visits&quot;: [5],
 })
 prediction = model_multi.get_prediction(hypothetical).summary_frame(alpha=0.05)
@@ -2448,7 +2663,17 @@ record(&quot;Q8e&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q9</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">logit_df = anc.dropna(subset=[&quot;anaemia&quot;]).copy()
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q9" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q9</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+logit_df = anc.dropna(subset=[&quot;anaemia&quot;]).copy()
 logit_df[&quot;anaemia&quot;] = logit_df[&quot;anaemia&quot;].astype(int)
 model_logit = smf.logit(
     &quot;preterm ~ age + anaemia + anc_visits&quot;, data=logit_df
@@ -2594,7 +2819,17 @@ record(&quot;Q9&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q10a</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">n_surv = int(surv.shape[0])
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+n_surv = int(surv.shape[0])
 events = int(surv[&quot;readmitted&quot;].sum())
 censored = int(n_surv - events)
 censoring_proportion = censored / n_surv
@@ -2668,7 +2903,17 @@ record(&quot;Q10a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q10b</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">km_all = SurvfuncRight(surv[&quot;time_days&quot;], surv[&quot;readmitted&quot;])
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+km_all = SurvfuncRight(surv[&quot;time_days&quot;], surv[&quot;readmitted&quot;])
 km_times = km_all.surv_times
 km_probs = km_all.surv_prob
 km_se = km_all.surv_prob_se
@@ -2820,7 +3065,17 @@ record(&quot;Q10b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q10c</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">strata = [&quot;Anaemia&quot;, &quot;No anaemia&quot;]
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+strata = [&quot;Anaemia&quot;, &quot;No anaemia&quot;]
 km_by_group = {
     group: SurvfuncRight(
         surv.loc[surv[&quot;anaemia&quot;] == group, &quot;time_days&quot;],
@@ -2943,7 +3198,17 @@ record(&quot;Q10c&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q10d</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">total_person_time = float(surv[&quot;time_days&quot;].sum())
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+total_person_time = float(surv[&quot;time_days&quot;].sum())
 rate = events / total_person_time
 rate_per_1000 = rate * 1000
 rate_ci = (
@@ -3030,7 +3295,17 @@ record(&quot;Q10d&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q10e</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">cox_design = pd.DataFrame({
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10e" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10e</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+cox_design = pd.DataFrame({
     &quot;anaemia&quot;: (surv[&quot;anaemia&quot;] == &quot;Anaemia&quot;).astype(float),
     &quot;caesarean&quot;: (surv[&quot;delivery_mode&quot;] == &quot;Caesarean&quot;).astype(float),
     &quot;age&quot;: surv[&quot;age&quot;].astype(float),
@@ -3131,7 +3406,17 @@ record(&quot;Q10e&quot;, cox_terms.to_dict(orient=&quot;records&quot;))</code></
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <div class="code-wrap"><div class="code-head"><span>Code cell <code>q10f</code></span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-python">schoenfeld = pd.DataFrame(
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10f" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10f</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+try:
+    anc
+    record
+except NameError as exc:
+    raise RuntimeError(
+        &quot;Run the &#x27;Reusable setup&#x27; cell before this cell. It creates &quot;
+        &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
+    ) from exc
+
+schoenfeld = pd.DataFrame(
     cox_model.schoenfeld_residuals, columns=cox_design.columns
 )
 schoenfeld[&quot;time_days&quot;] = surv[&quot;time_days&quot;].to_numpy()
@@ -3258,11 +3543,11 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></p
     cards.forEach(c=>{
       const on=!!done[c.dataset.qid];
       c.querySelector('.done-state').textContent=on?'●':'○';
-      c.querySelector('.mark-complete').textContent=on?'Completed ✓':'Mark complete';
+      c.querySelector('.mark-complete').textContent=on?"Completed ✓":"Mark complete";
     });
     const n=Object.keys(done).filter(k=>cards.some(c=>c.dataset.qid===k)).length;
     fill.style.width=(n/cards.length*100)+'%';
-    ptext.textContent=n+' of '+cards.length+' subquestions marked complete.';
+    ptext.textContent="{n} of {cards.length} subquestions marked complete.".replace('{n}',n).replace('{cards.length}',cards.length);
   }
   function highlight(code){
     const source=code.textContent;
@@ -3294,19 +3579,47 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></p
       card.hidden=!visible;
       if(visible)shown++;
     });
-    count.textContent=shown+' of '+cards.length+' subquestions visible.';
+    count.textContent="{shown} of {cards.length} subquestions visible.".replace('{shown}',shown).replace('{cards.length}',cards.length);
   }
   search.addEventListener('input',filter);
   chips.forEach(chip=>chip.addEventListener('click',()=>{
     chips.forEach(c=>c.classList.remove('active'));
     chip.classList.add('active');active=chip.dataset.filter;filter();
   }));
+  const setupCode=document.querySelector('.code-wrap[data-cell="setup"] pre code');
+  async function copyText(text,btn,label){
+    try{await navigator.clipboard.writeText(text);btn.textContent="Copied ✓"}
+    catch(e){btn.textContent="Copy failed"}
+    setTimeout(()=>btn.textContent=label,1400);
+  }
   document.querySelectorAll('.copy-code').forEach(btn=>btn.addEventListener('click',async()=>{
-    const code=btn.closest('.code-wrap').querySelector('code');
-    try{await navigator.clipboard.writeText(code.textContent);btn.textContent='Copied ✓'}
-    catch(e){btn.textContent='Copy failed'}
-    setTimeout(()=>btn.textContent='Copy code',1400);
+    const wrap=btn.closest('.code-wrap');
+    const code=wrap.querySelector('pre code');
+    let text=code.textContent;
+    if(wrap.dataset.requiresSetup==='true'&&setupCode){
+      text=setupCode.textContent+'\\n\\n'+text;
+    }
+    await copyText(text,btn,btn.dataset.copyMode==='with-setup'?"Copy setup + cell":"Copy code");
   }));
+  document.querySelectorAll('.copy-cell-only').forEach(btn=>btn.addEventListener('click',async()=>{
+    const code=btn.closest('.code-wrap').querySelector('pre code');
+    await copyText(code.textContent,btn,"Copy cell only");
+  }));
+  const themeKey='mnh-stat8100-theme-v1';
+  let theme='light';
+  try{theme=localStorage.getItem(themeKey)||'light'}catch(e){}
+  function paintTheme(){
+    document.body.dataset.companionTheme=theme;
+    document.querySelectorAll('[data-companion-theme-btn]').forEach(b=>{
+      b.classList.toggle('active',b.dataset.companionThemeBtn===theme);
+    });
+  }
+  document.querySelectorAll('[data-companion-theme-btn]').forEach(b=>b.addEventListener('click',()=>{
+    theme=b.dataset.companionThemeBtn;
+    try{localStorage.setItem(themeKey,theme)}catch(e){}
+    paintTheme();
+  }));
+  paintTheme();
   document.querySelectorAll('.mark-complete').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.qid;
     if(done[id])delete done[id];else done[id]=true;
