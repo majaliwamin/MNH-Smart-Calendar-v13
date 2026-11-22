@@ -507,11 +507,19 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert "html.full-screen-simulation .ctl" in simulation
     assert "html.full-screen-simulation #zw" in simulation
     assert "width:100%;height:100%" in css
+    assert "simUrl.searchParams.set(\"start\",\"find\")" in app
+    assert "enteringSimulation" in app
+    assert "{n:'Find',t:'Stage 1: Find the official Python site'" in simulation
+    assert "sub('Find the official Python site'" in simulation
+    assert "Always begin at stage 1, Find" in simulation
+    assert "go(0);" in simulation
     assert "Watch simulation" in simulation or "Watch simulation" in (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
 
     library = (resource_dir / "python-command-library.html").read_text(encoding="utf-8")
     assert "Watch simulation" in library
-    assert ">(Watch simulation)</button>" in library
+    assert ">Watch simulation</button>" in library
+    assert ">(Watch simulation)</button>" not in library
+    assert ".setup-simulation-button{font-weight:700;white-space:nowrap;background:#082f6b;" in library
     assert "data-open-setup-simulation" in library
     assert "function openSetupSimulation()" in library
     assert "MNH_OPEN_SETUP_SIM" in library
@@ -542,9 +550,12 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     cover_pos = library.index('class="cover-page" id="designed-cover-page"')
     topics_pos = library.index("<nav>")
     assert cover_pos < topics_pos
-    assert "bio-motion" in library  # source content stays intact
-    assert ".cover-page .bio-motion{display:none!important}" in bridge
-    assert ".cover-page .bio-sprite{animation:none!important;display:none!important}" in bridge
+    # The cover is static: no animated biomedical overlay objects remain.
+    assert "bio-motion" not in library
+    assert "bio-sprite" not in library
+    assert "@keyframes" not in library
+    assert "bio-motion" not in bridge
+    assert "bio-sprite" not in bridge
     assert "addStyles();" in bridge
     assert bridge.count("hidePanel();") == 1
     assert 'if (reopenButtonEl) reopenButtonEl.style.display = "block";' in bridge
@@ -960,7 +971,12 @@ def test_cover_page_has_requested_subtitle_and_no_microscope():
     library = (ROOT / "frontend" / "resources" / "python-command-library.html").read_text(
         encoding="utf-8"
     )
-    assert "For Biomedical &amp; Health Sciences Research" in library
+    assert "FOR BIOMEDICAL &amp; HEALTH SCIENCES RESEARCH" in library
+    assert "For Biomedical &amp; Health Sciences Research" not in library
+    assert "static histogram, density curve and statistical symbols" in library
+    assert "bio-sprite" not in library
+    assert "bio-motion" not in library
+    assert "@keyframes" not in library
     assert "methodological review v42" in library
     assert "no microscope illustration" in library
     assert "no course-name labels" in library
@@ -975,4 +991,4 @@ def test_cover_page_has_requested_subtitle_and_no_microscope():
     match = re.search(r"data:image/png;base64,([A-Za-z0-9+/=]+)", library)
     assert match
     digest = hashlib.sha256(base64.b64decode(match.group(1))).hexdigest().upper()
-    assert digest == "436CACA6EF5B720E94142AD5AA49034B2C85A98C062A5AE25A744B77A008D79F"
+    assert digest == "6AD9E74A84A3127929E1BE0B1CE68B7C58F542954BDA3474591E7EC6631974D6"

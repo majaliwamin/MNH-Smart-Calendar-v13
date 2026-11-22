@@ -1046,6 +1046,7 @@ function syncCurrentAcademicWeek(){
 }
 function showView(name){
  if(!VIEWS.includes(name))name="weekly";
+ const enteringSimulation=name==="python-setup-simulation"&&currentView!=="python-setup-simulation";
  const craraRoot=document.getElementById("class-rep-assistant");
  if(craraRoot){if(name!=="weekly"&&typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=name!=="weekly";}
  if(name==="resources"&&currentView!=="resources"&&currentView!=="python-library"&&currentView!=="python-setup-simulation")previousNonResourcesView=currentView;
@@ -1061,6 +1062,15 @@ function showView(name){
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";simulation.hidden=name!=="python-setup-simulation";
  if(name==="python-setup-simulation"){
     const simFrame=simulation.querySelector("iframe"),fitSim=()=>{try{simFrame.contentWindow.fit?.()}catch(e){}};
+    if(enteringSimulation){
+      // The iframe starts loading with the page. Reload it so viewing the
+      // simulation always begins at the first "Find" stage, never mid-way.
+      const simUrl=new URL(simFrame.src,location.href);
+      simUrl.searchParams.set("start","find");
+      simUrl.searchParams.set("t",String(Date.now()));
+      simFrame.addEventListener("load",fitSim,{once:true});
+      simFrame.src=simUrl.toString();
+    }
     requestAnimationFrame(fitSim);setTimeout(fitSim,80);
   }
   const resourcesMode=name==="resources",libraryMode=name==="python-library"||name==="python-setup-simulation";

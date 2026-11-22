@@ -516,7 +516,7 @@ var CODE1='import numpy as np\nimport pandas as pd\n\nrng = np.random.default_rn
 var CODE2='import matplotlib.pyplot as plt\n\nplt.scatter(df["hours"], df["score"], alpha=0.6)\nplt.xlabel("Hours studied")\nplt.ylabel("Score")\nplt.title("Synthetic score versus study hours")\nplt.show()';
 var stages=[
 {n:'Find',t:'Stage 1: Find the official Python site',x:'The walkthrough visually demonstrates locating the official Python website and checking its domain.',
- run:async function(){show();dl(0);page(PG.search,' ','New Tab');sub('Click the Chrome icon on the taskbar','The browser shown is simulated. Any real browser can be used for this process.');await sleep(1000);await click('#tk i[data-w=br]');show('br');sub('Chrome opens on its New Tab page','The address bar and search field are simulated as part of this walkthrough.');await sleep(1600);sub('Click the search box');
+ run:async function(){sub('Find the official Python site','Stage 1 starts here: find the official Python site before any installation steps.');await sleep(1800);show();dl(0);page(PG.search,' ','New Tab');sub('Click the Chrome icon on the taskbar','The browser shown is simulated. Any real browser can be used for this process.');await sleep(1000);await click('#tk i[data-w=br]');show('br');sub('Chrome opens on its New Tab page','The address bar and search field are simulated as part of this walkthrough.');await sleep(1600);sub('Click the search box');
   await click('#sbox');$('#ph').style.display='none';sub('Type the search','Chrome suggests related searches as you type. You can click one instead of finishing the sentence.');await typAC($('#q'),'python official page',100);await sleep(900);sub('Press Enter');await key('Enter');
   page(PG.results,'google.com/search?q=python+official+page&oq=python+official+page&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIICAEQABgWGB4','python official page - Google Search');await sleep(1400);
   sub('Check the address under the name','It must read exactly https://www.python.org. Look-alike domains and ads can carry unwanted software.');await pt('#rurl');await sleep(1500);sub('Click “Welcome to Python.org”');await click('#rok');
@@ -590,6 +590,7 @@ $('#bs').onclick=function(){spd=spd===1?2:spd===2?3:1;this.textContent='Speed '+
 $('#bn').onclick=function(){go(Math.min(idx+1,stages.length-1))};$('#bv').onclick=function(){go(Math.max(idx-1,0))};
 $('#bz').onclick=function(){zoom=!zoom;$('#zw').classList.toggle('z',zoom);document.documentElement.classList.toggle('simulation-zoomed',zoom);this.textContent=zoom?'🔍 Fit':'🔍 Zoom';fit()};
 addEventListener('keydown',function(e){var t=e.target,tag=t&&t.tagName;if(tag==='BUTTON'||tag==='SELECT'||tag==='INPUT'||tag==='TEXTAREA'||(t&&t.isContentEditable))return;if(e.key===' '){e.preventDefault();$('#bp').click()}else if(e.key==='ArrowRight')$('#bn').click();else if(e.key==='ArrowLeft')$('#bv').click()});
+/* Always begin at stage 1, Find; the parent reloads this iframe with start=find. */
 go(0);
 </script>
 </body>
