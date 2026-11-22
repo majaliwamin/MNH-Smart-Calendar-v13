@@ -21,6 +21,11 @@ MARKER = "MNH_VERIFIED_RESULTS_JSON:"
 
 
 def main():
+    # The builder uses the last verified results for the worked examples.
+    # Confirm that those examples still match a fresh execution before writing.
+    seed_results = {}
+    if RESULTS_PATH.is_file():
+        seed_results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
     build_notebook()
     notebook = nbformat.read(NOTEBOOK_PATH, as_version=4)
     client = NotebookClient(
@@ -52,6 +57,11 @@ def main():
         raise RuntimeError(f"Notebook execution produced errors: {errors}")
     if not isinstance(results, dict) or not results:
         raise RuntimeError("Could not extract the verified results record from the notebook.")
+    if seed_results and results != seed_results:
+        raise RuntimeError(
+            "Executed results differ from the values used in the worked examples. "
+            "Re-run the build with fresh verified results."
+        )
 
     build_html(results)
     print(f"Executed notebook: {NOTEBOOK_PATH}")

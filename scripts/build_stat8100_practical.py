@@ -9,7 +9,8 @@ from pathlib import Path
 import nbformat as nbf
 
 from stat8100_code_cells import CODE, QUESTION_CODE, QUESTION_TITLES
-from stat8100_guides import GUIDES, REPORTING_TEMPLATES
+from stat8100_guides import GUIDES
+from stat8100_reporting import work_report, worked_template_examples
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_DIR = ROOT / "frontend" / "resources"
@@ -95,8 +96,9 @@ def parent_question(subquestion_id):
     return "Q10" if subquestion_id.startswith("Q10") else subquestion_id[:2]
 
 
-def guide_markdown(qid):
+def guide_markdown(qid, results):
     guide = GUIDES[qid]
+    report = work_report(qid, results)
     lines = [f"#### {qid} — {guide['title']}", ""]
     lines.append(f"**Practical requirement.** {guide['requirement']}")
     lines.append(f"**Task classification.** {guide['classification']}")
@@ -113,12 +115,20 @@ def guide_markdown(qid):
     lines.append("")
     lines.append(f"**Reporting guidance.** {guide['reporting']}")
     lines.append("")
+    lines.append(f"**Worked report from the executed notebook.** {report['text']}")
+    lines.append("")
+    lines.append(f"*Verified source:* {report['source']}. *Teaching note:* {report['teach']}")
+    lines.append("")
     lines.append(f"**Common mistakes.** {guide['common_mistakes']}")
     lines.append("")
     return "\n".join(lines)
 
 
 def build_notebook():
+    """Build the notebook, using the last verified results for worked examples."""
+    results = {}
+    if RESULTS_PATH.is_file():
+        results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
     cells = []
 
     cells.append(nbf.v4.new_markdown_cell("\n".join([
@@ -137,7 +147,7 @@ def build_notebook():
         "- Run **Dataset audit** once to reproduce the verification recorded below.",
         "- For each question, read the learning guide, run the listed code cell(s), inspect the output, then write your own interpretation and report.",
         "- The `mark_done` cell at the end of each question updates the progress indicator.",
-        "- Reporting templates near the end use placeholders. Verified numerical results are stored in the question sections and in `stat8100_practical_results.json`, not inside the templates.",
+        "- Each reporting template is shown twice: once as a reusable sentence frame and once as a worked example filled from the executed notebook.",
         "",
         "## Navigation",
         "",
@@ -187,7 +197,7 @@ def build_notebook():
             prefix = subid[:len(qid)]
             if prefix != qid or (len(subid) > len(qid) and subid[len(qid)].isdigit()):
                 continue
-            cells.append(nbf.v4.new_markdown_cell(guide_markdown(subid)))
+            cells.append(nbf.v4.new_markdown_cell(guide_markdown(subid, results)))
             for key in QUESTION_CODE[subid]:
                 cells.append(nbf.v4.new_markdown_cell(f"**Code cell `{key}`**"))
                 cells.append(nbf.v4.new_code_cell(CODE[key]))
@@ -202,11 +212,28 @@ def build_notebook():
         '<a id="reporting-templates"></a>',
         "## Reporting templates",
         "",
-        "Templates use placeholders. Replace them with values from your executed output; do not copy an interpretation that does not match your results.",
+        "Each template keeps placeholders as a reusable writing pattern. The worked example immediately "
+        "underneath fills every placeholder from the verified notebook output, so you can compare the "
+        "frame with a completed, data-grounded sentence. Do not copy a result that does not match your own output.",
         "",
     ])))
-    for title, template in REPORTING_TEMPLATES:
-        cells.append(nbf.v4.new_markdown_cell(f"**{title}**\n\n> {template}\n"))
+    for example in worked_template_examples(results):
+        cells.append(nbf.v4.new_markdown_cell("\n".join([
+            f"### {example['title']}",
+            "",
+            "**Reusable pattern**",
+            "",
+            f"> {example['pattern']}",
+            "",
+            f"**Worked example from {example['qid']}**",
+            "",
+            f"> {example['text']}",
+            "",
+            f"*Verified source:* {example['source']}. *Teaching note:* {example['teach']}",
+            "",
+            f"See the executed {example['qid']} section above for the full output.",
+            "",
+        ])))
 
     cells.append(nbf.v4.new_markdown_cell("\n".join([
         '<a id="limitations"></a>',
@@ -257,8 +284,9 @@ def _verified_output(qid, results):
     return '<pre class="verified-output">' + html.escape(text) + '</pre>'
 
 
-def _guide_html(qid):
+def _guide_html(qid, results):
     guide = GUIDES[qid]
+    report = work_report(qid, results)
     learned = "".join(f"<li>{html.escape(point)}</li>" for point in guide["learning"])
     codes = "".join(_code_block(key) for key in QUESTION_CODE[qid]) or (
         '<p class="no-code">No code cell is required for this task.</p>'
@@ -306,6 +334,13 @@ def _guide_html(qid):
             <p>{html.escape(guide['reporting'])}</p>
           </div>
         </section>
+        <section class="card-section worked-report">
+          <h4>Worked report — verified from the executed notebook</h4>
+          <p>{html.escape(report['text'])}</p>
+          <p class="muted"><strong>Verified source:</strong> {html.escape(report['source'])}</p>
+          <p class="muted"><strong>Teaching note:</strong> {html.escape(report['teach'])}</p>
+          <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
+        </section>
         <section class="card-section">
           <h4>Common mistakes</h4>
           <p class="warning">{html.escape(guide['common_mistakes'])}</p>
@@ -351,12 +386,17 @@ def build_html(results=None):
             prefix = subid[:len(qid)]
             if prefix != qid or (len(subid) > len(qid) and subid[len(qid)].isdigit()):
                 continue
-            cards.append(_guide_html(subid))
+            cards.append(_guide_html(subid, results))
 
     templates = "".join(
-        f'<details><summary>{html.escape(title)}</summary>'
-        f'<pre>{html.escape(template)}</pre></details>'
-        for title, template in REPORTING_TEMPLATES
+        f'<details class="template-example"><summary>{html.escape(example["title"])}</summary>'
+        f'<h5>Reusable pattern</h5><pre>{html.escape(example["pattern"])}</pre>'
+        f'<h5>Worked example from <a href="#{html.escape(example["qid"])}">{html.escape(example["qid"])}</a></h5>'
+        f'<p class="worked-report">{html.escape(example["text"])}</p>'
+        f'<p class="muted"><strong>Verified source:</strong> {html.escape(example["source"])} · '
+        f'<strong>Teaching note:</strong> {html.escape(example["teach"])}</p>'
+        f'</details>'
+        for example in worked_template_examples(results)
     )
 
     audit_html = "".join(
@@ -424,6 +464,10 @@ input[type=search]{{flex:1;min-width:220px;padding:11px 13px;border:1px solid va
 .learning li{{margin:4px 0}}
 .two-col{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
 .warning{{background:#fff8e8;border-left:4px solid var(--gold);padding:9px 12px;border-radius:6px}}
+.worked-report{{background:#f8fbff;border:1px solid #c8dcf2;border-left:4px solid var(--blue);border-radius:8px;padding:11px 13px}}
+.worked-report p:first-of-type{{margin-top:0}}
+.template-example{{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:#fff}}
+.template-example h5{{margin:12px 0 5px;color:var(--navy);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}}
 .code-wrap{{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid #0b1b2e}}
 .code-head{{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#132947;color:#dbeafe;font-size:.82rem}}
 .code-head code{{color:#fff}}
@@ -507,9 +551,9 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
 
     {''.join(cards)}
 
-    <section class="panel">
-      <h2>Reporting templates</h2>
-      <p class="muted">Placeholders must be replaced with actual values from the executed notebook. Actual verified results appear in the individual question cards.</p>
+    <section class="panel" id="reporting-templates">
+      <h2>Reporting templates with worked verified examples</h2>
+      <p class="muted">Each generic pattern keeps placeholders as a reusable sentence frame. Directly underneath, a worked example fills every placeholder with values from the executed notebook; the same examples also appear in the individual question cards.</p>
       {templates}
     </section>
 

@@ -125,6 +125,9 @@ def test_notebook_is_executed_has_no_errors_and_contains_every_subquestion():
     sources = "\n".join(_source(cell) for cell in code_cells)
     for qid in QUESTION_IDS:
         assert f"#### {qid} —" in markdown
+        assert f"**Worked report from the executed notebook.**" in markdown
+    assert markdown.count("**Reusable pattern**") == len(TEMPLATE_TITLES)
+    assert markdown.count("**Worked example from Q") == len(TEMPLATE_TITLES)
     for group in QUESTION_GROUPS:
         assert f'<a id="{group.lower()}"></a>' in markdown
     assert '<a id="reporting-templates"></a>' in markdown
@@ -204,6 +207,18 @@ def test_html_companion_has_searchable_navigation_and_exact_layout():
 
     for title in TEMPLATE_TITLES:
         assert f"<summary>{title}</summary>" in companion
+    assert companion.count('<details class="template-example">') == len(TEMPLATE_TITLES)
+    assert companion.count("Worked example from ") >= len(TEMPLATE_TITLES)
+    assert 'id="reporting-templates"' in companion
+    assert "Placeholders must be replaced with actual values" not in companion
+    for qid in QUESTION_IDS:
+        card = _card(companion, qid)
+        assert "<h4>Worked report — verified from the executed notebook</h4>" in card
+        assert "<strong>Verified source:</strong>" in card
+        assert "<strong>Teaching note:</strong>" in card
+    assert "47/400" in _card(companion, "Q1a")
+    assert "139/382" in _card(companion, "Q3b")
+    assert "68,841 person-days" in _card(companion, "Q10d")
     assert "simulated teaching data" in companion
     assert "not an exact" in companion
 
@@ -296,6 +311,7 @@ def test_generators_and_dev_dependencies_are_present():
     for name in (
         "stat8100_code_cells.py",
         "stat8100_guides.py",
+        "stat8100_reporting.py",
         "build_stat8100_practical.py",
         "execute_stat8100_practical.py",
     ):
@@ -304,6 +320,7 @@ def test_generators_and_dev_dependencies_are_present():
     runner = (scripts / "execute_stat8100_practical.py").read_text(encoding="utf-8")
     assert "def build_notebook()" in builder
     assert "def build_html(results=None)" in builder
+    assert "from stat8100_reporting import work_report, worked_template_examples" in builder
     assert "nbformat.write(" in runner
     assert "NotebookClient(" in runner
     assert "MARKER" in runner
