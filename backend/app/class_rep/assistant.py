@@ -9,6 +9,7 @@ from app.class_rep.chichewa_academic import chichewa_quality_instruction
 from app.class_rep.language import response_language_instruction, CONVERSATION_CONTINUITY_INSTRUCTIONS
 from app.class_rep.local_knowledge import local_teaching_context
 from app.class_rep.stats_visuals import answer_visual
+from app.class_rep.statistics_lessons import answer_lesson as answer_statistics_lesson
 from app.class_rep.language_intelligence import (
     detect_language, detect_mode, detect_tone, mode_instruction, tone_style_instruction,
 )
@@ -98,6 +99,12 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     mode = detect_mode(message, history)
     detected_language = detect_language(message)
     tone = detect_tone(message, history)
+    # Manual-first statistics teaching must win over the generic chart hook:
+    # words such as "distribution" or "show" would otherwise be mistaken for a
+    # chart request and skip the reasoning, table and decision stages.
+    statistics_lesson = answer_statistics_lesson(message, history, response_language)
+    if statistics_lesson is not None:
+        return statistics_lesson + (None,)
     # Deterministic visuals come from verified local teaching data only. Never
     # replace an explicit translation turn with a chart.
     if mode not in ("translate_into_chichewa", "translate_into_english"):

@@ -2047,6 +2047,7 @@ body.python-library-view{width:100%;height:100vh;height:100dvh;overflow:hidden;o
 body.python-library-view main{margin:0!important;padding:0!important}
 body.python-library-view #view-python-library:not([hidden]),
 body.python-library-view #view-python-setup-simulation:not([hidden]),
+body.python-library-view #view-hypothesis-lab:not([hidden]),
 body.python-library-view #view-stat8100-practical:not([hidden]){
  box-sizing:border-box;width:100%;max-width:none;margin:0!important;padding:0!important;height:100vh;height:100dvh;overflow:hidden
 }
