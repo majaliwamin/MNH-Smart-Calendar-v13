@@ -30,6 +30,37 @@ Chichewa reply. The backend now runs four explicit stages before inference:
 preference, the translation target, or detected Chichewa input — in that
 order. Users without a saved preference are no longer forced into English.
 
+## Local Python Library grounding (v44)
+
+For Python, statistics and data-analysis questions, CRARA now consults the
+bundled teaching resources before general model knowledge or uploaded material.
+`scripts/build_statistical_glossary.py` generates
+`backend/app/class_rep/data/local_teaching_knowledge.json` from the 46 executed
+bilingual glossary entries, the section index of
+`frontend/resources/python-command-library.html`, and the three simulated
+teaching CSV files. `local_knowledge.py` loads that index read-only and injects
+only the matching glossary cards, chapter ids and dataset fingerprints into the
+turn. It does not execute submitted code or fetch an internet source.
+
+`chichewa_academic.py` adds a compact academic-expression contract in CH mode:
+use the verified Chichewa wording supplied by the glossary, keep established
+technical abbreviations when no verified equivalent exists, explain the design
+before the method, and never upgrade simulated teaching results into biomedical
+or programme findings.
+
+## Verified statistical visuals (v44)
+
+`stats_visuals.py` answers chart requests deterministically from fixed recipes
+over the three bundled simulated CSV files. It verifies each file's SHA-256
+before use, computes values server-side with the already-declared NumPy/pandas/
+SciPy/statsmodels stack, and emits the existing fenced `chart` JSON contract.
+Recipes include observed-versus-normal distribution curves (KDE), paired blood
+pressure, facility summaries, a gestational-age scatter and a Kaplan–Meier
+curve. Every answer carries a bilingual source note, sample size, simulated-data
+label and reproducible Python code. A missing or changed file, an unclear
+variable, or a request for real patient records fails closed without inventing
+a chart or calling a model provider.
+
 ## Casual expressive layer
 
 `expressive_style.py` adds a deliberately narrow social register. `detect_tone()`

@@ -13,16 +13,22 @@ Conceptual terms may intentionally have no code example.
 from __future__ import annotations
 
 import contextlib
+import csv
+import hashlib
 import html
 import io
+import json
 import re
 import sys
 from pathlib import Path
 from typing import Any
 
-BUILD = "2026.11.22-statistical-tests-glossary-v43"
+BUILD = "2026.11.22-statistical-tests-glossary-v44"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
+CRARA_KNOWLEDGE_OUTPUT = ROOT / "backend" / "app" / "class_rep" / "data" / "local_teaching_knowledge.json"
+PYTHON_LIBRARY = ROOT / "frontend" / "resources" / "python-command-library.html"
+SAMPLE_DIR = ROOT / "frontend" / "resources" / "samples"
 
 CATEGORIES: list[tuple[str, str, str]] = [
     ("foundations", "1. Thinking before testing", "Kuganiza musanayese"),
@@ -2484,6 +2490,247 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
 """
 
 
+DATASET_VARIABLES: dict[str, dict[str, dict[str, str]]] = {
+    "anc_cohort.csv": {
+        "facility_type": {"en": "facility type", "ny": "mtundu wa chipatala"},
+        "age": {"en": "maternal age in years", "ny": "zaka za mayi"},
+        "parity": {"en": "number of previous births", "ny": "chiwerengero cha kubereka kale"},
+        "education": {"en": "maternal education category", "ny": "gulu la maphunziro a mayi"},
+        "bmi": {"en": "body mass index", "ny": "chiŵerengero cha thupi ndi kutalika (BMI)"},
+        "anc_visits": {"en": "number of antenatal visits", "ny": "chiwerengero cha ma visit antenatal"},
+        "iptp3": {"en": "three or more IPTp doses recorded as Yes/No", "ny": "milingo itatu kapena kuposerapo ya IPTp (Inde/Ayi)"},
+        "hb": {"en": "haemoglobin measurement", "ny": "muyeso wa haemoglobin"},
+        "anaemia": {"en": "anaemia indicator (1/0)", "ny": "chizindikiro cha anaemia (1/0)"},
+        "preterm": {"en": "preterm indicator (1/0)", "ny": "chizindikiro cha kubadwa msanga (1/0)"},
+        "gest_age": {"en": "gestational age in weeks", "ny": "msinkhu wa mimba masabata"},
+        "birthweight": {"en": "birth weight in grams", "ny": "kulemera kwa mwana mu magalamu"},
+        "low_bw": {"en": "low-birth-weight indicator (1/0)", "ny": "chizindikiro cha kulemera kochepa (1/0)"},
+    },
+    "bp_paired.csv": {
+        "sbp_booking": {"en": "systolic blood pressure at booking", "ny": "kuthamanga kwa magazi pa booking"},
+        "sbp_36wk": {"en": "systolic blood pressure at 36 weeks", "ny": "kuthamanga kwa magazi pa masabata 36"},
+    },
+    "postpartum_survival.csv": {
+        "time_days": {"en": "follow-up time in days", "ny": "nthawi yotsatira mu masiku"},
+        "readmitted": {"en": "readmission event indicator (1/0)", "ny": "chizindikiro cha kubwerera kuchipatala (1/0)"},
+        "anaemia": {"en": "anaemia group", "ny": "gulu la anaemia"},
+        "delivery_mode": {"en": "mode of delivery", "ny": "njira yoberekera"},
+        "age": {"en": "maternal age in years", "ny": "zaka za mayi"},
+    },
+}
+
+VISUAL_RECIPES: list[dict[str, Any]] = [
+    {
+        "id": "birthweight_distribution",
+        "kind": "distribution",
+        "dataset": "anc_cohort.csv",
+        "column": "birthweight",
+        "aliases": [
+            "birthweight distribution", "birth weight distribution", "birthweight curve",
+            "distribution of birth weight", "kufalikira kwa kulemera", "kulemera kwa makanda",
+        ],
+        "title_en": "Birth-weight distribution in simulated ANC cohort",
+        "title_ny": "Kufalikira kwa kulemera kwa makanda mu deta yophunzitsira ya ANC",
+        "chart_title_en": "Simulated birth-weight density and fitted normal curve",
+        "chart_title_ny": "Kufalikira kwa kulemera kwa makanda ndi normal curve yofananira",
+        "series_en": ["Observed density (KDE)", "Fitted normal curve"],
+        "series_ny": ["Kufalikira kwenikweni (KDE)", "Normal curve yofananira"],
+    },
+    {
+        "id": "haemoglobin_distribution",
+        "kind": "distribution",
+        "dataset": "anc_cohort.csv",
+        "column": "hb",
+        "aliases": [
+            "haemoglobin distribution", "hemoglobin distribution", "hb distribution",
+            "haemoglobin curve", "distribution of haemoglobin", "kufalikira kwa haemoglobin",
+        ],
+        "title_en": "Haemoglobin distribution in simulated ANC cohort",
+        "title_ny": "Kufalikira kwa haemoglobin mu deta yophunzitsira ya ANC",
+        "chart_title_en": "Simulated haemoglobin density and fitted normal curve",
+        "chart_title_ny": "Kufalikira kwa haemoglobin ndi normal curve yofananira",
+        "series_en": ["Observed density (KDE)", "Fitted normal curve"],
+        "series_ny": ["Kufalikira kwenikweni (KDE)", "Normal curve yofananira"],
+    },
+    {
+        "id": "facility_birthweight",
+        "kind": "group_mean",
+        "dataset": "anc_cohort.csv",
+        "group": "facility_type",
+        "column": "birthweight",
+        "aliases": [
+            "birthweight by facility", "birth weight by facility", "facility comparison",
+            "mean birth weight by facility", "kulemera kwa makanda ndi chipatala",
+        ],
+        "title_en": "Mean birth weight by facility type (simulated)",
+        "title_ny": "Avareji ya kulemera kwa makanda ndi mtundu wa chipatala (deta yopangidwa)",
+        "chart_title_en": "Mean birth weight by facility type",
+        "chart_title_ny": "Avareji ya kulemera kwa makanda ndi mtundu wa chipatala",
+        "series_en": ["Mean birth weight (g)"],
+        "series_ny": ["Avareji ya kulemera (g)"],
+    },
+    {
+        "id": "anaemia_low_birthweight",
+        "kind": "group_count",
+        "dataset": "anc_cohort.csv",
+        "group": "facility_type",
+        "column": "low_bw",
+        "aliases": [
+            "low birth weight counts", "low birthweight by facility", "anaemia and low birth weight",
+            "low bw chart", "chiwerengero cha kulemera kochepa",
+        ],
+        "title_en": "Low-birth-weight counts by facility type (simulated)",
+        "title_ny": "Chiwerengero cha makanda olemera pang'ono ndi mtundu wa chipatala (deta yopangidwa)",
+        "chart_title_en": "Low-birth-weight records by facility type",
+        "chart_title_ny": "Makanda olemera pang'ono ndi mtundu wa chipatala",
+        "series_en": ["Records with low_bw = 1"],
+        "series_ny": ["Zolemba zokhala ndi low_bw = 1"],
+    },
+    {
+        "id": "gestational_age_scatter",
+        "kind": "scatter",
+        "dataset": "anc_cohort.csv",
+        "x": "gest_age",
+        "y": "birthweight",
+        "aliases": [
+            "gestational age scatter", "birth weight scatter", "correlation scatter",
+            "relationship between gestational age and birth weight",
+            "ubale wa msinkhu wa mimba ndi kulemera",
+        ],
+        "title_en": "Gestational age and birth weight in simulated ANC cohort",
+        "title_ny": "Msinkhu wa mimba ndi kulemera kwa mwana mu deta yophunzitsira ya ANC",
+        "chart_title_en": "Gestational age vs birth weight (first 80 complete records)",
+        "chart_title_ny": "Msinkhu wa mimba vs kulemera kwa mwana (zolemba 80 zoyamba zathunthu)",
+        "series_en": ["Simulated observations"],
+        "series_ny": ["Ma observation opangidwa"],
+    },
+    {
+        "id": "paired_blood_pressure",
+        "kind": "paired_mean",
+        "dataset": "bp_paired.csv",
+        "before": "sbp_booking",
+        "after": "sbp_36wk",
+        "aliases": [
+            "paired blood pressure", "blood pressure before after", "bp chart", "bp change",
+            "paired t-test visual", "kuthamanga kwa magazi musanayambe ndi pambuyo",
+        ],
+        "title_en": "Paired systolic blood-pressure measurements (simulated)",
+        "title_ny": "Miyeso yophatikizidwa ya kuthamanga kwa magazi (deta yopangidwa)",
+        "chart_title_en": "Mean systolic blood pressure at booking and 36 weeks",
+        "chart_title_ny": "Avareji ya kuthamanga kwa magazi pa booking ndi masabata 36",
+        "series_en": ["Mean systolic pressure"],
+        "series_ny": ["Avareji ya kuthamanga kwa magazi"],
+        "labels_en": ["Booking", "36 weeks"],
+        "labels_ny": ["Booking", "Masabata 36"],
+    },
+    {
+        "id": "survival_by_anaemia",
+        "kind": "survival",
+        "dataset": "postpartum_survival.csv",
+        "time": "time_days",
+        "event": "readmitted",
+        "group": "anaemia",
+        "aliases": [
+            "survival curve", "kaplan meier", "kaplan-meier", "readmission curve",
+            "survival by anaemia", "mphepete yakupulumuka", "kubwerera kuchipatala",
+        ],
+        "title_en": "Event-free curves by anaemia group (simulated)",
+        "title_ny": "Mphepete zopanda chochitika ndi gulu la anaemia (deta yopangidwa)",
+        "chart_title_en": "Readmission-free probability by anaemia group",
+        "chart_title_ny": "Mwayi wosabwerera kuchipatala ndi gulu la anaemia",
+        "series_en": ["Anaemia", "No anaemia"],
+        "series_ny": ["Anaemia", "Opanda anaemia"],
+    },
+]
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _plain_text(markup: str) -> str:
+    text = html.unescape(re.sub(r"<[^>]+>", " ", markup))
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _library_sections() -> list[dict[str, Any]]:
+    if not PYTHON_LIBRARY.is_file():
+        return []
+    source = PYTHON_LIBRARY.read_text(encoding="utf-8", errors="replace")
+    starts = list(re.finditer(r"<section\b[^>]*>", source, flags=re.I))
+    sections: list[dict[str, Any]] = []
+    for index, match in enumerate(starts):
+        opening = match.group(0)
+        chapter = re.search(r'data-chapter-title="([^"]+)"', opening)
+        if not chapter:
+            continue
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(source)
+        body = source[match.end():end]
+        intro = re.search(r'<div class="chapter-intro-simple">(.*?)</div>', body, flags=re.I | re.S)
+        heading = re.search(r"<h2[^>]*>(.*?)</h2>", body, flags=re.I | re.S)
+        card_titles = re.findall(r"<span>([^<]{4,120})</span>", body)
+        sections.append({
+            "id": (re.search(r'\bid="([^"]+)"', opening) or [None, ""])[1],
+            "title": html.unescape(chapter.group(1)),
+            "track": html.unescape((re.search(r'data-topic-track="([^"]+)"', opening) or [None, ""])[1]),
+            "label": html.unescape((re.search(r'data-topic-label="([^"]+)"', opening) or [None, ""])[1]),
+            "heading": _plain_text(heading.group(1))[:240] if heading else "",
+            "intro": _plain_text(intro.group(1))[:900] if intro else "",
+            "card_titles": [_plain_text(item)[:140] for item in card_titles[:14]],
+        })
+    return sections
+
+
+def _dataset_metadata() -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for name, variables in DATASET_VARIABLES.items():
+        path = SAMPLE_DIR / name
+        if not path.is_file():
+            raise SystemExit(f"Missing simulated teaching dataset: {path}")
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        result[name] = {
+            "path": str(path.relative_to(ROOT)).replace("\\", "/"),
+            "sha256": _sha256(path),
+            "rows": len(rows),
+            "columns": list(rows[0].keys()) if rows else [],
+            "variables": variables,
+            "label_en": "simulated teaching data; not real patient records",
+            "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
+        }
+    return result
+
+
+def _write_crara_knowledge(glossary_entries: list[dict[str, Any]]) -> None:
+    knowledge = {
+        "schema_version": 1,
+        "build": BUILD,
+        "generated_by": "scripts/build_statistical_glossary.py",
+        "sources": {
+            "python_library": {
+                "path": str(PYTHON_LIBRARY.relative_to(ROOT)).replace("\\", "/"),
+                "sha256": _sha256(PYTHON_LIBRARY) if PYTHON_LIBRARY.is_file() else "",
+            },
+            "glossary": {
+                "path": str(OUTPUT.relative_to(ROOT)).replace("\\", "/"),
+                "sha256": _sha256(OUTPUT) if OUTPUT.is_file() else "",
+            },
+        },
+        "datasets": _dataset_metadata(),
+        "glossary": glossary_entries,
+        "library_sections": _library_sections(),
+        "visual_recipes": VISUAL_RECIPES,
+    }
+    CRARA_KNOWLEDGE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    CRARA_KNOWLEDGE_OUTPUT.write_text(
+        json.dumps(knowledge, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> None:
     glossary_entries = [normalise_entry(entry) for entry in ENTRIES]
     if len(glossary_entries) != 46:
@@ -2533,10 +2780,18 @@ def main() -> None:
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(render_page(), encoding="utf-8")
+    # Generation tests redirect OUTPUT to a temporary file; they must not
+    # rewrite the committed CRARA runtime index.
+    if OUTPUT.resolve() == (ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html").resolve():
+        _write_crara_knowledge(glossary_entries)
     code_count = sum(1 for entry in glossary_entries if entry["code"])
     print(
         f"Wrote {OUTPUT.name} with {len(glossary_entries)} glossary "
         f"entries ({code_count} with executed code) ({BUILD})."
+    )
+    print(
+        f"Wrote {CRARA_KNOWLEDGE_OUTPUT.name} for CRARA local-library grounding "
+        f"and verified statistical visuals."
     )
 
 

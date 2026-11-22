@@ -1,0 +1,2087 @@
+{
+  "build": "2026.11.22-statistical-tests-glossary-v44",
+  "datasets": {
+    "anc_cohort.csv": {
+      "columns": [
+        "id",
+        "facility_type",
+        "age",
+        "parity",
+        "education",
+        "bmi",
+        "anc_visits",
+        "iptp3",
+        "hb",
+        "anaemia",
+        "preterm",
+        "gest_age",
+        "birthweight",
+        "low_bw"
+      ],
+      "label_en": "simulated teaching data; not real patient records",
+      "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
+      "path": "frontend/resources/samples/anc_cohort.csv",
+      "rows": 400,
+      "sha256": "0004555857f95ad040f5d2131f4612a706d7d6ac00b1b50c8c3102b4854c42a9",
+      "variables": {
+        "age": {
+          "en": "maternal age in years",
+          "ny": "zaka za mayi"
+        },
+        "anaemia": {
+          "en": "anaemia indicator (1/0)",
+          "ny": "chizindikiro cha anaemia (1/0)"
+        },
+        "anc_visits": {
+          "en": "number of antenatal visits",
+          "ny": "chiwerengero cha ma visit antenatal"
+        },
+        "birthweight": {
+          "en": "birth weight in grams",
+          "ny": "kulemera kwa mwana mu magalamu"
+        },
+        "bmi": {
+          "en": "body mass index",
+          "ny": "chiŵerengero cha thupi ndi kutalika (BMI)"
+        },
+        "education": {
+          "en": "maternal education category",
+          "ny": "gulu la maphunziro a mayi"
+        },
+        "facility_type": {
+          "en": "facility type",
+          "ny": "mtundu wa chipatala"
+        },
+        "gest_age": {
+          "en": "gestational age in weeks",
+          "ny": "msinkhu wa mimba masabata"
+        },
+        "hb": {
+          "en": "haemoglobin measurement",
+          "ny": "muyeso wa haemoglobin"
+        },
+        "iptp3": {
+          "en": "three or more IPTp doses recorded as Yes/No",
+          "ny": "milingo itatu kapena kuposerapo ya IPTp (Inde/Ayi)"
+        },
+        "low_bw": {
+          "en": "low-birth-weight indicator (1/0)",
+          "ny": "chizindikiro cha kulemera kochepa (1/0)"
+        },
+        "parity": {
+          "en": "number of previous births",
+          "ny": "chiwerengero cha kubereka kale"
+        },
+        "preterm": {
+          "en": "preterm indicator (1/0)",
+          "ny": "chizindikiro cha kubadwa msanga (1/0)"
+        }
+      }
+    },
+    "bp_paired.csv": {
+      "columns": [
+        "id",
+        "sbp_booking",
+        "sbp_36wk"
+      ],
+      "label_en": "simulated teaching data; not real patient records",
+      "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
+      "path": "frontend/resources/samples/bp_paired.csv",
+      "rows": 60,
+      "sha256": "189b0bcc01a7000daa2b6bd64c2042d30ae8d15ca98334b7b294c8dfd91e30d0",
+      "variables": {
+        "sbp_36wk": {
+          "en": "systolic blood pressure at 36 weeks",
+          "ny": "kuthamanga kwa magazi pa masabata 36"
+        },
+        "sbp_booking": {
+          "en": "systolic blood pressure at booking",
+          "ny": "kuthamanga kwa magazi pa booking"
+        }
+      }
+    },
+    "postpartum_survival.csv": {
+      "columns": [
+        "id",
+        "time_days",
+        "readmitted",
+        "anaemia",
+        "delivery_mode",
+        "age"
+      ],
+      "label_en": "simulated teaching data; not real patient records",
+      "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
+      "path": "frontend/resources/samples/postpartum_survival.csv",
+      "rows": 500,
+      "sha256": "79517281d458d409f4de7b627cacea2a5b18acdab82b032b3da9d756e6f7c7c3",
+      "variables": {
+        "age": {
+          "en": "maternal age in years",
+          "ny": "zaka za mayi"
+        },
+        "anaemia": {
+          "en": "anaemia group",
+          "ny": "gulu la anaemia"
+        },
+        "delivery_mode": {
+          "en": "mode of delivery",
+          "ny": "njira yoberekera"
+        },
+        "readmitted": {
+          "en": "readmission event indicator (1/0)",
+          "ny": "chizindikiro cha kubwerera kuchipatala (1/0)"
+        },
+        "time_days": {
+          "en": "follow-up time in days",
+          "ny": "nthawi yotsatira mu masiku"
+        }
+      }
+    }
+  },
+  "generated_by": "scripts/build_statistical_glossary.py",
+  "glossary": [
+    {
+      "aliases": [],
+      "analogy_en": "A p-value is like checking how surprising a bus arrival time is under a published timetable. A very late bus is evidence against the timetable, but it does not prove the driver ignored it, and it does not tell you how much the service has changed.",
+      "analogy_ny": "p ndi ngati kuyang'ana nthawi yofika basi potengera ndandanda wolembedwa. Basi ikafika mochedwa kwambiri, izi zikutsutsa ndandandawu, koma sizikutsimikizira kuti dalaivala anyalanyaza ndandanda, komanso sizikuonetsa kuchuluka kwa kusintha kwake.",
+      "application_en": "Comparing a cohort's mean birth weight with a national reference value, provided the reference and measurement method are appropriate.",
+      "application_ny": "Kuyerekeza avareji ya kulemera kwa makanda ndi mtengo wadziko lonse, ngati mtengowo ndi njira yoyezera zikugwirizana.",
+      "category": "foundations",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112201)\nvalues = rng.normal(loc=9.8, scale=1.6, size=40)\n\ntest = stats.ttest_1samp(values, popmean=9.0)\nci = test.confidence_interval(confidence_level=0.95)\nprint(\"n =\", len(values), \"mean =\", round(float(values.mean()), 3))\nprint(\"t =\", round(float(test.statistic), 3), \"p =\", round(float(test.pvalue), 4))\nprint(\"95% CI for mean =\", round(float(ci.low), 3), \"to\", round(float(ci.high), 3))",
+      "code_explanation_en": "The t statistic says how many standard errors the sample mean is from the null value. A small p-value means data this extreme would be unusual if the null were true; it does not prove the alternative or measure importance.",
+      "code_explanation_ny": "Mtengo wa t ukusonyeza kuti avareji ya sample ili kutali bwanji ndi mtengo wa null potengera standard error. p ikachepa, deta yotere ingakhale yosowa ngati null ili yoona; izi sizikutsimikizira kuti alternative ndi yoona kapena kuti zotsatira ndi zofunika.",
+      "definition_en": "Use when you must decide whether observed data are compatible with a stated null model, such as whether a mean differs from a prespecified reference value.",
+      "explanation_ny": "Mukayesa mfundo, mumayamba mwakhazikitsa lingaliro loti palibe kusiyana. Kenako mumafunsa: ngati lingalirolo lili loona, kodi deta yathu ingakhale yotere? p ikuyankha funso limenelo, osati funso lakuti mfundo yanu ndi yoona kapena ayi.",
+      "misconception_en": "A p-value is not the probability that the null hypothesis is true. Significance depends on sample size; always report the estimate and interval.",
+      "misconception_ny": "p si mwayi wakuti null ndi yoona. Kufunika kwake kumadalira kuchuluka kwa deta; nthawi zonse nenani mtengo woyerekeza ndi interval.",
+      "output": "n = 40 mean = 9.703\nt = 3.191 p = 0.0028\n95% CI for mean = 9.257 to 10.148",
+      "term": "Hypothesis test and p-value",
+      "term_ny": "Kuyeza mfundo ndi mtengo wa p"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "A mean difference is like saying a harvest is 20 kg larger; Cohen's d is like saying that gain is large relative to the usual variation between harvests. Both descriptions matter.",
+      "analogy_ny": "Kusiyana kwa avareji kuli ngati kunena kuti zokolola ziwonjezeka ndi 20 kg; Cohen's d ili ngati kunena kuti kuwonjezekako n'kukulu poyerekeza ndi kusiyana kwamba pakati pa zokolola. Mafotokozedwe onse awiri ndi ofunika.",
+      "application_en": "Quantifying how much a nutrition intervention changes mean birth weight, alongside the precision of that estimate.",
+      "application_ny": "Kuyeza kuchuluka komwe pulogalamu ya zakudya imasintha avareji ya kulemera kwa makanda, pamodzi ndi kudziwa bwino kwa kuyerekeza kumeneko.",
+      "category": "foundations",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112202)\ncontrol = rng.normal(3100, 420, 60)\nexposed = rng.normal(3250, 430, 55)\n\ndiff = exposed.mean() - control.mean()\npooled_sd = np.sqrt(((len(control)-1)*control.var(ddof=1) +\n                     (len(exposed)-1)*exposed.var(ddof=1)) /\n                    (len(control)+len(exposed)-2))\nd = diff / pooled_sd\nJ = 1 - 3/(4*(len(control)+len(exposed))-9)\ng = J*d\nwelch = stats.ttest_ind(exposed, control, equal_var=False)\nci = welch.confidence_interval(0.95)\nprint(\"mean difference =\", round(float(diff), 1))\nprint(\"Welch 95% CI =\", round(float(ci.low), 1), \"to\", round(float(ci.high), 1))\nprint(\"Cohen d =\", round(float(d), 3), \"Hedges g =\", round(float(g), 3))",
+      "code_explanation_en": "The mean difference is in the original units, so it is usually the most directly useful number. Cohen's d and Hedges' g standardise the difference; Hedges' g applies a small-sample correction.",
+      "code_explanation_ny": "Kusiyana kwa avareji kuli mu mayunitsi oyambirira, choncho nthawi zambiri ndi nambala yothandiza kwambiri. Cohen's d ndi Hedges' g zimasintha kusiyana kukhala muyezo wofanana; Hedges' g imakonza pang'ono pazochepa.",
+      "definition_en": "Use when a p-value alone is not enough and you need to communicate how large a difference is and how precisely it has been estimated.",
+      "explanation_ny": "Kukula kwa zotsatira kumayankha funso lakuti 'kusiyana n'kukulu bwanji?', pamene p imayankha lakuti 'kodi kusiyana kumeneku kungachitike mwangozi?'. Mafunso onse awiri ndi ofunika koma si ofanana. Gwiritsani ntchito pamene p yokha sikukwanira ndipo mukufuna kusonyeza kukula kwa kusiyana komanso kudziwa bwino kuyerekezako.",
+      "misconception_en": "Standardised effects can look larger in homogeneous samples and smaller in heterogeneous ones. They are not universal clinical thresholds.",
+      "misconception_ny": "Zotsatira zokhazikika zingawoneke zazikulu mu deta yofanana kwambiri kapena zazing'ono mu deta yosiyana kwambiri. Sizili malire azachipatala omwe amagwiritsidwa ntchito kulikonse.",
+      "output": "mean difference = 134.4\nWelch 95% CI = -35.8 to 304.7\nCohen d = 0.292 Hedges g = 0.29",
+      "term": "Effect size with confidence interval",
+      "term_ny": "Kukula kwa zotsatira ndi confidence interval"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "Testing many outcomes is like buying many lottery tickets. If you check enough tickets, one may look lucky; correction raises the standard for calling that luck meaningful.",
+      "analogy_ny": "Kuyeza zotsatira zambiri kuli ngati kugula matikiti ambiri a lotale. Mukayang'ana ambiri, imodzi ingawoneke yamwayi; kukonzako kumakweza muyezo wotchedwa kuti mwayiwo ndi wofunika.",
+      "application_en": "Screening many biomarkers for association with an exposure while limiting misleading discoveries.",
+      "application_ny": "Kusakha ma biomarker ambiri kuti muwone ubale ndi matenda popanda kukhulupirira zopezeka zabodza.",
+      "category": "foundations",
+      "code": "import numpy as np\nimport pandas as pd\nfrom scipy import stats\nfrom statsmodels.stats.multitest import multipletests\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112203)\nn = 40\nx = rng.normal(0, 1, (8, n))\ny = rng.normal(0, 1, (8, n))\ny[:2] += 0.8\np_raw = stats.ttest_ind(x, y, axis=1).pvalue\n\nreject_holm, p_holm, _, _ = multipletests(p_raw, method=\"holm\")\nreject_bh, p_bh, _, _ = multipletests(p_raw, method=\"fdr_bh\")\nout = pd.DataFrame({\"test\": range(1, 9), \"raw_p\": p_raw.round(4),\n                    \"holm_p\": p_holm.round(4), \"bh_p\": p_bh.round(4),\n                    \"holm_sig\": reject_holm, \"bh_sig\": reject_bh})\nprint(out.to_string(index=False))",
+      "code_explanation_en": "Raw p-values are too optimistic when many tests are examined. Adjusted p-values are larger; Holm is stricter, while BH allows a controlled proportion of false discoveries.",
+      "code_explanation_ny": "p zosakonzedwa zimakhala zolimbikitsa kwambiri ngati mayeso ndi ambiri. p zosinthidwa zimakula; Holm ndi yowuma kwambiri, pamene BH imalola gawo lolamulidwa la zopezeka zabodza.",
+      "definition_en": "Use when you test several hypotheses in one analysis and must control either the chance of any false positive (FWER) or the expected false-discovery proportion (FDR).",
+      "explanation_ny": "Ngati muyeza makiyi ambiri, mwayi wopeza imodzi yabodza ukuwonjezeka. Kukonza kwa mayeso ambiri kumalimbitsa muyezo wotchedwa 'significant' kuti musakhulupirire zopezeka mwangozi. Gwiritsani ntchito pamene muyeza mfundo zambiri mu kafukufuku umodzi ndipo mukufuna kuchepetsa mwayi wa zotsatira zabodza zilizonse kapena gawo la zopezeka zabodza.",
+      "misconception_en": "Correction does not repair biased tests, poor design or dependence that violates the chosen method's assumptions. Pre-specifying a small primary family is better than correcting an unlimited exploratory fishing expedition.",
+      "misconception_ny": "Kukonza sikukonza mayeso olakwika, kapangidwe koyipa, kapena kudalirana komwe kuswa mfundo za njirayo. Kufotokozeratu gulu laling'ono la mayeso oyamba ndikwabwino kukonza kusaka kopanda malire.",
+      "output": " test  raw_p  holm_p   bh_p  holm_sig  bh_sig\n    1 0.0006  0.0040 0.0023      True    True\n    2 0.0000  0.0000 0.0000      True    True\n    3 0.1146  0.5728 0.2085     False   False\n    4 0.1303  0.5728 0.2085     False   False\n    5 0.1644  0.5728 0.2192     False   False\n    6 0.0870  0.5223 0.2085     False   False\n    7 0.6856  0.6856 0.6856     False   False\n    8 0.2368  0.5728 0.2707     False   False",
+      "term": "Multiple-testing correction",
+      "term_ny": "Kukonza kwa mayeso ambiri"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "Power is like using a net with a certain mesh size. A fine enough net catches small fish; a coarse net may let them escape even when they are present.",
+      "analogy_ny": "Mphamvu ili ngati ukonde wokhala ndi mabowo a kukula kwake. Ukonde wabwino ugwira nsomba zazing'ono; wokhala ndi mabowo akulu ukhoza kuzilola kuthawa ngakhale zilipo.",
+      "application_en": "Planning a two-arm intervention study before recruitment begins.",
+      "application_ny": "Kukonzekera kafukufuku wa magulu awiri musanayambe kusonkhanitsa anthu.",
+      "category": "foundations",
+      "code": "import numpy as np\nfrom statsmodels.stats.power import TTestIndPower\nfrom statsmodels.stats.proportion import proportion_effectsize\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112204)\npilot_control = rng.binomial(1, 0.20, 80)\npilot_treated = rng.binomial(1, 0.32, 80)\neffect = abs(proportion_effectsize(pilot_treated.mean(), pilot_control.mean()))\nanalysis = TTestIndPower()\nn_each = analysis.solve_power(effect_size=effect, alpha=0.05,\n                              power=0.80, ratio=1.0,\n                              alternative=\"two-sided\")\npower_60 = analysis.power(effect_size=effect, nobs1=60, alpha=0.05,\n                          ratio=1.0, alternative=\"two-sided\")\nprint(\"pilot proportions =\", round(pilot_control.mean(), 3),\n      \"and\", round(pilot_treated.mean(), 3))\nprint(\"standardised effect =\", round(float(effect), 3))\nprint(\"n per group for 80% power =\", int(np.ceil(n_each)))\nprint(\"power with 60 per group =\", round(float(power_60), 3))",
+      "code_explanation_en": "The pilot proportions provide a crude standardised effect. The required n is per group for a two-sided test at alpha 0.05.",
+      "code_explanation_ny": "Zigawo za pilot zimapereka kuyerekeza kwa zotsatira zokhazikika. n yofunikira ndi pa gulu limodzi pa mayeso awiri a alpha 0.05.",
+      "definition_en": "Use at the design stage to decide how many participants are needed to detect an effect of practical interest with acceptable power, or to calculate the power of a planned sample size.",
+      "explanation_ny": "Mphamvu ndi mwayi wozindikira kusiyana ngati kusiyana kwenikweni kulipo. Sample ikachepa, ngakhale mankhwala angathandize, kafukufuku angaphonye kuzindikira. Gwiritsani ntchito popanga kafukufuku kuti mudziwe ochita nawo kafukufuku angati omwe akufunika kuti azindikire zotsatira zofunika, kapena kuwerengera mphamvu ya sample yomwe yakonzedwa.",
+      "misconception_en": "Power calculations are only as good as their assumptions. A pilot-based effect is noisy and often exaggerated.",
+      "misconception_ny": "Kuwerengera mphamvu kumadalira mfundo zomwe mwayika. Zotsatira za pilot zimakhala zaphokoso ndipo nthawi zambiri zimakokomeza.",
+      "output": "pilot proportions = 0.175 and 0.362\nstandardised effect = 0.429\nn per group for 80% power = 87\npower with 60 per group = 0.645",
+      "term": "Power and sample size",
+      "term_ny": "Mphamvu ya mayeso ndi kukula kwa sample"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "Standard error is like the spread of repeated spoonfuls from a well-mixed pot. One spoonful may differ, but the average of many spoonfuls is stable.",
+      "analogy_ny": "Standard error ili ngati kusiyana kwa supuni zambiri zotengedwa mu mphika wosakanizidwa bwino. Supuni imodzi ingasiyane, koma avareji ya supuni zambiri imakhala yokhazikika.",
+      "application_en": "Explaining why a single cohort estimate is uncertain and why larger studies give narrower intervals.",
+      "application_ny": "Kufotokoza chifukwa chake kuyerekeza kwa gulu limodzi kusatsimikizika komanso chifukwa chake maphunziro akulu amakhala ndi ma interval opapatiza.",
+      "category": "foundations",
+      "code": "import numpy as np\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112205)\npopulation = rng.lognormal(mean=7.0, sigma=0.35, size=50000)\ntrue_mean = population.mean()\nmeans = np.array([rng.choice(population, size=50, replace=True).mean()\n                  for _ in range(2000)])\nse_theory = population.std(ddof=1) / np.sqrt(50)\nprint(\"true simulated population mean =\", round(float(true_mean), 2))\nprint(\"mean of 2000 sample means =\", round(float(means.mean()), 2))\nprint(\"SD of sample means =\", round(float(means.std(ddof=1)), 2))\nprint(\"theoretical SE =\", round(float(se_theory), 2))",
+      "code_explanation_en": "Individual sample means vary, but their average is close to the simulated population mean. The SD of those means is the standard error; the formula-based SE should be close.",
+      "code_explanation_ny": "Avareji a sample amasiyana, koma avareji yawo yonse ili pafupi ndi avareji ya gulu lopangidwa. SD ya avareji imeneyo ndi standard error; mtengo wa formula uyenera kukhala pafupi.",
+      "definition_en": "Use when you want to understand why two samples from the same population give different estimates, and how much an estimate typically varies across repeated samples.",
+      "explanation_ny": "Ngati mutenga magulu ang'onoang'ono ambiri kuchokera ku gulu limodzi, avareji yawo simakhala yofanana nthawi zonse. Kufalikira kwa ma avareji amenewo kumatiuza kuchuluka kwa kusatsimikizika kwa kuyerekeza kumodzi. Gwiritsani ntchito pamene mukufuna kumvetsetsa chifukwa chake sample ziwiri zachokera ku gulu limodzi zimapereka zotsatira zosiyana, komanso kuchuluka kwa kusiyana kwake.",
+      "misconception_en": "The central limit theorem is an approximation. Very small samples from strongly skewed distributions can behave poorly.",
+      "misconception_ny": "Central limit theorem ndi kuyerekeza chabe. Ma sample ang'onoang'ono ochokera ku deta yopendekerera kwambiri angakhale osadalirika.",
+      "output": "true simulated population mean = 1166.41\nmean of 2000 sample means = 1167.09\nSD of sample means = 59.8\ntheoretical SE = 59.63",
+      "term": "Sampling variability and standard error",
+      "term_ny": "Kusiyana kwa sample ndi standard error"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like shuffling team labels on a list of runners. If the labels do not matter, many shuffles will produce differences as large as the one you saw.",
+      "analogy_ny": "Zili ngati kusakaniza zilembo za magulu a othamanga. Ngati zilembozo sizifunika, kusakaniza kwambiri kudzatulutsa kusiyana kofanana kapena kokulirapo ndi komwe munawona.",
+      "application_en": "Comparing a small pilot group with a control when a parametric assumption is doubtful.",
+      "application_ny": "Kuyerekeza gulu laling'ono la pilot ndi gulu lolamulira pamene mfundo za parametric zikukayikiridwa.",
+      "category": "foundations",
+      "code": "import numpy as np\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112206)\ngroup_a = rng.normal(12.0, 2.0, 14)\ngroup_b = rng.normal(14.2, 2.0, 14)\nobserved = group_b.mean() - group_a.mean()\npooled = np.concatenate([group_a, group_b])\nn_a = len(group_a)\ncount = 0\nB = 20000\nfor _ in range(B):\n    shuffled = rng.permutation(pooled)\n    stat = shuffled[n_a:].mean() - shuffled[:n_a].mean()\n    if abs(stat) >= abs(observed) - 1e-12:\n        count += 1\nprint(\"observed difference =\", round(float(observed), 3))\nprint(\"two-sided permutation p =\", round((count + 1)/(B + 1), 4))",
+      "code_explanation_en": "The permutation p-value is the fraction of randomly reassigned datasets with a difference at least as extreme as the observed one. It uses the data's own rearrangement as the reference distribution instead of a textbook formula.",
+      "code_explanation_ny": "p ya permutation ndi gawo la deta yosinthidwa mwachisawawa yomwe kusiyana kwake kuli kokulirapo kapena kofanana ndi kowonedwa. Imagwiritsa ntchito kusinthasintha kwa deta yeniyeni m'malo mwa formula ya buku.",
+      "definition_en": "Use when you want a distribution-free way to test a sharp null hypothesis, especially with small samples or a statistic whose theoretical distribution is awkward.",
+      "explanation_ny": "Ngati palibe kusiyana kwenikweni, zilembo za gulu A ndi B ziyenera kusinthasintha mofanana. Timasakaniza zilembowo mobwerezabwereza kuti tiwone kodi kusiyana kwathu kuli kodabwitsa bwanji. Gwiritsani ntchito pamene mukufuna kuyesa mfundo ya null popanda kudalira mtundu wa kufalikira, makamaka ngati deta ndi yochepa kapena chiwerengerocho chili chovuta kuwerengera.",
+      "misconception_en": "Exchangeability is a strong assumption and can fail with unequal variances, time trends or clustering. With very few possible permutations the minimum p-value is coarse.",
+      "misconception_ny": "Kusinthana kungakhale kolimba ndipo kungalephere ngati variances zosiyana, nthawi kapena magulu ogwirizana. Ngati kusinthana kochepa, p yocheperako imakhala yosakhwima.",
+      "output": "observed difference = 1.926\ntwo-sided permutation p = 0.005",
+      "term": "Permutation test logic",
+      "term_ny": "Malingaliro a permutation test"
+    },
+    {
+      "aliases": [
+        "student t test",
+        "student's t test",
+        "equal variance t test",
+        "two sample t test",
+        "independent t test"
+      ],
+      "analogy_en": "Like comparing the average harvest of two separate farms: each farm contributes one yield per plot, and the question is whether the gap exceeds ordinary variation between plots.",
+      "analogy_ny": "Zili ngati kuyerekeza zokolola zapakati pa mafakitale awiri osiyana: famu iliyonse imapereka zokolola kamodzi pa malo aliwonse, ndipo funso ndi kuti kusiyana kwake kuli kwakukulu kuposa kusiyana kwamba.",
+      "application_en": "Comparing mean birth weight between two independently sampled regions when their spreads are similar.",
+      "application_ny": "Kuyerekeza avareji ya kulemera kwa makanda pakati pa madera awiri osiyana pamene kufalikira kwawo kuli kofanana.",
+      "category": "groups",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112240)\nstandard = rng.normal(3200, 380, 55)\nnew_care = rng.normal(3330, 390, 48)\n\nres = stats.ttest_ind(new_care, standard, equal_var=True)\nci = res.confidence_interval(0.95)\nprint(\"means =\", round(float(standard.mean()), 1), \"and\",\n      round(float(new_care.mean()), 1))\nprint(\"pooled t =\", round(float(res.statistic), 3),\n      \"df =\", round(float(res.df), 1), \"p =\", round(float(res.pvalue), 4))\nprint(\"95% CI for difference =\", round(float(ci.low), 1), \"to\",\n      round(float(ci.high), 1))",
+      "code_explanation_en": "equal_var=True pools the two variances. ttest_ind returns the t statistic, degrees of freedom and p-value; confidence_interval() adds the plausible range for the mean difference.",
+      "code_explanation_ny": "equal_var=True imaphatikiza variances ziwirizo kukhala chimodzi. ttest_ind imapereka t, degrees of freedom ndi p; confidence_interval() imawonjezera mtunda wotheka wa kusiyana kwa avareji.",
+      "definition_en": "Student's independent-samples t-test compares the means of two unrelated groups by dividing their mean difference by a pooled standard error. It assumes a common within-group variance.",
+      "explanation_ny": "Mayesowa uyerekeza avareji a magulu awiri osiyana. 'Independent' kutanthauza kuti munthu aliyense ali mugulu limodzi lokha, kotero palibe awiriawiri ofanana pakati pa maguluwo. Umagwiritsa ntchito kufalikira kwa magulu onse kuti uone kusiyana kwa avareji kuli kwakukulu kuposa phokoso la deta.",
+      "misconception_en": "It is not a paired test, and equal variances are an assumption rather than a guaranteed fact. A significant result does not prove that the groups differ for causal reasons.",
+      "misconception_ny": "Si paired test, ndipo variances zofanana ndi mfundo yongoganizira, osati yotsimikizika. Zotsatira zofunika sizikutsimikizira kuti kusiyana kunachitika chifukwa cha chinthu chinachake.",
+      "output": "means = 3218.5 and 3353.5\npooled t = 1.498 df = 101.0 p = 0.1372\n95% CI for difference = -43.8 to 313.8",
+      "term": "Independent samples t-test",
+      "term_ny": "t-test ya magulu odziyimira pawokha"
+    },
+    {
+      "aliases": [
+        "welch t test",
+        "welch's t-test",
+        "unequal variance t test",
+        "independent t test"
+      ],
+      "analogy_en": "Comparing two classrooms with different spreads of marks: Welch adjusts for the fact that one class may be much more variable than the other.",
+      "analogy_ny": "Kuyerekeza makalasi awiri omwe mphambu zawo zimafalikira mosiyanasiyana: Welch imaganizira kuti kalasi imodzi ikhoza kukhala yosiyana kwambiri ndi inzake.",
+      "application_en": "Comparing mean birth weight between infants from two independently sampled regions with unequal spread.",
+      "application_ny": "Kuyerekeza avareji ya kulemera kwa makanda ochokera kumadera awiri osiyana omwe kufalikira kwawo kusiyana.",
+      "category": "groups",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112207)\nstandard = rng.normal(3200, 380, 55)\nnew_care = rng.normal(3330, 520, 48)\n\nres = stats.ttest_ind(new_care, standard, equal_var=False)\nci = res.confidence_interval(0.95)\nprint(\"means =\", round(float(standard.mean()), 1), \"and\",\n      round(float(new_care.mean()), 1))\nprint(\"SDs =\", round(float(standard.std(ddof=1)), 1), \"and\",\n      round(float(new_care.std(ddof=1)), 1))\nprint(\"Welch t =\", round(float(res.statistic), 3),\n      \"df =\", round(float(res.df), 2), \"p =\", round(float(res.pvalue), 4))\nprint(\"95% CI for difference =\", round(float(ci.low), 1), \"to\",\n      round(float(ci.high), 1))",
+      "code_explanation_en": "equal_var=False switches off pooling. SciPy computes Welch’s adjusted df and a confidence interval for the mean difference using the two separate variances.",
+      "code_explanation_ny": "equal_var=False imaletsa kuphatikiza variances. SciPy imawerengera df yosinthidwa ya Welch ndi CI ya kusiyana kwa avareji pogwiritsa ntchito variances ziwiri zosiyana.",
+      "definition_en": "Welch’s t-test compares the means of two independent groups without assuming equal variances. It adjusts the degrees of freedom to account for unequal spread.",
+      "explanation_ny": "Welch imafunsa kuti avareji ya magulu awiri odziyimira pawokha ndi yosiyana kwambiri poyerekeza ndi kufalikira kwa deta. Simafuna kuti magulu awiriwo akhale ndi variances zofanana, choncho ndi yotetezeka pa deta yeniyeni.",
+      "misconception_en": "Welch compares means, not whole distributions. Two groups can differ in shape or spread while having similar means, and the test does not adjust for confounding.",
+      "misconception_ny": "Welch uyerekeza avareji, osati kufalikira kwathunthu. Magulu awiri angasiyane mawonekedwe kapena kufalikira koma avareji yawo ikhale yofanana, ndipo mayesowo suchotsa zinthu zosokoneza.",
+      "output": "means = 3281.6 and 3320.4\nSDs = 372.4 and 470.0\nWelch t = 0.46 df = 89.29 p = 0.6466\n95% CI for difference = -128.9 to 206.5",
+      "term": "Welch’s t-test",
+      "term_ny": "Welch’s t-test ya magulu awiri"
+    },
+    {
+      "aliases": [
+        "dependent t test",
+        "within subject t test",
+        "before after t test"
+      ],
+      "analogy_en": "Weighing the same patient before and after treatment: the patient's usual body size cancels out, leaving the change to be studied.",
+      "analogy_ny": "Kuyeza wodwala yemweyo asanalandire chithandizo ndi atalandira: kukula kwake kwamba kumachotsedwa, kotero kusintha kokha kumatsala kuti kuunikidwe.",
+      "application_en": "Assessing change in blood pressure before and after an intervention in the same participants.",
+      "application_ny": "Kuwona kusintha kwa kuthamanga kwa magazi musanayambe ndi mutalandira chithandizo mwa omwewo.",
+      "category": "groups",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112208)\nbaseline = rng.normal(118, 14, 45)\nfollow_up = baseline + rng.normal(-4.5, 9.0, 45)\ndiff = follow_up - baseline\n\nres = stats.ttest_rel(follow_up, baseline)\nci = res.confidence_interval(0.95)\nprint(\"mean change =\", round(float(diff.mean()), 2))\nprint(\"SD of changes =\", round(float(diff.std(ddof=1)), 2))\nprint(\"t =\", round(float(res.statistic), 3), \"p =\", round(float(res.pvalue), 4))\nprint(\"95% CI for mean change =\", round(float(ci.low), 2), \"to\",\n      round(float(ci.high), 2))",
+      "code_explanation_en": "diff stores follow_up minus baseline. ttest_rel performs the one-sample t-test on those differences; the reported mean change and CI describe the paired effect.",
+      "code_explanation_ny": "diff imasunga follow_up opanda baseline. ttest_rel imachita t-test ya gulu limodzi pa kusiyana kumeneko; kusintha kwa avareji ndi CI zikufotokoza zotsatira za awiriawiri.",
+      "definition_en": "The paired samples t-test tests whether the mean of within-pair differences is zero. It is used when the same units are measured twice or when units are deliberately matched.",
+      "explanation_ny": "Pa paired t-test, munthu aliyense amakhala control wake. Timayang'ana kusiyana pakati pa before ndi after, osati kuyerekeza magulu awiri osiyana. Izi zimachotsa kusiyana kwachilengedwe pakati pa anthu.",
+      "misconception_en": "The unit of analysis is the pair, not each separate measurement. Treating repeated observations as independent observations produces invalid standard errors.",
+      "misconception_ny": "Chinthu chowunikiridwa ndi awiriwiri, osati miyeso yosiyana. Kutenga ma observation obwerezabwereza ngati odziyimira pawokha kumapanga standard errors zolakwika.",
+      "output": "mean change = -3.57\nSD of changes = 10.19\nt = -2.348 p = 0.0235\n95% CI for mean change = -6.63 to -0.5",
+      "term": "Paired samples t-test",
+      "term_ny": "t-test ya deta yophatikizidwa"
+    },
+    {
+      "aliases": [
+        "mann whitney",
+        "mann-whitney",
+        "mann–whitney u test",
+        "wilcoxon rank sum",
+        "rank sum test"
+      ],
+      "analogy_en": "Comparing the rankings of two groups rather than comparing their raw averages.",
+      "analogy_ny": "Kuyerekeza masanjidwe a magulu awiri m'malo moyerekeza avareji awo osasinthidwa.",
+      "application_en": "Comparing ordinal pain scores or skewed biomarker concentrations between two independent groups.",
+      "application_ny": "Kuyerekeza masanjidwe a ululu kapena kuchuluka kwa biomarker kopendekerera pakati pa magulu awiri odziyimira pawokha.",
+      "category": "groups",
+      "code": "import numpy as np\nimport scipy.stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112209)\ngroup1 = rng.lognormal(2.2, 0.8, 40)\ngroup2 = rng.lognormal(2.6, 0.8, 42)\n\nu = scipy.stats.mannwhitneyu(group1, group2)\nrank_biserial = 2*u.statistic/(len(group1)*len(group2)) - 1\nprint(\"medians =\", round(float(np.median(group1)), 2), \"and\",\n      round(float(np.median(group2)), 2))\nprint(\"U =\", round(float(u.statistic), 1), \"p =\", round(float(u.pvalue), 4))\nprint(\"rank-biserial effect =\", round(float(rank_biserial), 3))",
+      "code_explanation_en": "scipy.stats.mannwhitneyu(group1, group2) ranks the pooled observations and returns U with a two-sided p-value. The rank-biserial effect describes how often a group1 value exceeds a group2 value.",
+      "code_explanation_ny": "scipy.stats.mannwhitneyu(group1, group2) imasintha ma value onse kukhala ma rank ndikupereka U ndi p ya mbali ziwiri. Rank-biserial imafotokoza kuchuluka komwe mtengo wa group1 umaposa wa group2.",
+      "definition_en": "A non-parametric test for comparing two independent groups using the ranks of their observations.",
+      "explanation_ny": "Mayesowa amafananitsa magulu awiri osadalirana pogwiritsa ntchito malo amene ma observations awo ali nawo akasanjidwa kuyambira pa ochepa kufika pa ambiri.",
+      "misconception_en": "It is not automatically a test of differences in medians; its interpretation depends on the distributions.",
+      "misconception_ny": "Si mayeso wa kusiyana kwa medians nthawi zonse; kutanthauzira kwake kumadalira mawonekedwe a kufalikira kwa deta.",
+      "output": "medians = 10.17 and 11.23\nU = 722.0 p = 0.2757\nrank-biserial effect = -0.14",
+      "term": "Mann–Whitney U Test",
+      "term_ny": "Mann–Whitney U Test"
+    },
+    {
+      "aliases": [
+        "wilcoxon signed rank",
+        "wilcoxon signed-rank test",
+        "signed rank",
+        "paired rank test"
+      ],
+      "analogy_en": "Examining how each participant's measurement changes rather than treating the two groups as unrelated.",
+      "analogy_ny": "Kuyang'ana mmene muyeso wa munthu aliyense umasinthira, osati kuona magulu awiri ngati osagwirizana.",
+      "application_en": "Analysing before-after symptom scores when the differences are skewed.",
+      "application_ny": "Kusanthula masanjidwe a zizindikiro musanayambe ndi mutalandira chithandizo pamene kusiyana kuli kopendekerera.",
+      "category": "groups",
+      "code": "import numpy as np\nimport scipy.stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112210)\nbefore = rng.lognormal(4.0, 0.5, 36)\nafter = before * rng.lognormal(-0.18, 0.35, 36)\ndiff = after - before\n\nres = scipy.stats.wilcoxon(before, after)\nprint(\"median change =\", round(float(np.median(diff)), 3))\nprint(\"W =\", round(float(res.statistic), 1), \"p =\", round(float(res.pvalue), 4))\nprint(\"nonzero differences =\", int(np.sum(diff != 0)))",
+      "code_explanation_en": "scipy.stats.wilcoxon(before, after) ranks the absolute paired differences and keeps their signs. W and p test whether positive and negative ranks are balanced; the median change shows the typical direction.",
+      "code_explanation_ny": "scipy.stats.wilcoxon(before, after) imasankha kukula kwa kusiyana kwa awiriawiri ndikusunga zizindikiro. W ndi p zimayesa kuti ma rank abwino ndi oyipa ali oyenerana; kusintha kwa median kukusonyeza njira yamba.",
+      "definition_en": "A non-parametric test for comparing two related measurements.",
+      "explanation_ny": "Mayesowa amafananitsa miyeso iwiri yokhudzana, monga kulemera kwa mwana asanalandire chithandizo ndi pambuyo pake, pogwiritsa ntchito kusiyana ndi ma rank ake.",
+      "misconception_en": "It is not suitable for two independent groups.",
+      "misconception_ny": "Si yoyenera magulu awiri odziyimira pawokha; pamafunika awiriawiri kapena muyeso wobwerezabwereza pa chinthu chimodzi.",
+      "output": "median change = -12.523\nW = 162.0 p = 0.0063\nnonzero differences = 36",
+      "term": "Wilcoxon Signed-Rank Test",
+      "term_ny": "Wilcoxon Signed-Rank Test"
+    },
+    {
+      "aliases": [
+        "anova",
+        "analysis of variance",
+        "analysis of variance (anova)",
+        "one way anova",
+        "f test",
+        "tukey"
+      ],
+      "analogy_en": "Comparing the average examination scores of students from three different classes.",
+      "analogy_ny": "Kuyerekeza avareji a mphambu za mayeso za ophunzira ochokera m'makalasi atatu osiyana.",
+      "application_en": "Testing whether mean birth weight differs across standard, low-dose and high-dose care groups.",
+      "application_ny": "Kuyesa kuti avareji ya kulemera kwa makanda imasiyana pakati pa chisamaliro cha standard, low-dose ndi high-dose.",
+      "category": "groups",
+      "code": "import numpy as np\nimport scipy.stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112211)\ngroup1 = rng.normal(3100, 250, 45)\ngroup2 = rng.normal(3250, 250, 45)\ngroup3 = rng.normal(3400, 250, 45)\n\nresult = scipy.stats.f_oneway(group1, group2, group3)\nprint(\"group means =\",\n      [round(float(np.mean(g)), 1) for g in (group1, group2, group3)])\nprint(\"F =\", round(float(result.statistic), 3),\n      \"p =\", format(float(result.pvalue), \".3g\"))",
+      "code_explanation_en": "scipy.stats.f_oneway(group1, group2, group3) runs the one-way ANOVA F test. F is the ratio of the between-group mean square to the within-group mean square, and the p-value tests the null that all means are equal.",
+      "code_explanation_ny": "scipy.stats.f_oneway(group1, group2, group3) imayesa ANOVA ya magulu atatu. F ndi chiŵerengero cha mean square yapakati pa magulu ndi ya mkati mwa magulu; p imayesa lingaliro loti avareji zonse zili zofanana.",
+      "definition_en": "A statistical method used to compare the means of three or more independent groups.",
+      "explanation_ny": "ANOVA imathandiza kufufuza ngati pali kusiyana kwakukulu pakati pa ma average a magulu atatu kapena kuposerapo.",
+      "misconception_en": "A significant ANOVA result does not tell us exactly which groups differ. Post-hoc comparisons may be needed.",
+      "misconception_ny": "Zotsatira za ANOVA zofunika siziuza momveka kuti magulu ati akusiyana. Pangafunike mayeso otsatira a post-hoc kuti adziwe.",
+      "output": "group means = [3134.4, 3283.0, 3412.6]\nF = 11.51 p = 2.47e-05",
+      "term": "Analysis of Variance (ANOVA)",
+      "term_ny": "Kusanthula kwa Kusiyana (ANOVA)"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like ranking all horses from several stables and asking whether the stables are mixed throughout the ranking or clustered at different ends.",
+      "analogy_ny": "Zili ngati kusanja mahatchi onse ochokera m'magulu angapo ndikufunsa kuti maguluwo asanganikirana muzotsatira kapena amaonekera mbali zosiyanasiyana za mzere.",
+      "application_en": "Comparing skewed parasite counts across three treatment arms.",
+      "application_ny": "Kuyerekeza kuchuluka kwa tizirombo topendekerera m'magulu atatu a chithandizo.",
+      "category": "groups",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112212)\ngroups = [\n    rng.lognormal(2.0, 0.7, 35),\n    rng.lognormal(2.2, 0.7, 35),\n    rng.lognormal(2.6, 0.7, 35),\n]\n\nh = stats.kruskal(*groups)\nprint(\"medians =\", [round(float(np.median(g)), 2) for g in groups])\nprint(\"H =\", round(float(h.statistic), 3), \"df =\", len(groups)-1,\n      \"p =\", round(float(h.pvalue), 5))",
+      "code_explanation_en": "A small p-value says the groups do not all have the same rank distribution. It does not say which groups differ, so follow with clearly planned pairwise comparisons and a multiplicity adjustment.",
+      "code_explanation_ny": "p ikachepa, magulu onse alibe kufalikira kwa ma rank kofanana. Sizitiuza kuti magulu ati amasiyana, choncho tsatirani ndi kuyerekeza kwapawiri kokonzedwa ndi kukonza kwa mayeso ambiri.",
+      "definition_en": "Use as a rank-based alternative to one-way ANOVA when comparing three or more independent groups with ordinal or skewed continuous outcomes.",
+      "explanation_ny": "Kruskal-Wallis ndiye mtundu wa ANOVA wogwiritsa ntchito ma rank. Imayang'ana kuti magulu atatu kapena kuposerapo ali ndi ma rank ofanana kapena ayi. Gwiritsani ntchito m'malo mwa one-way ANOVA potengera ma rank poyerekeza magulu atatu kapena kuposerapo odziyimira pawokha okhala ndi zotsatira zosanjidwa kapena zopendekerera.",
+      "misconception_en": "Like Mann-Whitney, shape differences can mimic location differences. It does not provide an adjusted mean difference.",
+      "misconception_ny": "Monga Mann-Whitney, kusiyana kwa mawonekedwe kukhoza kuwoneka ngati kusiyana kwa malo. Sipereka kusiyana kwa avareji koyendetsedwa.",
+      "output": "medians = [8.66, 8.72, 11.77]\nH = 9.516 df = 2 p = 0.00858",
+      "term": "Kruskal-Wallis test",
+      "term_ny": "Kruskal-Wallis test"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like tracking the same plant's height each week. Comparing the same plant with itself removes much of the variation between different plants.",
+      "analogy_ny": "Zili ngati kuyeza kutalika kwa chomera chomwecho sabata iliyonse. Kuyerekeza chomeracho ndi chokha kumachepetsa kusiyana komwe kulipo pakati pa zomera zosiyanasiyana.",
+      "application_en": "Testing whether a biomarker changes across baseline, week 4 and week 8 in the same cohort.",
+      "application_ny": "Kuyesa kuti biomarker imasintha pakati pa poyambira, sabata 4 ndi sabata 8 mwa gulu lomwelo.",
+      "category": "groups",
+      "code": "import numpy as np\nimport pandas as pd\nfrom statsmodels.stats.anova import AnovaRM\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112213)\nrows = []\nfor pid in range(1, 31):\n    base = rng.normal(12, 1.8)\n    for visit, shift in [(\"baseline\", 0.0), (\"week4\", 0.35), (\"week8\", 0.8)]:\n        rows.append((pid, visit, base + shift + rng.normal(0, 0.9)))\ndf = pd.DataFrame(rows, columns=[\"id\", \"visit\", \"biomarker\"])\n\nfit = AnovaRM(data=df, depvar=\"biomarker\", subject=\"id\",\n              within=[\"visit\"]).fit()\ntable = fit.anova_table[[\"F Value\", \"Pr > F\"]].round(4)\nprint(table.to_string())\nprint(\"n participants =\", df[\"id\"].nunique())",
+      "code_explanation_en": "The F test asks whether the mean biomarker differs across visits after accounting for the fact that the same participants contributed each row. A small p-value indicates change over time; plot the visit means to see the pattern.",
+      "code_explanation_ny": "F imayesa kuti avareji ya biomarker imasiyana pa nthawi poganizira kuti munthu yemweyo anapereka deta nthawi zonse. p ikachepa, zikusonyeza kusintha pakapita nthawi; jambulani ma avareji a nthawi kuti muone mawonekedwe.",
+      "definition_en": "Use when the same participants are measured under three or more conditions or time points and you want to test whether the within-person means differ.",
+      "explanation_ny": "Munthu aliyense amabwerezedwa mu nthawi zonse, kotero timagwiritsa ntchito kusiyana kwa mkati mwa munthuyo. Izi zimachepetsa phokoso chifukwa munthu aliyense amakhala control wake. Gwiritsani ntchito pamene omwewo ayezedwa pazochitika kapena nthawi zitatu kapena kuposerapo ndipo mukufuna kuyesa kuti avareji za mkati mwa munthu zimasiyana.",
+      "misconception_en": "Repeated-measures ANOVA is less flexible than a mixed model for missing visits, unequal spacing or complex covariance. Sphericity violations inflate the F test unless corrected.",
+      "misconception_ny": "ANOVA yobwerezabwereza si yosinthika ngati mixed model ngati pali nthawi yosowa, mtunda wosiyana kapena mgwirizano wovuta. Kuswa sphericity kumakulitsa F ngati sikukonzedwa.",
+      "output": "       F Value  Pr > F\nvisit    8.097  0.0008\nn participants = 30",
+      "term": "Repeated-measures ANOVA",
+      "term_ny": "ANOVA ya miyeso yobwerezabwereza"
+    },
+    {
+      "aliases": [
+        "relative risk",
+        "rr",
+        "cohort",
+        "2x2 table"
+      ],
+      "analogy_en": "Risk is the fraction of a group that crosses a finish line; a risk ratio compares those fractions directly.",
+      "analogy_ny": "Risk ndi gawo la gulu lomwe ladutsa mzere womaliza; risk ratio uyerekeza magawo amenewo mwachindunji.",
+      "application_en": "Comparing event risk between exposed and unexposed groups in a cohort with a fixed follow-up window.",
+      "application_ny": "Kuyerekeza chiopsezo cha chochitika pakati pa gulu lowonekera ndi losawonekera mu kafukufuku wa cohort ndi nthawi yotsatira yokhazikika.",
+      "category": "categories",
+      "code": "import numpy as np\nfrom statsmodels.stats.contingency_tables import Table2x2\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112214)\nexposed_event = rng.binomial(1, 0.45, 100).sum()\nunexposed_event = rng.binomial(1, 0.25, 100).sum()\ntable = np.array([[exposed_event, 100-exposed_event],\n                  [unexposed_event, 100-unexposed_event]])\nres = Table2x2(table)\n\nprint(\"table [event, no event] rows: exposed, unexposed\")\nprint(table)\nrr_ci = res.riskratio_confint()\nor_ci = res.oddsratio_confint()\nprint(\"risk ratio =\", round(float(res.riskratio), 3),\n      \"95% CI\", round(float(rr_ci[0]), 3), \"to\", round(float(rr_ci[1]), 3))\nprint(\"odds ratio =\", round(float(res.oddsratio), 3),\n      \"95% CI\", round(float(or_ci[0]), 3), \"to\", round(float(or_ci[1]), 3))",
+      "code_explanation_en": "Table2x2(table) computes riskratio from the event probability in each row. riskratio_confint() returns its interval; odds ratio is printed beside it to highlight the distinction.",
+      "code_explanation_ny": "Table2x2(table) imawerengera riskratio kuchokera ku mwayi wa chochitika mu mzere uliwonse. riskratio_confint() imapereka interval; odds ratio imasindikizidwa pafupi kusonyeza kusiyana.",
+      "definition_en": "A risk ratio, or relative risk, is the probability of an event in one group divided by the probability in another. It is a direct comparison of event risks over a defined time window.",
+      "explanation_ny": "Risk ratio uyerekeza mwayi weniweni wa chochitika m'magulu awiri. Ngati RR ili 2, chochitikacho chimachitika kawiri pafupipafupi m'gulu loyamba pa nthawi yofotokozedwa, osati kuti ma odds anakwera kawiri.",
+      "misconception_en": "A case-control study usually cannot estimate a risk ratio directly because group sizes are fixed by sampling. A crude risk ratio also does not adjust for confounding.",
+      "misconception_ny": "Kafukufuku wa case-control nthawi zambiri sungathe kuyerekeza risk ratio mwachindunji chifukua kuchuluka kwa magulu kumakhazikitsidwa ndi kusankha. Risk ratio yosakonzedwa suchotsanso zosokoneza.",
+      "output": "table [event, no event] rows: exposed, unexposed\n[[37 63]\n [21 79]]\nrisk ratio = 1.762 95% CI 1.114 to 2.786\nodds ratio = 2.209 95% CI 1.177 to 4.147",
+      "term": "Risk ratio",
+      "term_ny": "Risk ratio"
+    },
+    {
+      "aliases": [
+        "or",
+        "odds",
+        "case control",
+        "2x2 table"
+      ],
+      "analogy_en": "Risk is the fraction of a class that passes; odds are passers divided by non-passers. An odds ratio compares pass-to-fail ratios, not pass fractions.",
+      "analogy_ny": "Risk ndi gawo la kalasi lomwe ladutsa; ma odds ndi odutsa ogawidwa ndi osadutsa. Odds ratio uyerekeza chiŵerengerocho, osati magawo a odutsa.",
+      "application_en": "Summarising an exposure-outcome association in a case-control study or reporting an adjusted logistic regression coefficient.",
+      "application_ny": "Kufotokoza ubale wa exposure ndi zotsatira mu kafukufuku wa case-control kapena kunena coefficient ya logistic regression wosinthidwa.",
+      "category": "categories",
+      "code": "import numpy as np\nfrom statsmodels.stats.contingency_tables import Table2x2\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112241)\nexposed_event = rng.binomial(1, 0.40, 90).sum()\nunexposed_event = rng.binomial(1, 0.20, 90).sum()\ntable = np.array([[exposed_event, 90-exposed_event],\n                  [unexposed_event, 90-unexposed_event]])\nres = Table2x2(table)\nci = res.oddsratio_confint()\n\nprint(\"table [event, no event] rows: exposed, unexposed\")\nprint(table)\nprint(\"odds ratio =\", round(float(res.oddsratio), 3),\n      \"95% CI\", round(float(ci[0]), 3), \"to\", round(float(ci[1]), 3))",
+      "code_explanation_en": "Table2x2(table) treats rows as exposure groups and columns as event/no event. riskratio and oddsratio_confint() return the two different effect measures from the same counts.",
+      "code_explanation_ny": "Table2x2(table) imatenga mizere ngati magulu a exposure ndi mizati ngati chochitika/chosachitika. riskratio ndi oddsratio_confint() zimapereka miyezo iwiri yosiyana kuchokera ku makutu omwewo.",
+      "definition_en": "An odds ratio is the ratio of the odds of an event in one group to the odds in another. Odds are event count divided by non-event count, so the measure is not the same as a risk ratio.",
+      "explanation_ny": "Odds ratio uyerekeza ma odds, osati mwayi weniweni. Ngati gulu limodzi lili ndi ma odds apamwamba kawiri, izi sizitanthauza kuti mwayi wochitika unawirikizeka, makamaka ngati chochitikacho chili chofala.",
+      "misconception_en": "Do not call an odds ratio 'times more likely' for a common outcome. Crude odds ratios do not adjust for confounding, and sparse cells give unstable estimates.",
+      "misconception_ny": "Musatchule odds ratio kuti 'katheŵa kuchuluka mwayi' ngati chochitika chili chofala. Odds ratio yosakonzedwa suchotsa zosokoneza, ndipo makutu ochepa amapanga kuyerekeza kosakhazikika.",
+      "output": "table [event, no event] rows: exposed, unexposed\n[[35 55]\n [22 68]]\nodds ratio = 1.967 95% CI 1.036 to 3.733",
+      "term": "Odds ratio",
+      "term_ny": "Odds ratio"
+    },
+    {
+      "aliases": [
+        "chi square",
+        "chi-squared",
+        "contingency table test",
+        "test of independence",
+        "cramer v"
+      ],
+      "analogy_en": "Checking whether drink choices differ by age group more than random mixing would produce. Chi-square flags the pattern; Cramer's V says how pronounced it is.",
+      "analogy_ny": "Kuyang'ana kuti zakumwa zosankhidwa zimasiyana m'magulu azaka kuposa momwe kusakaniza mwachisawawa kungapangire. Chi-square imazindikira mawonekedwe; Cramer's V imatiuza kuti ndi yamphamvu bwanji.",
+      "application_en": "Testing whether malaria positivity category differs by specimen type.",
+      "application_ny": "Kuyesa kuti gulu la malungo limasiyana ndi mtundu wa zitsanzo.",
+      "category": "categories",
+      "code": "import numpy as np\nimport pandas as pd\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112215)\nn = 300\nexposure = rng.choice([\"none\", \"low\", \"high\"], n, p=[0.45, 0.35, 0.20])\nprobs = {\"none\": [0.75, 0.25], \"low\": [0.65, 0.35], \"high\": [0.45, 0.55]}\noutcome = np.array([rng.choice([\"no\", \"yes\"], p=probs[e]) for e in exposure])\ntab = pd.crosstab(exposure, outcome)\n\nchi2, p, dof, expected = stats.chi2_contingency(tab)\nn_total = tab.to_numpy().sum()\nv = np.sqrt(chi2 / (n_total * (min(tab.shape) - 1)))\nprint(tab.to_string())\nprint(\"minimum expected count =\", round(float(expected.min()), 2))\nprint(\"chi2 =\", round(float(chi2), 3), \"df =\", dof,\n      \"p =\", round(float(p), 5))\nprint(\"Cramer V =\", round(float(v), 3))",
+      "code_explanation_en": "crosstab() builds the table. chi2_contingency() returns the statistic, p-value, degrees of freedom and expected counts. Cramer's V is computed from chi-square and sample size as a 0–1 strength measure.",
+      "code_explanation_ny": "crosstab() imapanga table. chi2_contingency() imapereka chi-square, p, degrees of freedom ndi kuchuluka koyembekezeka. Cramer's V imawerengedwa kuchokera ku chi-square ndi kuchuluka kwa deta ngati muyezo wa 0–1.",
+      "definition_en": "A chi-square test of independence assesses whether two categorical variables are associated by comparing observed contingency-table counts with counts expected under independence.",
+      "explanation_ny": "Chi-square imafanizira zomwe tawona ndi zomwe tikadayembekezera ngati palibe ubale pakati pa makategori. Ngati kusiyana kwake kuli kwakukulu, p imachepa ndipo tikukayikira kuti palibe ubale. Cramer's V imatiuza mphamvu ya ubalewo.",
+      "misconception_en": "A small p-value does not prove causation or describe strength. Expected counts that are too small make the asymptotic p unreliable; use an exact method when needed.",
+      "misconception_ny": "p yochepa sikutsimikizira causality kapena kufotokoza mphamvu ya ubale. Kuchuluka koyembekezeka kochepa kumapangitsa p kusadalirika; gwiritsani ntchito njira yeniyeni ngati kuli koyenera.",
+      "output": "col_0  no  yes\nrow_0         \nhigh   27   29\nlow    67   38\nnone   99   40\nminimum expected count = 19.97\nchi2 = 9.229 df = 2 p = 0.00991\nCramer V = 0.175",
+      "term": "Chi-square test",
+      "term_ny": "Chi-square test"
+    },
+    {
+      "aliases": [
+        "fisher exact",
+        "fisher's exact test",
+        "exact test",
+        "small table"
+      ],
+      "analogy_en": "Instead of approximating with a bell curve, Fisher enumerates all possible arrangements of a small deck and counts how extreme yours is.",
+      "analogy_ny": "M'malo kugwiritsa ntchito kuyerekeza kwa mawonekedwe a belu, Fisher imawerenga makonzedwe onse a makadi ochepa ndikuwerengera kuti anu ndi otani.",
+      "application_en": "Analysing a rare outcome in a small pilot study.",
+      "application_ny": "Kusanthula zotsatira zosowa mu kafukufuku wawung'ono wa pilot.",
+      "category": "categories",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112216)\na = rng.binomial(1, 0.10, 18).sum()\nb = 18 - a\nc = rng.binomial(1, 0.35, 16).sum()\nd = 16 - c\ntable = np.array([[a, b], [c, d]])\n\nodds, p = stats.fisher_exact(table, alternative=\"two-sided\")\nprint(\"table =\", table.tolist())\nprint(\"odds ratio =\", round(float(odds), 3))\nprint(\"Fisher exact two-sided p =\", round(float(p), 4))",
+      "code_explanation_en": "fisher_exact(table) uses the fixed margins to enumerate arrangements and returns the conditional odds ratio and two-sided p-value. The raw table is printed because sparse odds ratios can be unstable.",
+      "code_explanation_ny": "fisher_exact(table) imagwiritsa ntchito m'mphepete lokhazikika kuwerenga makonzedwe onse ndikupereka conditional odds ratio ndi p ya mbali ziwiri. Table yoyambirira imasindikizidwa chifukwa ma odds ratio a makutu ochepa angakhale osakhazikika.",
+      "definition_en": "Fisher’s exact test computes an exact p-value for association in a 2x2 table by enumerating tables with the same margins, rather than relying on a large-sample approximation.",
+      "explanation_ny": "Ngati makutu ali ochepa, chi-square si yodalirika. Fisher imawerengera mwayi wa table yotere mwachindunji potengera makutu omwe alipo, osati kugwiritsa ntchito mawonekedwe a belu.",
+      "misconception_en": "Exact does not mean automatically better for large tables. It gives an unadjusted association and can be conservative; a zero cell can make the odds ratio infinite.",
+      "misconception_ny": "Kukhala 'exact' sikutanthauza kuti kuli bwino nthawi zonse pa table yayikulu. Sipereka zotsatira zosinthidwa ndipo ikhoza kukhala yodziletsa kwambiri; selo la zero lingapangitse odds ratio kukhala yopanda malire.",
+      "output": "table = [[1, 17], [5, 11]]\nodds ratio = 0.129\nFisher exact two-sided p = 0.0782",
+      "term": "Fisher’s exact test",
+      "term_ny": "Fisher’s exact test"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like counting only shoppers who switched brands, not those who kept the same brand, to decide whether a campaign shifted preference.",
+      "analogy_ny": "Zili ngati kuwerengera okha ogula omwe adasintha mtundu wa katundu, osati omwe adakhalabe ndi mtundu womwewo, kuti muone ngati kampeni idasintha zokonda.",
+      "application_en": "Comparing test positivity before and after a training programme in the same laboratories.",
+      "application_ny": "Kuyerekeza kuchuluka kwa zotsatira zabwino musanayambe ndi mutalandira maphunziro m'ma laboratory omwewo.",
+      "category": "categories",
+      "code": "import numpy as np\nimport pandas as pd\nfrom statsmodels.stats.contingency_tables import mcnemar\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112217)\nbefore = rng.binomial(1, 0.35, 120)\nafter = before.copy()\nflips = rng.choice(120, size=28, replace=False)\nafter[flips] = 1 - after[flips]\ntab = pd.crosstab(before, after)\n\nres = mcnemar(tab.to_numpy(), exact=True)\nprint(tab.to_string())\nprint(\"discordant counts =\", int(tab.iloc[0,1]), \"and\", int(tab.iloc[1,0]))\nprint(\"McNemar exact p =\", round(float(res.pvalue), 4))",
+      "code_explanation_en": "Concordant pairs cancel out because they do not indicate change. The test compares the two discordant cells.",
+      "code_explanation_ny": "Ma pair ogwirizana amachotsedwa chifukwa sawonetsa kusintha. Mayesowo uyerekeza makutu awiri osagwirizana.",
+      "definition_en": "Use for paired binary data, such as the same participants tested before and after an intervention, when the question is whether the proportion of positive results changes.",
+      "explanation_ny": "McNemar imayang'ana anthu omwe zotsatira zawo zinasintha. Omwe sanasinthe sawonjezera chidziwitso pa funso lakuti kuchuluka kwa positive kwasintha kapena ayi. Gwiritsani ntchito pa deta ya binary yophatikizidwa, monga omwewo ayezedwa asanayambe ndi atalandira chithandizo, pamene funso ndi kuti gawo la zotsatira zabwino limasintha.",
+      "misconception_en": "It tests marginal change, not whether individual predictions are accurate. Missing one member of a pair discards that pair.",
+      "misconception_ny": "Umayesa kusintha kwa m'mphepete, osati kuti zolosera za munthu aliyense ndi zolondola. Ngati mbali imodzi ya awiriwiri yasowa, awiriwiriwo amatayika.",
+      "output": "col_0   0   1\nrow_0        \n0      65  21\n1       7  27\ndiscordant counts = 21 and 7\nMcNemar exact p = 0.0125",
+      "term": "McNemar test",
+      "term_ny": "McNemar test"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "Two weather forecasters may both often say 'no rain'. Raw agreement looks good, but kappa asks whether they agree beyond what that common forecast would predict.",
+      "analogy_ny": "Anyosi awiri angamalengeze kuti 'mvula sigwa' pafupipafupi. Kuvomerezana kowoneka kumakhala kwakukulu, koma kappa imafunsa kuti kuvomerezana kwawo kuposa kwa mwangozi ndi kokwanira.",
+      "application_en": "Measuring agreement between two readers classifying malaria slides.",
+      "application_ny": "Kuyeza kuvomerezana pakati pa owerenga awiri pogawira ma slide a malungo.",
+      "category": "categories",
+      "code": "import numpy as np\nfrom scipy import stats\nfrom statsmodels.stats.inter_rater import cohens_kappa\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112218)\ntrue_class = rng.integers(0, 2, 160)\nrater_a = true_class.copy()\nrater_b = true_class.copy()\ndisagree = rng.choice(160, size=34, replace=False)\nrater_b[disagree] = 1 - rater_b[disagree]\ntable = np.zeros((2, 2), dtype=int)\nfor a, b in zip(rater_a, rater_b):\n    table[a, b] += 1\n\nres = cohens_kappa(table)\nprint(\"confusion table rows=rater A, cols=rater B\")\nprint(table)\nprint(\"observed agreement =\", round(float(np.trace(table)/table.sum()), 3))\nprint(\"kappa =\", round(float(res.kappa), 3))\nprint(\"95% CI =\", round(float(res.kappa_low), 3), \"to\",\n      round(float(res.kappa_upp), 3))",
+      "code_explanation_en": "Observed agreement can be high simply because one category is common. Kappa subtracts chance agreement.",
+      "code_explanation_ny": "Kuvomerezana kowonedwa kukhoza kukhala kwakukulu chifukwa makategori imodzi ndi yofala. Kappa imachotsa kuvomerezana kwamwayi.",
+      "definition_en": "Use when two raters classify the same subjects into categories and you want agreement beyond what chance alone would produce.",
+      "explanation_ny": "Kuvomerezana kokha sikukwanira chifukwa owerenga angavomereze mwangozi. Kappa imafunsa kuti kuvomerezana kwathu kuposa kwa mwangozi ndi kokwanira bwanji. Gwiritsani ntchito pamene owerenga awiri agawira anthu omwewo m'makategori ndipo mukufuna kuvomerezana koposa mwangozi.",
+      "misconception_en": "Kappa depends on category prevalence and can be surprisingly low when a category is rare. It assumes the same categories and no systematic rater bias in its simplest form.",
+      "misconception_ny": "Kappa imadalira kuchuluka kwa makategori ndipo ikhoza kukhala yotsika modabwitsa makategori imodzi ikachepa. Imaganizira makategori ofanana komanso kusakondera kwa owerenga mu mawonekedwe ake osavuta.",
+      "output": "confusion table rows=rater A, cols=rater B\n[[60 17]\n [17 66]]\nobserved agreement = 0.787\nkappa = 0.574\n95% CI = 0.447 to 0.701",
+      "term": "Cohen's kappa for agreement",
+      "term_ny": "Cohen's kappa wa kuvomerezana"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like checking whether the colours of candies in a bag match the manufacturer's stated mix, rather than comparing two different bags.",
+      "analogy_ny": "Zili ngati kuyang'ana kuti mitundu ya maswiti m'chikwama ikugwirizana ndi kusakaniza kwalengezedwa ndi wopanga, osati kuyerekeza zikwama ziwiri.",
+      "application_en": "Checking whether specimen types in a laboratory log follow an expected quarterly mix.",
+      "application_ny": "Kuyang'ana kuti mitundu ya zitsanzo mu buku la laboratory ikugwirizana ndi kusakaniza koyembekezeka kwa kotala.",
+      "category": "categories",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112219)\nobserved = rng.multinomial(240, [0.52, 0.30, 0.18])\nexpected_probs = np.array([0.50, 0.30, 0.20])\nexpected = observed.sum() * expected_probs\n\nchi2, p = stats.chisquare(f_obs=observed, f_exp=expected)\nprint(\"observed =\", observed.tolist())\nprint(\"expected =\", np.round(expected, 1).tolist())\nprint(\"chi2 =\", round(float(chi2), 3), \"df =\", len(observed)-1,\n      \"p =\", round(float(p), 4))",
+      "code_explanation_en": "The test measures how far the observed counts are from the expected counts relative to sampling variation. A large p-value is consistent with the specified distribution; it does not prove the distribution is exactly correct.",
+      "code_explanation_ny": "Mayesowo amayeza kuti kuchuluka kowonedwa kuli kutali bwanji ndi koyembekezeka poyerekeza ndi kusiyana kwachibadwa kwa sample. p yayikulu ikugwirizana ndi kagawidwe kofotokozedwa; sikutsimikizira kuti kagawidweko ndi kolondola ndendende.",
+      "definition_en": "Use when you have counts in one categorical variable and want to compare the observed distribution with a prespecified expected distribution.",
+      "explanation_ny": "Apa tili ndi gulu limodzi lokha la makategori. Timafanizira kuchuluka komwe tawona ndi kuchuluka komwe tikadayembekezera ngati muyezo wina uli woona. Gwiritsani ntchito pamene muli ndi kuchuluka kwa makategori imodzi ndipo mukufuna kuyerekeza kagawidwe kowonedwa ndi kagawidwe kokonzedweratu.",
+      "misconception_en": "With very large samples, trivial deviations become significant. With small expected counts, the approximation is poor.",
+      "misconception_ny": "Ndi deta yayikulu kwambiri, kusiyana kochepa kumakhala kofunika. Ndi kuchuluka koyembekezeka kochepa, kuyerekezako kumakhala koyipa.",
+      "output": "observed = [115, 69, 56]\nexpected = [120.0, 72.0, 48.0]\nchi2 = 1.667 df = 2 p = 0.4346",
+      "term": "Chi-square goodness-of-fit",
+      "term_ny": "Chi-square ya kukwanira kwa kugawa"
+    },
+    {
+      "aliases": [
+        "pearson correlation",
+        "pearson r",
+        "linear correlation",
+        "r"
+      ],
+      "analogy_en": "Examining whether birth weight tends to increase as gestational age increases.",
+      "analogy_ny": "Kuyang'ana kuti kulemera kwa mwana kumakonda kuwonjezeka pamene msinkhu wa mimba ukukwera.",
+      "application_en": "Exploring whether birth weight rises with gestational age in a cohort before fitting a regression model.",
+      "application_ny": "Kufufuza kuti kulemera kwa makanda kumakwera ndi msinkhu wa mimba mu gulu la kafukufuku musanayike regression.",
+      "category": "association",
+      "code": "import numpy as np\nimport scipy.stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112220)\ngestational_age = rng.normal(32, 3, 80)  # simulated weeks\nbirth_weight = 600 + 95*gestational_age + rng.normal(0, 250, 80)  # simulated grams\n\nres = scipy.stats.pearsonr(gestational_age, birth_weight)\nci = res.confidence_interval(0.95)\nprint(\"Pearson r =\", round(float(res.statistic), 3))\nprint(\"95% CI =\", round(float(ci.low), 3), \"to\", round(float(ci.high), 3))\nprint(\"p =\", round(float(res.pvalue), 6))\nprint(\"r squared =\", round(float(res.statistic**2), 3))",
+      "code_explanation_en": "scipy.stats.pearsonr(gestational_age, birth_weight) returns r, its p-value and a 95% confidence interval. r ranges from -1 to 1; r squared is shared variance in a simple linear model, not a causal measure.",
+      "code_explanation_ny": "scipy.stats.pearsonr(gestational_age, birth_weight) imapereka r, p ndi 95% CI. r ili pakati pa -1 ndi 1; r squared ndi gawo la kusiyana lomwe limagawidwa mu model yosavuta, osati muyezo wa causality.",
+      "definition_en": "Measures the strength and direction of a linear relationship between two continuous variables.",
+      "explanation_ny": "Pearson correlation imasonyeza mmene variables ziwiri zimayendera limodzi pa ubale wa mzere wowongoka (linear relationship), komanso mphamvu ndi direction ya ubalewo.",
+      "misconception_en": "Correlation does not establish causation.",
+      "misconception_ny": "Ubale (correlation) sikutsimikizira kuti chinthu chimodzi chinayambitsa chinacho (causation).",
+      "output": "Pearson r = 0.761\n95% CI = 0.649 to 0.84\np = 0.0\nr squared = 0.579",
+      "term": "Pearson Correlation",
+      "term_ny": "Pearson Correlation"
+    },
+    {
+      "aliases": [
+        "spearman correlation",
+        "spearman rho",
+        "spearman rank",
+        "rank correlation"
+      ],
+      "analogy_en": "Comparing participants' positions in two rankings rather than their actual numerical measurements.",
+      "analogy_ny": "Kuyerekeza malo a omwe atengapo mbali mu mindandanda iwiri ya masanjidwe, osati miyeso yao yeniyeni.",
+      "application_en": "Associating an ordinal adherence score with a skewed biomarker.",
+      "application_ny": "Kugwirizanitsa masanjidwe a kumvera malangizo ndi biomarker wopendekerera.",
+      "category": "association",
+      "code": "import numpy as np\nimport scipy.stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112221)\nvariable1 = rng.integers(1, 6, 90)\nvariable2 = 2.2*variable1 + rng.lognormal(0, 0.5, 90)\n\nres = scipy.stats.spearmanr(variable1, variable2)\nrho = float(res.statistic)\nz = np.arctanh(rho)\nse = 1/np.sqrt(len(variable1)-3)\nlo, hi = np.tanh(z - 1.96*se), np.tanh(z + 1.96*se)\nprint(\"Spearman rho =\", round(rho, 3))\nprint(\"approx 95% CI =\", round(float(lo), 3), \"to\", round(float(hi), 3))\nprint(\"p =\", round(float(res.pvalue), 6))",
+      "code_explanation_en": "scipy.stats.spearmanr(variable1, variable2) computes rho from the ranks of the two variables. The Fisher-style z interval is approximate and is less reliable with many ties or small samples.",
+      "code_explanation_ny": "scipy.stats.spearmanr(variable1, variable2) imawerengera rho kuchokera ku ma rank a zinthu ziwirizo. Interval ya Fisher z ndi yongoyerekeza ndipo si yodalirika ngati ma value ofanana ndi ambiri kapena deta ili yochepa.",
+      "definition_en": "Measures the strength and direction of a monotonic relationship using ranked observations.",
+      "explanation_ny": "Spearman correlation imagwiritsa ntchito ma rank a observations kuti ifufuze ngati variable imodzi imakonda kukwera kapena kutsika pamene ina ikusintha.",
+      "misconception_en": "Spearman correlation does not require a linear relationship, but it still does not prove causation.",
+      "misconception_ny": "Spearman correlation safuna ubale wa mzere wowongoka, koma sikutsimikizirabe kuti chinthu chimodzi chinayambitsa chinacho.",
+      "output": "Spearman rho = 0.973\napprox 95% CI = 0.959 to 0.982\np = 0.0",
+      "term": "Spearman Rank Correlation",
+      "term_ny": "Spearman Rank Correlation"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like asking, for every pair of runners, whether the two judges ranked them in the same order.",
+      "analogy_ny": "Zili ngati kufunsa, pa othamanga awiri alionse, kuti owerenga awiri adawasanja m'dongosolo lomwelo kapena ayi.",
+      "application_en": "Comparing two ordinal scoring systems with many repeated scores.",
+      "application_ny": "Kuyerekeza machitidwe awiri a masanjidwe okhala ndi zotsatira zobwerezabwereza.",
+      "category": "association",
+      "code": "import numpy as np\nfrom scipy import stats\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112222)\nlab_score = rng.integers(0, 4, 70)\nclinical_score = np.clip(lab_score + rng.integers(-1, 2, 70), 0, 4)\n\nres = stats.kendalltau(lab_score, clinical_score)\ntau = float(res.statistic)\nprint(\"Kendall tau-b =\", round(tau, 3))\nprint(\"p =\", round(float(res.pvalue), 5))\nprint(\"concordance interpretation: tau = P(concordant) - P(discordant)\")",
+      "code_explanation_en": "Positive tau means more pairs are concordant than discordant. It can be read as the difference between the probabilities that a randomly chosen pair is concordant or discordant.",
+      "code_explanation_ny": "tau yabwino imatanthauza kuti pali awiriawiri ogwirizana kwambiri kuposa osagwirizana. Itha kuwerengedwa ngati kusiyana pakati pa mwayi woti awiriwiri asankhidwe mwachisawawa agwirizane kapena ayi.",
+      "definition_en": "Use as another rank-based association measure when you want an interpretable concordance probability and have many tied ranks or a modest sample.",
+      "explanation_ny": "Kendall amayang'ana awiriawiri a anthu. Ngati munthu woyamba ali pamwamba pa winayo pa zinthu zonse ziwiri, awiriwiriwo amagwirizana; ngati dongosolo lisinthika, amasagwirizana. Gwiritsani ntchito ngati muyezo wina wa ma rank pamene mukufuna kumvetsetsa mwayi wogwirizana wa ma pairs ndipo muli ndi ma rank ofanana ambiri kapena deta yochepa.",
+      "misconception_en": "It is not a slope and has no simple units. Different tie structures affect comparison across studies.",
+      "misconception_ny": "Si slope ndipo ilibe mayunitsi osavuta. Kusiyana kwa ma value ofanana kumakhudza kuyerekeza pakati pa maphunziro.",
+      "output": "Kendall tau-b = 0.709\np = 0.0\nconcordance interpretation: tau = P(concordant) - P(discordant)",
+      "term": "Kendall tau-b",
+      "term_ny": "Kendall tau-b"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like comparing exam scores after accounting for study hours. You ask whether the remaining difference in scores still follows the remaining difference in the other factor.",
+      "analogy_ny": "Zili ngati kuyerekeza mphambu za mayeso mutaganizira maola ophunzirira. Mumafunsa kuti kusiyana kotsala kwa mphambu kukutsatabe kusiyana kotsala kwa chinthu china.",
+      "application_en": "Checking whether a biomarker-outcome association persists after accounting for age.",
+      "application_ny": "Kuyang'ana kuti ubale wa biomarker ndi zotsatira ukupitilizabe mutaganizira zaka.",
+      "category": "association",
+      "code": "import numpy as np\nimport pandas as pd\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112223)\nn = 120\nage = rng.normal(45, 10, n)\nbiomarker = 0.5*age + rng.normal(0, 3, n)\noutcome = 0.4*biomarker + 0.6*age + rng.normal(0, 2, n)\ndf = pd.DataFrame({\"age\": age, \"biomarker\": biomarker, \"outcome\": outcome})\n\ndef residuals(target, controls):\n    X = np.column_stack([np.ones(len(target))] + [df[c].to_numpy() for c in controls])\n    beta = np.linalg.lstsq(X, np.asarray(target), rcond=None)[0]\n    return np.asarray(target) - X @ beta\n\nrx = residuals(df[\"biomarker\"], [\"age\"])\nry = residuals(df[\"outcome\"], [\"age\"])\npartial = np.corrcoef(rx, ry)[0, 1]\ncrude = df[\"biomarker\"].corr(df[\"outcome\"])\nprint(\"crude Pearson r =\", round(float(crude), 3))\nprint(\"partial r controlling age =\", round(float(partial), 3))",
+      "code_explanation_en": "The crude correlation mixes the biomarker-outcome relationship with age effects. The partial correlation asks whether variation in biomarker not explained by age still tracks variation in outcome not explained by age.",
+      "code_explanation_ny": "Correlation yosakonzedwa imasakaniza ubale wa biomarker ndi zotsatira pamodzi ndi zaka. Partial imafunsa kuti kusiyana kwa biomarker komwe sikufotokozedwa ndi zaka kukugwirizanabe ndi kusiyana kwa zotsatira komwe sikufotokozedwa ndi zaka.",
+      "definition_en": "Use when you want the association between two continuous variables after removing the linear influence of one or more measured covariates.",
+      "explanation_ny": "Timachotsa zomwe zaka zingafotokoze pa zinthu zonse ziwiri, kenako timayang'ana ngati zotsala zikugwirizanabe. Izi zili ngati kufanizira anthu azaka zomwezo. Gwiritsani ntchito pamene mukufuna ubale pakati pa zinthu ziwiri za manambala mutachotsa mphamvu ya mzere ya zinthu zina zoyezedwa.",
+      "misconception_en": "Partial correlation cannot remove unmeasured confounding or reverse causation. It only handles linear adjustment and gives no slope in original units.",
+      "misconception_ny": "Partial correlation singachotse zinthu zosayezedwa kapena kusintha komwe kumayambitsa. Imagwira ntchito yokhayo yosinthidwa mwa mzere ndipo sipereka slope mu mayunitsi oyambirira.",
+      "output": "crude Pearson r = 0.871\npartial r controlling age = 0.46",
+      "term": "Partial correlation",
+      "term_ny": "Partial correlation"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like scanning many security camera feeds. The more screens you watch, the more likely one flicker looks suspicious; a rule is needed to decide what deserves attention.",
+      "analogy_ny": "Zili ngati kuyang'ana makamera ambiri achitetezo. Mukayang'ana zowonerapo zambiri, kung'ambika kumodzi kumakhala kotheka kuoneka kokayikitsa; pamafunika lamulo losankha zoyenera kuyang'ana.",
+      "application_en": "Screening a panel of biomarkers for associations with a continuous outcome.",
+      "application_ny": "Kusakha gulu la ma biomarker kuti muwone ubale ndi zotsatira za manambala.",
+      "category": "association",
+      "code": "import numpy as np\nimport pandas as pd\nfrom scipy import stats\nfrom statsmodels.stats.multitest import multipletests\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112224)\ncols = [\"marker_a\", \"marker_b\", \"marker_c\", \"marker_d\", \"outcome\"]\ndf = pd.DataFrame(rng.normal(size=(90, len(cols))), columns=cols)\ndf[\"outcome\"] += 0.5*df[\"marker_a\"] - 0.3*df[\"marker_c\"]\n\nrows = []\nfor i, a in enumerate(cols[:-1]):\n    for b in cols[i+1:]:\n        r, p = stats.pearsonr(df[a], df[b])\n        rows.append((a, b, r, p))\nres = pd.DataFrame(rows, columns=[\"x\", \"y\", \"r\", \"p\"])\nres[\"bh_p\"] = multipletests(res[\"p\"], method=\"fdr_bh\")[1]\nprint(res.assign(r=res[\"r\"].round(3), p=res[\"p\"].round(4),\n                 bh_p=res[\"bh_p\"].round(4)).to_string(index=False))",
+      "code_explanation_en": "Many correlations produce many p-values. BH-adjusted p-values are larger and indicate which associations survive a controlled false-discovery proportion.",
+      "code_explanation_ny": "Ma correlation ambiri amatulutsa ma p ambiri. p za BH zimakula ndipo zikusonyeza ubale uti womwe wapulumuka gawo lolamulidwa la zopezeka zabodza.",
+      "definition_en": "Use when exploring many pairwise correlations and you need to reduce the chance of over-interpreting accidental significant pairs.",
+      "explanation_ny": "Mukayang'ana ma correlation onse nthawi imodzi, mwayi wopeza imodzi yabodza ukuwonjezeka. Kukonza kwa BH kumachepetsa chiopsezo chakuti maubale ambiri omwe mwalengeza ndi amwayi. Gwiritsani ntchito poyang'ana ma correlation ambiri pakati pa zinthu ndipo mukufuna kupewa kukhulupirira mwangozi ma pair omwe awoneka ofunika.",
+      "misconception_en": "Correlation matrices do not imply a network of causal relationships. Correlated predictors make individual p-values hard to interpret.",
+      "misconception_ny": "Matrix ya correlation siyitanthauza kuti pali maubale a causality. Zinthu zogwirizana zimapangitsa ma p pa chimodzi chimodzi kukhala ovuta kutanthauzira.",
+      "output": "       x        y      r      p   bh_p\nmarker_a marker_b -0.125 0.2386 0.4772\nmarker_a marker_c -0.019 0.8559 0.9313\nmarker_a marker_d  0.164 0.1228 0.4772\nmarker_a  outcome  0.403 0.0001 0.0008\nmarker_b marker_c -0.016 0.8802 0.9313\nmarker_b marker_d  0.009 0.9313 0.9313\nmarker_b  outcome  0.027 0.7979 0.9313\nmarker_c marker_d -0.085 0.4253 0.7089\nmarker_c  outcome -0.131 0.2192 0.4772\nmarker_d  outcome  0.135 0.2041 0.4772",
+      "term": "Correlation matrix with multiplicity control",
+      "term_ny": "Matrix ya correlation ndi kukonza kwa mayeso ambiri"
+    },
+    {
+      "aliases": [
+        "simple linear regression",
+        "ols",
+        "slope",
+        "least squares"
+      ],
+      "analogy_en": "Fitting a straight edge to a scatter of points: the slope tells you how much the line rises for each step sideways.",
+      "analogy_ny": "Kuyika mzere wowongoka pamfundo zambiri: slope imatiuza kuti mzerewo ukukwera bwanji pa sitepe iliyonse yopita mbali.",
+      "application_en": "Estimating the expected change in birth weight associated with gestational age.",
+      "application_ny": "Kuyerekeza kusintha koyembekezeka kwa kulemera kwa makanda mogwirizana ndi msinkhu wa mimba.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112225)\ngestation = rng.normal(38, 2, 90)\nbirth_weight = 180 + 78*gestation + rng.normal(0, 120, 90)\ndf = pd.DataFrame({\"gestation\": gestation, \"birth_weight\": birth_weight})\n\nfit = smf.ols(\"birth_weight ~ gestation\", data=df).fit()\nci = fit.conf_int().loc[\"gestation\"]\nprint(\"intercept =\", round(float(fit.params[\"Intercept\"]), 1))\nprint(\"slope =\", round(float(fit.params[\"gestation\"]), 2))\nprint(\"95% CI for slope =\", round(float(ci[0]), 2), \"to\", round(float(ci[1]), 2))\nprint(\"p =\", round(float(fit.pvalues[\"gestation\"]), 6))\nprint(\"R squared =\", round(float(fit.rsquared), 3))",
+      "code_explanation_en": "ols() fits the straight-line model. The slope, its confidence interval and p-value describe the predictor association; R squared describes the proportion of outcome variance explained.",
+      "code_explanation_ny": "ols() imayika model ya mzere wowongoka. Slope, CI ndi p zikufotokoza ubale wa predictor; R squared ikufotokoza gawo la kusiyana kwa zotsatira lofotokozedwa.",
+      "definition_en": "Linear regression models the mean of a continuous outcome as a linear function of one or more predictors. A coefficient estimates the expected change in the outcome for a one-unit change in its predictor, holding other terms fixed.",
+      "explanation_ny": "Linear regression imajambula mzere wabwino kwambiri wodutsa pa deta. Slope imatiuza kuti zotsatira zikusintha bwanji pamene chinthu cholosera chikuwonjezeka, pamene zinthu zina zakhazikitsidwa.",
+      "misconception_en": "Association is not causation. Extrapolation beyond the observed predictor range is unsafe, and a significant slope can still be small. Residual diagnostics matter.",
+      "misconception_ny": "Ubale si causality. Kuyerekeza kunja kwa mtundu wa predictor wowonedwa n'kotetezeka, ndipo slope yofunika ikhoza kukhala yaying'ono. Macheke a residual ndi ofunika.",
+      "output": "intercept = 131.0\nslope = 79.1\n95% CI for slope = 66.3 to 91.9\np = 0.0\nR squared = 0.632",
+      "term": "Linear regression",
+      "term_ny": "Linear regression"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like comparing salaries after accounting for experience and region. Otherwise a group difference may simply reflect who has worked longer.",
+      "analogy_ny": "Zili ngati kuyerekeza malipiro mutaganizira zokumana nazo ndi dera. Popanda izi, kusiyana kwa magulu kungakhale chifukwa choti ena agwira ntchito nthawi yayitali.",
+      "application_en": "Estimating an exposure-blood pressure association while accounting for age and BMI.",
+      "application_ny": "Kuyerekeza ubale wa exposure ndi kuthamanga kwa magazi pamene zaka ndi BMI zaganiziridwa.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112226)\nn = 140\nage = rng.normal(30, 7, n)\nbmi = 0.15*age + rng.normal(24, 3, n)\nexposure = rng.integers(0, 2, n)\nbp = 70 + 0.35*age + 0.8*bmi + 5*exposure + rng.normal(0, 6, n)\ndf = pd.DataFrame({\"age\": age, \"bmi\": bmi,\n                   \"exposure\": exposure, \"bp\": bp})\n\ncrude = smf.ols(\"bp ~ exposure\", data=df).fit()\nadjusted = smf.ols(\"bp ~ exposure + age + bmi\", data=df).fit()\nfor name, fit in [(\"crude\", crude), (\"adjusted\", adjusted)]:\n    ci = fit.conf_int().loc[\"exposure\"]\n    print(name, \"exposure coefficient =\",\n          round(float(fit.params[\"exposure\"]), 2),\n          \"95% CI\", round(float(ci[0]), 2), \"to\", round(float(ci[1]), 2),\n          \"p =\", round(float(fit.pvalues[\"exposure\"]), 4))",
+      "code_explanation_en": "The crude coefficient combines the exposure association with age and BMI differences. The adjusted coefficient estimates the exposure contrast at the same age and BMI.",
+      "code_explanation_ny": "Coefficient yosakonzedwa imaphatikiza ubale wa exposure ndi kusiyana kwa zaka ndi BMI. Coefficient yosinthidwa imayerekeza kusiyana kwa exposure pa zaka ndi BMI zofanana.",
+      "definition_en": "Use when a continuous outcome has several predictors and you need an adjusted association for one predictor while holding the others fixed in the model.",
+      "explanation_ny": "Mukasintha, mumafanizira anthu ofanana mwa zaka ndi BMI kuti muone kuti exposure yokha imabweretsa kusiyana kotani. Izi zili ngati kufanizira apulo ndi apulo, osati apulo ndi nthochi. Gwiritsani ntchito pamene zotsatira za manambala zili ndi zinthu zolosera zingapo ndipo mukufuna ubale wosinthidwa wa chimodzi pamene zina zakhazikitsidwa mu model.",
+      "misconception_en": "Adjustment can introduce bias if you adjust for colliders or mediators on the causal path. Coefficients depend on the correct functional form.",
+      "misconception_ny": "Kusintha kungabweretse kukondera ngati musintha collider kapena mediator yomwe ili pa njira ya causality. Ma coefficient amadalira mawonekedwe olondola a model.",
+      "output": "crude exposure coefficient = 4.33 95% CI 2.03 to 6.63 p = 0.0003\nadjusted exposure coefficient = 4.46 95% CI 2.43 to 6.49 p = 0.0",
+      "term": "Multiple linear regression and adjustment",
+      "term_ny": "Multiple linear regression ndi kusintha"
+    },
+    {
+      "aliases": [
+        "logit",
+        "binary regression",
+        "log odds",
+        "adjusted odds ratio"
+      ],
+      "analogy_en": "If a treatment changes the odds from 1 in 9 to 2 in 9, the odds ratio is 2, but the risk itself did not double. Odds and probability are different scales.",
+      "analogy_ny": "Ngati chithandizo chasintha ma odds kuchokera 1 mwa 9 kufika 2 mwa 9, odds ratio ndi 2, koma mwayiwo sunawirikizeke. Ma odds ndi probability zili pa miyezo yosiyana.",
+      "application_en": "Modelling the odds of a neonatal outcome after exposure adjustment.",
+      "application_ny": "Kuyerekeza ma odds a zotsatira za makanda pambuyo posintha zinthu zosokoneza.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112227)\nn = 220\nage = rng.normal(32, 8, n)\nexposure = rng.integers(0, 2, n)\nlin = -3.0 + 0.045*age + 0.85*exposure\nprob = 1/(1 + np.exp(-lin))\nevent = rng.binomial(1, prob)\ndf = pd.DataFrame({\"age\": age, \"exposure\": exposure, \"event\": event})\n\nfit = smf.logit(\"event ~ exposure + age\", data=df).fit(disp=False)\nci = np.exp(fit.conf_int())\nprint(\"event count =\", int(df[\"event\"].sum()), \"of\", n)\nfor name in [\"exposure\", \"age\"]:\n    print(name, \"OR =\", round(float(np.exp(fit.params[name])), 3),\n          \"95% CI\", round(float(ci.loc[name, 0]), 3), \"to\",\n          round(float(ci.loc[name, 1]), 3),\n          \"p =\", round(float(fit.pvalues[name]), 4))",
+      "code_explanation_en": "logit() fits the log-odds model. np.exp(coefficient) converts each coefficient to an adjusted odds ratio; np.exp(conf_int()) converts its interval to the same scale.",
+      "code_explanation_ny": "logit() imayika model ya log-odds. np.exp(coefficient) imasintha coefficient kukhala odds ratio wosinthidwa; np.exp(conf_int()) imasintha interval yake ku muyezo womwewo.",
+      "definition_en": "Logistic regression models the probability of a binary outcome by fitting a linear model to the log-odds. Exponentiating a coefficient gives an odds ratio for a one-unit predictor increase.",
+      "explanation_ny": "Logistic regression imagwira ntchito ndi mwayi wa chochitika cha binary. M'malo moyerekeza kusiyana kwa manambala, imayerekeza kuti ma odds achulukana kangati zinthu zina zili zofanana.",
+      "misconception_en": "An odds ratio is not a risk ratio, especially for common outcomes. Separation produces huge coefficients and invalid p-values; model estimates are associations unless the design supports causality.",
+      "misconception_ny": "Odds ratio si risk ratio, makamaka ngati zochitika zili zofala. Kulekanitsa kumapanga coefficient zazikulu ndi p zosadalirika; zotsatira za model ndi ubale pokhapokha kapangidwe kathandizira causality.",
+      "output": "event count = 55 of 220\nexposure OR = 3.773 95% CI 1.919 to 7.416 p = 0.0001\nage OR = 1.078 95% CI 1.033 to 1.125 p = 0.0006",
+      "term": "Logistic regression",
+      "term_ny": "Logistic regression"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like modelling the number of buses arriving at a stop per hour: counts cannot be negative, and the model works in log scale to respect that.",
+      "analogy_ny": "Zili ngati kuyerekeza kuchuluka kwa mabasi ofika pa siteshoni pa ola limodzi: kuchuluka sikungakhale koyipa, kotero model imagwiritsa ntchito log kuti ipewe zotsatira zosatheka.",
+      "application_en": "Modelling monthly clinic visit counts by programme and age.",
+      "application_ny": "Kuyerekeza kuchuluka kwa ma visit a kuchipatala pamwezi mwa pulogalamu ndi zaka.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112228)\nn = 180\ngroup = rng.integers(0, 2, n)\nage = rng.normal(45, 10, n)\nmu = np.exp(0.7 + 0.4*group + 0.01*age)\nvisits = rng.poisson(mu)\ndf = pd.DataFrame({\"visits\": visits, \"group\": group, \"age\": age})\n\nfit = smf.glm(\"visits ~ group + age\", data=df,\n              family=sm.families.Poisson()).fit()\nfor name in [\"group\", \"age\"]:\n    ci = np.exp(fit.conf_int().loc[name])\n    print(name, \"rate ratio =\", round(float(np.exp(fit.params[name])), 3),\n          \"95% CI\", round(float(ci[0]), 3), \"to\", round(float(ci[1]), 3))\nprint(\"Pearson chi2 / df =\", round(float(fit.pearson_chi2/fit.df_resid), 3))",
+      "code_explanation_en": "Exponentiated coefficients are rate or count ratios. The dispersion check near 1 supports the Poisson mean-variance assumption; a much larger value suggests overdispersion and a negative binomial model.",
+      "code_explanation_ny": "Ma coefficient otengedwa exp ndi chiŵerengero cha mitengo kapena kuchuluka. Kufufuza dispersion pafupi ndi 1 kumathandizira mfundo ya Poisson yakuti avareji ndi variance zili pafupi; mtengo waukulu kwambiri ukuwonetsa kufalikira kwambiri ndipo kungafune negative binomial.",
+      "definition_en": "Use for count outcomes when the mean and variance are expected to be similar and you want rate or count ratios from exposures and offsets.",
+      "explanation_ny": "Poisson imagwiritsidwa ntchito powerengera zinthu monga kuchuluka kwa ma visit. Imayerekeza kuchuluka kwa zinthu ndi kugwiritsa ntchito log kuti zotsatira zisakhale zoipa. Gwiritsani ntchito pa zotsatira za kuchuluka pamene avareji ndi variance zikuyembekezeka kufanana ndipo mukufuna chiŵerengero cha mitengo kapena kuchuluka kuchokera ku exposure ndi offset.",
+      "misconception_en": "Ignoring differing follow-up time or population size produces misleading rates. Overdispersion makes Poisson standard errors too small.",
+      "misconception_ny": "Kunyalanyaza nthawi yotsatira kapena kuchuluka kwa anthu kumapanga mitengo yolakwika. Kufalikira kwambiri kumapangitsa standard errors za Poisson kukhala zazing'ono.",
+      "output": "group rate ratio = 1.402 95% CI 1.217 to 1.616\nage rate ratio = 1.009 95% CI 1.002 to 1.016\nPearson chi2 / df = 1.204",
+      "term": "Poisson regression for counts",
+      "term_ny": "Poisson regression ya kuchuluka"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "Poisson is like assuming every bus stop has the same unpredictability. Negative binomial allows some stops to be much more erratic than others.",
+      "analogy_ny": "Poisson ili ngati kuganiza kuti mabasi pa siteshoni zilizonse ali ndi kusadziwikiratu kofanana. Negative binomial imalola kuti zina zikhale zosasinthasintha kwambiri kuposa zina.",
+      "application_en": "Modelling overdispersed infection counts across health facilities.",
+      "application_ny": "Kuyerekeza kuchuluka kwa matenda ofalikira kwambiri m'ma chipatala osiyanasiyana.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112229)\nn = 200\ngroup = rng.integers(0, 2, n)\nmu = np.exp(1.0 + 0.6*group)\nvisits = rng.negative_binomial(2, 2/(2 + mu))\ndf = pd.DataFrame({\"visits\": visits, \"group\": group})\n\npoisson = smf.glm(\"visits ~ group\", data=df,\n                  family=sm.families.Poisson()).fit()\nnb = smf.negativebinomial(\"visits ~ group\", data=df).fit(disp=False)\nprint(\"Poisson AIC =\", round(float(poisson.aic), 1))\nprint(\"NegBin AIC =\", round(float(nb.aic), 1))\nprint(\"NegBin alpha =\", round(float(nb.params[\"alpha\"]), 3))\nprint(\"group rate ratio =\", round(float(np.exp(nb.params[\"group\"])), 3))",
+      "code_explanation_en": "Lower AIC favours the model with the better trade-off between fit and complexity. The alpha parameter quantifies extra variance beyond Poisson.",
+      "code_explanation_ny": "AIC yotsika imakonda model yomwe ili ndi mgwirizano wabwino pakati pa kukwanira ndi kuvuta. Parameter alpha imayeza kusiyana kwowonjezera kuposa Poisson.",
+      "definition_en": "Use for overdispersed count outcomes when the variance is substantially larger than the mean and Poisson standard errors would be too optimistic.",
+      "explanation_ny": "Poisson ikaganiza kuti avareji ndi variance zili pafupi. Koma kuchuluka kwa ma visit kumasiyana kwambiri, choncho negative binomial imawonjezera parameter yothandizira kufalikira kumeneko. Gwiritsani ntchito pa kuchuluka kofalikira kwambiri pamene variance ndi yokulirapo kwambiri kuposa avareji ndipo standard errors za Poisson zingakhale zolimbikitsa kwambiri.",
+      "misconception_en": "AIC comparison is not a hypothesis test of causality. If zeros come from a separate process, zero-inflated models may be needed.",
+      "misconception_ny": "Kuyerekeza kwa AIC si mayeso wa causality. Ngati zeros zili ndi njira yosiyana, zero-inflated models zingafunike.",
+      "output": "Poisson AIC = 1146.5\nNegBin AIC = 963.0\nNegBin alpha = 0.552\ngroup rate ratio = 2.082",
+      "term": "Negative binomial regression",
+      "term_ny": "Negative binomial regression"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like comparing household spending: a few very large bills stretch the distribution, so a ratio of typical spending is more stable than a raw mean difference.",
+      "analogy_ny": "Zili ngati kuyerekeza ndalama zapakhomo: mabilu akuluakulu ochepa amatambasula kagawidwe, kotero chiŵerengero cha ndalama zamba chimakhala chokhazikika kuposa kusiyana kwa avareji yaiwisi.",
+      "application_en": "Comparing mean laboratory cost between two care pathways.",
+      "application_ny": "Kuyerekeza mtengo wa labu pakati pa njira ziwiri za chisamaliro.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112230)\nn = 140\ngroup = rng.integers(0, 2, n)\nmean_cost = np.exp(5.0 + 0.25*group)\ncost = rng.gamma(shape=4.0, scale=mean_cost/4.0)\ndf = pd.DataFrame({\"cost\": cost, \"group\": group})\n\nfit = smf.glm(\"cost ~ group\", data=df,\n              family=sm.families.Gamma(link=sm.families.links.Log())).fit()\nratio = np.exp(fit.params[\"group\"])\nci = np.exp(fit.conf_int().loc[\"group\"])\nprint(\"group geometric mean ratio =\", round(float(ratio), 3))\nprint(\"95% CI =\", round(float(ci[0]), 3), \"to\", round(float(ci[1]), 3))\nprint(\"p =\", round(float(fit.pvalues[\"group\"]), 4))",
+      "code_explanation_en": "With a log link, exp(group coefficient) is a ratio of geometric means, not a difference in arithmetic means. This is often a better summary for skewed positive data than forcing a normal linear model.",
+      "code_explanation_ny": "Ndi log link, exp(group coefficient) ndi chiŵerengero cha avareji za geometric, osati kusiyana kwa avareji za arithmetic. Izi nthawi zambiri zimakhala zabwinoko pa deta yabwino yopendekerera kusiyana ndi kukakamiza linear model ya normal.",
+      "definition_en": "Use for continuous positive outcomes with right skew and roughly constant coefficient of variation, such as costs or laboratory concentrations, using a log link.",
+      "explanation_ny": "Deta ina monga ndalama kapena kuchuluka kwa labu siyoyenera kuyerekeza ndi avareji yamba chifukwa imakhala ndi mchira wautali. Gamma GLM imaganizira kuti kusiyana kumakula pamene avareji ikukula. Gwiritsani ntchito pa zotsatira za manambala zoposa zero zopendekerera kumanja komanso kukhala ndi coefficient of variation wofanana, monga ndalama kapena kuchuluka kwa labu, pogwiritsa ntchito log link.",
+      "misconception_en": "Gamma GLM cannot handle exact zeros. Results depend on the variance function; a log-transformed OLS answers a related but different question.",
+      "misconception_ny": "Gamma GLM singagwire ma zero ndendende. Zotsatira zimadalira ntchito ya variance; OLS yotembenuza log imayankha funso lofanana koma losiyana.",
+      "output": "group geometric mean ratio = 1.306\n95% CI = 1.107 to 1.54\np = 0.0016",
+      "term": "Gamma GLM for positive skewed outcomes",
+      "term_ny": "Gamma GLM ya zotsatira zabwino zopendekerera"
+    },
+    {
+      "aliases": [
+        "confounder",
+        "crude",
+        "adjusted",
+        "third variable"
+      ],
+      "analogy_en": "Ice cream sales and drowning both rise in summer. Summer is the confounder; banning ice cream would not prevent drowning.",
+      "analogy_ny": "Kugulitsa ayisikilimu ndi kumira m'madzi zimawonjezeka chilimwe. Chilimwe ndi chosokoneza; kuletsa ayisikilimu sikungaletse kumira.",
+      "application_en": "Comparing crude and age-adjusted exposure effects in an observational cohort.",
+      "application_ny": "Kuyerekeza zotsatira za exposure zosakonzedwa ndi zosinthidwa ndi zaka mu gulu la observational.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112231)\nn = 200\nage = rng.normal(60, 8, n)\nexposure = (rng.random(n) < (0.25 + 0.007*(age-60))).astype(int)\nlin = -2.5 + 0.04*age + 0.7*exposure\nevent = rng.binomial(1, 1/(1+np.exp(-lin)))\ndf = pd.DataFrame({\"age\": age, \"exposure\": exposure, \"event\": event})\n\ncrude = smf.logit(\"event ~ exposure\", data=df).fit(disp=False)\nadj = smf.logit(\"event ~ exposure + age\", data=df).fit(disp=False)\nprint(\"crude OR =\", round(float(np.exp(crude.params[\"exposure\"])), 3))\nprint(\"age-adjusted OR =\", round(float(np.exp(adj.params[\"exposure\"])), 3))\nprint(\"age OR =\", round(float(np.exp(adj.params[\"age\"])), 3))",
+      "code_explanation_en": "The crude logistic model contains exposure only; the adjusted model adds age. Comparing the two odds ratios shows how much of the crude association was explained by age in this simulated cohort.",
+      "code_explanation_ny": "Model ya logistic yosakonzedwa ili ndi exposure yokha; yosinthidwa imawonjezera zaka. Kuyerekeza ma odds ratio awiri kukusonyeza kuchuluka kwa ubale wosakonzedwa womwe unafotokozedwa ndi zaka mu gulu lopangidwali.",
+      "definition_en": "Confounding occurs when a third variable is associated with the exposure and independently affects the outcome, causing the crude exposure-outcome association to be distorted.",
+      "explanation_ny": "Kusokoneza kumachitika ngati chinthu chachitatu chikugwirizana ndi exposure ndi zotsatira. Mwachitsanzo, zaka zingapangitse munthu kukhala ndi exposure komanso kukhala pachiwopsezocho, kotero kusiyana kowonedwa kungakhale kwa zaka osati kwa exposure.",
+      "misconception_en": "Not every third variable is a confounder. Adjusting for a collider or mediator can create bias, and unmeasured confounders cannot be fixed by a model. Choose variables from subject knowledge or a causal diagram.",
+      "misconception_ny": "Si chinthu chilichonse chachitatu chomwe ndi chosokoneza. Kusintha collider kapena mediator kungabweretse kukondera, ndipo chosokoneza chosayezedwa sizingakonzedwe ndi model. Sankhani zinthu pogwiritsa ntchito chidziwitso kapena chithunzi cha causality.",
+      "output": "crude OR = 2.77\nage-adjusted OR = 2.652\nage OR = 1.048",
+      "term": "Confounding",
+      "term_ny": "Kusokoneza"
+    },
+    {
+      "aliases": [
+        "effect modification",
+        "product term",
+        "subgroup",
+        "effect modifier"
+      ],
+      "analogy_en": "A fertiliser that works well in wet soil but not in dry soil. The average effect hides an important interaction with soil condition.",
+      "analogy_ny": "Feteleza wogwira bwino m'nthaka yonyowa koma osagwira m'nthaka youma. Zotsatira za avareji zimabisala kuyanjana kwakukulu ndi mtunda wa nthaka.",
+      "application_en": "Testing whether an intervention effect differs by participant group or sex.",
+      "application_ny": "Kuyesa kuti zotsatira za chithandizo zimasiyana ndi gulu la omwe atengapo mbali kapena jenda.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112232)\nn = 240\ngroup = rng.integers(0, 2, n)\nsex = rng.integers(0, 2, n)\nrisk = -2.0 + 0.35*group + 0.9*sex + 1.1*group*sex + rng.normal(0, 0.5, n)\nevent = rng.binomial(1, 1/(1+np.exp(-risk)))\ndf = pd.DataFrame({\"group\": group, \"sex\": sex, \"event\": event})\n\nfit = smf.logit(\"event ~ group * sex\", data=df).fit(disp=False)\np_int = fit.pvalues[\"group:sex\"]\nor_g0 = np.exp(fit.params[\"group\"])\nor_g1 = np.exp(fit.params[\"group\"] + fit.params[\"group:sex\"])\nprint(\"interaction p =\", round(float(p_int), 4))\nprint(\"OR in sex=0 =\", round(float(or_g0), 3))\nprint(\"OR in sex=1 =\", round(float(or_g1), 3))",
+      "code_explanation_en": "The model formula group * sex adds both main effects and the group:sex product term. Its p-value tests whether the group effect differs by sex; exp() converts coefficients and sums to stratum-specific odds ratios.",
+      "code_explanation_ny": "Fomula group * sex imawonjezera main effects ndi product term group:sex. p yake imayesa kuti zotsatira za gulu zimasiyana ndi jenda; exp() imasintha coefficient ndi kuchuluka kwawo kukhala odds ratio za gulu lililonse.",
+      "definition_en": "Interaction, or effect modification, means that the effect of one predictor on the outcome differs according to the level of another predictor. It is modelled with a product term in addition to main effects.",
+      "explanation_ny": "Interaction imafunsa kuti mankhwala amagwira ntchito mofanana kwa aliyense kapena ayi. Mwachitsanzo, zotsatira zake zikhoza kukhala zazikulu kwa amuna kuposa azimayi, kotero avareji imodzi imabisala kusiyana kofunika.",
+      "misconception_en": "A non-significant interaction does not prove effects are identical. Interaction is scale-dependent, and mining many subgroups without a prespecified hypothesis produces false positives.",
+      "misconception_ny": "Kusowa kwa interaction yofunika sikutsimikizira kuti zotsatira zili zofanana. Kuyanjana kumadalira muyezo wogwiritsidwa ntchito, ndipo kusaka magulu ambiri popanda lingaliro lokonzedweratu kumapanga zopezeka zabodza.",
+      "output": "interaction p = 0.2849\nOR in sex=0 = 1.323\nOR in sex=1 = 2.605",
+      "term": "Interaction",
+      "term_ny": "Kuyanjana"
+    },
+    {
+      "aliases": [
+        "vif",
+        "variance inflation factor",
+        "correlated predictors"
+      ],
+      "analogy_en": "Two witnesses who give identical testimony. Their agreement does not provide two independent pieces of evidence, and the court cannot tell which one drives the conclusion.",
+      "analogy_ny": "Mboni ziwiri zopereka umboni wofanana. Kuvomerezana kwawo sikupereka umboni wawiri wodziyimira pawokha, ndipo khoti silikudziwa kuti ndani akuyendetsa chigamulo.",
+      "application_en": "Checking correlated predictors before interpreting an adjusted regression model.",
+      "application_ny": "Kuyang'ana zinthu zolosera zogwirizana musanatanthauzire model ya regression yosinthidwa.",
+      "category": "regression",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\nfrom statsmodels.stats.outliers_influence import variance_inflation_factor\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112233)\nn = 100\nx1 = rng.normal(0, 1, n)\nx2 = 0.92*x1 + rng.normal(0, 0.25, n)\nx3 = rng.normal(0, 1, n)\nX = pd.DataFrame({\"x1\": x1, \"x2\": x2, \"x3\": x3})\nXc = sm.add_constant(X)\nvifs = [variance_inflation_factor(Xc.values, i)\n        for i in range(Xc.shape[1])][1:]\nprint(pd.DataFrame({\"predictor\": X.columns,\n                    \"VIF\": np.round(vifs, 2)}).to_string(index=False))\nprint(\"correlation x1-x2 =\", round(float(X[\"x1\"].corr(X[\"x2\"])), 3))",
+      "code_explanation_en": "variance_inflation_factor() regresses each predictor on the others. A high VIF means that predictor is largely redundant, so its individual coefficient is poorly determined.",
+      "code_explanation_ny": "variance_inflation_factor() imayika predictor iliyonse pa ena. VIF yapamwamba imatanthauza kuti predictor imodzi imafotokozedwa kwambiri ndi ena, kotero coefficient yake payokha siyodalirika.",
+      "definition_en": "Multicollinearity is a situation in which predictors in a regression model are highly linearly related, making individual coefficients unstable and their standard errors large even when predictions may be adequate.",
+      "explanation_ny": "Ngati zinthu zolosera ziwiri zikunena pafupifupi zinthu zomwezo, model imavutika kudziwa kuti ndi iti yomwe ikuyambitsa kusintha. VIF imatiuza kuti vutolo lili bwanji.",
+      "misconception_en": "High VIF does not bias predictions or invalidate the overall model. Dropping a confounder merely to lower VIF can introduce bias; centring helps polynomial terms, not genuine redundancy.",
+      "misconception_ny": "VIF yapamwamba siyikondera zolosera kapena kuwononga model yonse. Kuchotsa chinthu chosokoneza kungoti VIF itsike kungabweretse kukondera; kuyika pakati kumathandiza polynomial, osati kusiyana kwachilengedwe.",
+      "output": "predictor   VIF\n       x1 13.44\n       x2 13.39\n       x3  1.02\ncorrelation x1-x2 = 0.962",
+      "term": "Multicollinearity",
+      "term_ny": "Multicollinearity"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like tracking several plants: each plant starts at a different height, but you can still estimate the average weekly growth while allowing each plant its own starting point.",
+      "analogy_ny": "Zili ngati kuyang'ana zomera zambiri: chilichonse chimayamba kutalika kosiyana, koma mumathabe kuyerekeza kukula kwamba pa sabata pamene malola chilichonse kukhala ndi poyambira chake.",
+      "application_en": "Analysing repeated biomarker measurements from the same participants.",
+      "application_ny": "Kusanthula ma biomarker obwerezabwereza kuchokera kwa omwewo.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112234)\nrows = []\nfor pid in range(1, 41):\n    intercept = rng.normal(12, 1.8)\n    for week in [0, 4, 8]:\n        rows.append((pid, week, intercept + 0.18*week +\n                     rng.normal(0, 0.9)))\ndf = pd.DataFrame(rows, columns=[\"id\", \"week\", \"value\"])\n\nfit = smf.mixedlm(\"value ~ week\", df, groups=df[\"id\"]).fit(reml=True)\nprint(\"fixed intercept =\", round(float(fit.fe_params[\"Intercept\"]), 3))\nprint(\"fixed week slope =\", round(float(fit.fe_params[\"week\"]), 3))\nprint(\"between-person variance =\",\n      round(float(fit.cov_re.iloc[0, 0]), 3))\nprint(\"within-person variance =\", round(float(fit.scale), 3))",
+      "code_explanation_en": "The fixed week slope is the average change over time. The random-effect variance describes how much participants differ in their baseline level; the residual variance describes within-person noise.",
+      "code_explanation_ny": "Slope ya week ndi kusintha kwamba pakapita nthawi. Random-effect variance ikufotokoza kusiyana kwa anthu pa poyambira; residual variance ikufotokoza phokoso mkati mwa munthu.",
+      "definition_en": "Use for repeated or clustered continuous outcomes when observations within the same participant or site are correlated and you want both fixed effects and random variation between clusters.",
+      "explanation_ny": "Munthu aliyense ali ndi poyambira payekha, kotero mizere yake siyodziyimira pawokha. Mixed model imapereka aliyense poyambira payekha pamene imayerekeza kusintha kwamba kwa nthawi. Gwiritsani ntchito pa zotsatira za manambala zobwerezabwereza kapena zogwirizana pamene deta ya munthu yemweyo kapena malo imodzi ili ndi ubale ndipo mukufuna fixed effects ndi kusiyana kwapakati pa magulu.",
+      "misconception_en": "A random-intercept model assumes the same time slope for everyone; random slopes need more data. Convergence problems are common with few clusters.",
+      "misconception_ny": "Random-intercept imaganizira kuti slope ya nthawi ndi yofanana kwa aliyense; random slopes zifuna deta yambiri. Mavuto a convergence amapezeka ngati magulu ndi ochepa.",
+      "output": "fixed intercept = 11.754\nfixed week slope = 0.196\nbetween-person variance = 1.98\nwithin-person variance = 0.867",
+      "term": "Mixed-effects model",
+      "term_ny": "Mixed-effects model"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like surveying the same households repeatedly. You still want the city-wide average, but you must not count each household reply as fully independent evidence.",
+      "analogy_ny": "Zili ngati kufunsa mabanja omwewo mobwerezabwereza. Mukufabe avareji ya mzinda wonse, koma simuyenera kuwerengera yankho lililonse ngati umboni wodziyimira pawokha.",
+      "application_en": "Estimating population-average change in repeated test positivity.",
+      "application_ny": "Kuyerekeza kusintha kwa kuchuluka kwa zotsatira zabwino mwa gulu lonse.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112235)\nrows = []\nfor pid in range(1, 61):\n    base = rng.normal(0, 0.6)\n    for visit in [0, 1, 2]:\n        group = pid % 2\n        lin = -0.8 + base + 0.45*visit + 0.4*group\n        prob = 1/(1+np.exp(-lin))\n        rows.append((pid, visit, group, rng.binomial(1, prob)))\ndf = pd.DataFrame(rows, columns=[\"id\", \"visit\", \"group\", \"event\"])\n\ngee = sm.GEE.from_formula(\"event ~ visit + group\", groups=\"id\",\n                          data=df, family=sm.families.Binomial()).fit()\nfor name in [\"visit\", \"group\"]:\n    print(name, \"log-OR =\", round(float(gee.params[name]), 3),\n          \"p =\", round(float(gee.pvalues[name]), 4))\nprint(\"n clusters =\", df[\"id\"].nunique())",
+      "code_explanation_en": "GEE estimates a marginal, population-average log-odds ratio. Its SEs are wider than a naive logistic regression that treats each visit as independent.",
+      "code_explanation_ny": "GEE imayerekeza log-odds ratio ya gulu lonse. Standard errors zake ndi zazikulu kuposa logistic regression yonamiza kuti ma visit ndi odziyimira pawokha.",
+      "definition_en": "Use for repeated binary outcomes when your main interest is the population-average effect and you need standard errors that account for within-person correlation.",
+      "explanation_ny": "GEE imazindikira kuti munthu yemweyo amapereka deta kangapo. Imasintha standard errors kuti zisakhale zazing'ono mwangozi, koma imayang'ana zotsatira za gulu lonse osati za munthu aliyense. Gwiritsani ntchito pa zotsatira za binary zobwerezabwereza pamene chidwi chachikulu ndi zotsatira za gulu lonse ndipo mukufuna standard errors zomwe ziganizira ubale wa mkati mwa munthu.",
+      "misconception_en": "GEE needs enough clusters for reliable SEs. It is less efficient than a correctly specified mixed model.",
+      "misconception_ny": "GEE ifuna magulu okwanira kuti SE zikhale zodalirika. Si yamphamvu ngati mixed model yoyenerera.",
+      "output": "visit log-OR = 0.379 p = 0.0315\ngroup log-OR = 0.506 p = 0.132\nn clusters = 60",
+      "term": "GEE for correlated binary outcomes",
+      "term_ny": "GEE ya zotsatira za binary zogwirizana"
+    },
+    {
+      "aliases": [
+        "time to event",
+        "censoring",
+        "kaplan meier",
+        "cox regression"
+      ],
+      "analogy_en": "Following light bulbs until each fails, while some bulbs are still working when the study ends. Those still working do not count as failures, but their observed working time still contributes.",
+      "analogy_ny": "Kutsata mababu mpaka awonongeke, pamene ena akadagwira ntchito kafukufuku akatha. Omwe akadagwira ntchito sawerengedwa kuti awonongeka, koma nthawi yawo yogwira ntchito imathandizira.",
+      "application_en": "Time from treatment start to relapse, from birth to a neonatal outcome, or from device insertion to failure.",
+      "application_ny": "Nthawi kuchokera pachiyambi cha chithandizo mpaka matenda abwerera, kuchokera pakubadwa mpaka zotsatira za makanda, kapena kuchokera kuikidwa kwa chida mpaka chawonongeka.",
+      "category": "advanced",
+      "code": null,
+      "code_explanation_en": "No standalone code is needed for this umbrella term. The Kaplan-Meier entry uses SurvfuncRight for the event-free curve; the Cox entry uses PHReg for adjusted hazard ratios.",
+      "code_explanation_ny": "Mawu akuluwa safuna code payokha. Cholemba cha Kaplan-Meier chimagwiritsa ntchito SurvfuncRight pa mphepete yopanda chochitika; cholemba cha Cox chimagwiritsa ntchito PHReg pa ma hazard ratio osinthidwa.",
+      "definition_en": "Survival analysis is the set of methods for analysing time-to-event data, where the outcome is the time until an event and some subjects may be censored before that event is observed.",
+      "explanation_ny": "Survival analysis siyongotanthauza imfa. Imaphunzira nthawi kuyambira poyambira mpaka chochitika, monga kutuluka m'chipatala kapena kuyambiranso kwa matenda. Anthu omwe sanachitike chochitika mpaka kafukufuku utha amadziwika kuti censored.",
+      "misconception_en": "Ignoring censoring, or treating censored subjects as event-free forever, biases the estimate. A survival curve alone is not a causal effect, and competing events need explicit methods.",
+      "misconception_ny": "Kunyalanyaza kutayika kwa deta, kapena kuona omwe atayika ngati opanda chochitika mpaka kalekale, kumakondera zotsatira. Mphepete yokha si zotsatira za causality, ndipo zochitika zopikisana zifunika njira zapadera.",
+      "output": null,
+      "term": "Survival analysis",
+      "term_ny": "Kusanthula kwa nthawi mpaka chochitika"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like tracking how many runners are still uninjured at each mile, while allowing that some runners leave the study for reasons unrelated to injury.",
+      "analogy_ny": "Zili ngati kuyang'ana othamanga angati omwe alibe kuvulala pa mailo iliyonse, ndikuvomereza kuti ena amachoka mu kafukufuku pazifukwa zosagwirizana ndi kuvulala.",
+      "application_en": "Estimating event-free survival after a defined starting time.",
+      "application_ny": "Kuyerekeza kukhala popanda chochitika pambuyo pa poyambira pomveka.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\nfrom statsmodels.duration.survfunc import SurvfuncRight\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112236)\nn = 160\nevent_time = rng.exponential(scale=12, size=n)\ncensor_time = rng.uniform(3, 18, size=n)\nduration = np.minimum(event_time, censor_time)\nevent = (event_time <= censor_time).astype(int)\ndf = pd.DataFrame({\"duration\": duration, \"event\": event})\n\nsf = SurvfuncRight(df[\"duration\"], df[\"event\"])\nprint(\"participants =\", len(df), \"events =\", int(df[\"event\"].sum()))\nfor month in [3, 6, 12]:\n    idx = max(0, int(np.searchsorted(sf.surv_times, month,\n                                     side=\"right\")) - 1)\n    print(\"survival at month\", month, \"=\",\n          round(float(sf.surv_prob[idx]), 3))",
+      "code_explanation_en": "The curve drops only at observed event times; censored participants contribute until their last known time. The printed values are the estimated proportions still event-free at 3, 6 and 12 months in this simulated cohort.",
+      "code_explanation_ny": "Mphepete imatsika pokhapo pa nthawi zomwe chochitika chinachitika; omwe atayika amathandizira mpaka nthawi yawo yomaliza yodziwika. Manambala osindikizidwa ndi gawo loyerekeza lopanda chochitika pa miyezi 3, 6 ndi 12 mu gulu lopangidwali.",
+      "definition_en": "Use to estimate the probability of remaining event-free over time when some participants are censored before the event occurs.",
+      "explanation_ny": "Kaplan-Meier imayesa kuti ndi gawo liti la anthu omwe akadali popanda chochitika pa nthawi iliyonse. Imalola anthu omwe atayika kutengapo mbali mpaka nthawi yomwe adaonekera komaliza. Gwiritsani ntchito kuyerekeza mwayi wokhalabe popanda chochitika pakapita nthawi pamene ena adatayika asanachitike chochitika.",
+      "misconception_en": "A curve does not adjust for confounders and comparing curves informally can be misleading. Censoring that depends on prognosis biases the estimate.",
+      "misconception_ny": "Mphepete silisinthidwa ndi zinthu zosokoneza ndipo kuyerekeza ma curve mwachisawawa kungasokeretse. Kutayika kogwirizana ndi chiopsezo kumakondera kuyerekezako.",
+      "output": "participants = 160 events = 86\nsurvival at month 3 = 0.812\nsurvival at month 6 = 0.634\nsurvival at month 12 = 0.384",
+      "term": "Kaplan-Meier survival estimate",
+      "term_ny": "Kaplan-Meier survival estimate"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like comparing two groups' chances of a breakdown at any given mile of a journey, assuming one group's relative risk stays constant throughout the trip.",
+      "analogy_ny": "Zili ngati kuyerekeza mwayi wakuti magulu awiri awonongeke pa mailo iliyonse ya ulendo, poganiza kuti kusiyana kwawo kumakhalabe kofanana pa ulendo wonse.",
+      "application_en": "Modelling time to an event after adjustment for age and group.",
+      "application_ny": "Kuyerekeza nthawi mpaka chochitika mutasintha zaka ndi gulu.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\nfrom statsmodels.duration.hazard_regression import PHReg\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112237)\nn = 180\nage = rng.normal(60, 8, n)\ngroup = rng.integers(0, 2, n)\nlp = 0.035*(age-60) + 0.55*group\nevent_time = rng.exponential(np.exp(-lp)*12)\ncensor_time = rng.uniform(3, 18, n)\nduration = np.minimum(event_time, censor_time)\nevent = (event_time <= censor_time).astype(int)\ndf = pd.DataFrame({\"duration\": duration, \"event\": event,\n                   \"age\": age, \"group\": group})\n\nfit = PHReg(df[\"duration\"], df[[\"age\", \"group\"]],\n            status=df[\"event\"]).fit(disp=False)\nfor i, name in enumerate([\"age\", \"group\"]):\n    print(name, \"HR =\", round(float(np.exp(fit.params[i])), 3),\n          \"p =\", round(float(fit.pvalues[i]), 4))\nprint(\"events =\", int(df[\"event\"].sum()))",
+      "code_explanation_en": "A hazard ratio above 1 means a higher instantaneous event rate at a given time, assuming proportional hazards. It is not a risk ratio or a survival-time ratio; the hazard is a rate, not a probability.",
+      "code_explanation_ny": "Hazard ratio woposa 1 ukutanthauza kuchuluka kwa zochitika pa nthawi inayake, ngati kuchuluka kwa ngozi kuli kofanana pakapita nthawi. Si risk ratio kapena chiŵerengero cha nthawi yopulumuka; hazard ndi mtengo, osati mwayi.",
+      "definition_en": "Use for time-to-event outcomes when you want a hazard ratio for predictors while allowing the baseline hazard to remain unspecified.",
+      "explanation_ny": "Cox imayerekeza kuti gulu lina lili ndi chiopsezo chachikulu bwanji chakumana ndi chochitika pa nthawi iliyonse. Simafuna kudziwa mawonekedwe enieni a chiopsekozo kwa nthawi yonse. Gwiritsani ntchito pa zotsatira za nthawi mpaka chochitika pamene mukufuna hazard ratio ya zinthu zolosera popanda kufotokoza mawonekedwe a baseline hazard.",
+      "misconception_en": "If hazards are not proportional, a single HR can be misleading. Cox does not estimate the baseline survival curve without extra steps.",
+      "misconception_ny": "Ngati kuchuluka kwa ngozi sikufanana pakapita nthawi, HR imodzi ikhoza kusokeretsa. Cox siyerekeza baseline survival popanda njira zina.",
+      "output": "age HR = 1.043 p = 0.0005\ngroup HR = 1.652 p = 0.0092\nevents = 121",
+      "term": "Cox proportional hazards regression",
+      "term_ny": "Cox proportional hazards regression"
+    },
+    {
+      "aliases": [
+        "hr",
+        "cox",
+        "proportional hazards",
+        "instantaneous rate"
+      ],
+      "analogy_en": "Two cars on the same road: the hazard ratio compares their instant-by-instant risk of a breakdown, assuming that relative risk stays constant throughout the journey.",
+      "analogy_ny": "Magalimoto awiri panjira imodzi: hazard ratio uyerekeza chiopsezo chawo cha kuwonongeka pa nthawi iliyonse, poganiza kuti kusiyana kwawo kumakhalabe kofanana pa ulendo wonse.",
+      "application_en": "Comparing time to relapse between treatment groups after adjusting for baseline prognosis.",
+      "application_ny": "Kuyerekeza nthawi mpaka matenda abwerera pakati pa magulu a chithandizo mutasintha zinthu zoyambirira zokhudza zotsatira.",
+      "category": "advanced",
+      "code": null,
+      "code_explanation_en": "No standalone code is needed for this definition. In the Cox regression entry, exp(coefficient) produces each hazard ratio while the baseline hazard remains unspecified.",
+      "code_explanation_ny": "Apa palibe code payokha. Mu cholemba cha Cox regression, exp(coefficient) imapereka hazard ratio iliyonse pamene baseline hazard sinafotokozedwe.",
+      "definition_en": "A hazard ratio is the ratio of two instantaneous event rates under a proportional-hazards model. It is usually obtained as exp(coefficient) from a Cox regression.",
+      "explanation_ny": "Hazard ndi chiopsezo chachindunji chakumana ndi chochitika pa nthawi inayake, ngati munthu wafika pa nthawiyo popanda chochitika. Hazard ratio uyerekeza chiopsekochi pakati pa magulu awiri.",
+      "misconception_en": "A hazard ratio is not a risk ratio, odds ratio or ratio of median survival times. If hazards change over time, one summary ratio can be misleading.",
+      "misconception_ny": "Hazard ratio si risk ratio, odds ratio kapena chiŵerengero cha median survival. Ngati ma hazard asintha pakapita nthawi, chiŵerengero chimodzi chikhoza kusokeretsa.",
+      "output": null,
+      "term": "Hazard ratio",
+      "term_ny": "Hazard ratio"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like repeatedly drawing new handfuls from the same bag of beads to see how much the proportion of colours varies, without going back to the factory.",
+      "analogy_ny": "Zili ngati kutenga mikono yatsopano mobwerezabwereza kuchokera m'thumba la mikanda kuti muone kuchuluka kwa mitundu kumasiyana bwanji, popanda kubwerera ku fakitale.",
+      "application_en": "Estimating uncertainty for a skewed biomarker median when a formula is not convenient.",
+      "application_ny": "Kuyerekeza kusatsimikizika kwa median ya biomarker wopendekerera pamene formula si yosavuta.",
+      "category": "advanced",
+      "code": "import numpy as np\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112238)\ncontrol = rng.lognormal(5.0, 0.6, 60)\ntreated = rng.lognormal(5.2, 0.6, 55)\nobserved = np.median(treated) - np.median(control)\nB = 5000\nboot = np.empty(B)\nfor i in range(B):\n    bc = rng.choice(control, size=len(control), replace=True)\n    bt = rng.choice(treated, size=len(treated), replace=True)\n    boot[i] = np.median(bt) - np.median(bc)\nlo, hi = np.percentile(boot, [2.5, 97.5])\nprint(\"observed median difference =\", round(float(observed), 3))\nprint(\"bootstrap 95% percentile CI =\", round(float(lo), 3),\n      \"to\", round(float(hi), 3))\nprint(\"resamples =\", B)",
+      "code_explanation_en": "The interval is formed from the middle 95% of bootstrap statistics. It describes sampling uncertainty for this statistic under resampling.",
+      "code_explanation_ny": "Interval imapangidwa kuchokera pakati pa 95% ya ma statistic obwerezedwa. Imafotokoza kusatsimikizika kwa sample pa chiwerengerochi.",
+      "definition_en": "Use when the sampling distribution of a statistic is awkward or you want a nonparametric interval without deriving a standard error formula.",
+      "explanation_ny": "Bootstrap imatenga deta yomwe ilipo ndikuisankhanso mobwerezabwereza kuti iyonetse kuti chiwerengero chathu chingasinthike bwanji ngati tikanatenganso sample ina kuchokera ku gulu lomwelo. Gwiritsani ntchito pamene kagawidwe ka sample ka chiwerengero kuli kovuta kapena mukufuna interval popanda kupeza formula ya standard error.",
+      "misconception_en": "Bootstrap fails with tiny samples, rare events, strong dependence or extreme statistics such as the maximum. Percentile intervals can be biased; BCa is an alternative.",
+      "misconception_ny": "Bootstrap yalephera ndi ma sample ang'ono, zochitika zosowa, kudalirana kwakukulu kapena ziwerengero zapadera monga mtengo wapamwamba. Percentile interval ikhoza kukondera; BCa ndi njira ina.",
+      "output": "observed median difference = 50.381\nbootstrap 95% percentile CI = -24.038 to 92.207\nresamples = 5000",
+      "term": "Bootstrap confidence interval",
+      "term_ny": "Bootstrap confidence interval"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like a metal detector: sensitivity is how often it finds real metal, specificity is how often it stays quiet for harmless objects, and the threshold controls how beep-happy it is.",
+      "analogy_ny": "Zili ngati chida chozindikira zitsulo: sensitivity ndi kuchuluka kwa zitsulo zenizeni zomwe chazipeza, specificity ndi kuchuluka kwa zinthu zopanda vuto zomwe chakhala chete, ndipo malire amalamulira kuchuluka kwa kubweep.",
+      "application_en": "Evaluating a biomarker score for classifying a binary outcome.",
+      "application_ny": "Kuwunika score ya biomarker pogawira zotsatira za binary.",
+      "category": "advanced",
+      "code": "import numpy as np\nfrom sklearn.metrics import roc_curve, auc, confusion_matrix\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112239)\ny = np.r_[np.zeros(160, dtype=int), np.ones(140, dtype=int)]\nscore = np.r_[rng.normal(0.8, 0.5, 160), rng.normal(1.7, 0.6, 140)]\n\nfpr, tpr, thresholds = roc_curve(y, score)\nauc_value = auc(fpr, tpr)\nj = tpr - fpr\nbest = int(np.argmax(j))\ncut = thresholds[best]\npred = (score >= cut).astype(int)\ntn, fp, fn, tp = confusion_matrix(y, pred).ravel()\nprint(\"AUC =\", round(float(auc_value), 3))\nprint(\"Youden J =\", round(float(j[best]), 3))\nprint(\"candidate threshold =\", round(float(cut), 3))\nprint(\"sensitivity =\", round(tp/(tp+fn), 3),\n      \"specificity =\", round(tn/(tn+fp), 3))\nprint(\"confusion matrix [[TN, FP], [FN, TP]] =\",\n      [[int(tn), int(fp)], [int(fn), int(tp)]])",
+      "code_explanation_en": "AUC is the probability that a randomly chosen positive case scores above a randomly chosen negative case. Youden's J chooses the threshold maximising sensitivity plus specificity minus one.",
+      "code_explanation_ny": "AUC ndi mwayi wakuti munthu wabwino asankhidwe ndi score yapamwamba kuposa munthu woipa. Youden's J imasankha malire omwe akulitsa sensitivity ndi specificity pamodzi.",
+      "definition_en": "Use when a continuous marker or model score is used to discriminate between two groups and you want to summarise discrimination and examine a candidate cut-off.",
+      "explanation_ny": "ROC imajambula kusinthanitsa pakati pa kuzindikira matenda (sensitivity) ndi kupewa chenjezo labodza (specificity). AUC imatiuza ngati score imasiyanitsa bwino; Youden ndi imodzi mwa njira zosankha malire. Gwiritsani ntchito pamene chiwerengero chosalekeza kapena model score chikugwiritsidwa ntchito kusiyanitsa magulu awiri ndipo mukufuna kufotokoza kusiyanitsa ndi kuyang'ana malire oti mugwiritse ntchito.",
+      "misconception_en": "AUC ignores calibration and the clinical consequences of errors. A threshold tuned on the same data is optimistically biased.",
+      "misconception_ny": "AUC sinyalanyaza kulinganiza kwa zolosera ndi zotsatira za zolakwika. Malire osinthidwa pa deta yomweyo amakhala otsika mtengo kwambiri.",
+      "output": "AUC = 0.901\nYouden J = 0.658\ncandidate threshold = 1.133\nsensitivity = 0.864 specificity = 0.794\nconfusion matrix [[TN, FP], [FN, TP]] = [[127, 33], [19, 121]]",
+      "term": "ROC curve, AUC and Youden threshold",
+      "term_ny": "ROC curve, AUC ndi Youden threshold"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like practising several mock exams with different question sets, rather than memorising one practice paper and then sitting the same paper again.",
+      "analogy_ny": "Zili ngati kuchita mayeso oyerekeza ambiri ndi mafunso osiyanasiyana, osati kukumbukira pepala limodzi la maphunziro kenako ndikuchitanso pepala lomwelo.",
+      "application_en": "Estimating discrimination of a predictive model before external validation.",
+      "application_ny": "Kuyerekeza kusiyanitsa kwa model yolosera musanatsimikiziridwe ndi deta yakunja.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112240)\nn = 240\nx1 = rng.normal(0, 1, n)\nx2 = 0.5*x1 + rng.normal(0, 1, n)\ny = (0.8*x1 - 0.4*x2 + rng.normal(0, 1, n) > 0).astype(int)\ndf = pd.DataFrame({\"x1\": x1, \"x2\": x2, \"y\": y})\n\npipe = Pipeline([(\"scale\", StandardScaler()),\n                 (\"model\", LogisticRegression(max_iter=1000))])\ncv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3,\n                             random_state=2026112240)\nscores = cross_val_score(pipe, df[[\"x1\", \"x2\"]], df[\"y\"],\n                         cv=cv, scoring=\"roc_auc\")\nprint(\"folds =\", len(scores))\nprint(\"mean CV AUC =\", round(float(scores.mean()), 3))\nprint(\"SD across folds =\", round(float(scores.std(ddof=1)), 3))",
+      "code_explanation_en": "The mean is the estimated performance across repeated held-out folds; the SD shows variability. Because scaling and model fitting happen inside each fold, the estimate avoids leakage from using the full dataset's information.",
+      "code_explanation_ny": "Avareji ndi kagwiridwe koyerekeza pamagulu obisidwa obwerezabwereza; SD ikuwonetsa kusiyana. Popeza scaling ndi kuyika model zimachitika mkati mwa gulu lililonse, kuyerekezako kumapewa kutulutsa zidziwitso kuchokera ku deta yonse.",
+      "definition_en": "Use to estimate how well a modelling pipeline generalises to new data when you cannot afford a separate large test set.",
+      "explanation_ny": "Cross-validation imagawa deta kukhala magulu, imaphunzitsa pa ena ndikuyesa pa otsala. Izi zimatsanzira kugwiritsa ntchito model pa deta yatsopano popanda kuwononga deta yoyesera. Gwiritsani ntchito kuyerekeza kuti model pipeline igwira ntchito bwanji pa deta yatsopano pamene simungapeze gulu lalikulu la test.",
+      "misconception_en": "Cross-validation is not a substitute for an external validation cohort. Overlapping folds are not fully independent.",
+      "misconception_ny": "Cross-validation silo lowa m'malo mwa gulu lotsimikizira lakunja. Magulu ophatikizana si odziyimira pawokha kwathunthu.",
+      "output": "folds = 15\nmean CV AUC = 0.819\nSD across folds = 0.068",
+      "term": "Cross-validation for predictive models",
+      "term_ny": "Cross-validation ya predictive models"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like asking whether exercise improves sleep directly or through reducing stress. You must measure stress at the right time and rule out other influences before claiming the pathway.",
+      "analogy_ny": "Zili ngati kufunsa kuti kuchita masewera kumapangitsa kugona bwino mwachindunji kapena kudzera kuchepetsa nkhawa. Muyenera kuyeza nkhawa pa nthawi yoyenera ndikuchotsa zinthu zina musananene kuti njirayo ndi yoona.",
+      "application_en": "Exploring whether an intervention acts through an intermediate behavioural measure.",
+      "application_ny": "Kufufuza kuti chithandizo chikugwira ntchito kudzera pa muyeso wapakati wa khalidwe.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\nimport statsmodels.formula.api as smf\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112241)\nn = 220\nx = rng.binomial(1, 0.5, n)\nc = rng.normal(0, 1, n)\nm = 0.6*x + 0.3*c + rng.normal(0, 0.8, n)\ny = 0.4*m + 0.3*x + 0.2*c + rng.normal(0, 0.9, n)\ndf = pd.DataFrame({\"x\": x, \"m\": m, \"y\": y, \"c\": c})\n\na = smf.ols(\"m ~ x + c\", data=df).fit().params[\"x\"]\nb = smf.ols(\"y ~ m + x + c\", data=df).fit().params[\"m\"]\ncp = smf.ols(\"y ~ x + c\", data=df).fit().params[\"x\"]\nindirect = a*b\nprint(\"a path =\", round(float(a), 3))\nprint(\"b path =\", round(float(b), 3))\nprint(\"indirect effect a*b =\", round(float(indirect), 3))\nprint(\"direct effect c-prime =\", round(float(cp), 3))\nprint(\"total effect =\", round(float(indirect + cp), 3))",
+      "code_explanation_en": "The indirect component is the product of the exposure-mediator and mediator-outcome paths. The direct component is the remaining exposure association with the mediator held fixed.",
+      "code_explanation_ny": "Gawo losadziwika ndi kuchulukitsa kwa njira ya exposure-mediator ndi mediator-zotsatira. Gawo lolunjika ndi ubale wa exposure wotsala pamene mediator wakhazikitsidwa.",
+      "definition_en": "Use when you want to ask whether part of an exposure effect operates through an intermediate variable, and you can defend the causal ordering and assumptions.",
+      "explanation_ny": "Mediation imafunsa kuti kodi exposure imakhudza zotsatira mwachindunji kapena imadutsa pa chinthu chapakati. Mwachitsanzo, maphunziro angakhudze ndalama, ndipo ndalama zikhudze thanzi. Gwiritsani ntchito pamene mukufuna kufunsa kuti gawo la zotsatira za exposure limadutsa pa chinthu chapakati, ndipo mutha kuteteza dongosolo ndi mfundo za causality.",
+      "misconception_en": "Product-of-coefficients intervals need bootstrap and are sensitive to model misspecification. Mediation is not established by a significant indirect effect alone.",
+      "misconception_ny": "Ma interval a kuchulukitsa kwa coefficient amafuna bootstrap ndipo amadalira model yoyenera. Mediation sikutsimikiziridwa ndi indirect effect yofunika yokha.",
+      "output": "a path = 0.704\nb path = 0.414\nindirect effect a*b = 0.291\ndirect effect c-prime = 0.633\ntotal effect = 0.925",
+      "term": "Mediation analysis",
+      "term_ny": "Kusanthula kwa mediation"
+    },
+    {
+      "aliases": [],
+      "analogy_en": "It is like checking whether a survey conclusion survives if non-respondents would have answered somewhat differently. You do not know their answers, so you test a range of reasonable possibilities.",
+      "analogy_ny": "Zili ngati kuyang'ana kuti chigamulo cha kafukufuku chikapitilizabe ngati omwe sanayankhe akanayankha mosiyana pang'ono. Simudziwa mayankho awo, choncho muyesa zotheka zingapo zomveka.",
+      "application_en": "Testing whether a group comparison depends on missing outcome assumptions.",
+      "application_ny": "Kuyesa kuti kuyerekeza kwa magulu kumadalira mfundo za zotsatira zosowa.",
+      "category": "advanced",
+      "code": "import numpy as np\nimport pandas as pd\n\n# SIMULATED TEACHING DATA — not real patient records.\nrng = np.random.default_rng(2026112242)\nn = 200\ngroup = rng.integers(0, 2, n)\ntrue_value = 10 + 1.5*group + rng.normal(0, 2, n)\nobserved = true_value.copy()\nmissing_prob = np.where(group == 1, 0.30, 0.10)\nmissing = rng.random(n) < missing_prob\nobserved[missing] = np.nan\ndf = pd.DataFrame({\"group\": group, \"value\": observed})\n\ndef diff_after_delta(delta):\n    filled = df.copy()\n    for g in [0, 1]:\n        median_g = filled.loc[filled[\"group\"] == g, \"value\"].median()\n        mask = (filled[\"group\"] == g) & filled[\"value\"].isna()\n        filled.loc[mask, \"value\"] = median_g + delta*g\n    return filled.loc[filled[\"group\"] == 1, \"value\"].mean() -            filled.loc[filled[\"group\"] == 0, \"value\"].mean()\n\ncomplete = df.dropna()\ncc_diff = complete.loc[complete[\"group\"] == 1, \"value\"].mean() - \\\n          complete.loc[complete[\"group\"] == 0, \"value\"].mean()\nprint(\"missing rate by group =\",\n      df.groupby(\"group\")[\"value\"].apply(lambda s: round(s.isna().mean(), 3)).to_dict())\nprint(\"complete-case difference =\", round(float(cc_diff), 3))\nfor delta in [-1.0, 0.0, 1.0]:\n    print(\"delta scenario\", delta, \"difference =\",\n          round(float(diff_after_delta(delta)), 3))",
+      "code_explanation_en": "The complete-case estimate uses only participants with observed outcomes. Sensitivity scenarios shift imputed values in one group to explore how strong a missing-data bias would need to be to change the conclusion.",
+      "code_explanation_ny": "Kuyerekeza kwa complete-case kugwiritsa ntchito omwe ali ndi zotsatira zowonedwa okha. Zochitika za sensitivity zimasintha ma value oyikidwa mu gulu limodzi kuti ziwone kukondera kofunika kusintha chigamulo.",
+      "definition_en": "Use when conclusions may depend on how missing outcomes are handled, so you can show how the estimate changes under plausible assumptions rather than presenting one imputation as definitive.",
+      "explanation_ny": "Deta ikasowa, kuyankha kumodzi kungakhale kokondera. Sensitivity analysis imatiwonetsa ngati chigamulochi chingasinthe pamene tipanga mfundo zosiyanasiyana zokhudza anthu omwe sanapereke deta. Gwiritsani ntchito pamene zotsatira zingadalire momwe deta yosowa yayendetsedwera, kuti muwonetse kuyerekezako kumasintha bwanji pansi pa mfundo zotheka osati kungopereka imputation imodzi ngati yotsimikizika.",
+      "misconception_en": "Delta values are assumptions and must be justified from subject knowledge. This simple median fill does not preserve uncertainty or relationships among variables.",
+      "misconception_ny": "Ma delta ndi mfundo zomwe ziyenera kutetezedwa ndi chidziwitso cha nkhani. Kudzaza ndi median sikusunga kusatsimikizika kapena ubale pakati pa zinthu.",
+      "output": "missing rate by group = {0: 0.133, 1: 0.347}\ncomplete-case difference = 1.751\ndelta scenario -1.0 difference = 1.398\ndelta scenario 0.0 difference = 1.746\ndelta scenario 1.0 difference = 2.093",
+      "term": "Missing-data sensitivity analysis",
+      "term_ny": "Kusanthula kwa kusowa kwa deta mosiyanasiyana"
+    }
+  ],
+  "library_sections": [
+    {
+      "card_titles": [],
+      "heading": "Book coverage and quality-audit status",
+      "id": "audit_coverage",
+      "intro": "",
+      "label": "Coverage & audit",
+      "title": "Coverage & audit",
+      "track": "Reference & audit"
+    },
+    {
+      "card_titles": [
+        "Check Python, py and pip",
+        "PATH troubleshooting",
+        "Install Jupyter Notebook and JupyterLab",
+        "Working folder and launch",
+        "Windows-only scope and common Windows problems",
+        "Packages, versions and conflicts"
+      ],
+      "heading": "Getting started: installing Python and Jupyter on Windows No notebook cells Copy terminal commands",
+      "id": "ch0",
+      "intro": "Before analysing research data, you need a working place to write and run Python. This chapter guides you through installing Python, setting up Jupyter Notebook and checking that the computer can find the correct Python installation. Think of it as preparing your laboratory bench before starting an experiment.",
+      "label": "0. Setup & installation",
+      "title": "0. Setup & installation",
+      "track": "Foundations"
+    },
+    {
+      "card_titles": [
+        "FIRST NOTEBOOK CELL",
+        "Install packages inside the notebook",
+        "Dedicated kernel and version record",
+        "Choose the right scientific Python library",
+        "Import conventions used throughout scientific Python",
+        "Python as a data-analysis toolkit"
+      ],
+      "heading": "Chapter 1: Preliminaries — Python, Jupyter and your research environment Copy notebook cells Copy terminal commands",
+      "id": "ch1",
+      "intro": "This chapter explains where Python code runs and how notebooks, cells, kernels and packages fit together. You will learn how to run code in the right order, inspect results and manage the tools that add scientific functions to Python.",
+      "label": "1. Python environment",
+      "title": "1. Python environment",
+      "track": "Foundations"
+    },
+    {
+      "card_titles": [
+        "Your first Python calculation: gestational age",
+        "Variables and meaningful research names",
+        "Recognise Python data types",
+        "Arithmetic and unit conversion",
+        "Strings, labels and clean output",
+        "Boolean logic: classify a measurement carefully",
+        "if / elif / else: make a transparent category",
+        "for loops: repeat a calculation across observations",
+        "Assertions: check assumptions before analysis",
+        "Explore objects and documentation in Jupyter",
+        "Notebook cell order and the kernel state",
+        "Useful IPython magic commands",
+        "Scalar types: integers, floats, strings, booleans and None",
+        "Mutable objects, assignment and copying"
+      ],
+      "heading": "Chapter 2: Python language basics and fundamentals Copy notebook cells",
+      "id": "ch2",
+      "intro": "Here you learn the basic language used to give instructions to a computer: values, variables, text, numbers, lists, dictionaries, conditions, loops and functions. These are the building blocks you will use later to organise participant records and automate repetitive research tasks.",
+      "label": "2. Language basics",
+      "title": "2. Language basics",
+      "track": "Foundations"
+    },
+    {
+      "card_titles": [
+        "Types, lists, dictionaries",
+        "Function with error handling",
+        "Lists: several observations in one object",
+        "Dictionaries: one participant record",
+        "Functions: reuse a validated calculation",
+        "Tuples and sequence unpacking",
+        "Sets and unique laboratory categories",
+        "Built-in sequence functions",
+        "List, dictionary and set comprehensions",
+        "Function scope and returning multiple values",
+        "Lambda functions for simple mappings",
+        "Generators for memory-efficient processing",
+        "Handle errors without hiding data problems",
+        "Read and write text files with a context manager"
+      ],
+      "heading": "Chapter 3: Built-in data structures, functions and files Copy notebook cells Copy terminal commands",
+      "id": "book3",
+      "intro": "This chapter teaches the everyday containers Python uses to organise research information, how to write reusable functions, how to handle errors, and how to read and write files safely. These skills help you build analysis workflows that are clear, repeatable and easier to check.",
+      "label": "3. Data structures & files",
+      "title": "3. Data structures & files",
+      "track": "Foundations"
+    },
+    {
+      "card_titles": [
+        "Create and inspect a NumPy array",
+        "Vectorised unit conversion and Boolean masks",
+        "Array indexing and missing-value-aware summaries",
+        "Convert birth weights and calculate summaries",
+        "Create a boolean mask and count records",
+        "4.1 — Create arrays from lists and nested lists",
+        "4.1 — Create arrays with zeros, ones, ranges and identity matrices",
+        "4.1 — Inspect and control NumPy data types",
+        "4.1 — Array arithmetic is element-wise",
+        "4.1 — Basic indexing and slicing",
+        "4.1 — Boolean indexing with one or more conditions",
+        "4.1 — Fancy indexing with integer position arrays",
+        "4.1 — Transpose arrays and swap axes",
+        "4.2 — Generate reproducible pseudorandom data"
+      ],
+      "heading": "Chapter 4: NumPy basics — arrays and vectorised computation",
+      "id": "book4",
+      "intro": "NumPy is a Python library for working efficiently with numerical data. It stores values in arrays and lets you calculate across many measurements at once instead of writing a separate instruction for every participant. This is especially useful for laboratory concentrations, birth measurements and simulated datasets.",
+      "label": "4. NumPy arrays",
+      "title": "4. NumPy arrays",
+      "track": "Data handling"
+    },
+    {
+      "card_titles": [
+        "Create a DataFrame and inspect it",
+        "Select, filter and derive a variable",
+        "Series operations and value counts",
+        "Create and inspect an Biomedical DataFrame",
+        "Select columns and filter participants",
+        "Series: values and index labels",
+        "Select and update Series values by label",
+        "Build a Series from a dictionary",
+        "Reindex a Series and recognise missing values",
+        "Series arithmetic aligns by index",
+        "Detect and handle missing Series values",
+        "Create a DataFrame from equal-length columns",
+        "Control DataFrame column order and create an empty column",
+        "Inspect DataFrame rows, columns and data types"
+      ],
+      "heading": "Chapter 5: Getting started with pandas",
+      "id": "book5",
+      "intro": "Pandas gives Python table-like structures called Series and DataFrames. You can select columns, filter participants, sort records, calculate summaries and align information by labels. Think of a DataFrame as a programmable research spreadsheet that can handle much larger and more repeatable workflows.",
+      "label": "5. pandas foundations",
+      "title": "5. pandas foundations",
+      "track": "Data handling"
+    },
+    {
+      "card_titles": [
+        "Read a CSV using an explicit path",
+        "Read an Excel worksheet and inspect sheet names",
+        "Export a cleaned dataset without the index",
+        "Read an Excel workbook using an explicit path",
+        "Inspect worksheet names before loading one",
+        "Create a small simulated cohort and write a raw CSV",
+        "Control column selection, data types and row limits",
+        "Read tab-delimited laboratory data",
+        "Parse dates during import and inspect them",
+        "Handle missing-value codes without changing valid zeroes",
+        "Skip non-data lines and assign explicit column names",
+        "Read a large CSV in manageable chunks",
+        "Read and write JSON records",
+        "Read XML data when the structure is tabular"
+      ],
+      "heading": "Chapter 6: Data loading, storage and file formats",
+      "id": "book6",
+      "intro": "Research information arrives in many formats, including CSV, Excel, JSON and databases. This chapter shows how to load these files into Python, control how columns are interpreted, and save cleaned or summarised outputs. Choosing the correct file format and data types helps prevent errors during analysis.",
+      "label": "6. Files & formats",
+      "title": "6. Files & formats",
+      "track": "Data handling"
+    },
+    {
+      "card_titles": [
+        "Quantify missing values by variable",
+        "Standardise text categories safely",
+        "Check duplicates and plausible ranges",
+        "Create a missing-data report",
+        "Flag values for source verification",
+        "Build a complete missingness profile",
+        "Compare complete-case counts before dropping rows",
+        "Use thresh to retain records with enough observed values",
+        "Fill missing values only with a justified strategy",
+        "Replace special missing-value codes after checking the data dictionary",
+        "Convert mixed numeric text and identify conversion failures",
+        "Remove duplicates using the correct key",
+        "Drop a verified duplicate while preserving the raw table",
+        "Standardise text using strip, case conversion and replacement"
+      ],
+      "heading": "Chapter 7: Data cleaning and preparation",
+      "id": "book7",
+      "intro": "Data cleaning is the careful process of identifying missing values, duplicates, inconsistent labels, incorrect types and implausible measurements. Python can help detect these issues, but it cannot decide what the correct clinical value should be. Check questionable records against source documents and keep a record of every change.",
+      "label": "7. Data cleaning",
+      "title": "7. Data cleaning",
+      "track": "Data handling"
+    },
+    {
+      "card_titles": [
+        "Inspect and missingness",
+        "Plausibility checks and imputation",
+        "Multiple imputation (MICE)",
+        "Nullable extension dtypes preserve unknown values",
+        "Clean laboratory text with regular expressions",
+        "Use categorical dtype for documented categories",
+        "Use regex extraction to validate specimen codes"
+      ],
+      "heading": "Supplementary Biomedical practice: data cleaning and quality assurance Copy notebook cells",
+      "id": "supplement_data_quality",
+      "intro": "Real datasets can contain missing values, duplicate records, impossible measurements and inconsistent entries. This chapter teaches you to look for these problems systematically, check them against the study protocol or source records, and document corrections instead of silently changing data.",
+      "label": "Companion: data quality",
+      "title": "Companion: data quality",
+      "track": "Data handling"
+    },
+    {
+      "card_titles": [
+        "Merge participant and laboratory tables with validation",
+        "Reshape repeated biomarker values from wide to long",
+        "Aggregate before merging grouped results",
+        "Merge participant and laboratory tables",
+        "Reshape repeated biomarkers from wide to long",
+        "Create a MultiIndex for participant and visit",
+        "Select one participant or one visit from a MultiIndex",
+        "Swap and sort hierarchical index levels",
+        "Move identifiers into and out of the index",
+        "Compare inner, left, right and outer joins",
+        "Join when key names differ",
+        "Merge using more than one key",
+        "Validate a one-to-one merge and detect duplicate keys",
+        "Understand many-to-many row multiplication"
+      ],
+      "heading": "Chapter 8: Data wrangling — joining, combining and reshaping",
+      "id": "book8",
+      "intro": "Research projects often store participant details, clinical observations and laboratory results in separate tables. This chapter teaches you to join those tables using appropriate identifiers and reshape data between wide and long formats. Checking keys and row counts prevents accidental duplication or loss of participants.",
+      "label": "8. Wrangling & reshaping",
+      "title": "8. Wrangling & reshaping",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "New variables",
+        "Merge and reshape"
+      ],
+      "heading": "Supplementary Biomedical practice: variable transformation Copy notebook cells",
+      "id": "supplement_variable_transformation",
+      "intro": "Data transformation means creating or rearranging variables so they answer a research question. Examples include calculating age groups, deriving anaemia categories from an appropriate definition, changing units and reshaping repeated measurements. Always preserve the original values and document how derived variables were created.",
+      "label": "Companion: variable transformation",
+      "title": "Companion: variable transformation",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "Histogram of simulated birth weights",
+        "Scatter plot with units and readable labels",
+        "Plot haemoglobin by malaria group",
+        "Inspect association with a scatterplot",
+        "Line graph: monthly malaria positivity",
+        "Bar chart: compare organism counts",
+        "Grouped bar chart: compare malaria groups",
+        "Histogram: inspect a biomarker distribution",
+        "Density curve: compare cytokine distributions",
+        "Boxplot: compare birth weight across groups",
+        "Violin plot: show distribution shape",
+        "Scatterplot: examine biomarker relationships",
+        "Add a fitted line to a scatterplot",
+        "Error bars: display means and uncertainty"
+      ],
+      "heading": "Chapter 9: Plotting and visualisation",
+      "id": "book9",
+      "intro": "This chapter uses plotting tools to display distributions, comparisons, relationships and trends. You will learn how to make graphs that communicate the data honestly, with meaningful labels, units and legends. The examples use biomedical measurements, but the same plotting skills apply across research fields.",
+      "label": "9. Plotting & visualisation",
+      "title": "9. Plotting & visualisation",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "Core plots",
+        "Correlation heatmap",
+        "Kaplan-Meier",
+        "FacetGrid: compare a distribution across groups",
+        "Set Matplotlib defaults for consistent research figures",
+        "Other visualisation tools: optional interactive Plotly chart"
+      ],
+      "heading": "Supplementary Biomedical practice: data visualisation Copy notebook cells",
+      "id": "supplement_visualisation",
+      "intro": "Visualisation turns rows of numbers into pictures that help reveal distributions, differences, patterns and unusual observations. This chapter teaches you to choose suitable graphs, label axes and units clearly, and avoid misleading displays. A graph helps you explore and explain data; it does not by itself prove a scientific claim.",
+      "label": "Companion: visualisation",
+      "title": "Companion: visualisation",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "Group summary with count, mean and standard deviation",
+        "Create within-group standardised values",
+        "Summarise characteristics by exposure group",
+        "Report outcome availability by group",
+        "Understand the split–apply–combine idea",
+        "Compare size() with count()",
+        "Calculate several summaries with agg()",
+        "Use named aggregation for publication-ready tables",
+        "Group by more than one variable",
+        "Keep grouping variables as ordinary columns with as_index=False",
+        "Calculate proportions within each group",
+        "Use transform() to add group summaries to every participant",
+        "Filter groups using a minimum sample size",
+        "Rank observations within exposure groups"
+      ],
+      "heading": "Chapter 10: Data aggregation and group operations",
+      "id": "book10",
+      "intro": "Often you need to compare summaries across groups, such as mean haemoglobin by malaria status or culture positivity by specimen type. Group operations let you split data into categories, calculate summaries for each group and attach group-level results back to individual records.",
+      "label": "10. Grouping & aggregation",
+      "title": "10. Grouping & aggregation",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "Summaries and CI",
+        "Normality",
+        "Iterate over groups for transparent group-specific checks",
+        "Group by a mapping or a function",
+        "Quantile buckets and group-specific summaries",
+        "Cross-tabulation of two categorical variables",
+        "Weighted group means and weighted correlation",
+        "Use groupby apply for a clearly defined custom summary",
+        "Fill missing values using group-specific medians",
+        "Take a reproducible random sample within each group",
+        "Estimate a group-wise linear trend with a small function",
+        "Group by a MultiIndex level",
+        "Suppress group keys when combining apply results",
+        "Select a subset of columns within a group operation"
+      ],
+      "heading": "Supplementary Biomedical practice: descriptive statistics Copy notebook cells",
+      "id": "supplement_descriptive_statistics",
+      "intro": "Descriptive statistics help you summarise the participants and measurements before testing hypotheses. You will learn when to use counts, percentages, means, standard deviations, medians and interquartile ranges, and how to show denominators so readers can understand what each summary represents.",
+      "label": "Companion: descriptive statistics",
+      "title": "Companion: descriptive statistics",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "Parse dates and sort observations",
+        "Calculate days since each participant’s first visit",
+        "Inspect datetime columns and their data types",
+        "Extract year, month, day and weekday",
+        "Create a daily date range",
+        "Generate weekly and monthly reporting dates",
+        "Set a date column as the time-series index",
+        "Select observations within a date interval",
+        "Identify missing calendar dates",
+        "Aggregate daily surveillance counts to monthly totals",
+        "Calculate weekly malaria test positivity",
+        "Convert daily observations to weekly averages",
+        "Upsample monthly data to daily dates",
+        "Interpolate a short gap in a continuous series"
+      ],
+      "heading": "Chapter 11: Time series and repeated measurements",
+      "id": "book11",
+      "intro": "Time-series data are arranged by date or time. This chapter teaches how to create date indexes, work with daily, weekly, monthly and quarterly frequencies, summarise trends, handle time zones, calculate changes and use rolling windows. Repeated measurements from the same participant require special care: descriptive time-series operations do not by themselves provide valid longitudinal statistical inference.",
+      "label": "11. Time series",
+      "title": "11. Time series",
+      "track": "Wrangling, visualisation & aggregation"
+    },
+    {
+      "card_titles": [
+        "Fit a simple linear regression with statsmodels",
+        "Fit logistic regression for a binary outcome",
+        "Fit an adjusted linear regression",
+        "Inspect residuals against fitted values",
+        "Convert a numeric pandas DataFrame to a NumPy array",
+        "Select only model features with loc before conversion",
+        "Understand what happens when mixed data are converted",
+        "Create indicator variables for a categorical predictor",
+        "Build a Patsy model matrix from a formula",
+        "Choose a reference category in a Patsy formula",
+        "Fit an ordinary least squares model with statsmodels",
+        "Fit an adjusted OLS model with a categorical exposure",
+        "Fit logistic regression for a binary neonatal outcome",
+        "Inspect a statsmodels regression summary"
+      ],
+      "heading": "Chapter 12: Introduction to modelling libraries",
+      "id": "book12",
+      "intro": "Python has specialised libraries for statistical modelling. This chapter introduces how data prepared with pandas can be passed to modelling tools, how to fit basic models and how to read estimates, confidence intervals and model diagnostics. A software output is only useful when the model matches the research question and study design.",
+      "label": "12. Modelling libraries",
+      "title": "12. Modelling libraries",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Group comparisons",
+        "Categorical tests",
+        "Multiple testing"
+      ],
+      "heading": "Statistical methods companion: hypothesis testing foundations Copy notebook cells",
+      "id": "supplement_hypothesis_testing",
+      "intro": "A hypothesis test compares what you observed with what might be expected under a stated null hypothesis. This chapter introduces test statistics, p-values and the role of assumptions. The central lesson is that a p-value is not the probability that your hypothesis is true, and statistical significance is not the same as clinical or biological importance.",
+      "label": "Companion: hypothesis testing",
+      "title": "Companion: hypothesis testing",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "One-sample, paired t-test and Wilcoxon",
+        "Kruskal-Wallis and repeated-measures ANOVA"
+      ],
+      "heading": "Statistical methods companion: comparing means and ranks Copy notebook cells",
+      "id": "supplement_mean_rank_tests",
+      "intro": "This chapter focuses on tests for numerical outcomes. You will learn the difference between comparing one group with a reference value, comparing two independent groups and comparing measurements from the same participants. It also introduces rank-based alternatives when the assumptions for common parametric tests are not suitable.",
+      "label": "Companion: means & ranks",
+      "title": "Companion: means & ranks",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Chi-square goodness-of-fit",
+        "Pearson with confidence interval",
+        "Poisson or negative binomial"
+      ],
+      "heading": "Statistical methods companion: categorical data, correlation and counts Copy notebook cells",
+      "id": "supplement_categorical_correlation",
+      "intro": "This chapter covers questions involving categories and counts, such as whether culture positivity differs by specimen type or whether two categorical variables are associated. It explains chi-square, Fisher exact and McNemar tests, alongside correlation and count models. Test choice must reflect the study design and the size of the expected cell counts.",
+      "label": "Companion: categories & correlation",
+      "title": "Companion: categories & correlation",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Correlation",
+        "Linear regression and diagnostics",
+        "Logistic, Poisson, NegBin"
+      ],
+      "heading": "Statistical methods companion: correlation and regression Copy notebook cells",
+      "id": "supplement_correlation_regression",
+      "intro": "Correlation describes how two variables move together, while regression estimates how an outcome changes in relation to one or more predictors. This chapter introduces interpretation of coefficients, uncertainty and model assumptions. An observed association does not automatically mean that one variable caused the other.",
+      "label": "Companion: correlation & regression",
+      "title": "Companion: correlation & regression",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Mixed model and GEE",
+        "ROC, AUC, Youden threshold",
+        "Cox regression",
+        "Bootstrap CI"
+      ],
+      "heading": "Statistical methods companion: advanced analytical methods Copy notebook cells",
+      "id": "supplement_advanced_methods",
+      "intro": "This chapter introduces methods that help answer more complex research questions, such as adjusted analyses, model checking and specialised approaches. The aim is not to apply complicated methods automatically, but to understand what question each method answers, what assumptions it needs and whether it is appropriate for your data.",
+      "label": "Companion: advanced methods",
+      "title": "Companion: advanced methods",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Mediation: malaria, gestation and birth weight",
+        "Effect modification and forest plot",
+        "Missing-data sensitivity (delta adjustment)",
+        "Cross-validation",
+        "Predictive values and regression diagnostics",
+        "Fit a simple autoregressive time-series model"
+      ],
+      "heading": "Statistical methods companion: mediation, effect modification, sensitivity and validation Copy notebook cells",
+      "id": "supplement_sensitivity_validation",
+      "intro": "Research findings can depend on modelling choices and study assumptions. This chapter explores mediation, effect modification, sensitivity analyses and validation. These methods help investigate pathways, differences in associations between groups, and whether conclusions remain reasonably stable when analytical decisions change.",
+      "label": "Companion: sensitivity & validation",
+      "title": "Companion: sensitivity & validation",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Build an analysis-ready table from simulated records",
+        "Create a compact descriptive report",
+        "Create a documented analysis subset",
+        "Generate a compact data-quality table",
+        "01. Case study 1 — inspect nested JSON surveillance records",
+        "02. Count surveillance events by district and result",
+        "03. Calculate malaria positivity with explicit denominators",
+        "04. Parse event timestamps and count events by hour",
+        "05. Case study 2 — compare laboratory specimen types",
+        "06. Calculate organism distribution among positive cultures",
+        "07. Case study 3 — analyse birth-weight patterns by year",
+        "08. Examine repeated naming categories without exposing identities",
+        "09. Plot a yearly outcome trend with a complete DataFrame",
+        "10. Case study 4 — summarise nutrient values in foods"
+      ],
+      "heading": "Chapter 13: Data analysis examples — integrated Biomedical workflow",
+      "id": "book13",
+      "intro": "This chapter brings the earlier skills into one connected process: import the data, inspect it, clean it, create variables, describe it, visualise it and carry out an appropriate analysis. You will practise keeping decisions traceable so that the final results can be checked and reproduced.",
+      "label": "13. Integrated analysis",
+      "title": "13. Integrated analysis",
+      "track": "Projects & reproducibility"
+    },
+    {
+      "card_titles": [
+        "Reproducibility footer"
+      ],
+      "heading": "Supplementary Biomedical practice: reporting, reproducibility and research ethics Copy notebook cells",
+      "id": "supplement_reporting_ethics",
+      "intro": "A good analysis should be understandable and reproducible by another researcher. This chapter covers clear reporting, documenting decisions, keeping code and data organised, protecting participant confidentiality and distinguishing simulated teaching data from real research records.",
+      "label": "Companion: reporting & ethics",
+      "title": "Companion: reporting & ethics",
+      "track": "Projects & reproducibility"
+    },
+    {
+      "card_titles": [
+        "Cleaning pipeline with checks",
+        "Reusable comparison function",
+        "Optional advanced packages",
+        "Compare agreement between two microbiology readers"
+      ],
+      "heading": "Supplementary Biomedical practice: pipelines, reusable functions and optional packages Copy notebook cells Copy terminal commands",
+      "id": "supplement_reusable_workflows",
+      "intro": "As projects grow, repeating long blocks of code becomes difficult to maintain. This chapter introduces reusable functions, pipelines and optional scientific packages. The goal is to make analysis more consistent, easier to check and easier to repeat when new participants or laboratory results are added.",
+      "label": "Companion: reusable workflows",
+      "title": "Companion: reusable workflows",
+      "track": "Projects & reproducibility"
+    },
+    {
+      "card_titles": [
+        "01. Inspect ndarray shape, dtype and strides",
+        "02. Check NumPy data-type families",
+        "03. Reshape a flat laboratory export",
+        "04. Compare ravel and flatten",
+        "05. Understand C-order and Fortran-order traversal",
+        "06. Join laboratory batches along rows or columns",
+        "07. Split a matrix into assay batches",
+        "08. Repeat and tile reference patterns",
+        "09. Broadcast group reference values across participants",
+        "10. Broadcast a participant vector down matrix columns",
+        "11. Use ufunc reduce and accumulate",
+        "12. Use ufunc outer for pairwise calculations",
+        "13. Aggregate contiguous ranges with reduceat",
+        "14. Store mixed laboratory fields in a structured array"
+      ],
+      "heading": "Appendix A: Advanced NumPy",
+      "id": "appendixA",
+      "intro": "This appendix looks beneath the basic array operations. You will learn how NumPy represents data in memory, rearranges and combines arrays, applies calculations across different shapes, sorts values, and works with large files. These skills help when building efficient and reproducible numerical workflows for biomedical research.",
+      "label": "Appendix A: advanced NumPy",
+      "title": "Appendix A: advanced NumPy",
+      "track": "Reference & audit"
+    },
+    {
+      "card_titles": [
+        "01. Navigate the IPython terminal efficiently",
+        "02. Discover IPython magic commands",
+        "03. Run a script and inspect its variables",
+        "04. Load a script into a Jupyter cell",
+        "05. Interrupt a long-running analysis safely",
+        "06. Reuse command history without copying errors",
+        "07. Understand input and output history variables",
+        "08. Clear interactive variables and history carefully",
+        "09. Inspect the current working directory",
+        "10. Capture operating-system command output",
+        "11. Inspect environment variables without exposing secrets",
+        "12. Create a directory bookmark",
+        "13. Diagnose a data-cleaning error with a traceback",
+        "14. Enable automatic post-mortem debugging"
+      ],
+      "heading": "Appendix B: More on the IPython System",
+      "id": "appendixB",
+      "intro": "This appendix teaches you how to use the interactive Python environment more confidently. You will learn keyboard shortcuts, magic commands, command history, operating-system interaction, debugging, timing, profiling, module reloading and configuration. These tools help you explore biomedical datasets, find errors and develop reproducible analysis code.",
+      "label": "Appendix B: IPython system",
+      "title": "Appendix B: IPython system",
+      "track": "Reference & audit"
+    },
+    {
+      "card_titles": [
+        "Worked example 1 — Classify birth weight",
+        "Worked example 2 — Sheet shapes",
+        "Worked example 3 — Complete-case versus median imputation",
+        "Worked example 4 — Composite adverse outcome",
+        "Worked example 5 — Hb by malaria status",
+        "Worked example 6 — Log-scale IL-6 boxplot",
+        "Worked example 7 — Hb across parity groups",
+        "Worked example 8 — Malaria by Hb interaction (odds ratios)",
+        "Worked example 9 — Cut-off with sensitivity of at least 0.90",
+        "Worked example 10 — Integrated project: malaria and birth weight"
+      ],
+      "heading": "Worked solutions",
+      "id": "sol",
+      "intro": "",
+      "label": "Worked solutions",
+      "title": "Worked solutions",
+      "track": "Reference & audit"
+    },
+    {
+      "card_titles": [
+        "1 — Define the estimand before choosing a test",
+        "2 — Proportion with a Wilson confidence interval",
+        "3 — Welch mean difference with a confidence interval",
+        "4 — Chi-square assumptions and Fisher exact test",
+        "5 — Paired measurements: analyse within-person change",
+        "6 — Linear regression with robust standard errors",
+        "7 — Logistic regression: odds ratios and confidence intervals",
+        "8 — Missing-data audit before imputation",
+        "9 — Multiple imputation with MICE: a cautious example",
+        "10 — Repeated measurements: mixed-effects model",
+        "11 — Diagnostic accuracy with confidence intervals",
+        "12 — Control false discoveries across many biomarkers",
+        "13 — Bootstrap confidence interval for a median difference",
+        "14 — Prevent data leakage with a preprocessing pipeline"
+      ],
+      "heading": "Statistical and methodological quality assurance",
+      "id": "statistical_methodology_review",
+      "intro": "this section adds effect estimates, confidence intervals, model diagnostics, missing-data reasoning, repeated-measures methods, validation, multiplicity control and reproducible reporting. All data are simulated. The examples teach methods; they do not prescribe clinical thresholds or replace a study protocol.",
+      "label": "Review: methods quality",
+      "title": "Review: methods quality",
+      "track": "Statistical methods & modelling"
+    },
+    {
+      "card_titles": [
+        "Step 1 — import the libraries and make results reproducible",
+        "Step 2 — generate a simulated maternal and neonatal dataset",
+        "Step 3 — inspect the dataset before changing anything",
+        "Step 4 — assess missing values, duplicates and category coding",
+        "Step 5 — create a protected working copy and validate values",
+        "Step 6 — derive variables while preserving unknown values",
+        "Step 7 — describe the sample and compare groups descriptively",
+        "Step 8 — perform a simple unadjusted comparison with confidence in interpretation",
+        "Step 9 — visualise the distribution, not just the p-value",
+        "Step 10 — estimate an adjusted association using logistic regression",
+        "Step 11 — save a clean analysis copy and an audit summary",
+        "Guided learner tasks — complete these before moving to your own workbook"
+      ],
+      "heading": "Practical Biomedical research workflow: from simulated Excel data to an interpretable model",
+      "id": "Biomedical_practical_workflow",
+      "intro": "This guided workflow shows how the Python skills fit together in a realistic research scenario. You start with a simulated dataset, prepare it carefully, explore the variables and build an interpretable analysis. The focus is on understanding each decision, not simply obtaining a p-value.",
+      "label": "Lab: research workflow",
+      "title": "Lab: research workflow",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "Define the observational unit before analysis",
+        "Checkpoint 2 — preserve and inspect raw data",
+        "Checkpoint 3 — build a data dictionary",
+        "Plan the analysis before testing"
+      ],
+      "heading": "Biomedical guided workflow: raw workbook to defensible analysis",
+      "id": "Biomedical_project_sequence",
+      "intro": "This section organises the learning into a sequence of project stages, from raw workbook to defensible findings. Each stage builds on the previous one and reinforces good habits such as preserving raw data, checking denominators and documenting exclusions.",
+      "label": "Project: guided sequence",
+      "title": "Project: guided sequence",
+      "track": "Projects & reproducibility"
+    },
+    {
+      "card_titles": [
+        "1 — Simulate a communicable-disease surveillance dataset",
+        "2 — Estimate prevalence with a clear denominator",
+        "3 — Compare positivity across districts",
+        "4 — Build a diagnostic 2×2 table and calculate accuracy measures",
+        "5 — Plot a simulated infectious-disease trend"
+      ],
+      "heading": "Infectious Disease Python Laboratory",
+      "id": "infectious_disease_lab",
+      "intro": "This laboratory uses simulated malaria, HIV and tuberculosis programme data to practise calculating prevalence, examining trends and evaluating diagnostic-test performance. It demonstrates how data skills support surveillance and research while reminding you to use clear case definitions and valid denominators.",
+      "label": "Lab: infectious disease",
+      "title": "Lab: infectious disease",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Build a simulated clinical microbiology culture dataset",
+        "2 — Calculate culture positivity by specimen type",
+        "3 — Summarise organism distribution",
+        "4 — Construct an antibiogram from interpreted AST results",
+        "5 — Calculate colony-forming units per millilitre (CFU/mL)",
+        "6 — Summarise minimum inhibitory concentration (MIC) measurements",
+        "7 — Monitor laboratory quality indicators",
+        "8 — Plot culture positivity by specimen",
+        "9 — Parse a microbial FASTA sequence with Biopython (optional)"
+      ],
+      "heading": "Medical Microbiology Python Laboratory",
+      "id": "medical_microbiology_lab",
+      "intro": "This laboratory explores specimen records, culture results, organism frequencies, antimicrobial susceptibility summaries, antibiograms and colony counts. The examples teach data organisation and analysis; they do not replace laboratory standard operating procedures or current CLSI/EUCAST guidance.",
+      "label": "Lab: medical microbiology",
+      "title": "Lab: medical microbiology",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Create simulated ELISA standard-curve data",
+        "2 — Fit a four-parameter logistic (4PL) ELISA standard curve",
+        "3 — Explore cytokine measurements across repeated visits",
+        "4 — Calculate fold change relative to baseline",
+        "5 — Simulate flow-cytometry marker intensities and inspect a scatter plot"
+      ],
+      "heading": "Immunology and Laboratory Biomarkers Python Laboratory",
+      "id": "immunology_lab",
+      "intro": "This laboratory uses simulated ELISA and cytokine data to practise handling assay measurements, standard curves, repeated visits and biomarker comparisons. It helps connect laboratory outputs with research datasets while emphasising assay quality control and validated working ranges.",
+      "label": "Lab: immunology & biomarkers",
+      "title": "Lab: immunology & biomarkers",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Install the scientific Python libraries once",
+        "2 — Import the main scientific libraries",
+        "3 — Know which library to use",
+        "4 — Create your first NumPy array",
+        "5 — Understand shape, dimensions and size",
+        "6 — Index and slice array values",
+        "7 — Perform vectorised calculations",
+        "8 — Create Boolean masks to select participants",
+        "9 — Calculate summaries safely with missing values",
+        "10 — Generate reproducible simulated research data",
+        "11 — Compare groups using NumPy masks",
+        "12 — Connect NumPy arrays to a Pandas DataFrame",
+        "13 — Plot a NumPy array with Matplotlib",
+        "14 — Create a Seaborn group comparison"
+      ],
+      "heading": "Scientific Python imports and guided NumPy laboratory",
+      "id": "scientific_imports_numpy_lab",
+      "intro": "This section explains why researchers import libraries such as NumPy, pandas, Matplotlib and SciPy, and what each contributes. It then uses NumPy examples to practise numerical arrays and calculations that form the foundation for later data analysis.",
+      "label": "Lab: imports & NumPy",
+      "title": "Lab: imports & NumPy",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Create a longitudinal cytokine dataset",
+        "2 — Describe visits without treating them as independent people",
+        "3 — Fit a participant random-intercept mixed model",
+        "4 — Fit a population-average GEE model",
+        "5 — Audit missingness and inspect model residuals"
+      ],
+      "heading": "Supplementary laboratory: longitudinal biomarker analysis across T1, T2 and T3",
+      "id": "longitudinal_biomarker_review",
+      "intro": "When cytokines, hormones or other biomarkers are measured at T1, T2 and T3, each participant contributes repeated observations. These observations are related; they must not be analysed as if every row came from a different person. This laboratory demonstrates descriptive summaries, mixed-effects models and GEE using simulated maternal-health biomarker data.",
+      "label": "Lab: longitudinal biomarkers",
+      "title": "Lab: longitudinal biomarkers",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Create a diagnostic-accuracy dataset",
+        "2 — Calculate sensitivity, specificity and Wilson confidence intervals",
+        "3 — Plot the ROC curve and estimate AUC with bootstrap uncertainty",
+        "4 — Interpret predictive values at different prevalences",
+        "5 — Compare two paired diagnostic tests on the same participants"
+      ],
+      "heading": "Supplementary laboratory: diagnostic accuracy and biomarker evaluation",
+      "id": "diagnostic_accuracy_lab",
+      "intro": "define the intended clinical role, target condition, reference standard, participant spectrum, timing and blinding. AUC is not calibration, and a statistically optimal threshold is not automatically clinically useful.",
+      "label": "Lab: diagnostic accuracy",
+      "title": "Lab: diagnostic accuracy",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Simulate an observational cohort with confounding",
+        "2 — Compare crude risk ratio with adjusted modified-Poisson risk ratio",
+        "3 — Estimate a logistic-regression odds ratio and explain its meaning",
+        "4 — Assess effect modification with an interaction term",
+        "5 — Use a confounding and analysis-plan checklist"
+      ],
+      "heading": "Supplementary laboratory: epidemiology, confounding and effect modification",
+      "id": "epidemiology_confounding_lab",
+      "intro": "adjustment is not automatically beneficial. Choose covariates using subject knowledge and a causal model. Avoid automatic adjustment for mediators or colliders, and state the effect scale for interactions.",
+      "label": "Lab: epidemiology & confounding",
+      "title": "Lab: epidemiology & confounding",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Estimate malaria test positivity with an explicit denominator",
+        "2 — Analyse a TB screening and diagnostic cascade",
+        "3 — Construct an antibiogram from laboratory-interpreted AST results",
+        "4 — Calculate microbial alpha and beta diversity from a count table",
+        "5 — Summarise parasitaemia with a skew-aware scale",
+        "6 — Summarise an HIV testing and treatment cascade"
+      ],
+      "heading": "Supplementary laboratory: infectious disease and microbiology data analysis",
+      "id": "infectious_disease_advanced_lab",
+      "intro": "use validated case definitions and laboratory interpretations. AST categories must come from the laboratory system using the adopted CLSI/EUCAST standard. Do not invent breakpoints or infer resistance categories from raw measurements in these examples.",
+      "label": "Lab: infectious disease + microbiology",
+      "title": "Lab: infectious disease + microbiology",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Create time-to-event data with right censoring",
+        "2 — Estimate Kaplan–Meier survival curves",
+        "3 — Compare survival curves with the log-rank test",
+        "4 — Fit a Cox proportional-hazards model",
+        "5 — Estimate cumulative incidence with competing risks (Aalen–Johansen)",
+        "6 — Inspect Schoenfeld residuals for proportional hazards"
+      ],
+      "heading": "Supplementary laboratory: survival analysis and time-to-event outcomes",
+      "id": "survival_analysis_lab",
+      "intro": "define time zero, event, censoring and competing events. Hazard ratios are not risk ratios. Assess proportional hazards and consider competing-risk cumulative incidence when another event prevents the event of interest.",
+      "label": "Lab: survival analysis",
+      "title": "Lab: survival analysis",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Build a leakage-safe development and test dataset",
+        "2 — Fit a logistic-regression prediction pipeline",
+        "3 — Use cross-validation within the development data",
+        "4 — Check calibration with a reliability diagram",
+        "5 — Evaluate a prespecified decision threshold and confusion matrix",
+        "6 — Compare logistic regression, random forest and gradient boosting"
+      ],
+      "heading": "Supplementary laboratory: predictive modelling and machine learning",
+      "id": "predictive_modeling_lab",
+      "intro": "separate development from evaluation, split by participant or time when appropriate, fit preprocessing only within training data, and validate externally before clinical deployment. Reporting guidance does not guarantee model quality.",
+      "label": "Lab: predictive modelling",
+      "title": "Lab: predictive modelling",
+      "track": "Applied biomedical labs"
+    },
+    {
+      "card_titles": [
+        "1 — Create a reproducible project and preserve the raw dataset",
+        "2 — Validate identifiers, variable types and data ranges",
+        "3 — Examine missingness before choosing an analysis strategy",
+        "4 — Produce descriptive summaries with explicit denominators",
+        "5 — Estimate an adjusted prevalence ratio with robust Poisson regression",
+        "6 — Export analysis outputs without altering the raw source",
+        "7 — Record software versions, random seed and source-file hash",
+        "8 — Add automated checks before accepting an analysis dataset"
+      ],
+      "heading": "Supplementary laboratory: reproducible Biomedical research project workflow",
+      "id": "Biomedical_reproducible_project_lab",
+      "intro": "use synthetic data for practice; retain an immutable, access-controlled source export; apply protocol-defined validation rules; separate raw, processed and output files; and document missing-data and modelling decisions. Never place identifiable participant data in a public or shared teaching project.",
+      "label": "Project: reproducible workflow",
+      "title": "Project: reproducible workflow",
+      "track": "Projects & reproducibility"
+    }
+  ],
+  "schema_version": 1,
+  "sources": {
+    "glossary": {
+      "path": "frontend/resources/python-statistical-tests-glossary.html",
+      "sha256": "d9e7c2160e58fd2770aa73b632bbbbb83015e6c8dd6e65c50f402faa16509ed2"
+    },
+    "python_library": {
+      "path": "frontend/resources/python-command-library.html",
+      "sha256": "99399cf1cec3ee883fb450c883659d35a42e9b998b86b358bba034f66b1baca2"
+    }
+  },
+  "visual_recipes": [
+    {
+      "aliases": [
+        "birthweight distribution",
+        "birth weight distribution",
+        "birthweight curve",
+        "distribution of birth weight",
+        "kufalikira kwa kulemera",
+        "kulemera kwa makanda"
+      ],
+      "chart_title_en": "Simulated birth-weight density and fitted normal curve",
+      "chart_title_ny": "Kufalikira kwa kulemera kwa makanda ndi normal curve yofananira",
+      "column": "birthweight",
+      "dataset": "anc_cohort.csv",
+      "id": "birthweight_distribution",
+      "kind": "distribution",
+      "series_en": [
+        "Observed density (KDE)",
+        "Fitted normal curve"
+      ],
+      "series_ny": [
+        "Kufalikira kwenikweni (KDE)",
+        "Normal curve yofananira"
+      ],
+      "title_en": "Birth-weight distribution in simulated ANC cohort",
+      "title_ny": "Kufalikira kwa kulemera kwa makanda mu deta yophunzitsira ya ANC"
+    },
+    {
+      "aliases": [
+        "haemoglobin distribution",
+        "hemoglobin distribution",
+        "hb distribution",
+        "haemoglobin curve",
+        "distribution of haemoglobin",
+        "kufalikira kwa haemoglobin"
+      ],
+      "chart_title_en": "Simulated haemoglobin density and fitted normal curve",
+      "chart_title_ny": "Kufalikira kwa haemoglobin ndi normal curve yofananira",
+      "column": "hb",
+      "dataset": "anc_cohort.csv",
+      "id": "haemoglobin_distribution",
+      "kind": "distribution",
+      "series_en": [
+        "Observed density (KDE)",
+        "Fitted normal curve"
+      ],
+      "series_ny": [
+        "Kufalikira kwenikweni (KDE)",
+        "Normal curve yofananira"
+      ],
+      "title_en": "Haemoglobin distribution in simulated ANC cohort",
+      "title_ny": "Kufalikira kwa haemoglobin mu deta yophunzitsira ya ANC"
+    },
+    {
+      "aliases": [
+        "birthweight by facility",
+        "birth weight by facility",
+        "facility comparison",
+        "mean birth weight by facility",
+        "kulemera kwa makanda ndi chipatala"
+      ],
+      "chart_title_en": "Mean birth weight by facility type",
+      "chart_title_ny": "Avareji ya kulemera kwa makanda ndi mtundu wa chipatala",
+      "column": "birthweight",
+      "dataset": "anc_cohort.csv",
+      "group": "facility_type",
+      "id": "facility_birthweight",
+      "kind": "group_mean",
+      "series_en": [
+        "Mean birth weight (g)"
+      ],
+      "series_ny": [
+        "Avareji ya kulemera (g)"
+      ],
+      "title_en": "Mean birth weight by facility type (simulated)",
+      "title_ny": "Avareji ya kulemera kwa makanda ndi mtundu wa chipatala (deta yopangidwa)"
+    },
+    {
+      "aliases": [
+        "low birth weight counts",
+        "low birthweight by facility",
+        "anaemia and low birth weight",
+        "low bw chart",
+        "chiwerengero cha kulemera kochepa"
+      ],
+      "chart_title_en": "Low-birth-weight records by facility type",
+      "chart_title_ny": "Makanda olemera pang'ono ndi mtundu wa chipatala",
+      "column": "low_bw",
+      "dataset": "anc_cohort.csv",
+      "group": "facility_type",
+      "id": "anaemia_low_birthweight",
+      "kind": "group_count",
+      "series_en": [
+        "Records with low_bw = 1"
+      ],
+      "series_ny": [
+        "Zolemba zokhala ndi low_bw = 1"
+      ],
+      "title_en": "Low-birth-weight counts by facility type (simulated)",
+      "title_ny": "Chiwerengero cha makanda olemera pang'ono ndi mtundu wa chipatala (deta yopangidwa)"
+    },
+    {
+      "aliases": [
+        "gestational age scatter",
+        "birth weight scatter",
+        "correlation scatter",
+        "relationship between gestational age and birth weight",
+        "ubale wa msinkhu wa mimba ndi kulemera"
+      ],
+      "chart_title_en": "Gestational age vs birth weight (first 80 complete records)",
+      "chart_title_ny": "Msinkhu wa mimba vs kulemera kwa mwana (zolemba 80 zoyamba zathunthu)",
+      "dataset": "anc_cohort.csv",
+      "id": "gestational_age_scatter",
+      "kind": "scatter",
+      "series_en": [
+        "Simulated observations"
+      ],
+      "series_ny": [
+        "Ma observation opangidwa"
+      ],
+      "title_en": "Gestational age and birth weight in simulated ANC cohort",
+      "title_ny": "Msinkhu wa mimba ndi kulemera kwa mwana mu deta yophunzitsira ya ANC",
+      "x": "gest_age",
+      "y": "birthweight"
+    },
+    {
+      "after": "sbp_36wk",
+      "aliases": [
+        "paired blood pressure",
+        "blood pressure before after",
+        "bp chart",
+        "bp change",
+        "paired t-test visual",
+        "kuthamanga kwa magazi musanayambe ndi pambuyo"
+      ],
+      "before": "sbp_booking",
+      "chart_title_en": "Mean systolic blood pressure at booking and 36 weeks",
+      "chart_title_ny": "Avareji ya kuthamanga kwa magazi pa booking ndi masabata 36",
+      "dataset": "bp_paired.csv",
+      "id": "paired_blood_pressure",
+      "kind": "paired_mean",
+      "labels_en": [
+        "Booking",
+        "36 weeks"
+      ],
+      "labels_ny": [
+        "Booking",
+        "Masabata 36"
+      ],
+      "series_en": [
+        "Mean systolic pressure"
+      ],
+      "series_ny": [
+        "Avareji ya kuthamanga kwa magazi"
+      ],
+      "title_en": "Paired systolic blood-pressure measurements (simulated)",
+      "title_ny": "Miyeso yophatikizidwa ya kuthamanga kwa magazi (deta yopangidwa)"
+    },
+    {
+      "aliases": [
+        "survival curve",
+        "kaplan meier",
+        "kaplan-meier",
+        "readmission curve",
+        "survival by anaemia",
+        "mphepete yakupulumuka",
+        "kubwerera kuchipatala"
+      ],
+      "chart_title_en": "Readmission-free probability by anaemia group",
+      "chart_title_ny": "Mwayi wosabwerera kuchipatala ndi gulu la anaemia",
+      "dataset": "postpartum_survival.csv",
+      "event": "readmitted",
+      "group": "anaemia",
+      "id": "survival_by_anaemia",
+      "kind": "survival",
+      "series_en": [
+        "Anaemia",
+        "No anaemia"
+      ],
+      "series_ny": [
+        "Anaemia",
+        "Opanda anaemia"
+      ],
+      "time": "time_days",
+      "title_en": "Event-free curves by anaemia group (simulated)",
+      "title_ny": "Mphepete zopanda chochitika ndi gulu la anaemia (deta yopangidwa)"
+    }
+  ]
+}

@@ -72,3 +72,11 @@ The existing analytics implementation and dashboard calculations were retained. 
 - Session creation, cloud filtering, analytics, Excel/PDF exports and week navigation now cover all seven days. Out-of-range day index 7 is still rejected and flagged for review.
 - Legacy Saturday timetable and recurring records are retained instead of being deleted or flagged during startup migration. The two managed programme events remain fixed to Tuesday and Thursday.
 - Build metadata moved to `2026.11.22-statistical-tests-glossary-v43` across the app, service worker and generated glossary.
+
+## v44 (22 Nov 2026) — CRARA local-library grounding and verified visuals
+
+- CRARA now treats the bundled Python Command Library, the 46-entry executed bilingual statistics glossary, and the three simulated teaching CSV files as primary evidence for programming/statistics questions. The generated `local_teaching_knowledge.json` records source paths, SHA-256 fingerprints, dataset metadata and chapter ids; `local_knowledge.py` injects only matching evidence into the turn.
+- Added a compact Chichewa academic-expression contract so CH answers use verified glossary wording, keep untranslated technical abbreviations where no verified equivalent exists, and do not present simulated teaching results as patient or research findings.
+- Added deterministic, server-side statistical visuals from SHA-256-verified simulated data: KDE plus fitted-normal distribution curves, paired blood pressure, facility summaries, a gestational-age scatter and a Kaplan–Meier curve. Each answer includes bilingual source provenance, sample size, simulated-data wording and reproducible Python code; no submitted code runs and no web source is consulted.
+- Unclear variables, missing/changed data and real-patient-data requests fail closed with a helpful supported-options answer. Verified visual turns bypass the model provider and keep the existing fenced `chart` JSON renderer contract.
+- Build metadata moved to `2026.11.22-statistical-tests-glossary-v44` across backend config, app shell, service worker, generated glossary and the generated local-knowledge index.
