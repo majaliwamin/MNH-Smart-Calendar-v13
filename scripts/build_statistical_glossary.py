@@ -1841,11 +1841,14 @@ def render_page() -> str:
         for key, title, ny_title in CATEGORIES
     )
     body_parts: list[str] = []
+    index_offset = 0
     for category_key, _, _ in CATEGORIES:
         category_entries = [e for e in ENTRIES if e["category"] == category_key]
         cards = "\n".join(
-            render_entry(entry, i + 1) for i, entry in enumerate(category_entries)
+            render_entry(entry, index_offset + i + 1)
+            for i, entry in enumerate(category_entries)
         )
+        index_offset += len(category_entries)
         category_title = next(t for k, t, _ in CATEGORIES if k == category_key)
         category_ny = next(t for k, _, t in CATEGORIES if k == category_key)
         body_parts.append(

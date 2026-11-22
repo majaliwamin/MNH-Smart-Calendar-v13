@@ -731,6 +731,8 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
         for block in re.findall(r'<div class="output-wrap">.*?<pre>(.*?)</pre>', glossary, re.S)
     ]
     assert len(code_blocks) == len(output_blocks) == 42
+    term_ids = re.findall(r'<h3 id="(term-\d+)"', glossary)
+    assert len(term_ids) == len(set(term_ids)) == 42
     assert all("SIMULATED TEACHING DATA" in block for block in code_blocks)
     assert all("default_rng(" in block for block in code_blocks)
     assert all(block and not re.search(r"\b(?:nan|inf|infinity)\b", block, re.I)
