@@ -8,8 +8,6 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
-import nbformat as nbf
-
 from stat8100_code_cells import CODE, QUESTION_CODE, QUESTION_TITLES
 from stat8100_guides import GUIDES
 from stat8100_reporting import work_report, worked_template_examples
@@ -163,6 +161,8 @@ def guide_markdown(qid, results):
 
 def build_notebook():
     """Build the notebook, using the last verified results for worked examples."""
+    import nbformat as nbf
+
     results = {}
     if RESULTS_PATH.is_file():
         results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
