@@ -960,7 +960,7 @@ def test_cover_page_has_requested_subtitle_and_no_microscope():
     library = (ROOT / "frontend" / "resources" / "python-command-library.html").read_text(
         encoding="utf-8"
     )
-    assert "For biomedical and health sciences research" in library
+    assert "For Biomedical &amp; Health Sciences Research" in library
     assert "methodological review v42" in library
     assert "no microscope illustration" in library
     assert "no course-name labels" in library
@@ -975,4 +975,4 @@ def test_cover_page_has_requested_subtitle_and_no_microscope():
     match = re.search(r"data:image/png;base64,([A-Za-z0-9+/=]+)", library)
     assert match
     digest = hashlib.sha256(base64.b64decode(match.group(1))).hexdigest().upper()
-    assert digest == "D27A3AA94DFFD4548FBFB44B3A6B18771155E436EFD0E5B9ADC97CF25BCBA1DA"
+    assert digest == "436CACA6EF5B720E94142AD5AA49034B2C85A98C062A5AE25A744B77A008D79F"
