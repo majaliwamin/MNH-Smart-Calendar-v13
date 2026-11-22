@@ -189,6 +189,8 @@ CODE["audit"] = dedent(r'''
     record("Audit", {
         "datasets": audit_table.to_dict(orient="records"),
         "education_levels": anc["education"].value_counts(dropna=False).to_dict(),
+        "facility_levels": anc["facility_type"].value_counts(dropna=False).to_dict(),
+        "iptp3_levels": anc["iptp3"].value_counts(dropna=False).to_dict(),
         "anaemia_mismatches": int((~anaemia_check.dropna()).sum()),
         "preterm_mismatches": int((~preterm_check.dropna()).sum()),
         "lowbw_mismatches": int((~lowbw_check.dropna()).sum()),

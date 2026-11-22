@@ -92,6 +92,10 @@ def test_practical_resources_exist_and_match_the_uploaded_csvs():
     assert (audit["bp_paired.csv"]["rows"], audit["bp_paired.csv"]["columns"]) == (60, 3)
     assert (audit["postpartum_survival.csv"]["rows"], audit["postpartum_survival.csv"]["columns"]) == (500, 6)
     assert results["Audit"]["education_levels"]["None"] == 55
+    assert results["Audit"]["facility_levels"] == {
+        "Urban": 154, "Peri-urban": 133, "Rural": 113,
+    }
+    assert results["Audit"]["iptp3_levels"] == {"Yes": 243, "No": 157}
     assert results["Audit"]["anaemia_mismatches"] == 0
     assert results["Audit"]["preterm_mismatches"] == 9
 
@@ -126,6 +130,8 @@ def test_notebook_is_executed_has_no_errors_and_contains_every_subquestion():
     for qid in QUESTION_IDS:
         assert f"#### {qid} —" in markdown
         assert f"**Worked report from the executed notebook.**" in markdown
+    assert "**Measurement-scale classification table (verified against the supplied file)**" in markdown
+    assert "| Variable | Scale | Why | Verified evidence |" in markdown
     assert markdown.count("**Reusable pattern**") == len(TEMPLATE_TITLES)
     assert markdown.count("**Worked example from Q") == len(TEMPLATE_TITLES)
     for group in QUESTION_GROUPS:
@@ -216,6 +222,10 @@ def test_html_companion_has_searchable_navigation_and_exact_layout():
         assert "<h4>Worked report — verified from the executed notebook</h4>" in card
         assert "<strong>Verified source:</strong>" in card
         assert "<strong>Teaching note:</strong>" in card
+    q2a = _card(companion, "Q2a")
+    assert "Measurement-scale classification table" in q2a
+    assert "<th>Verified evidence</th>" in q2a
+    assert "Urban (n=154)" in q2a
     assert "47/400" in _card(companion, "Q1a")
     assert "139/382" in _card(companion, "Q3b")
     assert "68,841 person-days" in _card(companion, "Q10d")

@@ -32,6 +32,15 @@
       "Primary": 212,
       "Secondary+": 133
     },
+    "facility_levels": {
+      "Peri-urban": 133,
+      "Rural": 113,
+      "Urban": 154
+    },
+    "iptp3_levels": {
+      "No": 157,
+      "Yes": 243
+    },
     "lowbw_mismatches": 0,
     "preterm_mismatches": 9
   },

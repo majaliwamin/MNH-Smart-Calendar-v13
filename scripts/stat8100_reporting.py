@@ -145,11 +145,16 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
 
     if qid == "Q2a":
         levels = audit.get("education_levels", {})
+        facilities = audit.get("facility_levels", {})
+        iptp = audit.get("iptp3_levels", {})
         level_text = ", ".join(f"{name} (n={_i(count)})" for name, count in levels.items())
+        facility_text = ", ".join(f"{name} (n={_i(count)})" for name, count in facilities.items())
+        iptp_text = ", ".join(f"{name} (n={_i(count)})" for name, count in iptp.items())
         return _work(
             qid,
-            "facility_type is nominal because its categories have no intrinsic order; education is ordinal "
-            f"({level_text}); anc_visits is a discrete count; and bmi and birthweight are continuous measurements.",
+            f"facility_type is nominal: {facility_text} have no intrinsic order. Education is ordinal: "
+            f"{level_text}. iptp3 is a nominal binary label: {iptp_text}. anc_visits is a discrete count, "
+            "while bmi and birthweight are continuous measurements.",
             "Dataset audit and column definitions · anc_cohort.csv",
             "The literal education category 'None' is data, not a missing-value marker. Scale determines which summaries and plots are meaningful.",
         )

@@ -91,6 +91,30 @@ def question_slug(question_id):
     return question_id.lower()
 
 
+def classification_rows(results):
+    """Build Q2(a)'s five-row concept table from the executed dataset audit."""
+    audit = results.get("Audit", {})
+    facility = audit.get("facility_levels", {})
+    education = audit.get("education_levels", {})
+    anc_rows = next(
+        (row.get("rows") for row in audit.get("datasets", [])
+         if row.get("dataset") == "anc_cohort.csv"),
+        0,
+    )
+    return [
+        ["facility_type", "Nominal", "Three unordered categories.",
+         ", ".join(f"{k} (n={v})" for k, v in facility.items()) or "Levels not verified"],
+        ["education", "Ordinal", "Ordered attainment, but gaps are not numeric distances.",
+         ", ".join(f"{k} (n={v})" for k, v in education.items()) or "Levels not verified"],
+        ["anc_visits", "Discrete count", "Non-negative whole-number visit count.",
+         f"Numeric column in the {anc_rows}-row ANC file."],
+        ["bmi", "Continuous", "Measured quantity with meaningful decimals.",
+         "10 missing values; summarise on 390 evaluable records."],
+        ["birthweight", "Continuous", "Measured quantity with meaningful decimals.",
+         f"Complete for all {anc_rows} records."],
+    ]
+
+
 def parent_question(subquestion_id):
     """Return Q10 for Q10a-f, otherwise the two-character parent question."""
     return "Q10" if subquestion_id.startswith("Q10") else subquestion_id[:2]
@@ -119,6 +143,16 @@ def guide_markdown(qid, results):
     lines.append("")
     lines.append(f"*Verified source:* {report['source']}. *Teaching note:* {report['teach']}")
     lines.append("")
+    if qid == "Q2a":
+        lines.extend([
+            "**Measurement-scale classification table (verified against the supplied file)**",
+            "",
+            _md_table(
+                ["Variable", "Scale", "Why", "Verified evidence"],
+                classification_rows(results),
+            ),
+            "",
+        ])
     lines.append(f"**Common mistakes.** {guide['common_mistakes']}")
     lines.append("")
     return "\n".join(lines)
@@ -288,6 +322,19 @@ def _guide_html(qid, results):
     guide = GUIDES[qid]
     report = work_report(qid, results)
     learned = "".join(f"<li>{html.escape(point)}</li>" for point in guide["learning"])
+    concept_table = ""
+    if qid == "Q2a":
+        rows = classification_rows(results)
+        concept_table = (
+            '<section class="card-section"><h4>Measurement-scale classification table '
+            '(verified against the supplied file)</h4><div style="overflow:auto"><table>'
+            '<thead><tr>' + "".join(f"<th>{html.escape(h)}</th>" for h in
+                                    ["Variable", "Scale", "Why", "Verified evidence"]) +
+            '</tr></thead><tbody>' + "".join(
+                "<tr>" + "".join(f"<td>{html.escape(cell)}</td>" for cell in row) + "</tr>"
+                for row in rows
+            ) + '</tbody></table></div></section>'
+        )
     codes = "".join(_code_block(key) for key in QUESTION_CODE[qid]) or (
         '<p class="no-code">No code cell is required for this task.</p>'
     )
@@ -296,7 +343,7 @@ def _guide_html(qid, results):
         "Conceptual": "tag-concept", "Calculation": "tag-calc",
         "Mixed": "tag-mixed", "Reporting": "tag-report",
     }.get(guide["classification"], "tag-mixed")
-    return f"""
+    card = f"""
     <details class="question-card" id="{html.escape(qid)}" data-qid="{html.escape(qid)}"
              data-classification="{html.escape(guide['classification'])}" open>
       <summary>
@@ -351,6 +398,10 @@ def _guide_html(qid, results):
         </div>
       </div>
     </details>"""
+    if concept_table:
+        marker = '        <section class="card-section">\n          <h4>Common mistakes</h4>'
+        card = card.replace(marker, "        " + concept_table + "\n" + marker, 1)
+    return card
 
 
 RESULTS_PLACEHOLDER = {}
