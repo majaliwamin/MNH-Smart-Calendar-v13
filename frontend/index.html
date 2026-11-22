@@ -248,6 +248,7 @@
     <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
      <button type="button" class="menu-nav" data-view="resources"><span>&#9633;</span>Resources</button>
      <button type="button" class="menu-nav" data-view="python-library"><span>&#9634;</span>Python Library</button>
+     <button type="button" class="menu-nav" data-view="stat8100-practical"><span>&#9679;</span>STAT 8100 Practical</button>
    </div>
       <div id="legacy-actions" hidden>
     <button type="button" id="edit-header" disabled></button><button type="button" id="save" disabled></button>
@@ -298,6 +299,7 @@
  <div id="res-list"></div><div id="res-form-wrap"></div>
  <section class="python-library-section" aria-label="Python Command Library for biomedical and health sciences" style="margin-top:24px">
   <button type="button" class="resources-back" id="open-python-library">Open Python Library full screen</button>
+   <button type="button" class="resources-back" id="open-stat8100-practical">Open STAT 8100 Practical Companion</button>
  </section>
 </section>
 <section class="view vw" id="view-python-library" hidden>
@@ -309,6 +311,15 @@
   loading="eager">
  </iframe>
 </section>
+<section class="view vw" id="view-stat8100-practical" hidden>
+  <button type="button" class="python-library-back" id="stat8100-practical-back" aria-label="Back to Resources">&#8592; Back to Resources</button>
+  <iframe
+   class="python-library-frame"
+   src="/resources/stat8100_practical_companion.html?v=2026.11.22-stat8100-practical-v1"
+   title="STAT 8100 Biostatistics and Epidemiology Practical Companion"
+   loading="eager">
+  </iframe>
+ </section>
 <section class="view vw" id="view-python-setup-simulation" hidden>
   <button type="button" class="python-library-back" id="python-setup-simulation-back" aria-label="Back to Python Library">&#8592; Back to library</button>
   <iframe

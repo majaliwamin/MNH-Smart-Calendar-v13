@@ -1,0 +1,694 @@
+{
+  "Audit": {
+    "anaemia_mismatches": 0,
+    "datasets": [
+      {
+        "columns": 14,
+        "dataset": "anc_cohort.csv",
+        "duplicate_rows": 0,
+        "missing_cells": 46,
+        "rows": 400,
+        "sha256": "EE9D58D5E484D62244B62E17910AEDE241B074B4E7F70D22C783F50DD6E9E1DA"
+      },
+      {
+        "columns": 3,
+        "dataset": "bp_paired.csv",
+        "duplicate_rows": 0,
+        "missing_cells": 0,
+        "rows": 60,
+        "sha256": "677B7643994C0C57CE9FA2C052EEB22086D5B20537E5D8FE1290A98B3AFEF786"
+      },
+      {
+        "columns": 6,
+        "dataset": "postpartum_survival.csv",
+        "duplicate_rows": 0,
+        "missing_cells": 0,
+        "rows": 500,
+        "sha256": "0099FFCFCC226141DD762E6ABD338343325DC360A8011FFC571CAB06AC332EF2"
+      }
+    ],
+    "education_levels": {
+      "None": 55,
+      "Primary": 212,
+      "Secondary+": 133
+    },
+    "lowbw_mismatches": 0,
+    "preterm_mismatches": 9
+  },
+  "Q10a": {
+    "censored": 291,
+    "censoring_proportion": 0.582,
+    "events": 209,
+    "median_observed_follow_up": 119.0,
+    "participants": 500
+  },
+  "Q10b": {
+    "ci_180": [
+      0.5376967802281104,
+      0.6374260529022242
+    ],
+    "ci_90": [
+      0.7225135000491342,
+      0.7996274218041816
+    ],
+    "median_ci": [
+      202.0,
+      260.0
+    ],
+    "median_survival": 233.0,
+    "number_at_risk": {
+      "0": 500,
+      "180": 152,
+      "270": 55,
+      "365": 0,
+      "90": 313
+    },
+    "survival_180": 0.589437429541154,
+    "survival_90": 0.7636945713896193
+  },
+  "Q10c": {
+    "groups": [
+      "Anaemia",
+      "No anaemia"
+    ],
+    "logrank_chi2": 22.567150027588177,
+    "logrank_p": 2.029248805613964e-06,
+    "median_survival": {
+      "Anaemia": 169.0,
+      "No anaemia": 311.0
+    }
+  },
+  "Q10d": {
+    "ci_per_1000_person_days": [
+      2.6383091376616434,
+      3.476671597703874
+    ],
+    "events": 209,
+    "exponential_s180": 0.5789861839469784,
+    "exponential_s90": 0.7609114166228408,
+    "person_time_days": 68841.0,
+    "rate_per_1000_person_days": 3.0359814645342165,
+    "rate_per_person_day": 0.0030359814645342163
+  },
+  "Q10e": [
+    {
+      "coefficient": 0.6386730247741905,
+      "hazard_ratio": 1.8939659651453198,
+      "hr_ci_high": 2.4858388075768456,
+      "hr_ci_low": 1.4430167660893085,
+      "p_value": 4.160840042411009e-06,
+      "term": "anaemia"
+    },
+    {
+      "coefficient": 0.4523878494130527,
+      "hazard_ratio": 1.57206155350336,
+      "hr_ci_high": 2.1013613778432245,
+      "hr_ci_low": 1.176084015848786,
+      "p_value": 0.0022477535129053717,
+      "term": "caesarean"
+    },
+    {
+      "coefficient": 0.01958141348456775,
+      "hazard_ratio": 1.0197743868674463,
+      "hr_ci_high": 1.0424955121736947,
+      "hr_ci_low": 0.9975484670840552,
+      "p_value": 0.08157016853329652,
+      "term": "age"
+    }
+  ],
+  "Q10f": [
+    {
+      "flag_ph_concern": true,
+      "p_holm": 3.021391502156348e-10,
+      "p_value": 1.510695751078174e-10,
+      "spearman_rho": 0.4244187577868859,
+      "term": "anaemia"
+    },
+    {
+      "flag_ph_concern": true,
+      "p_holm": 3.4766126130679167e-14,
+      "p_value": 1.1588708710226389e-14,
+      "spearman_rho": 0.5007106992568828,
+      "term": "caesarean"
+    },
+    {
+      "flag_ph_concern": false,
+      "p_holm": 0.7357945020654691,
+      "p_value": 0.7357945020654691,
+      "spearman_rho": -0.023477950844014106,
+      "term": "age"
+    }
+  ],
+  "Q1a": [
+    {
+      "count": 47,
+      "denominator": 400,
+      "event": "Preterm delivery",
+      "sample_proportion": 0.1175
+    },
+    {
+      "count": 43,
+      "denominator": 400,
+      "event": "Low birth weight",
+      "sample_proportion": 0.1075
+    }
+  ],
+  "Q1b": {
+    "contingency": {
+      "0": {
+        "0": 324,
+        "1": 33,
+        "All": 357
+      },
+      "1": {
+        "0": 29,
+        "1": 14,
+        "All": 43
+      },
+      "All": {
+        "0": 353,
+        "1": 47,
+        "All": 400
+      }
+    },
+    "risk_difference": 0.2157193659212826,
+    "risk_ratio": 3.62582538517975,
+    "table": [
+      {
+        "P(low_bw | stratum)": 0.2978723404255319,
+        "low_bw_count": 14,
+        "stratum": "Preterm (preterm=1)",
+        "stratum_n": 47
+      },
+      {
+        "P(low_bw | stratum)": 0.0821529745042493,
+        "low_bw_count": 29,
+        "stratum": "Term (preterm=0)",
+        "stratum_n": 353
+      }
+    ]
+  },
+  "Q2b": [
+    {
+      "IQR": 8.0,
+      "mean": 26.01,
+      "median": 26.0,
+      "n_missing": 0,
+      "n_non_missing": 400,
+      "sd": 5.878033531334158,
+      "variable": "age"
+    },
+    {
+      "IQR": 5.650000000000002,
+      "mean": 22.732564102564105,
+      "median": 22.4,
+      "n_missing": 10,
+      "n_non_missing": 390,
+      "sd": 3.857685693490599,
+      "variable": "bmi"
+    },
+    {
+      "IQR": 1.9749999999999996,
+      "mean": 11.486649214659687,
+      "median": 11.5,
+      "n_missing": 18,
+      "n_non_missing": 382,
+      "sd": 1.4152913605179895,
+      "variable": "hb"
+    },
+    {
+      "IQR": 1.8999999999999986,
+      "mean": 38.55975,
+      "median": 39.2,
+      "n_missing": 0,
+      "n_non_missing": 400,
+      "sd": 2.4581519919522568,
+      "variable": "gest_age"
+    },
+    {
+      "IQR": 561.75,
+      "mean": 3046.8925,
+      "median": 3040.5,
+      "n_missing": 0,
+      "n_non_missing": 400,
+      "sd": 442.43707162671626,
+      "variable": "birthweight"
+    }
+  ],
+  "Q2c": [
+    {
+      "iqr_outliers_high": 1,
+      "iqr_outliers_low": 5,
+      "mean": 3046.8925,
+      "median": 3040.5,
+      "n": 400,
+      "sd": 442.43707162671626,
+      "skewness": -0.30775860211429906,
+      "variable": "birthweight"
+    },
+    {
+      "iqr_outliers_high": 0,
+      "iqr_outliers_low": 36,
+      "mean": 38.55975,
+      "median": 39.2,
+      "n": 400,
+      "sd": 2.4581519919522568,
+      "skewness": -1.9393228809325516,
+      "variable": "gest_age"
+    }
+  ],
+  "Q2d": {
+    "n": 400,
+    "pearson_ci": [
+      0.2765496000320724,
+      0.4467861112286768
+    ],
+    "pearson_p": 4.980870139146528e-14,
+    "pearson_r": 0.36471173662946693,
+    "spearman_p": 1.1043025045435383e-11,
+    "spearman_rho": 0.3310247699384513
+  },
+  "Q3a": {
+    "ci": [
+      3003.4025442080865,
+      3090.3824557919133
+    ],
+    "df": 399,
+    "mean": 3046.8925,
+    "n": 400,
+    "scipy_ci": [
+      3003.4025442080865,
+      3090.3824557919133
+    ],
+    "sd": 442.43707162671626,
+    "se": 22.121853581335813,
+    "t_critical": 1.9659272959208818
+  },
+  "Q3b": {
+    "ci": [
+      0.3172050127096916,
+      0.4132542274199954
+    ],
+    "denominator": 382,
+    "events": 139,
+    "missing_excluded": 18,
+    "prevalence": 0.36387434554973824
+  },
+  "Q3d": [
+    {
+      "ci_high": 3182.4111810483905,
+      "ci_low": 3038.471935834726,
+      "facility_type": "Urban",
+      "mean": 3110.4415584415583,
+      "n": 154,
+      "sd": 452.0772966907057
+    },
+    {
+      "ci_high": 3063.7675490574056,
+      "ci_low": 2915.435458461391,
+      "facility_type": "Peri-urban",
+      "mean": 2989.6015037593984,
+      "n": 133,
+      "sd": 432.39728049507863
+    },
+    {
+      "ci_high": 3108.533510617193,
+      "ci_low": 2946.900117701391,
+      "facility_type": "Rural",
+      "mean": 3027.716814159292,
+      "n": 113,
+      "sd": 433.58508534383066
+    }
+  ],
+  "Q4": {
+    "groups": [
+      {
+        "iptp3": "Yes",
+        "mean": 3125.786008230453,
+        "median": 3126.0,
+        "n": 243,
+        "sd": 420.646535392015
+      },
+      {
+        "iptp3": "No",
+        "mean": 2924.7834394904457,
+        "median": 2947.0,
+        "n": 157,
+        "sd": 448.86395515435635
+      }
+    ],
+    "levene_p": 0.8127607421602898,
+    "mann_whitney_p": 3.693814467947495e-05,
+    "mann_whitney_u": 23734.5,
+    "mean_difference": 201.00256874000706,
+    "rank_biserial": 0.24423999370920813,
+    "welch_ci": [
+      112.76290683794944,
+      289.24223064206467
+    ],
+    "welch_df": 317.3866489321943,
+    "welch_p": 1.0351764378014585e-05,
+    "welch_t": 4.481724050216285
+  },
+  "Q5": {
+    "ci": [
+      1.3553004979575256,
+      5.978032835375807
+    ],
+    "incorrect_independent_p": 0.08476830371404064,
+    "incorrect_independent_t": 1.7388548850262389,
+    "mean_change": 3.6666666666666665,
+    "paired_p": 0.0023870066397307338,
+    "paired_t": 3.1743058076721327,
+    "shapiro_p": 0.3026484033803393,
+    "shapiro_w": 0.9766186743585408,
+    "summary": [
+      {
+        "mean": 112.2,
+        "measure": "sbp_booking",
+        "n": 60,
+        "sd": 10.357671356642062
+      },
+      {
+        "mean": 115.86666666666666,
+        "measure": "sbp_36wk",
+        "n": 60,
+        "sd": 12.629621713763573
+      },
+      {
+        "mean": 3.6666666666666665,
+        "measure": "paired difference",
+        "n": 60,
+        "sd": 8.947429640692416
+      }
+    ]
+  },
+  "Q6": {
+    "anova_df_between": 2,
+    "anova_df_within": 379,
+    "anova_f": 11.364796463021328,
+    "anova_p": 1.609424137127712e-05,
+    "groups": [
+      {
+        "facility_type": "Urban",
+        "mean": 11.913103448275862,
+        "median": 12.0,
+        "n": 145,
+        "sd": 1.498946628859274
+      },
+      {
+        "facility_type": "Peri-urban",
+        "mean": 11.275,
+        "median": 11.2,
+        "n": 128,
+        "sd": 1.3251058492856422
+      },
+      {
+        "facility_type": "Rural",
+        "mean": 11.16788990825688,
+        "median": 11.3,
+        "n": 109,
+        "sd": 1.267242612769724
+      }
+    ],
+    "kruskal_h": 18.54280470996295,
+    "kruskal_p": 9.407649265313935e-05,
+    "levene_p": 0.04328237430035785,
+    "tukey": [
+      {
+        "group1": "Peri-urban",
+        "group2": "Rural",
+        "lower": -0.5298,
+        "meandiff": -0.1071,
+        "p-adj": 0.8222,
+        "reject": false,
+        "upper": 0.3156
+      },
+      {
+        "group1": "Peri-urban",
+        "group2": "Urban",
+        "lower": 0.2448,
+        "meandiff": 0.6381,
+        "p-adj": 0.0005,
+        "reject": true,
+        "upper": 1.0314
+      },
+      {
+        "group1": "Rural",
+        "group2": "Urban",
+        "lower": 0.3341,
+        "meandiff": 0.7452,
+        "p-adj": 0.0001,
+        "reject": true,
+        "upper": 1.1563
+      }
+    ]
+  },
+  "Q7a": {
+    "chi2": 2.6903026379269273,
+    "column_percent": {
+      "0.0": {
+        "None": 11.934,
+        "Primary": 55.144,
+        "Secondary+": 32.922
+      },
+      "1.0": {
+        "None": 17.266,
+        "Primary": 48.201,
+        "Secondary+": 34.532
+      }
+    },
+    "df": 2,
+    "expected": [
+      [
+        33.71465968586387,
+        19.285340314136125
+      ],
+      [
+        127.86125654450262,
+        73.13874345549738
+      ],
+      [
+        81.42408376963351,
+        46.575916230366495
+      ]
+    ],
+    "min_expected": 19.285340314136125,
+    "monte_carlo_p": null,
+    "observed": {
+      "0.0": {
+        "None": 29,
+        "Primary": 134,
+        "Secondary+": 80
+      },
+      "1.0": {
+        "None": 24,
+        "Primary": 67,
+        "Secondary+": 48
+      }
+    },
+    "p": 0.26050028624413535,
+    "row_percent": {
+      "0.0": {
+        "None": 54.717,
+        "Primary": 66.667,
+        "Secondary+": 62.5
+      },
+      "1.0": {
+        "None": 45.283,
+        "Primary": 33.333,
+        "Secondary+": 37.5
+      }
+    }
+  },
+  "Q7b": {
+    "ci": [
+      0.3172050127096916,
+      0.4132542274199954
+    ],
+    "exact_p": 0.007322830837467615,
+    "n": 382,
+    "null_p": 0.3,
+    "p_hat": 0.36387434554973824,
+    "x": 139
+  },
+  "Q7c": {
+    "ci": [
+      0.01970387633946194,
+      0.16748155119074942
+    ],
+    "difference": 0.08932113568404534,
+    "fisher_p": 0.014594044167015211,
+    "groups": [
+      {
+        "denominator": 139,
+        "group": "Anaemia",
+        "preterm_events": 25,
+        "proportion": 0.17985611510791366
+      },
+      {
+        "denominator": 243,
+        "group": "No anaemia",
+        "preterm_events": 22,
+        "proportion": 0.09053497942386832
+      }
+    ],
+    "z": 2.556966994840861,
+    "z_p": 0.010558923544111731
+  },
+  "Q8a": {
+    "n": 400,
+    "r_squared": 0.13301465083528163,
+    "terms": [
+      {
+        "ci_high": 1153.7936793341623,
+        "ci_low": -122.41175287303668,
+        "coefficient": 515.6909632305628,
+        "p_value": 0.11289920188664387,
+        "std_error": 324.57855366427475,
+        "term": "Intercept"
+      },
+      {
+        "ci_high": 82.15859290136163,
+        "ci_low": 49.128645048543866,
+        "coefficient": 65.64361897495274,
+        "p_value": 4.9808701391472734e-14,
+        "std_error": 8.40053837032518,
+        "term": "gest_age"
+      }
+    ]
+  },
+  "Q8b": {
+    "adj_r_squared": 0.17431518509382127,
+    "missing_bmi_excluded": 10,
+    "n": 390,
+    "r_squared": 0.18280551738077422,
+    "terms": [
+      {
+        "ci_high": 1005.5632007846117,
+        "ci_low": -346.34993915403913,
+        "coefficient": 329.6066308152863,
+        "p_value": 0.338300528725051,
+        "std_error": 343.79795672550966,
+        "term": "Intercept"
+      },
+      {
+        "ci_high": 259.8611130474667,
+        "ci_low": 94.45542247304486,
+        "coefficient": 177.15826776025577,
+        "p_value": 3.159423498616959e-05,
+        "std_error": 42.063455683875276,
+        "term": "C(iptp3, Treatment(reference='No'))[T.Yes]"
+      },
+      {
+        "ci_high": 74.02935111034515,
+        "ci_low": 40.767252379782605,
+        "coefficient": 57.398301745063876,
+        "p_value": 4.3762912311256736e-11,
+        "std_error": 8.458710284070843,
+        "term": "gest_age"
+      },
+      {
+        "ci_high": 22.55185297183114,
+        "ci_low": 1.7642412953425843,
+        "coefficient": 12.15804713358686,
+        "p_value": 0.02198943548829969,
+        "std_error": 5.286388754165395,
+        "term": "bmi"
+      },
+      {
+        "ci_high": 44.76648666453748,
+        "ci_low": 2.463838503931594,
+        "coefficient": 23.61516258423454,
+        "p_value": 0.02874749660933741,
+        "std_error": 10.75776510490491,
+        "term": "anc_visits"
+      }
+    ]
+  },
+  "Q8c": {
+    "cooks_threshold": 0.010256410256410256,
+    "durbin_watson": 1.9872089311707544,
+    "top_cooks": [
+      0.049014111917957105,
+      0.04523631658678923,
+      0.042943720420679954,
+      0.037755383131797715,
+      0.037373246208354964
+    ]
+  },
+  "Q8d": {
+    "adj_r2_base": 0.17431518509382127,
+    "adj_r2_extended": 0.17792318336691137,
+    "aic_base": 5786.759247579495,
+    "aic_extended": 5787.02007413781,
+    "df_diff": 2,
+    "f_statistic": 1.8448598154299463,
+    "n": 390,
+    "p_value": 0.15944917874151754
+  },
+  "Q8e": {
+    "model_with_facility_urban": {
+      "mean": 3175.033131939952,
+      "mean_ci_lower": 3102.6903561212853,
+      "mean_ci_upper": 3247.3759077586187,
+      "mean_se": 36.79361969227172,
+      "obs_ci_lower": 2385.2729431910484,
+      "obs_ci_upper": 3964.7933206888556
+    },
+    "model_without_facility": {
+      "mean": 3130.851516493117,
+      "mean_ci_lower": 3078.5735023159496,
+      "mean_ci_upper": 3183.129530670284,
+      "mean_se": 26.589096480847907,
+      "obs_ci_lower": 2340.968815843883,
+      "obs_ci_upper": 3920.7342171423506
+    }
+  },
+  "Q9": {
+    "n": 382,
+    "pseudo_r_squared": 0.03797346151718073,
+    "scenario_probabilities": {
+      "anaemia": 0.209017792285372,
+      "no_anaemia": 0.1072129863178099
+    },
+    "terms": [
+      {
+        "coefficient": -1.3254501515250423,
+        "odds_ratio": 0.2656833344081682,
+        "or_ci_high": 1.49416254790415,
+        "or_ci_low": 0.04724227245640392,
+        "p_value": 0.13252137579011158,
+        "std_error": 0.8811468202533959,
+        "term": "Intercept"
+      },
+      {
+        "coefficient": -0.0024444422509004153,
+        "odds_ratio": 0.9975585429651671,
+        "or_ci_high": 1.0514039946306561,
+        "or_ci_low": 0.9464706732376077,
+        "p_value": 0.927385711280262,
+        "std_error": 0.02682235561771637,
+        "term": "age"
+      },
+      {
+        "coefficient": 0.7886745683766331,
+        "odds_ratio": 2.200477909528209,
+        "or_ci_high": 4.092640054568089,
+        "or_ci_low": 1.1831245762541511,
+        "p_value": 0.012734415270477438,
+        "std_error": 0.316595451981738,
+        "term": "anaemia"
+      },
+      {
+        "coefficient": -0.18324236394819335,
+        "odds_ratio": 0.8325663472154797,
+        "or_ci_high": 0.9903893105496615,
+        "or_ci_low": 0.6998931785027267,
+        "p_value": 0.03854572565879196,
+        "std_error": 0.08856550178656843,
+        "term": "anc_visits"
+      }
+    ]
+  }
+}
