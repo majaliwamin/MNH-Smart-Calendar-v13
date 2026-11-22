@@ -165,6 +165,24 @@ def test_footer_is_fixed_above_mobile_navigation_and_image_exports_are_available
     assert 'scale:4' in app and 'window.downloadTimetableImage=downloadTimetableImage' in app
 
 
+def test_image_exports_include_a_header_and_use_larger_fonts():
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    start = app.index("async function downloadTimetableImage")
+    end = app.index("window.downloadTimetableImage=downloadTimetableImage", start)
+    export_code = app[start:end]
+    for token in (
+        'getElementById("hd-title")',
+        'getElementById("hd-sub")',
+        'WK.label(weekOffset)',
+        'WK.range(weekOffset)',
+        "MNH SMART TIMETABLE",
+        'setProperty("--text-scale","1.85","important")',
+        'setProperty("font-size","28px","important")',
+        'exportWidth=1200',
+    ):
+        assert token in export_code, token
+
+
 def test_timetable_places_lecturer_directly_after_module_code_and_theme_reaches_footer():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")

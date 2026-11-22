@@ -1829,7 +1829,34 @@ async function downloadTimetableImage(mime){
   build();weekly.hidden=false;
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   const target=weekly.querySelector(".wrap");if(!target)throw new Error("The weekly timetable is not available.");
-  const canvas=await window.html2canvas(target,{scale:4,useCORS:true,backgroundColor:getComputedStyle(document.body).backgroundColor,logging:false,windowWidth:Math.max(document.documentElement.clientWidth,target.scrollWidth),onclone:doc=>{const cloned=doc.querySelector("#view-weekly");if(cloned)cloned.hidden=false;}});
+  const cs=getComputedStyle(document.body),variable=name=>cs.getPropertyValue(name).trim();
+  const headerTitle=(document.getElementById("hd-title")?.textContent||"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block").trim();
+  const headerSubtitle=(document.getElementById("hd-sub")?.textContent||"Academic Calendar").trim();
+  const weekLine=[WK.label(weekOffset),`Monday–Sunday, ${WK.range(weekOffset)}`].filter(Boolean).join(" · ");
+  const pageBg=cs.backgroundColor||"#0b1017",ink=variable("--text")||cs.color||"#ffffff";
+  const muted=variable("--muted")||ink,accent=variable("--gold")||"#f2c14e",panel=variable("--panel")||pageBg;
+  const exportWidth=1200;
+  const canvas=await window.html2canvas(target,{scale:4,useCORS:true,backgroundColor:pageBg,logging:false,windowWidth:Math.max(document.documentElement.clientWidth,exportWidth),onclone:doc=>{
+    const cloned=doc.querySelector("#view-weekly");if(cloned)cloned.hidden=false;
+    const wrap=doc.querySelector("#view-weekly .wrap");if(!wrap)return;
+    wrap.style.setProperty("--text-scale","1.85","important");
+    wrap.style.overflow="visible";wrap.style.width=exportWidth+"px";wrap.style.maxWidth="none";wrap.style.padding="16px";wrap.style.background=pageBg;
+    const banner=doc.createElement("div");
+    banner.style.cssText=`box-sizing:border-box;width:100%;margin:0 0 16px;padding:18px 22px;background:${panel};border:2px solid ${accent};border-radius:10px;`;
+    const brand=doc.createElement("div");brand.textContent="MNH SMART TIMETABLE";brand.style.cssText=`color:${accent};font:800 17px/1.2 Arial,Helvetica,sans-serif;letter-spacing:1.4px;`;
+    const heading=doc.createElement("div");heading.textContent=headerTitle;heading.style.cssText=`color:${ink};font:800 30px/1.15 Arial,Helvetica,sans-serif;margin-top:6px;`;
+    const meta=doc.createElement("div");meta.textContent=[headerSubtitle,weekLine].filter(Boolean).join(" · ");meta.style.cssText=`color:${muted};font:600 19px/1.35 Arial,Helvetica,sans-serif;margin-top:8px;`;
+    banner.appendChild(brand);banner.appendChild(heading);banner.appendChild(meta);wrap.insertBefore(banner,wrap.firstChild);
+    const table=wrap.querySelector("table");if(table){table.style.width=exportWidth+"px";table.style.minWidth=exportWidth+"px";table.style.maxWidth="none";}
+    wrap.querySelectorAll("thead th, tbody th, td").forEach(cell=>{cell.style.setProperty("padding","8px 6px","important");cell.style.setProperty("height","auto","important");cell.style.setProperty("white-space","normal","important");});
+    wrap.querySelectorAll(".activity").forEach(button=>{button.style.setProperty("height","auto","important");button.style.setProperty("min-height","74px","important");button.style.setProperty("padding","10px","important");button.style.setProperty("font-size","26px","important");});
+    wrap.querySelectorAll(".activity-name").forEach(node=>node.style.setProperty("font-size","28px","important"));
+    wrap.querySelectorAll(".activity-lecturer").forEach(node=>node.style.setProperty("font-size","20px","important"));
+    wrap.querySelectorAll("thead th.corner, thead th.time, tbody th.time").forEach(node=>node.style.setProperty("font-size","20px","important"));
+    wrap.querySelectorAll("thead th.daycell .day, tbody th.daycell .day").forEach(node=>node.style.setProperty("font-size","24px","important"));
+    wrap.querySelectorAll("thead th.daycell .date, tbody th.daycell .date").forEach(node=>node.style.setProperty("font-size","18px","important"));
+    wrap.querySelectorAll(".lunch-label").forEach(node=>{node.style.setProperty("font-size","20px","important");node.style.setProperty("letter-spacing","2px","important");});
+  }});
   const actualMime=mime==="image/webp"&&!canvas.toDataURL("image/webp").startsWith("data:image/webp")?"image/png":mime;
   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("The browser could not encode this image.")),actualMime,actualMime==="image/png"?undefined:.98));
   const ext=actualMime.split("/")[1],url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MNH-Smart-Calendar-Weekly-Timetable.${ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
