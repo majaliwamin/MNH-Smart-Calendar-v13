@@ -24,4 +24,4 @@ python backend\run.py
 
 The `run.ps1` helper in the project root creates and reuses a local `.venv` automatically. The application is served at `http://127.0.0.1:8000/`, API documentation at `/docs`, and the health endpoint at `/health`.
 
-The timetable supports Monday–Friday sessions only. Custom sessions use `dayIndex`, `startTime` and `endTime`; the API validates weekdays, time ordering and overlaps.
+The timetable supports Monday–Sunday sessions. Custom sessions use `dayIndex`, `startTime` and `endTime`; the API validates weekdays, time ordering and overlaps.

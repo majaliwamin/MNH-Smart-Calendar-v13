@@ -53,7 +53,7 @@ def test_alarm_system_configurations_navigation_opens_existing_alarm_controls():
     assert 'document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");})' in app
     assert 'document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"))' in app
 
-def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
+def test_weekly_calendar_is_monday_to_sunday_and_supports_custom_sessions():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     assert 'class="view-tabs"' in html
@@ -62,7 +62,8 @@ def test_weekly_calendar_is_monday_to_friday_and_supports_custom_sessions():
     assert 'class="week-nav"' in html
     assert 'id="view-my-schedule"' in html
     assert 'id="session-day"' in html and 'id="session-start"' in html and 'id="session-end"' in html
-    assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday"]' in app
+    assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]' in app
+    assert '<option value="5">Saturday</option><option value="6">Sunday</option>' in html
     assert 'dayIndex,startTime,endTime' in app
     assert 'showView("weekly")' in app
     assert 'history.replaceState(null,"",location.pathname+location.search)' in app
@@ -131,7 +132,7 @@ def test_windows_startup_helper_and_correct_teaching_dates_are_documented():
     backend = (ROOT / "backend" / "app" / "database" / "connection.py").read_text(encoding="utf-8")
     assert "backend\\run.py" in run
     assert "http://127.0.0.1:8000/docs" in run
-    assert "9–13 November 2026" in readme
+    assert "9–15 November 2026" in readme
     assert '"1_5"' not in backend
 
 
@@ -141,7 +142,7 @@ def test_month_view_renders_weekdays_only_from_the_shared_malawi_week_model():
     assert '["Mon","Tue","Wed","Thu","Fri"]' in monthly
     assert 'weekday===0||weekday===6' in monthly
     assert 'WK.startParts(weekOffset)' in monthly
-    assert 'The academic timetable displays Monday–Friday only' in monthly
+    assert 'The monthly calendar displays weekdays only; the weekly timetable includes Saturday and Sunday' in monthly
 
 
 def test_reported_flutter_lint_patterns_are_corrected():
@@ -453,7 +454,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.22-statistical-tests-glossary-v42"
+    assert build == "2026.11.22-statistical-tests-glossary-v43"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -464,7 +465,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v42"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v43"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     assert 'data-view="python-library"' in html
@@ -482,7 +483,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
-    build = "2026.11.22-statistical-tests-glossary-v42"
+    build = "2026.11.22-statistical-tests-glossary-v43"
     simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
     assert simulation_path.is_file()
     simulation = simulation_path.read_text(encoding="utf-8")
@@ -709,7 +710,7 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
-    build = "2026.11.22-statistical-tests-glossary-v42"
+    build = "2026.11.22-statistical-tests-glossary-v43"
     assert f'BUILD_ID = "{build}"' in backend_config
     assert f'window.MNH_BUILD="{build}"' in index
     assert f'const BUILD = "{build}"' in worker

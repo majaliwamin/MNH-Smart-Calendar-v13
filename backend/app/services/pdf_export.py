@@ -1,7 +1,7 @@
 """Fillable MNH Smart Timetable PDF (ReportLab AcroForm).
 
 The opening weekly timetable uses a portrait A4 page for phone viewing, with
-Monday-Friday across the top and time slots down the left. Module and register
+Monday-Sunday across the top and time slots down the left. Module and register
 pages also use portrait A4. Editable entries are real AcroForm fields.
 """
 from datetime import timedelta
@@ -74,6 +74,11 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     TIME_BG = colors.HexColor(time_hex)
     LUNCH_BG = colors.HexColor(lunch_hex)
     LUNCH_TEXT = colors.HexColor(lunch_text_hex)
+    # Distinct, readable weekend foregrounds; light themes need darker ink.
+    WEEKEND_HEADER_INK = {
+        5: colors.HexColor("#7A4A00" if theme == "white" else "#FCD34D"),
+        6: colors.HexColor("#A11737" if theme == "white" else "#FDA4AF"),
+    }
     week_start = week_start or WEEK_START
     selection = normalise_selection(selected_modules, collections)
     selected_codes = set(selection)
@@ -188,7 +193,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
         pdf.roundRect(x, bottom, card_w, card_h, 2.5 * mm, stroke=0, fill=1)
         pdf.setFillColor(PURPLE)
         pdf.roundRect(x, top_y - header_h, card_w, header_h, 2 * mm, stroke=0, fill=1)
-        pdf.setFillColor(WHITE)
+        pdf.setFillColor(WEEKEND_HEADER_INK.get(day_index, WHITE))
         set_font("Helvetica-Bold", 20)
         pdf.drawString(x + 4 * mm, top_y - 8 * mm,
                        f"{day_date.strftime('%a').upper()}  |  {day_date.strftime('%d %B %Y')}")
@@ -245,7 +250,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     table_w = width - 16 * mm
     # Give the enlarged 18 pt time ranges enough room without clipping.
     time_w = 36 * mm
-    day_w = (table_w - time_w) / 5
+    day_w = (table_w - time_w) / len(WEEKDAY_NAMES)
     header_h = 15 * mm
     # Larger editable rows remain inside the first portrait A4 page.
     row_h = 20 * mm
@@ -257,10 +262,10 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
     pdf.setFillColor(WHITE)
     set_font("Helvetica-Bold", 8)
     pdf.drawCentredString(table_x + time_w / 2, header_bottom + 8 * mm, "TIME")
-    for day_index in range(5):
+    for day_index in range(len(WEEKDAY_NAMES)):
         day_x = table_x + time_w + day_index * day_w
         day_date = week_start + timedelta(days=day_index)
-        pdf.setFillColor(WHITE)
+        pdf.setFillColor(WEEKEND_HEADER_INK.get(day_index, WHITE))
         set_font("Helvetica-Bold", 20)
         pdf.drawCentredString(day_x + day_w / 2, header_bottom + 10.5 * mm,
                               day_date.strftime("%a").upper())
@@ -299,7 +304,7 @@ def build_timetable_pdf(collections: dict, selected_modules: list | None = None,
                                   row_y + 9 * mm, "LUNCH BREAK")
             continue
 
-        for day_index in range(5):
+        for day_index in range(len(WEEKDAY_NAMES)):
             cell_x = table_x + time_w + day_index * day_w
             if day_index:
                 pdf.setStrokeColor(LINE)

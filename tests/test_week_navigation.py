@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HTML = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 APP = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
 CSS = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+SERVER_PDF = (ROOT / "backend" / "app" / "services" / "pdf_export.py").read_text(encoding="utf-8")
 
 
 def _tabs():
@@ -20,7 +21,7 @@ def test_week_control_is_in_primary_navigation_and_analytics_is_in_the_menu():
     assert HTML.index('data-view="analytics"') < HTML.index('id="view-tabs"')
     for control in ('id="week-prev"', 'id="week-next"', 'id="week-now"'):
         assert control in tabs
-    # Every label carries its own Monday–Friday date range.
+    # Every label carries its own Monday–Sunday date range.
     assert 'id="week-now-range"' in tabs
     assert "Nov 9" in tabs
 
@@ -33,7 +34,7 @@ def test_week_model_is_shared_and_loaded_before_the_app():
     assert "new Date(Date.UTC(2026, 8, 7))" in source, "numbered teaching weeks start on Monday 7 September 2026"
     schedule = (ROOT / "backend" / "app" / "services" / "schedule.py").read_text(encoding="utf-8")
     assert "WEEK_START = date(2026, 11, 9)" in schedule, "the current block begins Monday 9 November 2026"
-    assert "WEEKDAYS = 5" in source, "teaching weeks are Monday to Friday"
+    assert "WEEKDAYS = 7" in source, "teaching weeks are Monday to Sunday"
     assert 'return value === -1 ? "Orientation Week" : "Week " + (value + 1);' in source
 
 
@@ -48,11 +49,13 @@ def test_week_dates_are_generated_not_hardcoded():
 
 
 def test_pdf_export_follows_the_selected_week():
-    assert 'txt("Weekly Schedule · Monday–Friday, 9–13 Nov 2026"' not in APP, "the PDF header must not be hardcoded"
+    assert 'txt("Weekly Schedule · Monday–Sunday, 9–15 Nov 2026"' not in APP, "the PDF header must not be hardcoded"
     assert "WK.label(weekOffset)" in APP and "WK.range(weekOffset)" in APP
     assert "WK.isoMonday(weekOffset)" in APP, "the PDF file name must be based on the selected week"
     assert "MNH-PhD-Timetable-" in APP
     assert "MNH-PhD-Weekly-Calendar.pdf" not in APP
+    assert "day_w = (table_w - time_w) / len(WEEKDAY_NAMES)" in SERVER_PDF
+    assert SERVER_PDF.count("range(len(WEEKDAY_NAMES))") >= 2
 
 
 def test_pdf_reads_the_button_cells_that_the_grid_actually_renders():
@@ -87,3 +90,24 @@ def test_other_views_use_the_selected_week_dates():
     assert "todayIndexFor(weekOffset)" in APP, "the schedule cards must highlight today inside the selected week"
     assert "dayEntries(c,WK.currentOffset())" in APP, "the header bell always describes the real current week"
     assert 'id="schedule-lead"' in HTML
+
+
+def test_saturday_and_sunday_have_separate_readable_foreground_colours():
+    assert 'const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]' in APP
+    assert 'weekendClass=index=>index===5?"weekend-saturday":index===6?"weekend-sunday":""' in APP
+    assert 'th.className="daycell "+weekendClass(c)' in APP
+    assert 'td.className=weekendClass(dayIndex)' in APP
+    assert "--saturday-ink:#ffd166;--sunday-ink:#ff9db0" in CSS
+    assert 'body[data-theme="white"],body[data-theme="red"]{--saturday-ink:#7a4a00;--sunday-ink:#a11737}' in CSS
+    assert "#view-weekly thead th.daycell.weekend-saturday:not(.today-day)" in CSS
+    assert "#view-weekly thead th.daycell.weekend-sunday:not(.today-day)" in CSS
+    assert "#view-weekly tbody td.weekend-saturday .activity.day-ink" in CSS
+    assert "#view-weekly tbody td.weekend-sunday .activity.day-ink" in CSS
+    assert "thead th.daycell.today-day.weekend-saturday{color:var(--saturday-ink)!important}" in CSS
+    assert "thead th.daycell.today-day.weekend-sunday{color:var(--sunday-ink)!important}" in CSS
+    assert 'const cssVar=(n,el=document.documentElement)=>getComputedStyle(el).getPropertyValue(n).trim()' in APP
+    assert 'const acroColor=c=>({ch1:c[0],ch2:c[1],ch3:c[2]})' in APP
+    assert "f.color=acroColor(cellInk)" in APP
+    assert 'cssVar("--saturday-ink",document.body)' in APP
+    assert 'cssVar("--sunday-ink",document.body)' in APP
+    assert "WEEKEND_HEADER_INK" in SERVER_PDF

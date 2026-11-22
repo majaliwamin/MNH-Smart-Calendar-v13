@@ -29,8 +29,10 @@ COLLECTIONS = {
     "cells": {
         "0_0": {"code": "PNIM-8100", "title": "Immunology tutorial", "timeLabel": "08:00–10:00", "weekStart": "2026-11-09"},
         "s-custom": {"dayIndex": 2, "startTime": "14:15", "endTime": "16:05", "code": "MIPN 8100", "title": "Imaging lab", "weekStart": "2026-11-09"},
-        "s-sat": {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "code": "PNIM-8100", "title": "Saturday class"},
-        "6_6": {"code": "Legacy", "timeLabel": "19:00–21:00"},   # legacy day index 6 -> ignored
+        "s-sat": {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "code": "PNIM-8100", "title": "Saturday class", "weekStart": "2026-11-09"},
+        "s-sun": {"dayIndex": 6, "startTime": "10:00", "endTime": "11:00", "code": "PNIM-8100", "title": "Sunday class", "weekStart": "2026-11-09"},
+        "6_7": {"code": "Legacy", "timeLabel": "19:00–21:00"},   # legacy day index 7 -> out of range
+        "s-out-of-range": {"dayIndex": 7, "startTime": "09:00", "endTime": "10:00", "title": "Out of range", "weekStart": "2026-11-09"},
     },
     "recurring": {
         "journal-club": {"title": "Journal Club", "day": "Tuesday", "time": "13:00–14:00"},
@@ -39,11 +41,11 @@ COLLECTIONS = {
 }
 
 
-def test_teaching_week_dates_are_monday_to_friday():
+def test_teaching_week_dates_are_monday_to_sunday():
     assert schedule.WEEK_START == date(2026, 11, 9)
     assert schedule.WEEK_START.strftime("%A") == "Monday"
-    assert date(2026, 11, 13).strftime("%A") == "Friday"
-    assert schedule.WEEKDAY_NAMES == ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+    assert date(2026, 11, 15).strftime("%A") == "Sunday"
+    assert schedule.WEEKDAY_NAMES == ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 
 def test_initials_ignore_professional_titles():
@@ -53,12 +55,16 @@ def test_initials_ignore_professional_titles():
     assert schedule.initials("Dr D. Mzinza") != "DD"
 
 
-def test_saturday_and_out_of_range_cells_are_never_resolved():
+def test_weekend_cells_resolve_but_out_of_range_cells_never_do():
     sessions = schedule.sessions_from_collections(COLLECTIONS)
     assert {s["weekday"] for s in sessions} <= set(schedule.WEEKDAY_NAMES)
-    assert "Saturday class" not in {s["activity"] for s in sessions}
-    assert schedule.cell_interval("x", {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00"}) is None
-    assert schedule.cell_interval("6_6", {"timeLabel": "19:00–21:00"}) is None
+    activities = {s["activity"] for s in sessions}
+    assert "Saturday class" in activities and "Sunday class" in activities
+    assert "Out of range" not in activities
+    assert schedule.cell_interval("x", {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00"}) is not None
+    assert schedule.cell_interval("x", {"dayIndex": 6, "startTime": "09:00", "endTime": "10:00"}) is not None
+    assert schedule.cell_interval("x", {"dayIndex": 7, "startTime": "09:00", "endTime": "10:00"}) is None
+    assert schedule.cell_interval("6_7", {"timeLabel": "19:00–21:00"}) is None
 
 
 def test_lecturer_comes_from_module_and_facilitator_records_without_inventing():
@@ -76,7 +82,7 @@ def test_custom_times_are_preserved_and_sorted():
     assert keys == sorted(keys)
 
 
-def test_excel_workbook_is_valid_monday_to_friday_with_half_height_merged_lunch_row():
+def test_excel_workbook_is_valid_monday_to_sunday_with_half_height_merged_lunch_row():
     import openpyxl
     payload = build_timetable_workbook(COLLECTIONS)
     assert payload[:2] == b"PK"                       # a real .xlsx (zip) container
@@ -86,10 +92,12 @@ def test_excel_workbook_is_valid_monday_to_friday_with_half_height_merged_lunch_
     assert [h.split("\n")[0] for h in header] == list(schedule.WEEKDAY_NAMES)
     assert "3rd Block" in str(ws["A1"].value)
     everything = " ".join(str(c.value) for sheet in wb for row in sheet.iter_rows() for c in row if c.value).lower()
-    assert "saturday" not in everything and "sat," not in everything
+    assert "saturday" in everything and "sunday" in everything
+    assert str(ws.cell(2, 7).font.color.rgb).endswith("FCD34D")
+    assert str(ws.cell(2, 8).font.color.rgb).endswith("FDA4AF")
     # The header band is the only merged part; the timetable itself is a plain grid.
     merged = {str(m) for m in ws.merged_cells.ranges}
-    assert merged == {"A1:F1"}
+    assert merged == {"A1:H1"}
     body_merges = [m for m in merged if any(int(c) >= 4 for c in __import__("re").findall(r"[0-9]+", m))]
     assert body_merges == [], f"body cells must stay ordinary cells, found {body_merges}"
     lunch_rows = [r for r in range(3, ws.max_row + 1) if "lunch" in str(ws.cell(r, 1).value).replace(" ", "").lower()]
@@ -111,16 +119,17 @@ def test_database_migration_flags_but_never_deletes_non_weekday_records():
         try:
             first = conn_module.connect()
             first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('cells','old-sat',?,0)", (json.dumps({"dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "code": "X"}),))
+            first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('cells','old-over',?,0)", (json.dumps({"dayIndex": 7, "startTime": "09:00", "endTime": "10:00", "code": "X"}),))
             first.execute("INSERT INTO docs(col,id,data,updated_at) VALUES('recurring','sat-club',?,0)", (json.dumps({"title": "Club", "day": "Saturday"}),))
             first.commit(); first.close()
             second = conn_module.connect()
-            kept = {r["id"] for r in second.execute("SELECT id FROM docs WHERE id IN ('old-sat','sat-club')")}
+            kept = {r["id"] for r in second.execute("SELECT id FROM docs WHERE id IN ('old-sat','old-over','sat-club')")}
             flagged = json.loads(second.execute("SELECT value FROM app_meta WHERE key='flagged_non_weekday_records'").fetchone()["value"])
             second.close()
         finally:
             conn_module.DATABASE_PATH, conn_module.ensure_directories = original
-    assert kept == {"old-sat"}  # non-weekday timetable cells are retained; extra recurring records are removed
-    assert {f["id"] for f in flagged} == {"old-sat"}
+    assert kept == {"old-sat", "old-over", "sat-club"}  # weekend records are retained, never silently deleted
+    assert {f["id"] for f in flagged} == {"old-over"}
 
 
 def _clean_env(*names):
@@ -225,6 +234,10 @@ def test_fillable_pdf_is_a3_landscape_and_contains_selected_module_lecturer():
             decoded_streams.append(stream)
     searchable_pdf = payload + b" ".join(decoded_streams)
     assert b"Seminar in MNH" in searchable_pdf and b"Journal Club" in searchable_pdf
+    # Every weekday gets a real AcroForm cell, including Saturday and Sunday.
+    for day_index in range(7):
+        field = f"wk_{day_index}_480".encode()
+        assert field in payload, f"weekday field {field.decode()} is missing from the PDF"
     assert re.search(rb"/MediaBox\s*\[\s*0\s+0\s+595\.\d+\s+841\.\d+\s*\]", payload)
 
 

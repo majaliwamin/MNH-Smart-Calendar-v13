@@ -132,14 +132,22 @@ def test_custom_session_times_are_validated_and_saved(monkeypatch, tmp_path):
         assert valid.status_code == 200
 
 
-def test_saturday_cells_are_rejected(monkeypatch, tmp_path):
+def test_weekend_cells_are_accepted_and_out_of_range_days_are_rejected(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
         client.post("/api/auth", json={"password": "rep"})
-        response = client.put("/api/doc/cells/session-saturday", json={
+        saturday = client.put("/api/doc/cells/session-saturday", json={
             "dayIndex": 5, "startTime": "09:00", "endTime": "10:00", "title": "Saturday"
         })
-        assert response.status_code == 400
+        sunday = client.put("/api/doc/cells/session-sunday", json={
+            "dayIndex": 6, "startTime": "09:00", "endTime": "10:00", "title": "Sunday"
+        })
+        out_of_range = client.put("/api/doc/cells/session-out-of-range", json={
+            "dayIndex": 7, "startTime": "09:00", "endTime": "10:00", "title": "Out of range"
+        })
+        assert saturday.status_code == 200
+        assert sunday.status_code == 200
+        assert out_of_range.status_code == 400
 
 
 def test_custom_session_overlap_is_rejected(monkeypatch, tmp_path):
@@ -156,13 +164,35 @@ def test_custom_session_overlap_is_rejected(monkeypatch, tmp_path):
         assert overlap.status_code == 409
 
 
-def test_database_migration_keeps_and_flags_non_weekday_timetable_records(monkeypatch, tmp_path):
+def test_weekend_session_overlaps_preserved_recurring_activity(monkeypatch, tmp_path):
+    configure_test_storage(monkeypatch, tmp_path)
+    with TestClient(app) as client:
+        client.post("/api/auth", json={"password": "rep"})
+        with connection.database() as c:
+            c.execute(
+                "INSERT OR REPLACE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+                ("recurring", "rec-sat", json.dumps({
+                    "title": "Saturday activity", "day": "Saturday", "time": "10:00–11:00"
+                }), 1),
+            )
+        response = client.put("/api/doc/cells/session-saturday", json={
+            "dayIndex": 5, "startTime": "10:30", "endTime": "11:30", "title": "Other"
+        })
+        assert response.status_code == 409
+        assert "Saturday activity" in response.json()["error"]
+
+
+def test_database_migration_keeps_weekend_records_and_flags_out_of_range(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
         with connection.database() as c:
             c.execute(
                 "INSERT OR REPLACE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
                 ("cells", "session-old-saturday", json.dumps({"dayIndex": 5, "title": "Old Saturday"}), 1),
+            )
+            c.execute(
+                "INSERT OR REPLACE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+                ("cells", "session-out-of-range", json.dumps({"dayIndex": 7, "title": "Out of range"}), 1),
             )
             c.execute(
                 "INSERT OR REPLACE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
@@ -173,13 +203,16 @@ def test_database_migration_keeps_and_flags_non_weekday_timetable_records(monkey
         ids = {row["id"] for row in rows}
         # Historical data is preserved (never silently deleted) ...
         assert "session-old-saturday" in ids
+        assert "session-out-of-range" in ids
         assert "session-friday" in ids
-        # ... but flagged for review and excluded from every Monday–Friday view and export.
+        # ... but out-of-range cells are flagged for review and excluded from every view and export.
         with connection.database() as c:
             flagged = json.loads(c.execute("SELECT value FROM app_meta WHERE key='flagged_non_weekday_records'").fetchone()[0])
-        assert "session-old-saturday" in {item["id"] for item in flagged}
+        assert "session-out-of-range" in {item["id"] for item in flagged}
+        assert "session-old-saturday" not in {item["id"] for item in flagged}
         from app.services.schedule import cell_interval
-        assert cell_interval("session-old-saturday", {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00"}) is None
+        assert cell_interval("session-old-saturday", {"dayIndex": 5, "startTime": "09:00", "endTime": "10:00"}) is not None
+        assert cell_interval("session-out-of-range", {"dayIndex": 7, "startTime": "09:00", "endTime": "10:00"}) is None
 
 
 def test_restore_rejects_overlapping_custom_sessions_without_erasing_data(monkeypatch, tmp_path):
@@ -202,7 +235,7 @@ def test_restore_rejects_overlapping_custom_sessions_without_erasing_data(monkey
         assert any(row["id"] == "session-kept" for row in rows)
 
 
-def test_recurring_saturday_records_are_rejected_and_legacy_records_are_deleted_with_audit(monkeypatch, tmp_path):
+def test_recurring_saturday_records_cannot_be_added_but_legacy_records_are_preserved(monkeypatch, tmp_path):
     configure_test_storage(monkeypatch, tmp_path)
     with TestClient(app) as client:
         rejected = client.put("/api/doc/recurring/rec-sat", json={
@@ -216,15 +249,12 @@ def test_recurring_saturday_records_are_rejected_and_legacy_records_are_deleted_
             )
         client.get("/api/health")
         rows = client.get("/api/col/recurring").json()
-        assert "rec-old-sat" not in {row["id"] for row in rows}
+        assert "rec-old-sat" in {row["id"] for row in rows}
         with connection.database() as c:
             audit = c.execute(
                 "SELECT action,collection,item_id FROM audit WHERE item_id='rec-old-sat'"
             ).fetchone()
-        assert audit is not None
-        assert (audit["action"], audit["collection"], audit["item_id"]) == (
-            "migration_deleted", "recurring", "rec-old-sat"
-        )
+        assert audit is None
 
 
 def test_restore_rejects_saturday_recurring_activity_without_erasing_data(monkeypatch, tmp_path):
@@ -328,14 +358,15 @@ def test_excel_timetable_export_is_editable_and_navigable(monkeypatch, tmp_path)
         assert workbook.sheetnames == ["Weekly Timetable", "Session Details", "Module Directory", "Read Me"]
         weekly = workbook["Weekly Timetable"]
         details = workbook["Session Details"]
-        assert all("Saturday" not in str(weekly.cell(3, col).value) for col in range(1, 7))
+        headers = [str(weekly.cell(2, col).value).split("\n")[0] for col in range(1, 9)]
+        assert all(name in headers for name in ("Saturday", "Sunday"))
         assert details[3][5].value == "MIPN 8100"
         assert details[3][6].value == "Medical Imaging in Pregnancy and Neonates"
         assert details[3][7].value == "Dr Example"
         assert weekly["B3"].hyperlink is not None                 # session cell -> Session Details
         assert details.cell(3, 1).hyperlink is not None           # Session Details -> its weekly cell
         assert any("Lunch" in str(weekly.cell(row, 1).value).replace(" ", "") for row in range(4, weekly.max_row + 1))
-        assert "A1:F1" in {str(m) for m in weekly.merged_cells.ranges}   # header row merged across the table
+        assert "A1:H1" in {str(m) for m in weekly.merged_cells.ranges}   # header row merged across the table
         assert details.auto_filter.ref
         details.cell(3, 8).value = "Edited lecturer"
         assert details.cell(3, 8).value == "Edited lecturer"

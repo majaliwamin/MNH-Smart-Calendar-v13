@@ -64,3 +64,11 @@ The existing analytics implementation and dashboard calculations were retained. 
 - Non-weekday records are flagged, no longer deleted.
 - Facilitator initials ignore titles; photos accept common formats.
 - Not verified: Flutter (no SDK), real-browser rendering, Windows startup.
+
+## v43 (22 Nov 2026) — seven-day weekly timetable
+
+- The weekly web/PWA timetable now runs Monday–Sunday; the monthly calendar remains a five-column weekday view.
+- Saturday and Sunday have separate foreground tokens (`#ffd166` / `#ff9db0`, with darker light-theme values) on headers, empty cells and saved entries that do not carry a custom colour.
+- Session creation, cloud filtering, analytics, Excel/PDF exports and week navigation now cover all seven days. Out-of-range day index 7 is still rejected and flagged for review.
+- Legacy Saturday timetable and recurring records are retained instead of being deleted or flagged during startup migration. The two managed programme events remain fixed to Tuesday and Thursday.
+- Build metadata moved to `2026.11.22-statistical-tests-glossary-v43` across the app, service worker and generated glossary.

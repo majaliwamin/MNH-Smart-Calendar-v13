@@ -58,3 +58,9 @@ Open `http://127.0.0.1:8000/`. API docs are at `http://127.0.0.1:8000/docs`. Do 
 - Browser JavaScript syntax and server-served assets were checked. The automated headless browser attempt did not complete, so user acceptance testing in Chrome/Edge remains necessary.
 - Analytics calculations remain the existing friend-authored implementation; only the API authorization gate and client role checks were aligned. Attendance/missed-session metrics remain unavailable until attendance records exist.
 - The academic teaching week remains explicitly fixed to 9–13 November 2026. The date is not fabricated or shifted dynamically.
+
+## v43 update (22 Nov 2026)
+
+- Supersedes the original five-day audit decision for the web/PWA weekly timetable only: it now runs Monday–Sunday, with distinct Saturday and Sunday foregrounds. The monthly calendar remains weekdays-only.
+- Weekend timetable cells and legacy weekend recurring records are preserved; only out-of-range day index 7 is rejected/flagged.
+- The Flutter source still contains its own five-day timetable implementation and was not changed in v43.

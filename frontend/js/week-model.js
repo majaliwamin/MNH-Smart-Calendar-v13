@@ -1,6 +1,6 @@
 /*!
  * MNH academic week model — Malawi-local date and time is the single source of truth.
- * Orientation is 31 August–4 September; numbered teaching weeks run Monday–Friday from 7 September through 18 December 2026.
+ * Orientation is 31 August–4 September; numbered teaching weeks run Monday–Sunday from 7 September through 20 December 2026.
  * The displayed academic week follows the real current week and advances each Monday in Malawi.
  */
 (function (root, factory) {
@@ -13,7 +13,7 @@
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const FIRST_MONDAY = new Date(Date.UTC(2026, 8, 7));
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const WEEKDAYS = 5;
+  const WEEKDAYS = 7;
   const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const zoneFormatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: TIME_ZONE, calendar: "gregory", numberingSystem: "latn",
@@ -89,9 +89,7 @@
   function currentOffset() {
     const now = localNow(), today = Date.UTC(now.year, now.month, now.day);
     let mondayOfToday = today - ((now.weekday + 6) % 7) * DAY_MS;
-    // Keep the current teaching week through Friday; roll forward as soon as
-    // Friday ends (Saturday 00:00 Malawi time), not on Monday morning.
-    if (now.weekday === 6 || now.weekday === 0) mondayOfToday += 7 * DAY_MS;
+    // The displayed week includes Saturday and Sunday, so it advances on Monday.
     const first = Date.UTC(FIRST_MONDAY.getUTCFullYear(), FIRST_MONDAY.getUTCMonth(), FIRST_MONDAY.getUTCDate());
     return Math.floor((mondayOfToday - first) / (DAY_MS * 7));
   }

@@ -5,7 +5,8 @@ let weekOffset=WK.currentOffset();
 let autoWeekOffset=weekOffset;
 let dates=WK.dateLabels(weekOffset);
 const LEGACY_ROW_MAP={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:6};
-const days=["Monday","Tuesday","Wednesday","Thursday","Friday"];
+const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const weekendClass=index=>index===5?"weekend-saturday":index===6?"weekend-sunday":"";
 let modules={
  "MIPN 8100":{title:"Medical Imaging in Pregnancy and Neonates",facilitator:"Not specified"},
  "ARMN – 8100":{title:"Antimicrobial Resistance in Maternal & Neonatal Health",facilitator:"G Bandawe"},
@@ -67,8 +68,8 @@ function getSessionEntries(offset=weekOffset){
   if(!recordBelongsToWeek(id,data))return;
   let dayIndex,startTime,endTime,rowIndex=-1;
   const legacy=/^(\d+)_(\d+)$/.exec(id);
-  if(legacy){rowIndex=+legacy[1];dayIndex=+legacy[2];if(dayIndex<0||dayIndex>=5||rowIndex<0||rowIndex>=times.length)return;}
-  else {dayIndex=Number(data.dayIndex);if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5)return;}
+  if(legacy){rowIndex=+legacy[1];dayIndex=+legacy[2];if(dayIndex<0||dayIndex>=days.length||rowIndex<0||rowIndex>=times.length)return;}
+  else {dayIndex=Number(data.dayIndex);if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=days.length)return;}
   const fromLabel=parseRange(data.timeLabel);
   const fallback=legacy?defaultRange(rowIndex):{startTime:"08:00",endTime:"10:00"};
   startTime=String(data.startTime||fromLabel?.startTime||fallback.startTime);
@@ -283,7 +284,7 @@ function build(){
  const slotStarts=defaultSlots.filter(s=>parseClock(s.startTime)!==LUNCH_START).map(s=>s.startTime);
  const starts=[...new Set([...slotStarts,...entries.map(x=>x.startTime)])].sort((a,b)=>parseClock(a)-parseClock(b));
  const hr=document.createElement("tr"),corner=document.createElement("th");corner.className="corner";corner.textContent="Time";hr.appendChild(corner);
- days.forEach((day,c)=>{const th=document.createElement("th");th.className="daycell";th.dataset.dayIndex=String(c);th.scope="col";th.innerHTML=`<span class="day"><span class="dfull">${day}</span><span class="dshort">${day.slice(0,3)}</span></span><span class="date">${dates[c]}</span>`;hr.appendChild(th);});thead.appendChild(hr);
+ days.forEach((day,c)=>{const th=document.createElement("th");th.className="daycell "+weekendClass(c);th.dataset.dayIndex=String(c);th.scope="col";th.innerHTML=`<span class="day"><span class="dfull">${day}</span><span class="dshort">${day.slice(0,3)}</span></span><span class="date">${dates[c]}</span>`;hr.appendChild(th);});thead.appendChild(hr);
  starts.forEach((start,index)=>{
   if(!lunchDone&&parseClock(start)>=LUNCH_START)appendLunchRow();
   const tr=document.createElement("tr");tr.dataset.startTime=start;
@@ -291,9 +292,9 @@ function build(){
   const th=document.createElement("th");th.className="time"+(selectedTime===index?" highlight":"");th.scope="row";th.textContent=interval;th.tabIndex=0;th.setAttribute("role","button");th.setAttribute("aria-label",`Highlight the ${interval} row`);
   const toggle=()=>{selectedTime=selectedTime===index?-1:index;tbody.querySelectorAll("th.time:not(.lunch-time)").forEach((node,i)=>node.classList.toggle("highlight",i===selectedTime));};th.addEventListener("click",toggle);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});tr.appendChild(th);
   days.forEach((day,dayIndex)=>{
-   const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
+   const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.className=weekendClass(dayIndex);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${day}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${day} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}else if(weekendClass(dayIndex)){area.classList.add("day-ink");}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
    else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
@@ -340,7 +341,7 @@ function load(){
    state={...state,...parsed,cells:{...(parsed.cells||{})}};
    // Discard only the exact legacy hardcoded programme slots; keep genuine user-created sessions.
    ["1_0","6_0","6_1","0_2","3_2","1_3","2_3","6_3","0_4","3_4"].forEach(id=>delete state.cells[id]);
-   Object.entries(state.cells).forEach(([id,v])=>{if((/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=5)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=5))delete state.cells[id];});
+   Object.entries(state.cells).forEach(([id,v])=>{if((/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=days.length)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=days.length))delete state.cells[id];});
    // Migrate known legacy free-text module labels into structured entries.
    Object.entries(state.cells).forEach(([id,v])=>{if(v&&typeof v==="object"&&!v.weekStart)v.weekStart="2026-11-16";});
    Object.entries(state.cells).forEach(([k,v])=>{
@@ -424,7 +425,7 @@ document.getElementById("apply-module").addEventListener("click",async()=>{
  if(!editingUnlocked||!activeCell)return;
  const dayIndex=Number(document.getElementById("session-day").value),startTime=document.getElementById("session-start").value,endTime=document.getElementById("session-end").value;
  const start=parseClock(startTime),end=parseClock(endTime);
- if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=5||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a weekday and a valid end time later than the start time.";return;}
+ if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=days.length||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a valid timetable day and an end time later than the start time.";return;}
  const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
  const deliveryMode=document.getElementById("module-mode").value;
  const meetingInput=document.getElementById("session-link").value.trim(),meetingUrl=meetingInput?safeUrl(meetingInput):"";
@@ -468,7 +469,7 @@ document.getElementById("import-file").addEventListener("change",async e=>{
   }
   if(!obj||typeof obj.cells!=="object")throw new Error("bad");
   let cells=obj.cells;if(obj.version!==3)cells=remapLegacyCells(cells);
-  const clean={};Object.entries(cells).forEach(([k,v])=>{if(!validKey(k)||k==="2_1"||(/^\d+_\d+$/.test(k)&&+k.split("_")[1]>=5)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=5))return;const c=cleanCell(v);if(c.code||c.text||c.title)clean[k]=c;});
+  const clean={};Object.entries(cells).forEach(([k,v])=>{if(!validKey(k)||k==="2_1"||(/^\d+_\d+$/.test(k)&&+k.split("_")[1]>=days.length)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=days.length))return;const c=cleanCell(v);if(c.code||c.text||c.title)clean[k]=c;});
   state.cells=clean;build();await syncAll("Backup restored and saved.");
  }catch(err){statusEl.className="status error";statusEl.textContent=err.message||"That file isn’t a valid timetable backup.";}
 });
@@ -482,11 +483,13 @@ async function downloadPdf(){
   const pdf=new J({orientation:portrait?"p":"l",unit:"mm",format:"a4",compress:true});
   const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight(),M=8;
   const rgb=v=>{const m=/rgba?\(([^)]+)\)/.exec(v||"");if(!m)return null;const a=m[1].split(",").map(x=>parseFloat(x));return(a.length>3&&a[3]<.5)?null:a.slice(0,3).map(Math.round);};
-  const hex=c=>"#"+c.map(x=>x.toString(16).padStart(2,"0")).join("");
+  const acroColor=c=>({ch1:c[0],ch2:c[1],ch3:c[2]});
   const cs=(el,p)=>getComputedStyle(el)[p];
   const page=rgb(cs(document.body,"backgroundColor"))||[6,19,38];
-  const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const cssVar=(n,el=document.documentElement)=>getComputedStyle(el).getPropertyValue(n).trim();
   const parse=c=>{const r=rgb(c);if(r)return r;const h=String(c||"").replace("#","").trim();if(h.length>=6){const n=parseInt(h.slice(0,6),16);return[(n>>16)&255,(n>>8)&255,n&255];}return null;};
+  // Read from body so light-theme overrides are honoured in the exported PDF.
+  const weekendInk=[parse(cssVar("--saturday-ink",document.body))||[255,209,102],parse(cssVar("--sunday-ink",document.body))||[255,157,176]];
   const line=parse(cssVar("--gridline"))||[120,135,150];
   const ink=rgb(cs(document.body,"color"))||[255,255,255];
   const cyan=ink,white=ink;
@@ -499,7 +502,7 @@ async function downloadPdf(){
   // title
   pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?13:16);pdf.setTextColor(...white);
   txt(document.getElementById("hd-title").textContent,M,M+5);
-  pdf.setFontSize(portrait?9.5:11.5);pdf.setTextColor(...cyan);txt("Dashboard · "+WK.label(weekOffset)+" · Monday–Friday, "+WK.range(weekOffset),M,M+10.5);
+  pdf.setFontSize(portrait?9.5:11.5);pdf.setTextColor(...cyan);txt("Dashboard · "+WK.label(weekOffset)+" · Monday–Sunday, "+WK.range(weekOffset),M,M+10.5);
   const top=M+14,foot=9,cw0=portrait?22:30,hh=portrait?13:12;
   const rows=[...tbody.querySelectorAll("tr")],nr=rows.length,nc=days.length;
   const cw=(PW-2*M-cw0)/nc,rh=(PH-top-M-foot-hh)/nr;
@@ -514,13 +517,14 @@ async function downloadPdf(){
     txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});
    }else{
     const c=i-1;
-    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...inkOn(hBg));
+    const headerInk=weekendInk[c-5]||rgb(cs(th,"color"))||inkOn(hBg);
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...headerInk);
     txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
-    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...headerInk);
     txt(dates[c],x+w/2,top+hh/2+4,{align:"center"});
    }
   });
-  // Keep Monday–Friday together in one timetable header row on the first page.
+  // Keep Monday–Sunday together in one timetable header row on the first page.
   // The weekday columns are already drawn above; do not split them into separate pages.
   // Rows are allocated the full printable page height for taller, more readable export cells.
   let editable=true;
@@ -573,9 +577,9 @@ async function downloadPdf(){
       // Default edit font size: 18pt, so typed entries stay legible in desktop
       // viewers and in Google Drive's PDF editor.
       f.fontSize=18;f.fontName="Helvetica";
-      // jsPDF AcroForm expects RGB arrays for field appearance colours.
-      // Hex strings can produce blank/invisible text after the PDF is saved.
-      f.color=cellInk.slice();f.backgroundColor=fill.slice();f.borderColor=line.slice();
+      // jsPDF AcroForm encodes colours from ch1/ch2/ch3 objects; plain arrays
+      // throw inside encodeColorString and leave field text without an appearance.
+      f.color=acroColor(cellInk);f.backgroundColor=acroColor(fill);f.borderColor=acroColor(line);
       f.borderWidth=.25;f.required=false;
       try{f.quadding=1;}catch(e){}
       try{f.textAlign="center";}catch(e){}
@@ -586,7 +590,7 @@ async function downloadPdf(){
   });
   pdf.setFont("helvetica","normal");pdf.setFontSize(9);pdf.setTextColor(...cyan);
   txt("Penrose ScholarMw · Your academic partner for excellence",M,PH-M+1);
-  txt("Monday–Friday timetable · Fill empty cells to complete the schedule",PW-M,PH-M+1,{align:"right"});
+  txt("Monday–Sunday timetable · Fill empty cells to complete the schedule",PW-M,PH-M+1,{align:"right"});
   pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
   const blob=pdf.output("blob"),name="MNH-PhD-Timetable-"+WK.isoMonday(weekOffset)+"-"+(weekOffset===0?"this-week":"week-"+weekOffset)+".pdf";
   const url=URL.createObjectURL(blob),l=document.createElement("a");l.href=url;l.download=name;l.click();setTimeout(()=>URL.revokeObjectURL(url),4000);statusEl.className="status ok";statusEl.textContent="PDF ready.";
@@ -599,7 +603,7 @@ const syncEl=document.getElementById("sync");
 let cloud=null,syncing=false;
 function setSync(t){if(syncEl)syncEl.textContent=t;}
 function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
-function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<5)||/^session-[A-Za-z0-9-]+$/.test(k);}
+function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<days.length)||/^session-[A-Za-z0-9-]+$/.test(k);}
 function writeFailed(e){
  try{saveState();}catch(x){}
  if(e&&e.queued){
@@ -631,7 +635,7 @@ async function syncAll(okMsg){
   const want={...state.cells};
   const snap=await cloud.collection("cells").get();
   const existing=snap.docs.map(d=>d.id);
-  for(const [id,v] of Object.entries(want)){if(!validKey(id)||(/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=5)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=5))continue;await cloud.doc("cells/"+id).set({...cleanCell(v),updatedAt:Date.now()});}
+  for(const [id,v] of Object.entries(want)){if(!validKey(id)||(/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=days.length)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=days.length))continue;await cloud.doc("cells/"+id).set({...cleanCell(v),updatedAt:Date.now()});}
   for(const id of existing){if(!(id in want))await cloud.doc("cells/"+id).delete();}
   state.fromCloud=true;try{saveState();}catch(e){}
   setSync("Shared timetable · saved");statusEl.className="status ok";statusEl.textContent=okMsg||"Saved for everyone.";
@@ -648,7 +652,7 @@ async function onCells(snap){
  if(syncing||weekMigrationRunning)return;
  // Offline collection caches are never authoritative; wait for a live server snapshot.
  if(snap.metadata&&snap.metadata.fromCache)return;
- const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart||legacyMigrationSkipped.has(d.id))return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<5;});
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart||legacyMigrationSkipped.has(d.id))return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=days.length))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<days.length;});
  if(legacyDocs.length){
   weekMigrationRunning=true;
   const migrated=[],blocked=[];
@@ -656,7 +660,7 @@ async function onCells(snap){
    for(const doc of legacyDocs){
     const raw=doc.data()||{};
     const legacy=/^(\d+)_(\d+)$/.exec(doc.id);
-    if((legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=5))||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))continue;
+    if((legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=days.length))||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=days.length))continue;
     const suffix=doc.id.replace(/^session-/i,"").replace(/[^A-Za-z0-9-]+/g,"-").replace(/-+/g,"-").slice(0,70)||"legacy";
     const newId=`session-2026-11-16-import-${suffix}`;
     const migratedData={...(state.cells[doc.id]||{}),...raw,weekStart:"2026-11-16"};
@@ -690,7 +694,7 @@ async function onCells(snap){
   }
  }
  const remote={};
- snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=5)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=5))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
+ snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=days.length)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=days.length))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
  // A successful server snapshot is authoritative, including an empty collection.
  // This clears obsolete per-browser timetable rows instead of preserving them indefinitely.
  state.cells=remote;state.fromCloud=true;
@@ -1127,7 +1131,7 @@ function renderMonthly(){
   grid.appendChild(cell);
  }
  card.appendChild(grid);root.appendChild(card);
- root.appendChild(el("p","muted","The academic timetable displays Monday–Friday only. Its dated week follows the Malawi local calendar and advances automatically each Monday."));
+ root.appendChild(el("p","muted","The monthly calendar displays weekdays only; the weekly timetable includes Saturday and Sunday. Its dated week follows the Malawi local calendar and advances each Monday."));
 }
 function localActivityDate(dateText,timeText){
  const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText||"").trim());
@@ -1161,7 +1165,7 @@ function upcomingItemButton(item){
 async function getFutureActivities(){
  const now=Date.now(),local=WK.localNow(),items=[];
  // Weekly timetable entries are dated against the current Malawi-local academic week.
- for(let day=0;day<5;day++){
+ for(let day=0;day<days.length;day++){
   dayEntries(day,WK.currentOffset()).forEach(session=>{
    if(session.data?.recurring)return; // Recurring activities are sourced once from the shared recurring collection.
    if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
@@ -2155,7 +2159,7 @@ function buildAnalyticsInsights(d){
 function buildAnalyticsReport(data,d){
  const report=el("section","ana-report");report.hidden=true;
  report.appendChild(el("h3",null,"Detailed Analytics Report"));
- report.appendChild(el("p","ana-note","Reporting period: "+d.reportingPeriod+". Timetable figures describe the saved Monday–Friday template unless a dated record is stated."));
+ report.appendChild(el("p","ana-note","Reporting period: "+d.reportingPeriod+". Timetable figures describe the saved Monday–Sunday template unless a dated record is stated."));
  renderAnalyticsReport(data,report);
  return report;
 }
@@ -2455,7 +2459,7 @@ load();initCloud();initAlarms();initHeader();
    const head=new Uint8Array(await blob.slice(0,2).arrayBuffer());
    if(head[0]!==0x50||head[1]!==0x4B)throw new Error("The server did not return a valid .xlsx workbook.");
    const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Editable-Timetable.xlsx";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-   say("Editable Excel timetable downloaded (Monday–Friday, independent copy).","ok");
+   say("Editable Excel timetable downloaded (Monday–Sunday, independent copy).","ok");
   }catch(error){say(error&&error.message?error.message:"Excel export could not be created.","error");}
  };
  document.getElementById("weekly-export-xlsx")?.addEventListener("click",()=>window.downloadTimetableExcel());

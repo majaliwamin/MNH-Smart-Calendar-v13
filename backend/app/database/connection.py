@@ -5,6 +5,7 @@ import time
 from contextlib import contextmanager
 from threading import RLock
 from app.config import DATABASE_PATH, ensure_directories
+from app.services.schedule import WEEKDAY_NAMES
 
 DB_LOCK = RLock()
 SEED_MODULES = {
@@ -57,29 +58,6 @@ def connect():
             "INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("recurring", recurring_id, json.dumps(data, ensure_ascii=False), now),
         )
-    # Saturday recurring activities are outside the programme's Monday–Friday
-    # teaching calendar. Remove only those recurring records during migration;
-    # do not delete Saturday timetable cells, which are retained for review.
-    saturday_recurring = connection.execute(
-        "SELECT id,data FROM docs WHERE col='recurring'"
-    ).fetchall()
-    for row in saturday_recurring:
-        try:
-            recurring_data = json.loads(row["data"])
-        except (TypeError, json.JSONDecodeError):
-            recurring_data = {}
-        day = str(recurring_data.get("day", "")).strip().lower()
-        if day in ("sat", "saturday"):
-            connection.execute(
-                "DELETE FROM docs WHERE col='recurring' AND id=?",
-                (str(row["id"]),),
-            )
-            connection.execute(
-                "INSERT INTO audit(at,role,action,collection,item_id,summary) VALUES(?,?,?,?,?,?)",
-                (int(time.time() * 1000), "system", "migration_deleted", "recurring",
-                 str(row["id"]), "Removed Saturday recurring activity; programme teaching days are Monday–Friday."),
-            )
-
     # Remove the known hardcoded timetable seed cells, while preserving all other
     # user-created timetable records.
     obsolete_seed_ids = ("1_0", "6_0", "6_1", "0_2", "3_2", "1_3", "2_3", "6_3", "0_4", "3_4")
@@ -88,7 +66,7 @@ def connect():
         f"DELETE FROM docs WHERE col='cells' AND id IN ({placeholders})",
         obsolete_seed_ids,
     )
-    # The academic calendar is Monday–Friday. Out-of-range timetable cells are retained
+    # The timetable spans Monday–Sunday. Cells outside that range are retained
     # and flagged for review. The recurring collection is separately restricted to the
     # two canonical weekly events above.
     flagged = []
@@ -109,22 +87,15 @@ def connect():
                 day_index = raw_day
             elif isinstance(raw_day, str) and raw_day.isdigit():
                 day_index = int(raw_day)
-        if day_index is not None and day_index >= 5:
-            flagged.append({"collection": "cells", "id": item_id, "reason": f"weekday index {day_index} is outside Monday–Friday"})
-    for row in connection.execute("SELECT id,data FROM docs WHERE col='recurring'").fetchall():
-        try:
-            recurring_data = json.loads(row["data"])
-        except (TypeError, json.JSONDecodeError):
-            recurring_data = {}
-        if str(recurring_data.get("day", "")).strip().lower() in ("sat", "saturday"):
-            flagged.append({"collection": "recurring", "id": str(row["id"]), "reason": "scheduled on Saturday"})
+        if day_index is not None and day_index >= len(WEEKDAY_NAMES):
+            flagged.append({"collection": "cells", "id": item_id, "reason": f"weekday index {day_index} is outside Monday–Sunday"})
     previous = connection.execute("SELECT value FROM app_meta WHERE key='flagged_non_weekday_records'").fetchone()
     flagged_json = json.dumps(flagged, ensure_ascii=False, sort_keys=True)
     if flagged and (not previous or previous["value"] != flagged_json):
         connection.execute("INSERT OR REPLACE INTO app_meta(key,value) VALUES('flagged_non_weekday_records',?)", (flagged_json,))
         connection.execute("INSERT INTO audit(at,role,action,collection,item_id,summary) VALUES(?,?,?,?,?,?)",
                            (int(time.time() * 1000), "system", "flagged", None, None,
-                            f"{len(flagged)} record(s) fall outside Monday–Friday and are hidden from the timetable; they were kept for review."))
+                            f"{len(flagged)} record(s) fall outside Monday–Sunday and are hidden from the timetable; they were kept for review."))
     elif not flagged and previous:
         connection.execute("DELETE FROM app_meta WHERE key='flagged_non_weekday_records'")
     connection.commit()

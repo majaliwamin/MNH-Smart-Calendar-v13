@@ -64,7 +64,8 @@ CANONICAL_RECURRING = {
     "seminar-mnh": ("Seminar in MNH", "Thursday", "10:00–12:00"),
 }
 
-from app.services.schedule import DEFAULT_SESSION_RANGES, WEEK_START, minutes as _minutes_checked, cell_interval as _cell_interval  # noqa: E402
+from app.services.schedule import (DEFAULT_SESSION_RANGES, WEEKDAY_NAMES, WEEK_START,
+                                    minutes as _minutes_checked, cell_interval as _cell_interval)  # noqa: E402
 
 
 def _minutes(value: str) -> int | None:
@@ -89,7 +90,7 @@ def _validate_restore_intervals(cleaned):
             if start < other_end and end > other_start:
                 raise HTTPException(400, f"Backup contains overlapping sessions: {label} and {other_label}.")
         by_day[key].append((start, end, label))
-    weekday_index = {name.lower(): index for index, name in enumerate(("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"))}
+    weekday_index = {name.lower(): index for index, name in enumerate(WEEKDAY_NAMES)}
     for recurring_item in recurring:
         recurring_day = weekday_index.get(str(recurring_item.get("day", "")).strip().lower())
         if recurring_day is None:
@@ -310,7 +311,7 @@ def health():
 
 @router.get("/export/timetable.xlsx")
 def export_timetable_xlsx(modules: str | None = None, week_start: date | None = None):
-    """Download an independent, editable Excel copy of the Monday–Friday timetable.
+    """Download an independent, editable Excel copy of the Monday–Sunday timetable.
 
     `modules` is an optional comma-separated list of module codes to include
     (defaults to the three programme modules).
@@ -409,7 +410,7 @@ def analytics(year: int | None = None):
             legacy = re.fullmatch(r"(\d+)_(\d+)", item_id)
             if legacy:
                 slot, day = int(legacy.group(1)), int(legacy.group(2))
-                if day >= 5:
+                if day >= len(WEEKDAY_NAMES):
                     continue
                 fallback = DEFAULT_SESSION_RANGES[slot] if slot < len(DEFAULT_SESSION_RANGES) else ""
                 match = re.fullmatch(r"(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})", str(data.get("timeLabel", "")))
@@ -417,7 +418,7 @@ def analytics(year: int | None = None):
             else:
                 day = data.get("dayIndex")
                 start_text, end_text = str(data.get("startTime", "")), str(data.get("endTime", ""))
-                if type(day) is not int or day < 0 or day >= 5:
+                if type(day) is not int or day < 0 or day >= len(WEEKDAY_NAMES):
                     continue
             start, end = _minutes(start_text), _minutes(end_text)
             if start is None or end is None or end <= start:
@@ -458,7 +459,7 @@ def analytics(year: int | None = None):
         code = grouped[key]["code"]
         module = module_for(code)
         matching = grouped[key]["sessions"]
-        weekly = [item for item in matching if 0 <= item["day"] < 5]
+        weekly = [item for item in matching if 0 <= item["day"] < len(WEEKDAY_NAMES)]
         total_minutes = sum(item["minutes"] for item in matching)
         weekly_minutes = sum(item["minutes"] for item in weekly)
         module_results.append({
@@ -520,7 +521,7 @@ def analytics(year: int | None = None):
 
     # Attendance and completion need dated session-occurrence/attendance records, which
     # are not stored yet. Report them as unavailable instead of inferring values from the
-    # Monday-Friday timetable template (which is a plan, not delivered sessions).
+    # Monday-Sunday timetable template (which is a plan, not delivered sessions).
     attendance_available = False
     overall_attendance = None
     attendance_target = 70
@@ -655,7 +656,7 @@ def analytics(year: int | None = None):
         "recorded_additions": total,
         "missed_sessions": missed,
         "dashboard": dashboard,
-        "note": "Weekly figures describe the configured Monday–Friday timetable template, not a verified attendance register. Semester-to-date sessions and hours are intentionally not reported until dated session-occurrence and attendance records are recorded; timetable template rows must not be mistaken for sessions already delivered. Delivery-mode and missed markers currently describe the saved timetable entries. Set each module's semester targets in Modules; target progress will appear once dated semester records are available."
+        "note": "Weekly figures describe the configured Monday–Sunday timetable template, not a verified attendance register. Semester-to-date sessions and hours are intentionally not reported until dated session-occurrence and attendance records are recorded; timetable template rows must not be mistaken for sessions already delivered. Delivery-mode and missed markers currently describe the saved timetable entries. Set each module's semester targets in Modules; target progress will appear once dated semester records are available."
     }
 
 
@@ -794,8 +795,8 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
         if col == "cells":
             legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
             day_index = data.get("dayIndex")
-            if (legacy_day and int(legacy_day.group(1)) >= 5) or ("dayIndex" in data and (type(day_index) is not int or day_index < 0 or day_index >= 5)):
-                raise HTTPException(400, "Timetable sessions must be assigned Monday to Friday.")
+            if (legacy_day and int(legacy_day.group(1)) >= len(WEEKDAY_NAMES)) or ("dayIndex" in data and (type(day_index) is not int or day_index < 0 or day_index >= len(WEEKDAY_NAMES))):
+                raise HTTPException(400, "Timetable sessions must be assigned Monday to Sunday.")
             if ("startTime" in data) != ("endTime" in data) or (("startTime" in data or "endTime" in data) and not isinstance(day_index, int)):
                 raise HTTPException(400, "Custom sessions require a weekday, start time and end time.")
             if "startTime" in data:
@@ -844,8 +845,8 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
     if collection == "cells":
         legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
         day_index = data.get("dayIndex")
-        if (legacy_day and int(legacy_day.group(1)) >= 5) or ("dayIndex" in data and (type(day_index) is not int or day_index < 0 or day_index >= 5)):
-            raise HTTPException(400, "Timetable sessions must be assigned Monday to Friday.")
+        if (legacy_day and int(legacy_day.group(1)) >= len(WEEKDAY_NAMES)) or ("dayIndex" in data and (type(day_index) is not int or day_index < 0 or day_index >= len(WEEKDAY_NAMES))):
+            raise HTTPException(400, "Timetable sessions must be assigned Monday to Sunday.")
         if ("startTime" in data) != ("endTime" in data) or (("startTime" in data or "endTime" in data) and not isinstance(day_index, int)):
             raise HTTPException(400, "Custom sessions require a weekday, start time and end time.")
         if "startTime" in data or "endTime" in data:
@@ -890,10 +891,11 @@ def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_sess
                     old_end = int(parts[1][:2]) * 60 + int(parts[1][3:])
                     if new_start < old_end and new_end > old_start:
                         raise HTTPException(409, f"Session overlaps existing timetable entry {existing_id}.")
+                recurring_weekday_index = {name.casefold(): index for index, name in enumerate(WEEKDAY_NAMES)}
                 for recurring_row in recurring_rows:
                     recurring_data = json.loads(recurring_row["data"])
                     recurring_day = str(recurring_data.get("day", "")).strip().lower()
-                    recurring_index = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4}.get(recurring_day)
+                    recurring_index = recurring_weekday_index.get(recurring_day)
                     if recurring_index != day_index:
                         continue
                     recurring_title = str(recurring_data.get("title", "")).strip().lower()

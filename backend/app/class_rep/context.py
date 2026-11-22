@@ -64,7 +64,7 @@ def _resolved_schedule(collections: dict, today, now: datetime) -> dict:
             })
         weeks.append({"week_start": week_start.isoformat(), "sessions": sessions})
     return {
-        "note": "Authoritative Monday–Friday sessions resolved from the same live cells and recurring records. "
+        "note": "Authoritative Monday–Sunday sessions resolved from the same live cells and recurring records. "
                 "Dates, weekdays and times are already resolved; use this block for today, this week, "
                 "next week and upcoming-class questions instead of decoding raw dayIndex values.",
         "weeks": weeks,

@@ -3,7 +3,7 @@ import re
 from datetime import date, timedelta
 
 WEEK_START = date(2026, 11, 9)          # Monday
-WEEKDAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+WEEKDAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 LUNCH_START, LUNCH_END = 12 * 60, 13 * 60 + 30   # 12:00–13:30
 RECURRING_ACTIVITIES = (
     {"id": "journal-club", "title": "Journal Club", "day": 1, "weekday": "Tuesday", "start": "13:00", "end": "14:00"},
@@ -36,7 +36,7 @@ def cell_interval(item_id: str, data: dict):
     else:
         day = data.get("dayIndex")
         fallback = ""
-    if type(day) is not int or day < 0 or day >= 5:
+    if type(day) is not int or day < 0 or day >= len(WEEKDAY_NAMES):
         return None
     if data.get("startTime") and data.get("endTime"):
         start_text, end_text = str(data["startTime"]), str(data["endTime"])
@@ -85,7 +85,7 @@ def initials(name: str) -> str:
 
 
 def sessions_from_collections(collections: dict, week_start: date | None = None) -> list:
-    """Resolve stored weekday sessions for the requested Monday–Friday academic week."""
+    """Resolve stored timetable sessions for the requested Monday–Sunday academic week."""
     week_start = week_start or WEEK_START
     modules = collections.get("modules", {})
     facilitators = collections.get("facilitators", {})
