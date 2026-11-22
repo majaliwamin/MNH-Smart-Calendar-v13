@@ -22,7 +22,7 @@
       "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
       "path": "frontend/resources/samples/anc_cohort.csv",
       "rows": 400,
-      "sha256": "0004555857f95ad040f5d2131f4612a706d7d6ac00b1b50c8c3102b4854c42a9",
+      "sha256": "ee9d58d5e484d62244b62e17910aede241b074b4e7f70d22c783f50dd6e9e1da",
       "variables": {
         "age": {
           "en": "maternal age in years",
@@ -88,7 +88,7 @@
       "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
       "path": "frontend/resources/samples/bp_paired.csv",
       "rows": 60,
-      "sha256": "189b0bcc01a7000daa2b6bd64c2042d30ae8d15ca98334b7b294c8dfd91e30d0",
+      "sha256": "677b7643994c0c57ce9fa2c052eeb22086d5b20537e5d8fe1290a98b3afef786",
       "variables": {
         "sbp_36wk": {
           "en": "systolic blood pressure at 36 weeks",
@@ -113,7 +113,7 @@
       "label_ny": "deta yophunzitsira yopangidwa; si zolemba za odwala enieni",
       "path": "frontend/resources/samples/postpartum_survival.csv",
       "rows": 500,
-      "sha256": "79517281d458d409f4de7b627cacea2a5b18acdab82b032b3da9d756e6f7c7c3",
+      "sha256": "0099ffcfcc226141dd762e6abd338343325dc360a8011ffc571cab06ac332ef2",
       "variables": {
         "age": {
           "en": "maternal age in years",
@@ -1889,11 +1889,11 @@
   "sources": {
     "glossary": {
       "path": "frontend/resources/python-statistical-tests-glossary.html",
-      "sha256": "d9e7c2160e58fd2770aa73b632bbbbb83015e6c8dd6e65c50f402faa16509ed2"
+      "sha256": "f8fc0760a9fd05c1cf438c83af4e25da335ea0e69584e3c35fd6cba34da2451f"
     },
     "python_library": {
       "path": "frontend/resources/python-command-library.html",
-      "sha256": "99399cf1cec3ee883fb450c883659d35a42e9b998b86b358bba034f66b1baca2"
+      "sha256": "6c4b944abb4058a0a80e81e1bbe6739864feefe3df80e0e434feb6282fdff302"
     }
   },
   "visual_recipes": [

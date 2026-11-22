@@ -2644,10 +2644,17 @@ VISUAL_RECIPES: list[dict[str, Any]] = [
 ]
 
 def _sha256(path: Path) -> str:
+    """Hash canonical LF bytes so Windows and Linux checkouts agree.
+
+    Git stores these text resources with LF endings, while a Windows checkout
+    may expose CRLF. Hashing raw bytes would make the committed fingerprints
+    fail on CI and on a different checkout, so both generation and runtime
+    verification normalise line endings first.
+    """
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(65536), b""):
-            digest.update(chunk)
+            digest.update(chunk.replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
     return digest.hexdigest()
 
 
@@ -2725,9 +2732,8 @@ def _write_crara_knowledge(glossary_entries: list[dict[str, Any]]) -> None:
         "visual_recipes": VISUAL_RECIPES,
     }
     CRARA_KNOWLEDGE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    CRARA_KNOWLEDGE_OUTPUT.write_text(
-        json.dumps(knowledge, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    CRARA_KNOWLEDGE_OUTPUT.write_bytes(
+        (json.dumps(knowledge, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
     )
 
 
@@ -2779,7 +2785,9 @@ def main() -> None:
                 raise SystemExit(f"{entry['term']}: empty field {field}")
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(render_page(), encoding="utf-8")
+    # Write canonical LF bytes directly; text-mode writes translate newlines on
+    # Windows and would make the generated asset differ from the committed one.
+    OUTPUT.write_bytes(render_page().encode("utf-8"))
     # Generation tests redirect OUTPUT to a temporary file; they must not
     # rewrite the committed CRARA runtime index.
     if OUTPUT.resolve() == (ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html").resolve():

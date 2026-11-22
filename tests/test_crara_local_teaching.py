@@ -7,6 +7,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _sha256(path: Path) -> str:
+    """Hash canonical LF bytes, matching the committed teaching resources."""
+    return hashlib.sha256(
+        path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    ).hexdigest()
+
+
 def _chart_from(answer: str) -> dict:
     match = re.search(r"```chart\s*(\{.*?\})\s*```", answer, flags=re.S | re.I)
     assert match, "a fenced chart JSON block is required"
@@ -27,11 +34,11 @@ def test_generated_local_knowledge_is_source_backed():
     for source in payload["sources"].values():
         path = ROOT / source["path"]
         assert path.is_file()
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == source["sha256"]
+        assert _sha256(path) == source["sha256"]
     for name, meta in payload["datasets"].items():
         path = ROOT / meta["path"]
         assert path.is_file()
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == meta["sha256"]
+        assert _sha256(path) == meta["sha256"]
         assert "simulated teaching data" in meta["label_en"]
         assert "si zolemba za odwala enieni" in meta["label_ny"]
 

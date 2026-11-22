@@ -71,7 +71,10 @@ def _csv_path(dataset: str) -> tuple[Path, dict[str, Any]]:
         raise VisualError("invalid dataset path") from exc
     if not path.is_file():
         raise VisualError("dataset unavailable")
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    raw = path.read_bytes()
+    # The generated fingerprints hash canonical LF bytes. Git stores these
+    # text files with LF endings, while a Windows checkout may expose CRLF.
+    digest = hashlib.sha256(raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")).hexdigest()
     if digest != str(meta.get("sha256", "")):
         raise VisualError("dataset integrity check failed")
     return path, meta

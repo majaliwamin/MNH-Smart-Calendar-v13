@@ -40,7 +40,10 @@ bilingual glossary entries, the section index of
 `frontend/resources/python-command-library.html`, and the three simulated
 teaching CSV files. `local_knowledge.py` loads that index read-only and injects
 only the matching glossary cards, chapter ids and dataset fingerprints into the
-turn. It does not execute submitted code or fetch an internet source.
+turn. It does not execute submitted code or fetch an internet source. Fingerprints
+are computed over canonical LF bytes so a Windows checkout and a Linux CI checkout
+verify the same committed teaching files; generated HTML and JSON are also written
+with LF endings on every platform.
 
 `chichewa_academic.py` adds a compact academic-expression contract in CH mode:
 use the verified Chichewa wording supplied by the glossary, keep established
