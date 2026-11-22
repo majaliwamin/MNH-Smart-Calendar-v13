@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-BUILD = "2026.11.22-statistical-tests-glossary-v37"
+BUILD = "2026.11.22-statistical-tests-glossary-v38"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
 
@@ -149,7 +149,7 @@ E(
     term_ny="Kukula kwa zotsatira ndi confidence interval",
     use_en="Use when a p-value alone is not enough and you need to communicate how large a difference is and how precisely it has been estimated.",
     use_ny="Gwiritsani ntchito pamene p yokha sikukwanira ndipo mukufuna kusonyeza kukula kwa kusiyana komanso kudziwa bwino kuyerekezako.",
-    assumptions_en="The two groups are independent; the outcome is continuous; Cohen's d assumes comparable within-group spread. Welch's interval does not require equal variances but still relies on approximate normality of the group means.",
+    assumptions_en="The two groups are independent; the outcome is continuous; Cohen's d assumes comparable within-group spread. Welch’s interval does not require equal variances but still relies on approximate normality of the group means.",
     assumptions_ny="Magulu awiri ndi odziyimira pawokha; zotsatira ndi za manambala; Cohen's d imaganizira kufanana kwa kufalikira mkati mwa magulu. Welch interval safuna kuti variances zikhale zofanana koma imadalira kuti avareji azikhala pafupifupi normal.",
     code='''import numpy as np
 from scipy import stats
@@ -364,8 +364,8 @@ print("95% CI for difference =", round(float(ci.low), 1), "to",
       round(float(ci.high), 1))''',
     interpretation_en="equal_var=True asks SciPy to pool the two variances into one common estimate. The t statistic is the mean difference divided by its pooled standard error; the interval shows the plausible size of that difference.",
     interpretation_ny="equal_var=True imauza SciPy kuti igwirizanitse variances ziwirizo kukhala chimodzi. t ndi kusiyana kwa avareji kogawidwa ndi standard error yophatikizidwa; interval imasonyeza kukula kotheka kwa kusiyana.",
-    limits_en="If variances differ markedly, Welch's t-test is usually safer. This test compares means only; it does not adjust for confounding and it is invalid for paired data.",
-    limits_ny="Ngati variances zasiyana kwambiri, Welch's t-test nthawi zambiri ndi yotetezeka. Mayesowa uyerekeza avareji okha; suchotsa zinthu zosokoneza ndipo si woyenera deta yophatikizidwa.",
+    limits_en="If variances differ markedly, Welch’s t-test is usually safer. This test compares means only; it does not adjust for confounding and it is invalid for paired data.",
+    limits_ny="Ngati variances zasiyana kwambiri, Welch’s t-test nthawi zambiri ndi yotetezeka. Mayesowa uyerekeza avareji okha; suchotsa zinthu zosokoneza ndipo si woyenera deta yophatikizidwa.",
     explanation_ny="Independent samples t-test imafunsa kuti avareji a magulu awiri osiyana ndi osiyana kwambiri poyerekeza ndi kufalikira kwa deta mkati mwa gulu lililonse. 'Independent' kutanthauza kuti munthu aliyense ali mugulu limodzi lokha.",
     analogy_en="It is like comparing the average harvest of two separate farms. Each farm contributes its own yield once, and the comparison asks whether the difference is larger than ordinary farm-to-farm variation.",
     analogy_ny="Zili ngati kuyerekeza zokolola zapakati pa mafakitale awiri osiyana. Famu iliyonse imapereka zokolola zake kamodzi, ndipo kuyerekezako kumafunsa kuti kusiyana kwake n'kwakukulu kuposa kusiyana kwamba.",
@@ -401,15 +401,15 @@ print("Welch t =", round(float(res.statistic), 3),
       "df =", round(float(res.df), 2), "p =", round(float(res.pvalue), 4))
 print("95% CI for difference =", round(float(ci.low), 1), "to",
       round(float(ci.high), 1))''',
-    interpretation_en="The means and SDs show the direction and spread. Welch's t and adjusted degrees of freedom account for unequal variances. The p-value tests a zero mean difference; the CI gives the plausible size of the difference.",
+    interpretation_en="The means and SDs show the direction and spread. Welch’s t and adjusted degrees of freedom account for unequal variances. The p-value tests a zero mean difference; the CI gives the plausible size of the difference.",
     interpretation_ny="Avareji ndi SD zikusonyeza komwe kusiyana kulili komanso kufalikira kwake. Welch t ndi degrees of freedom zosinthidwa zimagwirizana ndi variances zosiyana. p imayesa kusiyana kwa zero; CI imapereka kukula kotheka kwa kusiyana.",
     limits_en="A t-test compares means, not entire distributions. Two groups can differ in shape or spread while having similar means. It does not adjust for confounding and is not a paired analysis.",
     limits_ny="t-test imayerekeza avareji, osati kufalikira kwathunthu. Magulu awiri angasiyane mawonekedwe kapena kufalikira koma avareji yawo ikhale yofanana. Sichotsa zinthu zosokoneza ndipo si yoyenera deta yophatikizidwa.",
     explanation_ny="Welch imafunsa kuti kodi avareji ya magulu awiri odziyimira pawokha ndi yosiyana kwambiri poyerekeza ndi kufalikira kwa deta. Simafuna kuti magulu awiriwo akhale ndi kufalikira kofanana.",
     analogy_en="Comparing two classrooms with different spreads of marks: Welch adjusts for the fact that one class may be much more variable than the other.",
     analogy_ny="Kuyerekeza makalasi awiri omwe mphambu zawo zimafalikira mosiyanasiyana: Welch imaganizira kuti kalasi imodzi ikhoza kukhala yosiyana kwambiri ndi inzake.",
-    report_en="Report group means, SDs and n, mean difference with 95% CI, Welch t, df and p. Say 'Welch's t-test' explicitly.",
-    report_ny="Nenani avareji a magulu, SD ndi n, kusiyana kwa avareji ndi 95% CI, Welch t, df ndi p. Tchulani momveka kuti 'Welch's t-test'.",
+    report_en="Report group means, SDs and n, mean difference with 95% CI, Welch t, df and p. Say 'Welch’s t-test' explicitly.",
+    report_ny="Nenani avareji a magulu, SD ndi n, kusiyana kwa avareji ndi 95% CI, Welch t, df ndi p. Tchulani momveka kuti 'Welch’s t-test'.",
     application_en="Comparing mean birth weight between infants from two independently sampled regions.",
     application_ny="Kuyerekeza avareji ya kulemera kwa makanda ochokera kumadera awiri osiyana.",
 )
@@ -1906,19 +1906,19 @@ for delta in [-1.0, 0.0, 1.0]:
 )
 
 TERM_RENAMES: dict[str, tuple[str, str]] = {
-    "Welch two-sample t-test": ("Welch's t-test", "Welch's t-test ya magulu awiri"),
+    "Welch two-sample t-test": ("Welch’s t-test", "Welch’s t-test ya magulu awiri"),
     "Paired t-test": ("Paired samples t-test", "t-test ya deta yophatikizidwa"),
     "Mann-Whitney U test": ("Mann–Whitney U test", "Mann–Whitney U test"),
     "One-way ANOVA with Tukey follow-up": (
-        "ANOVA",
-        "ANOVA (kusanthula kusiyana pakati pa magulu)",
+        "Analysis of variance (ANOVA)",
+        "Kusanthula kwa kusiyana (ANOVA)",
     ),
     "2x2 table, risk ratio and odds ratio": ("Risk ratio", "Risk ratio"),
     "Chi-square test of independence and Cramer's V": (
         "Chi-square test",
         "Chi-square test",
     ),
-    "Fisher exact test": ("Fisher's exact test", "Fisher's exact test"),
+    "Fisher exact test": ("Fisher’s exact test", "Fisher’s exact test"),
     "Spearman rank correlation": ("Spearman correlation", "Spearman correlation"),
     "Simple linear regression": ("Linear regression", "Linear regression"),
     "Logistic regression and odds ratios": ("Logistic regression", "Logistic regression"),
@@ -1935,16 +1935,19 @@ ALIASES: dict[str, list[str]] = {
     "Paired samples t-test": [
         "dependent t test", "within subject t test", "before after t test",
     ],
-    "Welch's t-test": [
-        "welch t test", "unequal variance t test", "independent t test",
+    "Welch’s t-test": [
+        "welch t test", "welch's t-test", "unequal variance t test",
+        "independent t test",
     ],
     "Chi-square test": [
         "chi square", "chi-squared", "contingency table test",
         "test of independence", "cramer v",
     ],
-    "Fisher's exact test": ["fisher exact", "exact test", "small table"],
-    "ANOVA": [
-        "analysis of variance", "one way anova", "f test", "tukey",
+    "Fisher’s exact test": [
+        "fisher exact", "fisher's exact test", "exact test", "small table",
+    ],
+    "Analysis of variance (ANOVA)": [
+        "anova", "analysis of variance", "one way anova", "f test", "tukey",
     ],
     "Mann–Whitney U test": [
         "mann whitney", "mann-whitney", "wilcoxon rank sum", "rank sum test",
@@ -2008,12 +2011,12 @@ FIELD_OVERRIDES: dict[str, dict[str, str]] = {
         "misconception_en": "The unit of analysis is the pair, not each separate measurement. Treating repeated observations as independent observations produces invalid standard errors.",
         "misconception_ny": "Chinthu chowunikiridwa ndi awiriwiri, osati miyeso yosiyana. Kutenga ma observation obwerezabwereza ngati odziyimira pawokha kumapanga standard errors zolakwika.",
     },
-    "Welch's t-test": {
-        "definition_en": "Welch's t-test compares the means of two independent groups without assuming equal variances. It adjusts the degrees of freedom to account for unequal spread.",
+    "Welch’s t-test": {
+        "definition_en": "Welch’s t-test compares the means of two independent groups without assuming equal variances. It adjusts the degrees of freedom to account for unequal spread.",
         "explanation_ny": "Welch imafunsa kuti avareji ya magulu awiri odziyimira pawokha ndi yosiyana kwambiri poyerekeza ndi kufalikira kwa deta. Simafuna kuti magulu awiriwo akhale ndi variances zofanana, choncho ndi yotetezeka pa deta yeniyeni.",
         "analogy_en": "Comparing two classrooms with different spreads of marks: Welch adjusts for the fact that one class may be much more variable than the other.",
         "analogy_ny": "Kuyerekeza makalasi awiri omwe mphambu zawo zimafalikira mosiyanasiyana: Welch imaganizira kuti kalasi imodzi ikhoza kukhala yosiyana kwambiri ndi inzake.",
-        "code_explanation_en": "equal_var=False switches off pooling. SciPy computes Welch's adjusted df and a confidence interval for the mean difference using the two separate variances.",
+        "code_explanation_en": "equal_var=False switches off pooling. SciPy computes Welch’s adjusted df and a confidence interval for the mean difference using the two separate variances.",
         "code_explanation_ny": "equal_var=False imaletsa kuphatikiza variances. SciPy imawerengera df yosinthidwa ya Welch ndi CI ya kusiyana kwa avareji pogwiritsa ntchito variances ziwiri zosiyana.",
         "application_en": "Comparing mean birth weight between infants from two independently sampled regions with unequal spread.",
         "application_ny": "Kuyerekeza avareji ya kulemera kwa makanda ochokera kumadera awiri osiyana omwe kufalikira kwawo kusiyana.",
@@ -2032,8 +2035,8 @@ FIELD_OVERRIDES: dict[str, dict[str, str]] = {
         "misconception_en": "A small p-value does not prove causation or describe strength. Expected counts that are too small make the asymptotic p unreliable; use an exact method when needed.",
         "misconception_ny": "p yochepa sikutsimikizira causality kapena kufotokoza mphamvu ya ubale. Kuchuluka koyembekezeka kochepa kumapangitsa p kusadalirika; gwiritsani ntchito njira yeniyeni ngati kuli koyenera.",
     },
-    "Fisher's exact test": {
-        "definition_en": "Fisher's exact test computes an exact p-value for association in a 2x2 table by enumerating tables with the same margins, rather than relying on a large-sample approximation.",
+    "Fisher’s exact test": {
+        "definition_en": "Fisher’s exact test computes an exact p-value for association in a 2x2 table by enumerating tables with the same margins, rather than relying on a large-sample approximation.",
         "explanation_ny": "Ngati makutu ali ochepa, chi-square si yodalirika. Fisher imawerengera mwayi wa table yotere mwachindunji potengera makutu omwe alipo, osati kugwiritsa ntchito mawonekedwe a belu.",
         "analogy_en": "Instead of approximating with a bell curve, Fisher enumerates all possible arrangements of a small deck and counts how extreme yours is.",
         "analogy_ny": "M'malo kugwiritsa ntchito kuyerekeza kwa mawonekedwe a belu, Fisher imawerenga makonzedwe onse a makadi ochepa ndikuwerengera kuti anu ndi otani.",
@@ -2044,8 +2047,8 @@ FIELD_OVERRIDES: dict[str, dict[str, str]] = {
         "misconception_en": "Exact does not mean automatically better for large tables. It gives an unadjusted association and can be conservative; a zero cell can make the odds ratio infinite.",
         "misconception_ny": "Kukhala 'exact' sikutanthauza kuti kuli bwino nthawi zonse pa table yayikulu. Sipereka zotsatira zosinthidwa ndipo ikhoza kukhala yodziletsa kwambiri; selo la zero lingapangitse odds ratio kukhala yopanda malire.",
     },
-    "ANOVA": {
-        "definition_en": "ANOVA (analysis of variance) compares means across three or more independent groups by partitioning total variation into between-group and within-group components and testing their ratio with an F statistic.",
+    "Analysis of variance (ANOVA)": {
+        "definition_en": "Analysis of variance (ANOVA) compares means across three or more independent groups by partitioning total variation into between-group and within-group components and testing their ratio with an F statistic.",
         "explanation_ny": "ANOVA imafunsa kuti kusiyana pakati pa avareji a magulu n'kwakukulu kuposa kusiyana kwamba mkati mwa gulu lililonse. F yayikulu imatanthauza kuti magulu sangakhale ndi avareji yofanana. Tukey amatsatira kuti adziwe magulu ati omwe akusiyana.",
         "analogy_en": "Comparing several teaching methods by asking whether the gap between class averages is larger than the usual spread of marks inside each class.",
         "analogy_ny": "Kuyerekeza njira zingapo zophunzitsira potengera kuti kusiyana pakati pa avareji a makalasi n'kwakukulu kuposa kufalikira kwa mphambu mkati mwa kalasi iliyonse.",
@@ -2480,10 +2483,10 @@ def main() -> None:
     requested = [
         "Independent samples t-test",
         "Paired samples t-test",
-        "Welch's t-test",
+        "Welch’s t-test",
         "Chi-square test",
-        "Fisher's exact test",
-        "ANOVA",
+        "Fisher’s exact test",
+        "Analysis of variance (ANOVA)",
         "Mann–Whitney U test",
         "Wilcoxon signed-rank test",
         "Pearson correlation",
