@@ -90,6 +90,13 @@ def _score_terms(text: str, terms: list[str]) -> int:
     return token_hits if token_hits >= 2 else 0
 
 
+def _term_question(term: str) -> str:
+    """Use the short technical name so Chichewa labels sound natural."""
+    acronym = re.search(r"\(([A-Za-z0-9]+)\)", term)
+    label = acronym.group(1) if acronym else term
+    return f"{label} ndi chiyani?"
+
+
 def glossary_context(message: str, response_language: str = "EN", limit: int = 2) -> str:
     """Return the most relevant executed glossary cards as source evidence."""
     chichewa = str(response_language).upper() == "CH"
@@ -110,10 +117,11 @@ def glossary_context(message: str, response_language: str = "EN", limit: int = 2
     for index, (_, entry) in enumerate(ranked[:limit], start=1):
         lines += [
             f"[{index}] {entry['term']} / {entry.get('term_ny', '')}",
-            f"English definition: {str(entry.get('definition_en', ''))[:620]}",
+            f"Definition: {str(entry.get('definition_en', ''))[:620]}",
         ]
         if chichewa:
-            lines.append(f"Chichewa explanation: {str(entry.get('explanation_ny', ''))[:620]}")
+            term = str(entry.get("term", ""))
+            lines.append(f"{_term_question(term)}: {str(entry.get('explanation_ny', ''))[:620]}")
             lines.append(f"Practical use: {str(entry.get('application_ny', ''))[:360]}")
             lines.append(f"Misconception: {str(entry.get('misconception_ny', ''))[:360]}")
         else:

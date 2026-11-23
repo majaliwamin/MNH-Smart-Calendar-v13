@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build the additive bilingual statistical-tests glossary page.
 
-Each glossary card uses the same short structure: term, English definition,
-Chichewa explanation, analogy, Python example where applicable, code
-explanation, practical application and common misconception. Code-bearing
+Each glossary card uses the same short structure: term, a plain-language
+definition, a natural Chichewa answer to the term question, analogy, Python
+example where applicable, code explanation, practical application and common
+misconception. Code-bearing
 entries remain self-contained notebook cells with fixed-seed synthetic data;
 they are executed here and their real stdout is embedded in the static HTML,
 so no clinical threshold, empirical result or invented number is hard-coded.
@@ -2280,8 +2281,19 @@ def field_pair(label_en: str, label_ny: str, en: str, ny: str) -> str:
 <span class="lang en">{html.escape(en)}</span><span class="lang ny">{html.escape(ny)}</span></p>"""
 
 
-def field_lang(lang: str, label: str, text: str) -> str:
-    return f"""<p class="field lang {lang}"><span class="field-label">{html.escape(label)}</span>{html.escape(text)}</p>"""
+def term_question(term: str) -> str:
+    """Use the short technical name so Chichewa labels sound natural."""
+    acronym = re.search(r"\(([A-Za-z0-9]+)\)", term)
+    label = acronym.group(1) if acronym else term
+    return f"{label} ndi chiyani?"
+
+
+def field_plain(lang: str, text: str) -> str:
+    return f"""<p class="field lang {lang}">{html.escape(text)}</p>"""
+
+
+def field_question(lang: str, question: str, text: str) -> str:
+    return f"""<p class="field lang {lang}"><span class="field-label">{html.escape(question)}</span>{html.escape(text)}</p>"""
 
 
 def render_entry(entry: dict[str, Any], index: int) -> str:
@@ -2317,8 +2329,8 @@ def render_entry(entry: dict[str, Any], index: int) -> str:
     </div>
     <span class="num">{index:02d}</span>
   </div>
-  {field_lang('en', 'English definition', entry['definition_en'])}
-  {field_lang('ny', 'Kufotokozera mu Chichewa', entry['explanation_ny'])}
+  {field_plain('en', entry['definition_en'])}
+  {field_question('ny', term_question(entry['term']), entry['explanation_ny'])}
   {field_pair('Analogy', 'Fanizo', entry['analogy_en'], entry['analogy_ny'])}
 {code_html}  {field_pair('Code explanation', 'Kufotokozera kwa code', entry['code_explanation_en'], entry['code_explanation_ny'])}
   {field_pair('Practical application', 'Kugwiritsa ntchito', entry['application_en'], entry['application_ny'])}
@@ -2421,8 +2433,8 @@ footer{{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;pad
     <span class="badge">{BUILD}</span>
     <p id="result-count" class="result-count" aria-live="polite" aria-atomic="true"><span class="lang en">Showing 46 of 46 terms</span><span class="lang ny">Kuwonetsa mawu 46 pa 46</span></p>
     <h1><span class="lang en">Statistical tests and modelling glossary</span><span class="lang ny">Mndandanda wa mawu a ziwerengero ndi kuyerekeza</span></h1>
-    <p class="lang en">This is a searchable glossary, not a textbook. Each term has an English definition, a natural Chichewa explanation, an analogy, a short Python example where applicable, a code explanation, a practical use and a common misconception. Conceptual umbrella terms may omit code.</p>
-    <p class="lang ny">Uwu ndi mndandanda wa mawu wosakika, osati buku la phunziro. Mawu aliwonse ali ndi tanthauzo mu Chingerezi, kufotokozera kwachilengedwe mu Chichewa, fanizo, chitsanzo chachifupi cha Python ngati chikugwiritsidwa ntchito, kufotokozera kwa code, kagwiritsidwe ntchito ndi chikhulupiriro chofala cholakwika. Mawu akulu a lingaliro angakhale opanda code.</p>
+    <p class="lang en">This is a searchable glossary, not a textbook. Each term has a clear definition, a natural Chichewa answer to the term question, an analogy, a short Python example where applicable, a code explanation, a practical use and a common misconception. Conceptual umbrella terms may omit code.</p>
+    <p class="lang ny">Uwu ndi mndandanda wa mawu wosakika, osati buku la phunziro. Mawu aliwonse ali ndi tanthauzo losavuta, yankho lachilengedwe mu Chichewa ku funso lakuti mawuwo ndi chiyani, fanizo, chitsanzo chachifupi cha Python ngati chikugwiritsidwa ntchito, kufotokozera kwa code, kagwiritsidwe ntchito ndi chikhulupiriro chofala cholakwika. Mawu akulu a lingaliro angakhale opanda code.</p>
     <p class="lang en">This resource is additive. It does not change the Chapter 0 setup lab, the command interpreter allow-list, CRARA, the install gate, navigation order or any earlier build behavior.</p>
     <p class="lang ny">Chothandizira ichi ndi chowonjezera chokha. Sichisintha labu ya Chapter 0, mndandanda wa malamulo ovomerezeka, CRARA, chipata cha install, dongosolo la navigation kapena machitidwe a ma build akale.</p>
   </section>

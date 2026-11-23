@@ -807,7 +807,7 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     assert 'id="view-statistical-glossary"' in index
     assert 'id="statistical-glossary-back"' in index
     assert 'data-view="statistical-glossary"' not in index
-    assert f'src="/resources/python-statistical-tests-glossary.html?v={build}"' in index
+    assert f'src="/resources/python-statistical-tests-glossary.html?v={build}&amp;glossary-labels=1"' in index
     assert '"statistical-glossary"' in app
     assert 'glossary.hidden=name!=="statistical-glossary"' in app
     assert 'getElementById("open-statistical-glossary")?.addEventListener("click",()=>showView("statistical-glossary"))' in app
@@ -842,8 +842,6 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     for category in ("foundations", "groups", "categories", "association", "regression", "advanced"):
         assert f'id="cat-{category}"' in glossary
     for label in (
-        "English definition",
-        "Kufotokozera mu Chichewa",
         "Analogy",
         "Python example",
         "Code explanation",
@@ -852,6 +850,11 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     ):
         assert label in glossary
     assert "Fanizo" in glossary
+    assert "English definition" not in plain
+    assert "Kufotokozera mu Chichewa" not in plain
+    assert "Hypothesis test and p-value ndi chiyani?" in plain
+    assert "Welch’s t-test ndi chiyani?" in plain
+    assert "ANOVA ndi chiyani?" in plain
     assert "When to use" not in plain
     assert "Assumptions / design checks" not in plain
     assert "Limitations and mistakes to avoid" not in plain

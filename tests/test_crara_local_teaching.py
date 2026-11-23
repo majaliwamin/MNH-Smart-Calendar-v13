@@ -54,9 +54,11 @@ def test_glossary_and_library_evidence_uses_verified_bilingual_wording():
     assert "LOCAL PYTHON LIBRARY — VERIFIED STATISTICAL GLOSSARY" in english
     assert "LOCAL PYTHON LIBRARY — CHAPTER EVIDENCE" in english
     assert "Welch’s t-test" in english
-    assert "English definition:" in english
+    assert "Definition:" in english
+    assert "English definition:" not in english
     assert "Executed fixed-seed teaching output:" in english
-    assert "Chichewa explanation:" in chichewa
+    assert "Welch’s t-test ndi chiyani?:" in chichewa
+    assert "Chichewa explanation:" not in chichewa
     assert "Misconception:" in chichewa
     assert "python-command-library.html#" in chichewa
 
