@@ -36,6 +36,52 @@ def _run(model: str, payload: dict, timeout: int = 60) -> dict:
     return result.get("result") or result
 
 
+def _run_audio(model: str, payload: dict, timeout: int = 60) -> tuple[bytes, str]:
+    """Run a Workers AI model whose result is raw audio, not JSON.
+
+    Deepgram Aura returns binary MP3. Older deployments may still return a
+    JSON envelope with base64 audio, so both shapes are accepted here.
+    """
+    account = os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip()
+    key = os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
+    if not account or not key:
+        raise VoiceError("Cloudflare Workers AI is not configured for CRARA voice.")
+    url = f"https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/{model}"
+    request = Request(url, data=json.dumps(payload).encode(),
+                      headers={"Authorization": "Bearer " + key,
+                               "Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            body = response.read()
+            media_type = response.headers.get_content_type()
+    except HTTPError as exc:
+        raise VoiceError(f"Cloudflare voice service returned HTTP {exc.code}.") from exc
+    except (URLError, TimeoutError, OSError) as exc:
+        raise VoiceError("Cloudflare voice service is unavailable.") from exc
+
+    if "json" in media_type:
+        try:
+            result = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise VoiceError("The speech service returned invalid audio.") from exc
+        if result.get("success") is False:
+            raise VoiceError("Cloudflare voice service rejected the request.")
+        nested = result.get("result") if isinstance(result.get("result"), dict) else result
+        audio = nested.get("audio") if isinstance(nested, dict) else None
+        if not isinstance(audio, str) or not audio:
+            raise VoiceError("The speech service returned no audio.")
+        try:
+            return base64.b64decode(audio), "audio/mpeg"
+        except (ValueError, TypeError) as exc:
+            raise VoiceError("The speech service returned invalid audio.") from exc
+
+    if not body:
+        raise VoiceError("The speech service returned no audio.")
+    if "mpeg" in media_type or "mp3" in media_type:
+        media_type = "audio/mpeg"
+    return body, media_type
+
+
 def transcribe(audio: bytes, content_type: str) -> str:
     if not audio or len(audio) > 5 * 1024 * 1024:
         raise VoiceError("Audio must be present and no larger than 5 MB.")
@@ -58,12 +104,5 @@ def speak(text: str) -> tuple[bytes, str]:
         raise VoiceError("There is no text to speak.")
     model = (os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL") or
              "@cf/deepgram/aura-2-en").strip()
-    result = _run(model, {"text": clean, "encoding": "mp3",
-                          "speaker": os.getenv("MNH_CLASSREP_TTS_SPEAKER", "luna")})
-    audio = result.get("audio")
-    if not isinstance(audio, str) or not audio:
-        raise VoiceError("The speech service returned no audio.")
-    try:
-        return base64.b64decode(audio), "audio/mpeg"
-    except (ValueError, TypeError) as exc:
-        raise VoiceError("The speech service returned invalid audio.") from exc
+    return _run_audio(model, {"text": clean, "encoding": "mp3",
+                              "speaker": os.getenv("MNH_CLASSREP_TTS_SPEAKER", "luna")})

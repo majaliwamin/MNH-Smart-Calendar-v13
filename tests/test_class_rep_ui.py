@@ -144,6 +144,23 @@ def test_crara_reads_audio_uploads_and_adds_copy_and_disclaimer_to_replies():
     assert ".cr-upload-status{" in css
 
 
+def test_crara_auto_speaks_chat_replies():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert "let replyAudio = null;" in js
+    assert "let speechGeneration = 0;" in js
+    assert "function stopReplySpeech()" in js
+    assert "function plainSpeechText(value)" in js
+    assert "function speakReply(text)" in js
+    assert 'fetch("/api/class-rep/speak"' in js
+    assert "speakReply(reply);" in js
+    assert "speakReply(finalReply);" in js
+    assert "if (!open) { closeClassroom(); stopReplySpeech(); }" in js
+    assert "chat-speech=1" in html
+    assert "new Audio(url)" in js
+    assert "audio.play()" in js
+
+
 def test_resource_upload_reports_when_crara_cannot_index_the_file():
     js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     assert 'uploaded.crara_indexing!=="indexed"' in js
@@ -340,7 +357,7 @@ def test_crara_mobile_header_and_composer_classroom_icon():
     assert ".cr-home-back span{display:none;}" in css
     assert ".cr-classroom-launch svg{" in css
     assert "class-rep.css?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1" in html
-    assert "class-rep.js?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1" in html
+    assert "class-rep.js?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1&amp;chat-speech=1" in html
 
 
 def test_crara_math_packages_are_served_locally_for_mobile_reliability():

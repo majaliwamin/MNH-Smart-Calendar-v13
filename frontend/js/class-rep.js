@@ -8,6 +8,9 @@
   const GUEST_STORAGE_KEY = "crara_guest_id";
   const GUEST_COOKIE_NAME = "cara_guest";
   const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN", lastLessonTopic: "", classroom: { open: false, topic: "", busy: false, generation: 0, fullscreen: false, joinCode: "" } };
+  let replyAudio = null;
+  let replyAudioUrl = "";
+  let speechGeneration = 0;
   function newGuestId() {
     const random = window.crypto && window.crypto.randomUUID
       ? window.crypto.randomUUID().replace(/-/g, "")
@@ -688,6 +691,60 @@
     area.remove();
     return copied;
   }
+  function stopReplySpeech() {
+    speechGeneration += 1;
+    if (replyAudio) {
+      try { replyAudio.pause(); } catch (_) {}
+      replyAudio = null;
+    }
+    if (replyAudioUrl) {
+      try { URL.revokeObjectURL(replyAudioUrl); } catch (_) {}
+      replyAudioUrl = "";
+    }
+  }
+  function plainSpeechText(value) {
+    return String(value || "")
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+      .replace(/^\s{0,3}>\s?/gm, "")
+      .replace(/^\s*[-*+]\s+/gm, "")
+      .replace(/^\s*\d+\.\s+/gm, "")
+      .replace(/\*\*|__|~~/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 1800);
+  }
+  function speakReply(text) {
+    const spoken = plainSpeechText(text);
+    if (!spoken || !state.voice) return;
+    stopReplySpeech();
+    const generation = speechGeneration;
+    fetch("/api/class-rep/speak", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: spoken })
+    }).then(async function (response) {
+      if (!response.ok || generation !== speechGeneration) return;
+      const url = URL.createObjectURL(await response.blob());
+      if (generation !== speechGeneration) {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        return;
+      }
+      const audio = new Audio(url);
+      replyAudio = audio;
+      replyAudioUrl = url;
+      audio.addEventListener("ended", function () {
+        if (replyAudio !== audio) return;
+        replyAudio = null;
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        replyAudioUrl = "";
+      });
+      return audio.play().catch(function () { stopReplySpeech(); });
+    }).catch(function () {});
+  }
   function decorateAssistantResponse(bubble, response) {
     if (!bubble || !response || bubble.querySelector(".cr-response-actions")) return;
     const query = String(bubble.dataset.query || "");
@@ -976,6 +1033,7 @@
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
     input.value = ""; updateComposerAction(); uploadMessage("");
+    stopReplySpeech();
     addMessage("user", message);
     const waitingLabel = nextWaitingPhrase().replace(/[.…]+$/, "");
     const pending = addMessage("assistant", "");
@@ -1022,6 +1080,7 @@
         if (!reply) throw new Error("CRARA returned an empty reply. Please try again.");
         pending.dataset.query = message;
         await typeReply(pending, reply);
+        speakReply(reply);
         state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: reply.slice(0, 4000) }]), 12); }
@@ -1029,7 +1088,8 @@
       } else {
         pending.dataset.query = message;
         const demoAnswer = demoReply(message);
-        await typeReply(pending, demoAnswer);
+        let finalReply = demoAnswer;
+        await typeReply(pending, finalReply);
         const saved = await fetch("/api/class-rep/conversation/turn", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message, reply: demoAnswer, conversation_id: state.conversationId })
@@ -1038,10 +1098,12 @@
           state.conversationId = saved.conversation_id;
           const savedReply = typeof saved.reply === "string" ? saved.reply : "";
           if (savedReply) {
-            await typeReply(pending, savedReply);
+            finalReply = savedReply;
+            await typeReply(pending, finalReply);
             state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: savedReply.slice(0, 4000) }]), 12);
           }
         }
+        speakReply(finalReply);
         status("Built-in fallback · AI not configured", false);
       }
     } catch (error) {
@@ -1148,7 +1210,7 @@
     }
   };
   function setOpen(open) {
-    if (!open) closeClassroom();
+    if (!open) { closeClassroom(); stopReplySpeech(); }
     if (open && !root.classList.contains("is-open")) {
       window.history.pushState({ ...(window.history.state || {}), caraAssistantOpen: true }, "", window.location.href);
       caraBackStateActive = true;

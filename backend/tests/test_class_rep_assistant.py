@@ -231,10 +231,35 @@ def test_voice_adapters_validate_and_return_audio(monkeypatch):
         pass
     else:
         raise AssertionError("Non-audio uploads must be rejected")
-    import base64
-    monkeypatch.setattr(voice, "_run", lambda model, payload: {"audio": base64.b64encode(b"mp3").decode()})
+    monkeypatch.setattr(voice, "_run_audio", lambda model, payload: (b"mp3", "audio/mpeg"))
     audio, content_type = voice.speak("Hello")
     assert audio == b"mp3" and content_type == "audio/mpeg"
+
+
+def test_voice_accepts_binary_cloudflare_tts_response(monkeypatch):
+    from app.class_rep import voice
+
+    class FakeHeaders:
+        def get_content_type(self):
+            return "audio/mpeg"
+
+    class FakeResponse:
+        headers = FakeHeaders()
+
+        def read(self):
+            return b"ID3-mp3-bytes"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "account")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "key")
+    monkeypatch.setattr(voice, "urlopen", lambda request, timeout=60: FakeResponse())
+    audio, content_type = voice._run_audio("@cf/deepgram/aura-2-en", {"text": "Hello"})
+    assert audio == b"ID3-mp3-bytes" and content_type == "audio/mpeg"
 
 
 def test_voice_transcription_uses_default_model_when_not_pinned(monkeypatch):
