@@ -317,6 +317,82 @@ def test_whiteboard_control_tokens_are_host_issued_and_verified(monkeypatch, tmp
         }).status_code == 403
 
 
+def test_whiteboard_cohost_grant_delegates_control_without_host_bypass(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    from app.class_rep import memory, whiteboard
+
+    assert "cohost" in whiteboard._CONTROL_TYPES
+    assert whiteboard._COHOST_TTL_SECONDS > whiteboard._CONTROL_TTL_SECONDS
+
+    host = memory.create_account("Host", "majaliwamin@gmail.com", "strong-password-123")
+    student = memory.create_account("Student", "student-cohost@example.org", "strong-password-123")
+    host_token = memory.create_session(host["id"])
+    student_token = memory.create_session(student["id"])
+    room = "crara_cohost_room"
+
+    with TestClient(app) as client:
+        client.get("/api/class-rep/auth/me")
+        client.cookies.set("cara_session", host_token, path="/")
+        granted = client.post("/api/class-rep/whiteboard/control", json={
+            "key": room,
+            "type": "cohost",
+            "value": {"enabled": True},
+        })
+        assert granted.status_code == 200
+        grant_token = granted.json()["token"]
+
+    with TestClient(app) as student_client:
+        student_client.get("/api/class-rep/auth/me")
+        student_client.cookies.set("cara_session", student_token, path="/")
+        denied = student_client.post("/api/class-rep/whiteboard/control", json={
+            "key": room,
+            "type": "mode",
+            "value": {"mode": "Question Queue"},
+        })
+        assert denied.status_code == 403
+
+        allowed = student_client.post("/api/class-rep/whiteboard/control", json={
+            "key": room,
+            "type": "mode",
+            "value": {"mode": "Question Queue"},
+            "authority": grant_token,
+        })
+        assert allowed.status_code == 200
+
+        wrong_room = student_client.post("/api/class-rep/whiteboard/control", json={
+            "key": "crara_other_room",
+            "type": "teaching",
+            "value": {"value": "paused"},
+            "authority": grant_token,
+        })
+        assert wrong_room.status_code == 403
+
+        escalate = student_client.post("/api/class-rep/whiteboard/control", json={
+            "key": room,
+            "type": "cohost",
+            "value": {"enabled": True},
+            "authority": grant_token,
+        })
+        assert escalate.status_code == 403, "a co-host must not mint further co-host grants"
+
+        saved = student_client.post("/api/class-rep/whiteboard/session", json={
+            "key": room,
+            "pages": [{"id": "cohost-page", "objects": []}],
+            "pageIndex": 0,
+            "chatMode": "Question Queue",
+            "permissions": {"canWrite": True},
+            "authority": grant_token,
+        })
+        assert saved.status_code == 200
+
+    with TestClient(app) as client:
+        client.get("/api/class-rep/auth/me")
+        client.cookies.set("cara_session", host_token, path="/")
+        loaded = client.get("/api/class-rep/whiteboard/session", params={"key": room})
+        assert loaded.status_code == 200
+        assert loaded.json()["session"]["pages"][0]["id"] == "cohost-page"
+
+
 def test_handoff_carries_server_derived_role(monkeypatch):
     from app.livekit import routes as livekit_routes
 
@@ -344,9 +420,9 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
     parent = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
 
-    assert "crara-whiteboard.js?v=crara-classroom-v7" in html
-    assert "crara-whiteboard.css?v=crara-classroom-v7" in html
-    assert 'data-crara-classroom-build="crara-classroom-v7"' in html
+    assert "crara-whiteboard.js?v=crara-classroom-v9" in html
+    assert "crara-whiteboard.css?v=crara-classroom-v9" in html
+    assert 'data-crara-classroom-build="crara-classroom-v9"' in html
     assert "/resources/crara-classroom/crara-whiteboard.js" in worker
     assert "/resources/crara-classroom/crara-whiteboard.css" in worker
     assert 'url.searchParams.set("role", result.role || "student")' in parent
@@ -380,6 +456,15 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     assert "function drainPendingQuestions()" in js
     assert "function authorizeControl(packet)" in js
     assert "async function hostSetTeaching(value)" in js
+    assert "async function hostSetCohost(enabled)" in js
+    assert 'type: "cohost"' in js
+    assert "function projectLesson()" in js
+    assert '["cohost", "Give CRARA board control"]' in js
+    assert "authority: state.cohostAuthority" in js
+    assert '"cr-wb-overlay cr-wb-collapsed"' in js
+    assert ".cr-wb-overlay.cr-wb-collapsed .cr-wb-tools" in css
+    assert "--wb-board:" in css
+    assert 'stroke="#dfe4dc"' in js
     assert "function cleanTimeline(raw)" in js
     assert "async function runTimeline()" in js
     assert 'publish("speech", {' in js

@@ -7,6 +7,8 @@ const packets = [];
 const domEvents = [];
 const speakCalls = [];
 const instructionCalls = [];
+const controlCalls = [];
+const authorizeCalls = [];
 const storage = new Map();
 let instructionResponseOverride = null;
 
@@ -58,13 +60,32 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function fetchMock(url, options = {}) {
   if (url === "/api/class-rep/speak") {
     speakCalls.push(JSON.parse(options.body || "{}"));
-    await wait(250);
+    await wait(600);
     return {
       ok: true,
       status: 200,
       headers: { get: () => "audio/mpeg" },
       blob: async () => ({ size: 1 }),
     };
+  }
+  if (url === "/api/class-rep/whiteboard/control") {
+    const body = JSON.parse(options.body || "{}");
+    controlCalls.push(body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ok: true,
+        type: body.type,
+        value: body.value,
+        token: "co-host-grant-" + controlCalls.length,
+      }),
+    };
+  }
+  if (url === "/api/class-rep/whiteboard/authorize") {
+    const body = JSON.parse(options.body || "{}");
+    authorizeCalls.push(body);
+    return { ok: true, status: 200, json: async () => ({ ok: true }) };
   }
   if (url === "/api/class-rep/whiteboard/instructions") {
     instructionCalls.push(JSON.parse(options.body || "{}"));
@@ -160,11 +181,11 @@ const context = {
   const results = await api.runTimeline();
   const elapsed = Date.now() - started;
   assert.equal(results.length, 5);
-  assert.ok(elapsed < 200, `board timeline must not wait for delayed voice, took ${elapsed}ms`);
+  assert.ok(elapsed < 300, `board timeline must not wait for delayed voice, took ${elapsed}ms`);
   assert.equal(api.getState().pages[0].objects.length, 2);
   assert.ok(packets.some((entry) => entry.packet.type === "segment" && entry.packet.segmentId === "s4"));
   assert.equal(speakCalls.length, 1, "speech segment should call the existing /speak endpoint");
-  await wait(320);
+  await wait(650);
   assert.ok(packets.some((entry) => entry.packet.type === "speech"), "speech events should be published");
 
   const speechPacketsBeforeRemote = packets.filter((entry) => entry.packet.type === "speech").length;
@@ -187,7 +208,7 @@ const context = {
     atMs: 50,
     timelineId: "tl-remote",
   })));
-  await wait(320);
+  await wait(650);
   assert.equal(speakCalls.length, speakCallsBeforeRemote + 1, "followers should play narration from the existing /speak endpoint");
   assert.equal(
     packets.filter((entry) => entry.packet.type === "speech").length,
@@ -319,7 +340,7 @@ const context = {
   const localQuestionPackets = packets.filter((entry) => entry.packet.id === "chat-local-student");
   assert.equal(localQuestionPackets.length, 1, "local chat should publish one authoritative question packet");
   assert.equal(localQuestionPackets[0].packet.answered, true, "the answering sender must mark the question as answered");
-  await wait(320);
+  await wait(650);
 
   // A host must not answer a question that the sending participant already
   // answered locally, otherwise two timelines would fight over the board.
@@ -361,6 +382,57 @@ const context = {
   await busyAnswer;
   await wait(120);
   assert.equal(instructionCalls.length, beforeQueuedAnswer + 1, "queued chat must be answered after the current response");
+
+  // The host can hand equal board authority to CRARA, and CRARA projects the
+  // lesson through the same instruction/timeline path instead of a new system.
+  api.setRole("host");
+  const controlCallsBeforeGrant = controlCalls.length;
+  const granted = await api.hostSetCohost(true);
+  assert.equal(granted, true, "host should be able to grant co-host control");
+  assert.equal(api.getState().cohost, true);
+  assert.equal(controlCalls[controlCallsBeforeGrant].type, "cohost");
+  assert.equal(controlCalls[controlCallsBeforeGrant].value.enabled, true);
+  const grantToken = "co-host-grant-" + (controlCallsBeforeGrant + 1);
+
+  for (let idleWait = 0; idleWait < 100 && api.getState().aiBusy; idleWait += 1) {
+    await wait(20);
+  }
+  assert.equal(api.getState().aiBusy, false, "CRARA must be idle before projection");
+  const projectionCallsBefore = instructionCalls.length;
+  const timelinePacketsBefore = packets.filter((entry) => entry.packet.type === "timeline").length;
+  await api.projectLesson();
+  assert.equal(instructionCalls.length, projectionCallsBefore + 1, "projection must use the existing lesson instruction service");
+  assert.ok(
+    packets.filter((entry) => entry.packet.type === "timeline").length > timelinePacketsBefore,
+    "projection must publish a synchronized board timeline"
+  );
+
+  const cohostControlBefore = controlCalls.length;
+  await api.hostSetTeaching("paused");
+  assert.equal(controlCalls[cohostControlBefore].type, "teaching");
+  assert.equal(controlCalls[cohostControlBefore].authority, grantToken);
+
+  const revoked = await api.hostSetCohost(false);
+  assert.equal(revoked, false);
+  assert.equal(api.getState().cohost, false);
+  assert.equal(api.getState().cohostAuthority, undefined, "the bearer grant must not be exposed in public state");
+
+  // A signed remote grant only tells followers that CRARA is driving; it must
+  // not silently promote every student in the room to a board controller.
+  const authorizeCallsBefore = authorizeCalls.length;
+  api.onRemote("crara-whiteboard", Buffer.from(JSON.stringify({
+    v: 1,
+    type: "cohost",
+    actor: "remote-host",
+    seq: 9000000000100,
+    lesson: "Hypothesis Testing",
+    enabled: true,
+    authority: "remote-signed-grant",
+  })));
+  await wait(20);
+  assert.equal(authorizeCalls.length, authorizeCallsBefore + 1);
+  assert.equal(api.getState().craraDriving, true);
+  assert.equal(api.getState().cohost, false, "followers must not receive local co-host authority from a broadcast grant");
 
   console.log("CRARA whiteboard timeline checks passed.");
 })().catch((error) => {

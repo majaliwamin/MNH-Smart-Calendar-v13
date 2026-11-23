@@ -60,6 +60,12 @@
     teaching: "idle",
     lesson: "Hypothesis Testing",
     role: "student",
+    // Local cohost authority is granted only by the human host through a
+    // signed control token. Remote followers see the state as presentation
+    // context only; it never grants them board control.
+    cohost: false,
+    cohostAuthority: "",
+    craraDriving: false,
     chatMode: "Active",
     permissions: { canWrite: true, canControl: false, boardLocked: false, boardOwner: "", granted: [] },
     questionQueue: [],
@@ -515,7 +521,7 @@
       setCaption(cleanText(packet.text, 300), cleanText(packet.from, 80), cleanText(packet.segmentId, 80), false);
       return;
     }
-    if (packet.type === "teaching" || packet.type === "mode" || packet.type === "permissions") {
+    if (packet.type === "teaching" || packet.type === "mode" || packet.type === "permissions" || packet.type === "cohost") {
       if (packet.authority) authorizeControl(packet);
       return;
     }
@@ -645,7 +651,7 @@
   }
 
   function buildUI() {
-    root = el("div", "cr-wb-overlay");
+    root = el("div", "cr-wb-overlay cr-wb-collapsed");
     root.hidden = true;
     root.setAttribute("aria-label", "CRARA shared whiteboard");
 
@@ -654,11 +660,15 @@
     brand.append(el("b", "cr-wb-name", "CRARA Whiteboard"), el("span", "cr-wb-sub", state.lesson));
     statusEl = el("span", "cr-wb-status", "Local · not connected");
     const headActions = el("div", "cr-wb-headactions");
+    const toolsToggle = el("button", "cr-wb-btn cr-wb-tools-toggle", "Tools");
+    toolsToggle.type = "button";
+    toolsToggle.setAttribute("aria-expanded", "false");
+    toolsToggle.setAttribute("aria-label", "Show whiteboard tools");
     const saveBtn = el("button", "cr-wb-btn", "Save on this device");
     const restoreBtn = el("button", "cr-wb-btn", "Restore saved");
     const exportBtn = el("button", "cr-wb-btn", "Export SVG");
     const closeBtn = el("button", "cr-wb-btn cr-wb-close", "Close");
-    headActions.append(saveBtn, restoreBtn, exportBtn, closeBtn);
+    headActions.append(toolsToggle, saveBtn, restoreBtn, exportBtn, closeBtn);
     head.append(brand, statusEl, headActions);
 
     const tools = el("div", "cr-wb-tools");
@@ -738,6 +748,7 @@
     const askBtn = el("button", "cr-wb-btn cr-wb-ask", "Ask CRARA");
     hostPanel = el("div", "cr-wb-host");
     const hostButtons = [
+      ["cohost", "Give CRARA board control"], ["project", "Project lesson"],
       ["pause", "Pause CRARA"], ["resume", "Resume CRARA"], ["stop", "Stop CRARA"],
       ["take", "Take board control"], ["lock", "Lock board"], ["unlock", "Unlock board"],
       ["enable", "Enable student writing"], ["disable", "Disable student writing"],
@@ -762,7 +773,7 @@
       "aria-label": "CRARA whiteboard canvas"
     });
     svg.innerHTML = '<defs><pattern id="cr-wb-grid" width="40" height="40" patternUnits="userSpaceOnUse">' +
-      '<path d="M40 0H0V40" fill="none" stroke="#1b2545" stroke-width="1"/></pattern>' +
+      '<path d="M40 0H0V40" fill="none" stroke="#dfe4dc" stroke-width="1"/></pattern>' +
       '<marker id="cr-wb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
       '<path d="M0 0 10 5 0 10z" fill="context-stroke"/></marker></defs>' +
       '<rect class="cr-wb-bg" x="-5000" y="-5000" width="10000" height="10000" fill="url(#cr-wb-grid)"/>';
@@ -779,6 +790,12 @@
     document.body.appendChild(root);
 
     closeBtn.addEventListener("click", close);
+    toolsToggle.addEventListener("click", function () {
+      const collapsed = root.classList.toggle("cr-wb-collapsed");
+      toolsToggle.textContent = collapsed ? "Tools" : "Hide tools";
+      toolsToggle.setAttribute("aria-expanded", String(!collapsed));
+      toolsToggle.setAttribute("aria-label", collapsed ? "Show whiteboard tools" : "Hide whiteboard tools");
+    });
     saveBtn.addEventListener("click", function () { persist(); announce("Whiteboard saved on this device."); });
     restoreBtn.addEventListener("click", function () { announce(restore() ? "Saved whiteboard restored." : "No saved whiteboard found."); });
     exportBtn.addEventListener("click", exportSvg);
@@ -1288,8 +1305,12 @@
     return ok();
   }
 
+  function isHumanHost() {
+    return state.role === "host" || state.role === "owner";
+  }
+
   function isHost() {
-    return state.role === "host" || state.role === "owner" || state.role === "crara";
+    return isHumanHost() || state.role === "crara" || state.cohost === true;
   }
 
   function hasRemoteParticipants() {
@@ -1329,8 +1350,16 @@
 
   function refreshRoleState() {
     if (!root) return;
+    const cohosting = state.cohost === true || state.craraDriving === true;
     root.classList.toggle("cr-wb-host-mode", isHost());
-    if (hostPanel) hostPanel.hidden = !isHost();
+    root.classList.toggle("cr-wb-cohost-active", cohosting);
+    const sub = root.querySelector(".cr-wb-sub");
+    if (sub) sub.textContent = cohosting ? state.lesson + " · CRARA co-hosting" : state.lesson;
+    if (hostPanel) {
+      hostPanel.hidden = !isHost();
+      const cohostButton = hostPanel.querySelector('[data-wb-host="cohost"]');
+      if (cohostButton) cohostButton.textContent = state.cohost ? "Take back board control" : "Give CRARA board control";
+    }
     if (modeEl) {
       modeEl.value = state.chatMode;
       modeEl.disabled = !isHost();
@@ -1362,10 +1391,49 @@
     announce("Chat mode: " + mode + ".");
   }
 
+  function setCohost(enabled, localAuthority, broadcast, authority) {
+    const value = enabled === true;
+    state.craraDriving = value;
+    if (localAuthority) {
+      state.cohost = value;
+      state.cohostAuthority = value ? cleanText(authority, 2000) : "";
+    } else if (!value) {
+      state.cohostAuthority = "";
+    }
+    setTeachingState(state.teaching);
+    refreshRoleState();
+    if (broadcast !== false) {
+      publish("cohost", {
+        enabled: value,
+        authority: localAuthority ? cleanText(authority, 2000) : ""
+      });
+    }
+    announce(value ? "CRARA now has board control." : "CRARA co-host control has ended.");
+  }
+
+  async function hostSetCohost(enabled) {
+    if (!isHumanHost()) return announce("Only the classroom host can grant CRARA co-host control.");
+    const value = enabled === true;
+    try {
+      const result = await postJson(API.control, {
+        key: state.sessionKey,
+        type: "cohost",
+        value: { enabled: value }
+      });
+      setCohost(result.value.enabled === true, true, false, result.token);
+      publish("cohost", { enabled: result.value.enabled === true, authority: result.token });
+      return result.value.enabled === true;
+    } catch (_) {
+      announce("CRARA co-host control requires the CRARA lesson service.");
+      return null;
+    }
+  }
+
   function authorizeControl(packet) {
     let value = {};
     if (packet.type === "mode") value = { mode: cleanText(packet.mode, 40) };
     else if (packet.type === "teaching") value = { value: cleanText(packet.value, 24) };
+    else if (packet.type === "cohost") value = { enabled: packet.enabled === true };
     else if (packet.permissions && typeof packet.permissions === "object") value = packet.permissions;
     postJson(API.authorize, {
       key: state.sessionKey,
@@ -1376,6 +1444,7 @@
       if (!result.ok) return;
       if (packet.type === "mode") setChatMode(value.mode, false);
       else if (packet.type === "teaching") setTeachingState(value.value);
+      else if (packet.type === "cohost") setCohost(value.enabled, false, false);
       else setPermissions(value);
     }).catch(function () {});
   }
@@ -1387,7 +1456,8 @@
       const result = await postJson(API.control, {
         key: state.sessionKey,
         type: "mode",
-        value: { mode: mode }
+        value: { mode: mode },
+        authority: state.cohostAuthority
       });
       setChatMode(result.value.mode, false);
       publish("mode", { mode: result.value.mode, authority: result.token });
@@ -1403,7 +1473,8 @@
       const result = await postJson(API.control, {
         key: state.sessionKey,
         type: "teaching",
-        value: { value: stateValue }
+        value: { value: stateValue },
+        authority: state.cohostAuthority
       });
       setTeachingState(result.value.value);
       publish("teaching", { value: result.value.value, authority: result.token });
@@ -1421,7 +1492,8 @@
       const result = await postJson(API.control, {
         key: state.sessionKey,
         type: "permissions",
-        value: next
+        value: next,
+        authority: state.cohostAuthority
       });
       setPermissions(result.value);
       publish("permissions", { permissions: result.value, authority: result.token });
@@ -1742,7 +1814,8 @@
         pages: state.pages,
         pageIndex: state.pageIndex,
         chatMode: state.chatMode,
-        permissions: state.permissions
+        permissions: state.permissions,
+        authority: state.cohostAuthority
       });
       announce("Session saved to the CRARA library.");
       publish("session", { key: state.sessionKey, savedAt: data.savedAt || Date.now() });
@@ -1754,7 +1827,8 @@
   async function restoreServer() {
     if (!isHost()) return announce("Only the host can restore the room session.");
     try {
-      const data = await getJson(API.session + "?key=" + encodeURIComponent(state.sessionKey));
+      const data = await getJson(API.session + "?key=" + encodeURIComponent(state.sessionKey) +
+        "&authority=" + encodeURIComponent(state.cohostAuthority));
       const saved = data.session;
       if (!saved) return announce("No saved session was found for this room.");
       state.pages = cleanPages(saved.pages);
@@ -1773,8 +1847,30 @@
     }
   }
 
+  function projectLesson() {
+    if (!isHost()) return announce("Lesson projection is available to the host or CRARA co-host.");
+    if (state.teaching === "stopped") setTeachingState("teaching");
+    setCaption("CRARA is projecting the lesson onto the shared board…", "CRARA");
+    return respondToQuestion({
+      id: uid("project"),
+      body: "Project the " + state.lesson + " lesson onto the shared whiteboard. Write the key definitions, draw the decision flow and render the standard equations while you explain each step.",
+      from: "CRARA",
+      mine: true,
+      intro: true
+    });
+  }
+
   async function hostAction(action) {
     if (!isHost()) return announce("Host controls are available to the classroom host.");
+    if (action === "cohost") {
+      if (!isHumanHost()) return announce("Only the classroom host can grant CRARA co-host control.");
+      const value = await hostSetCohost(!state.cohost);
+      if (value !== null && value === true) projectLesson();
+      return;
+    }
+    if (action === "project") {
+      return projectLesson();
+    }
     if (action === "pause") {
       pauseLesson(false);
       await hostSetTeaching("paused");
@@ -1965,6 +2061,8 @@
         pageIndex: state.pageIndex,
         teaching: state.teaching,
         role: state.role,
+        cohost: state.cohost,
+        craraDriving: state.craraDriving,
         chatMode: state.chatMode,
         permissions: state.permissions,
         questionQueue: state.questionQueue,
@@ -1984,6 +2082,8 @@
     hostSetMode: hostSetMode,
     hostSetTeaching: hostSetTeaching,
     hostSetPermissions: hostSetPermissions,
+    hostSetCohost: hostSetCohost,
+    projectLesson: projectLesson,
     askQuestion: askQuestion,
     startLessonIntro: startLessonIntro,
     respondToQuestion: respondToQuestion,

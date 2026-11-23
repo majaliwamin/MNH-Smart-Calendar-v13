@@ -48,7 +48,10 @@ _FORBIDDEN_ARG_KEYS = frozenset({
 })
 _BANNED_OUTPUT = ("penrose", "scholarmw", "voice training", "vtc", "your logo", "physics")
 _CONTROL_TTL_SECONDS = 300
-_CONTROL_TYPES = frozenset({"mode", "permissions", "teaching"})
+# A CRARA co-host grant must survive a normal lesson without asking the human
+# host to click again every five minutes. It is still signed and room-scoped.
+_COHOST_TTL_SECONDS = 7200
+_CONTROL_TYPES = frozenset({"mode", "permissions", "teaching", "cohost"})
 _TEACHING_STATES = frozenset({"idle", "teaching", "listening", "answering", "paused", "stopped"})
 _MAX_INSTRUCTIONS = 40
 _MAX_POINTS = 500
@@ -155,12 +158,14 @@ class WhiteboardSessionRequest(BaseModel):
     pageIndex: int = Field(default=0, ge=0, le=_MAX_PAGES - 1)
     chatMode: str = Field(default="Active", max_length=40)
     permissions: dict[str, Any] = Field(default_factory=dict)
+    authority: str = Field(default="", max_length=2000)
 
 
 class WhiteboardControlRequest(BaseModel):
     key: str = Field(min_length=1, max_length=160)
     type: str = Field(min_length=1, max_length=40)
     value: dict[str, Any] = Field(default_factory=dict, max_length=40)
+    authority: str = Field(default="", max_length=2000)
 
 
 class WhiteboardAuthorizeRequest(WhiteboardControlRequest):
@@ -256,6 +261,25 @@ def _verify_control(token: str, expected: dict[str, Any]) -> dict[str, Any] | No
         if payload.get(key) != value:
             return None
     return payload
+
+
+def _require_control_issuer(request: Request, key: str, authority: str = "") -> tuple[dict, str]:
+    """Accept the human host or a signed, room-scoped CRARA co-host grant.
+
+    The grant is a bearer token issued by the host through /control. Sessions,
+    join codes and other account-level operations remain strictly host-only.
+    """
+    user = _user(request)
+    if classroom_role(user) == "host":
+        return user, user["id"]
+    signed = _verify_control(authority, {
+        "typ": "crara-whiteboard-control",
+        "room": _clean_key(key),
+        "type": "cohost",
+    })
+    if signed and signed.get("value", {}).get("enabled") is True:
+        return user, str(signed.get("sub") or user["id"])
+    raise HTTPException(403, "Only the classroom host or an authorised CRARA co-host can control this board.")
 
 
 def _number(value: Any, low: float, high: float, default: float | None = None) -> float | None:
@@ -629,10 +653,12 @@ def instructions(request: Request, payload: WhiteboardInstructionRequest):
 
 @router.post("/control")
 def issue_control(request: Request, payload: WhiteboardControlRequest):
-    """Issue a short-lived signed token for a host-only board control change."""
-    user = _require_host(request)
+    """Issue a signed token for a host or authorised co-host control change."""
+    user, _ = _require_control_issuer(request, payload.key, payload.authority)
     if payload.type not in _CONTROL_TYPES:
         raise HTTPException(400, "Unsupported whiteboard control type.")
+    if payload.type == "cohost" and classroom_role(user) != "host":
+        raise HTTPException(403, "Only the classroom host can grant or revoke CRARA co-host control.")
     if payload.type == "mode":
         mode = str(payload.value.get("mode") or "").strip()
         if mode not in CHAT_MODES:
@@ -643,15 +669,21 @@ def issue_control(request: Request, payload: WhiteboardControlRequest):
         if teaching not in _TEACHING_STATES:
             raise HTTPException(400, "Unsupported lesson state.")
         value = {"value": teaching}
+    elif payload.type == "cohost":
+        enabled = payload.value.get("enabled")
+        if not isinstance(enabled, bool):
+            raise HTTPException(400, "Cohost control requires a boolean enabled value.")
+        value = {"enabled": enabled}
     else:
         value = _sanitize_permissions(payload.value)
+    ttl = _COHOST_TTL_SECONDS if payload.type == "cohost" else _CONTROL_TTL_SECONDS
     token = _sign_control({
         "typ": "crara-whiteboard-control",
         "sub": user["id"],
         "room": _clean_key(payload.key),
         "type": payload.type,
         "value": value,
-        "exp": int(time.time()) + _CONTROL_TTL_SECONDS,
+        "exp": int(time.time()) + ttl,
     })
     return {"ok": True, "type": payload.type, "value": value, "token": token}
 
@@ -674,7 +706,7 @@ def authorize_control(request: Request, payload: WhiteboardAuthorizeRequest):
 
 @router.post("/session")
 def save_session(request: Request, payload: WhiteboardSessionRequest):
-    user = _require_host(request)
+    _, owner_id = _require_control_issuer(request, payload.key, payload.authority)
     key = _clean_key(payload.key)
     body = payload.model_dump()
     raw = json.dumps(body, ensure_ascii=False)
@@ -683,7 +715,7 @@ def save_session(request: Request, payload: WhiteboardSessionRequest):
     pages = [page for page in payload.pages if isinstance(page, dict)][:_MAX_PAGES]
     saved = {
         "key": key,
-        "owner_id": user["id"],
+        "owner_id": owner_id,
         "lesson": payload.lesson.strip()[:120] or "Hypothesis Testing",
         "pages": pages,
         "pageIndex": payload.pageIndex,
@@ -691,14 +723,14 @@ def save_session(request: Request, payload: WhiteboardSessionRequest):
         "permissions": _sanitize_permissions(payload.permissions),
         "savedAt": int(time.time() * 1000),
     }
-    memory._write(SESSION_COLLECTION, memory._doc_id(user["id"], key), saved)
+    memory._write(SESSION_COLLECTION, memory._doc_id(owner_id, key), saved)
     return {"ok": True, "savedAt": saved["savedAt"], "key": key}
 
 
 @router.get("/session")
-def load_session(request: Request, key: str = "local"):
-    user = _require_host(request)
-    saved = memory._read(SESSION_COLLECTION, memory._doc_id(user["id"], _clean_key(key)))
-    if not saved or saved.get("owner_id") != user["id"]:
+def load_session(request: Request, key: str = "local", authority: str = ""):
+    _, owner_id = _require_control_issuer(request, key, authority)
+    saved = memory._read(SESSION_COLLECTION, memory._doc_id(owner_id, _clean_key(key)))
+    if not saved or saved.get("owner_id") != owner_id:
         return {"ok": True, "session": None}
     return {"ok": True, "session": saved}

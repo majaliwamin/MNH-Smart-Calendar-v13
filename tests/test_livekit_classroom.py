@@ -46,6 +46,27 @@ def test_classroom_bundle_is_present_and_rebranded():
     assert "Your CRARA classroom is ready" in js
 
 
+def test_classroom_chat_has_voice_ask_without_delivery_noise():
+    js = (CLASSROOM_DIR / "crara-classroom.js").read_text(encoding="utf-8")
+    css = (CLASSROOM_DIR / "crara-classroom.css").read_text(encoding="utf-8")
+
+    assert "Chat with CRARA and the room" not in js
+    assert "CRARA answers here while the lesson continues" not in js
+    assert 'children:"Sent"' not in js
+
+    assert 'className:"voiceask"' in js
+    assert "Ask CRARA by voice" in js
+    assert "Stop voice question" in js
+    assert "/api/class-rep/transcribe" in js
+    assert "crara-voice-question.webm" in js
+    assert "Voice question received. CRARA is answering in chat and on the board." in js
+    assert ".compose button.voiceask" in css
+
+    whiteboard = (CLASSROOM_DIR / "crara-whiteboard.js").read_text(encoding="utf-8")
+    assert "/api/class-rep/speak" in whiteboard
+    assert "speakNarration" in whiteboard
+
+
 def test_crara_ui_offers_lesson_scoped_classroom_panel():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     assert "cr-classroom-panel" in js

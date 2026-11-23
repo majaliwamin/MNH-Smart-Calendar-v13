@@ -20,6 +20,20 @@ def test_cara_floating_ui_uses_theme_tokens_and_mobile_layout():
     assert "@media(max-width:760px)" in css
 
 
+def test_crara_headers_truncate_instead_of_overflowing_on_mobile():
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+
+    title_rule = css.split(".cr-title{", 1)[1].split("}", 1)[0]
+    assert "white-space:nowrap" in title_rule
+    assert "overflow:hidden" in title_rule
+    assert "text-overflow:ellipsis" in title_rule
+
+    classroom_title_rule = css.split(".cr-classroom-title{", 1)[1].split("}", 1)[0]
+    assert "white-space:nowrap" in classroom_title_rule
+    assert "overflow:hidden" in classroom_title_rule
+    assert "text-overflow:ellipsis" in classroom_title_rule
+
+
 def test_crara_uses_a_scoped_silver_palette_including_the_graduation_cap():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert ".cara-widget,.view-tabs .cara-launcher{" in css
