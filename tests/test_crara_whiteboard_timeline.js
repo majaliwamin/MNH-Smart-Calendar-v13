@@ -337,6 +337,12 @@ const context = {
   const answerEvents = domEvents.slice(domEventsBeforeChat).filter((event) => event.type === "crara-whiteboard-answer");
   assert.equal(answerEvents.length, 1, "CRARA answers must be emitted into the classroom chat");
   assert.ok(answerEvents[0].detail.body, "the chat answer event must carry visible text");
+  assert.equal(
+    answerEvents[0].detail.body,
+    "State H0.",
+    "classroom chat must show the spoken answer, not the short board caption"
+  );
+  assert.equal(answerEvents[0].detail.caption, "Decision flow", "the board caption must remain available separately");
   const localQuestionPackets = packets.filter((entry) => entry.packet.id === "chat-local-student");
   assert.equal(localQuestionPackets.length, 1, "local chat should publish one authoritative question packet");
   assert.equal(localQuestionPackets[0].packet.answered, true, "the answering sender must mark the question as answered");

@@ -531,12 +531,13 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v44"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
-    # All three reference views are launched from Resources only; they have no
+    # All four reference views are launched from Resources only; they have no
     # standalone navigation-menu item or bottom-nav tab.
     assert 'data-view="python-library"' not in html
     assert 'href="#python-library"' not in html
     assert 'data-view="stat8100-practical"' not in html
     assert 'data-view="hypothesis-lab"' not in html
+    assert 'data-view="statistical-glossary"' not in html
     assert 'id="open-python-library"' in html
     assert "Open Python Library full screen" in html
     # The Resources section is a launcher only; its old placeholder copy is gone.
@@ -789,6 +790,8 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
     backend_config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
     index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
 
     build = "2026.11.22-statistical-tests-glossary-v44"
     assert f'BUILD_ID = "{build}"' in backend_config
@@ -796,6 +799,22 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     assert f'const BUILD = "{build}"' in worker
     assert '"/resources/python-statistical-tests-glossary.html"' in worker
     assert glossary_path.is_file()
+
+    # The glossary is a first-class Resources-only special view again, so a
+    # learner never has to hunt for the link buried in the Python Library.
+    assert 'id="open-statistical-glossary"' in index
+    assert "Open Statistical Tests Glossary full screen" in index
+    assert 'id="view-statistical-glossary"' in index
+    assert 'id="statistical-glossary-back"' in index
+    assert 'data-view="statistical-glossary"' not in index
+    assert f'src="/resources/python-statistical-tests-glossary.html?v={build}"' in index
+    assert '"statistical-glossary"' in app
+    assert 'glossary.hidden=name!=="statistical-glossary"' in app
+    assert 'getElementById("open-statistical-glossary")?.addEventListener("click",()=>showView("statistical-glossary"))' in app
+    assert 'getElementById("statistical-glossary-back")?.addEventListener("click",()=>showView(previousNonGlossaryView||"resources"))' in app
+    assert "MNH_OPEN_STATISTICAL_GLOSSARY" in app
+    assert "MNH_OPEN_STATISTICAL_GLOSSARY" in library
+    assert "body.python-library-view #view-statistical-glossary:not([hidden])" in css
 
     import html
     import re

@@ -60,6 +60,7 @@ def test_classroom_chat_has_voice_ask_without_delivery_noise():
     assert "/api/class-rep/transcribe" in js
     assert "crara-voice-question.webm" in js
     assert "Voice question received. CRARA is answering in chat and on the board." in js
+    assert "ue.narration||ue.body||ue.caption" in js, "chat bubbles must show the spoken answer, not the board title"
     assert ".compose button.voiceask" in css
 
     whiteboard = (CLASSROOM_DIR / "crara-whiteboard.js").read_text(encoding="utf-8")

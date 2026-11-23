@@ -1893,7 +1893,7 @@
     },
     "python_library": {
       "path": "frontend/resources/python-command-library.html",
-      "sha256": "cf1dd2d57f1aaacc33975abdc1bea02cf67fe52e3e69df0a15a65aeca1980ab0"
+      "sha256": "59e9f712f935035c7b11704146525dcfe2483362d191e6f09cda30996502dae3"
     }
   },
   "visual_recipes": [

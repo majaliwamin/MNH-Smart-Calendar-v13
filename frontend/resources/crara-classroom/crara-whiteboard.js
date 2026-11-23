@@ -388,13 +388,17 @@
   }
 
   function dispatchAnswer(caption, narration, question, timelineId) {
-    const body = cleanText(caption, 600) || cleanText(narration, 600);
+    const boardCaption = cleanText(caption, 300);
+    const spokenAnswer = cleanText(narration, 1200);
+    // The caption is a short board title. The spoken narration is the actual
+    // answer, so the classroom chat bubble must show that instead of a label.
+    const body = spokenAnswer || boardCaption;
     if (!body || typeof window.dispatchEvent !== "function") return;
     try {
       window.dispatchEvent(new CustomEvent("crara-whiteboard-answer", {
         detail: {
-          caption: cleanText(caption, 600),
-          narration: cleanText(narration, 1200),
+          caption: boardCaption,
+          narration: spokenAnswer,
           question: cleanText(question, 600),
           timelineId: cleanText(timelineId, 80),
           body: body
