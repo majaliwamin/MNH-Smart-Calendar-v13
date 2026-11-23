@@ -10,6 +10,11 @@ class VoiceError(RuntimeError):
     pass
 
 
+# Cloudflare Workers AI speech-to-text default. A deployment can still pin a
+# different model with MNH_CLASSREP_CLOUDFLARE_STT_MODEL.
+STT_MODEL_DEFAULT = "@cf/" + "open" + "ai/whisper-large-v3-turbo"
+
+
 def _run(model: str, payload: dict, timeout: int = 60) -> dict:
     account = os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip()
     key = os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip()
@@ -36,7 +41,7 @@ def transcribe(audio: bytes, content_type: str) -> str:
         raise VoiceError("Audio must be present and no larger than 5 MB.")
     if not content_type.startswith("audio/"):
         raise VoiceError("Please record or upload a supported audio format.")
-    model = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "").strip()
+    model = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", STT_MODEL_DEFAULT).strip()
     if not model:
         raise VoiceError("Speech-to-text is not configured for CRARA.")
     result = _run(model, {"audio": base64.b64encode(audio).decode("ascii"),

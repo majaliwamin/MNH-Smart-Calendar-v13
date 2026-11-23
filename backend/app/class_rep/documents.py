@@ -432,15 +432,13 @@ def recent_document_passages(owner_id: str = 'shared', *, document_limit: int = 
     with database() as connection:
         rows = connection.execute(
             "SELECT id,data,updated_at FROM docs WHERE col='cara_documents' "
-            "ORDER BY updated_at DESC LIMIT ?",
-            (max(100, document_limit * chunk_limit * 20),),
+            "ORDER BY updated_at DESC"
         ).fetchall()
-    grouped: dict[str, list[dict]] = {}
-    order: list[str] = []
-    used = 0
+    grouped: dict[str, dict] = {}
     for row in rows:
         try:
             item = json.loads(row["data"])
+            updated_at = row["updated_at"]
         except (TypeError, KeyError, json.JSONDecodeError):
             continue
         if not isinstance(item, dict) or item.get("owner_id", "shared") not in ("shared", owner_id):
@@ -449,12 +447,23 @@ def recent_document_passages(owner_id: str = 'shared', *, document_limit: int = 
         if not doc_id:
             continue
         if doc_id not in grouped:
-            if len(order) >= document_limit:
-                continue
-            order.append(doc_id)
-            grouped[doc_id] = []
-        if len(grouped[doc_id]) >= chunk_limit:
-            continue
+            grouped[doc_id] = {"item": item, "updated_at": updated_at, "chunks": []}
+        grouped[doc_id]["chunks"].append(item)
+    # Prefer the caller's own newest upload over a newer shared resource: a
+    # request such as "summarise my notes" should not pick someone else's file.
+    selected = sorted(
+        grouped.items(),
+        key=lambda pair: (pair[1]["item"].get("owner_id", "shared") == owner_id,
+                          pair[1]["updated_at"]),
+        reverse=True,
+    )[:document_limit]
+    candidates: list[dict] = []
+    for _, entry in selected:
+        candidates.extend(reversed(entry["chunks"][-chunk_limit:]))
+
+    used = 0
+    passages: list[dict] = []
+    for item in candidates:
         text = str(item.get("text") or "").strip()
         if not text:
             continue
@@ -463,7 +472,7 @@ def recent_document_passages(owner_id: str = 'shared', *, document_limit: int = 
         if not text:
             break
         used += len(text)
-        grouped[doc_id].append({
+        passages.append({
             "title": item.get("title"),
             "page": item.get("page"),
             "text": text,
@@ -471,7 +480,4 @@ def recent_document_passages(owner_id: str = 'shared', *, document_limit: int = 
         })
         if used >= max_chars:
             break
-    passages: list[dict] = []
-    for doc_id in order:
-        passages.extend(reversed(grouped[doc_id]))
     return passages

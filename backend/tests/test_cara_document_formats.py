@@ -98,3 +98,15 @@ def test_status_advertises_audio_uploads_when_speech_to_text_is_configured(monke
     result = status()
     assert result["audio_uploads"] == "enabled"
     assert "uploaded_audio_transcripts" in result["knowledge_sources"]
+
+
+def test_status_uses_default_speech_to_text_model_without_extra_configuration(monkeypatch):
+    from app.class_rep.routes import status
+
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "test-key")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "test-account")
+    monkeypatch.delenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", raising=False)
+    result = status()
+    assert result["audio_uploads"] == "enabled"
+    from app.class_rep.voice import STT_MODEL_DEFAULT
+    assert result["speech_to_text_model"] == STT_MODEL_DEFAULT

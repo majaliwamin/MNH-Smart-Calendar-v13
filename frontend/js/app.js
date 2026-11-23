@@ -2348,18 +2348,19 @@ async function uploadResourceFile(file){
  if(!response.ok)throw new Error(result.detail||result.error||"The file could not be uploaded.");
  return result;
 }
-async function addResource(t,u,n,file=null,category="Others"){
+async function addResource(t,u,n,file=null,category="Others",opts={}){
+ const silent=Boolean(opts&&opts.silent);
  const title=String(t||"").trim();
- if(!title){statusEl.className="status error";statusEl.textContent="Enter a resource name.";return false;}
+ if(!title){if(!silent){statusEl.className="status error";statusEl.textContent="Enter a resource name.";}return false;}
  let uploaded=null,rec;
  if(file){
-  if(file.size>25*1024*1024){statusEl.className="status error";statusEl.textContent="The selected file is larger than 25 MB.";return false;}
-  statusEl.className="status";statusEl.textContent="Uploading file…";
+  if(file.size>25*1024*1024){if(!silent){statusEl.className="status error";statusEl.textContent="The selected file is larger than 25 MB.";}return false;}
+  if(!silent){statusEl.className="status";statusEl.textContent="Uploading file…";}
   try{uploaded=await uploadResourceFile(file);rec=cleanRes({title,url:window.location.origin+uploaded.url,note:n,category,createdAt:Date.now(),fileId:uploaded.id,fileName:file.name,fileSize:uploaded.size});}
-  catch(e){statusEl.className="status error";statusEl.textContent=e.message||"File upload failed.";return false;}
+  catch(e){if(!silent){statusEl.className="status error";statusEl.textContent=e.message||"File upload failed.";}return false;}
  }else{
   rec=cleanRes({title,url:u,note:n,category,createdAt:Date.now()});
-  if(!rec.url){statusEl.className="status error";statusEl.textContent="Enter a valid web address or choose a file.";return false;}
+  if(!rec.url){if(!silent){statusEl.className="status error";statusEl.textContent="Enter a valid web address or choose a file.";}return false;}
  }
  const r={id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),...rec};
  try{
@@ -2367,10 +2368,11 @@ async function addResource(t,u,n,file=null,category="Others"){
   if(cloud)await cloud.doc("resources/"+r.id).set(data);
   else await window.mnhApi.request("PUT","/api/doc/resources/"+encodeURIComponent(r.id),data);
   resources.push(r);cacheResources();renderResources();
-  statusEl.className="status ok";statusEl.textContent="Saved for everyone.";
+  const indexingNote=uploaded&&uploaded.crara_indexing&&uploaded.crara_indexing!=="indexed"?" CRARA could not read this file for summaries.":"";
+  if(!silent){statusEl.className="status ok";statusEl.textContent="Saved for everyone."+indexingNote;}
  }catch(e){
   if(uploaded&&uploaded.id){try{await fetch("/api/resources/files/"+encodeURIComponent(uploaded.id),{method:"DELETE",credentials:"same-origin"});}catch(cleanupError){}}
-  writeFailed(e);return false;
+  if(!silent)writeFailed(e);return false;
  }
  return true;
 }
@@ -2428,9 +2430,30 @@ function renderResources(){
  });
  form.textContent="";if(editingUnlocked){const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));const mk=(p,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=p;i.maxLength=max;i.setAttribute("aria-label",p);return i;};
  const t=mk("Title",120),u=mk("Web address (optional when attaching a file)",300),n=mk("Short note (optional)",200),label=el("label","muted","Save in folder"),category=document.createElement("select");category.setAttribute("aria-label","Resource folder");["Lecture Notes","Books","Others"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;category.appendChild(o);});
- const fileLabel=el("label","muted","Attach a PDF, Word, CSV, Excel, photo or audio file"),file=document.createElement("input");file.type="file";file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm,audio/*";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
- file.addEventListener("change",()=>{const chosen=file.files&&file.files[0];if(chosen&&!t.value.trim())t.value=chosen.name.replace(/\.[^.]+$/,"");if(chosen)u.value="";});const b=el("button","primary","Add resource");b.type="button";
- b.addEventListener("click",async()=>{b.disabled=true;try{if(await addResource(t.value,u.value,n.value,file.files&&file.files[0],category.value)){t.value=u.value=n.value="";file.value="";category.value="Others";}}finally{b.disabled=false;}});f.append(t,u,n,label,category,fileLabel,file,b);form.appendChild(f);}
+ const fileLabel=el("label","muted","Attach PDF, Word, CSV, Excel, photo or audio files"),file=document.createElement("input");file.type="file";file.multiple=true;file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm,audio/*";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
+ file.addEventListener("change",()=>{const chosen=Array.from(file.files||[]);if(chosen.length===1&&!t.value.trim())t.value=chosen[0].name.replace(/\.[^.]+$/,"").slice(0,120);if(chosen.length>1)t.placeholder="Title optional for multiple files";});const b=el("button","primary","Add resource");b.type="button";
+ b.addEventListener("click",async()=>{
+    b.disabled=true;
+    try{
+      const files=Array.from(file.files||[]);
+      if(files.length>1){
+        let okCount=0;const failures=[];
+        for(let i=0;i<files.length;i++){
+          const fItem=files[i];
+          const title=fItem.name.replace(/\.[^.]+$/,"").slice(0,120)||("Resource "+(i+1));
+          statusEl.className="status";statusEl.textContent="Uploading "+(i+1)+" of "+files.length+": "+fItem.name;
+          if(await addResource(title,u.value,n.value,fItem,category.value,{silent:true}))okCount++; else failures.push(fItem.name);
+        }
+        if(okCount){t.value=u.value=n.value="";file.value="";category.value="Others";t.placeholder="Title";}
+        if(failures.length){statusEl.className="status error";statusEl.textContent="Saved "+okCount+" of "+files.length+". Failed: "+failures.slice(0,3).join(", ")+(failures.length>3?"…":"");}
+        else{statusEl.className="status ok";statusEl.textContent="Saved "+okCount+" resource"+(okCount===1?"":"s")+" for everyone.";}
+      }else{
+        const single=files[0]||null;
+        const title=t.value||(single?single.name.replace(/\.[^.]+$/,"").slice(0,120):"");
+        if(await addResource(title,u.value,n.value,single,category.value)){t.value=u.value=n.value="";file.value="";category.value="Others";t.placeholder="Title";}
+      }
+    }finally{b.disabled=false;}
+  });f.append(t,u,n,label,category,fileLabel,file,b);form.appendChild(f);}
 }
 function subscribeExtras(db){
  db.collection("settings").onSnapshot(snap=>{snap.docs.forEach(d=>{if(d.id==="header"){const v=d.data();applyHeader({title:v.title,subtitle:v.subtitle});}});},()=>{});

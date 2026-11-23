@@ -237,6 +237,21 @@ def test_voice_adapters_validate_and_return_audio(monkeypatch):
     assert audio == b"mp3" and content_type == "audio/mpeg"
 
 
+def test_voice_transcription_uses_default_model_when_not_pinned(monkeypatch):
+    from app.class_rep import voice
+
+    monkeypatch.delenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", raising=False)
+    seen = {}
+
+    def fake_run(model, payload):
+        seen["model"] = model
+        return {"text": "Recorded lecture"}
+
+    monkeypatch.setattr(voice, "_run", fake_run)
+    assert voice.transcribe(b"audio-bytes", "audio/mpeg") == "Recorded lecture"
+    assert seen["model"] == voice.STT_MODEL_DEFAULT
+
+
 def test_cara_analytics_intent_rejects_unauthorised_request(monkeypatch):
     from app.class_rep import routes
     from app.class_rep.schemas import ChatRequest
@@ -480,15 +495,20 @@ def test_default_ai_response_budget_supports_complete_academic_answers(monkeypat
 def test_recent_document_passages_are_owner_scoped_and_limited(monkeypatch):
     from app.class_rep import documents
 
-    def record(doc_id, title, text, owner="student-1"):
+    def record(doc_id, title, text, owner="student-1", updated_at=100):
         return {"data": json.dumps({"document_id": doc_id, "title": title,
                                     "owner_id": owner, "page": 1, "text": text}),
-                "updated_at": 100}
+                "updated_at": updated_at}
 
     rows = [
-        record("doc-a", "week-4-notes.pdf", "Second paragraph from the newest upload."),
-        record("doc-a", "week-4-notes.pdf", "First paragraph from the newest upload."),
-        record("doc-b", "private-notes.txt", "Another student's private notes.", owner="student-2"),
+        record("doc-shared", "shared-handout.pdf", "Newer shared handout.",
+               owner="shared", updated_at=300),
+        record("doc-a", "week-4-notes.pdf", "Second paragraph from the newest upload.",
+               updated_at=200),
+        record("doc-a", "week-4-notes.pdf", "First paragraph from the newest upload.",
+               updated_at=200),
+        record("doc-b", "private-notes.txt", "Another student's private notes.",
+               owner="student-2", updated_at=400),
     ]
 
     class FakeConnection:

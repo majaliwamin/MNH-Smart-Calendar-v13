@@ -17,7 +17,7 @@ import re
 PROVIDER = "CRARA statistics tutor"
 MODEL = "manual-first-v1"
 MANUAL_MARKER = "**Manual stage complete**"
-LAB_LINK = "[Open the Visual Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html)"
+LAB_LINK = "[Open the Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html)"
 
 _TEACH_VERBS = re.compile(
     r"\b(?:teach|explain|show|walk(?:\s+me)?(?:\s+through)?|guide|demonstrate|"
@@ -145,7 +145,7 @@ _LAB_INTRO = r"""## Hypothesis testing, taught manually first
 
 CRARA's rule for this topic is simple: **statistical reasoning comes before code**. Work through the research question, hypotheses, assumptions, hand calculation, table lookup, distribution and decision rule first. Python is a way to reproduce and check that reasoning, not a substitute for it.
 
-[Open the Visual Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html)
+[Open the Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html)
 
 The numbers below are a fixed teaching example, not a real patient finding. Use the controls in the lab to change the significance level, test statistic and tail configuration after you understand the hand calculation.
 """
@@ -392,7 +392,7 @@ plt.show()
 
 Python automates arithmetic and graph drawing. It does **not** choose the hypotheses, justify the assumptions, or write the scientific interpretation. Those remain statistical reasoning tasks.
 
-Return to the [Visual Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html) to repeat the table and distribution steps interactively.
+Return to the [Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html) to repeat the table and distribution steps interactively.
 """
 
 
@@ -527,5 +527,5 @@ __EXPLANATION__
 | Decision | Compare with critical value | Boolean comparison |
 | Interpretation | Research conclusion | Same research conclusion |
 
-Return to the [Visual Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html) to practise the manual steps again.
+Return to the [Hypothesis Testing Lab](/resources/hypothesis-testing-lab.html) to practise the manual steps again.
 """.replace("__CODE__", code).replace("__EXPLANATION__", explanation)

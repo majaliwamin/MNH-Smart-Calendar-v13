@@ -13,7 +13,7 @@ from app.class_rep.assistant import reply
 from app.class_rep.error_hygiene import is_transient_error_text
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic, provider_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
-from app.class_rep.voice import transcribe, speak, VoiceError
+from app.class_rep.voice import transcribe, speak, VoiceError, STT_MODEL_DEFAULT
 from app.class_rep import memory
 from app.class_rep.language_intelligence import resolve_response_language
 from app.class_rep.linguistic_knowledge import lexicon_stats
@@ -178,7 +178,7 @@ def provider_diagnostics(request: Request):
 def status():
     cfg, configured = provider_config(), provider_configs()
     cloudflare = bool(os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip() and os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip())
-    stt = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "").strip()
+    stt = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", STT_MODEL_DEFAULT).strip()
     return {"ready": bool(configured), "provider": cfg["provider"], "model": cfg["model"],
             "secret_configured": bool(configured), "connection": "not_tested",
             "fallbacks": [p["provider"] for p in configured[1:]],

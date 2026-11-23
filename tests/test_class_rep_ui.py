@@ -93,6 +93,8 @@ def test_crara_reads_audio_uploads_and_adds_copy_and_disclaimer_to_replies():
     assert "audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm" in js
     assert 'const isAudio = /^audio\\//i.test(file.type || "")' in js
     assert "Audio files must be 5 MB or smaller" in js
+    assert 'state.audioUploads = result.audio_uploads === "enabled";' in js
+    assert '"Audio transcription is not configured for CRARA"' in js
     assert '(isAudio ? "Transcribing " : "Reading ")' in js
     assert '" · ask CRARA to summarise it"' in js
     assert "function decorateAssistantResponse(bubble, response)" in js
@@ -107,6 +109,18 @@ def test_crara_reads_audio_uploads_and_adds_copy_and_disclaimer_to_replies():
     assert ".cr-copy-button,.cr-feedback-button{" in css
     assert ".cr-disclaimer{" in css
     assert ".cr-upload-status{" in css
+
+
+def test_resource_upload_reports_when_crara_cannot_index_the_file():
+    js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    assert 'uploaded.crara_indexing!=="indexed"' in js
+    assert "CRARA could not read this file for summaries." in js
+
+def test_resources_allow_multiple_file_uploads():
+    js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    assert "file.multiple=true" in js
+    assert '"Uploading "+(i+1)+" of "+files.length' in js
+    assert "const files=Array.from(file.files||[])" in js
 
 
 def test_cara_header_and_composer_controls_have_no_button_shapes():

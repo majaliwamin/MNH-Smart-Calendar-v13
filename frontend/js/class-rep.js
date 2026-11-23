@@ -7,7 +7,7 @@
   const LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com";
   const GUEST_STORAGE_KEY = "crara_guest_id";
   const GUEST_COOKIE_NAME = "cara_guest";
-  const state = { history: [], busy: false, ready: false, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN" };
+  const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN" };
   function newGuestId() {
     const random = window.crypto && window.crypto.randomUUID
       ? window.crypto.randomUUID().replace(/-/g, "")
@@ -432,10 +432,11 @@
       state.ready = Boolean(response.ok && result.ready);
       state.voice = result.voice === "enabled";
       state.uploads = result.document_uploads === "enabled";
+      state.audioUploads = result.audio_uploads === "enabled";
       status(state.ready ? "AI configured · " + result.provider + (result.connection === "not_tested" ? " · connection not tested" : result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
       recordButton.disabled = !state.voice; root.dataset.documentSearch = result.document_search || "unavailable";
     } catch (_) {
-      state.ready = false; state.voice = false; state.uploads = false;
+      state.ready = false; state.voice = false; state.uploads = false; state.audioUploads = false;
       status("Services unavailable", false);
       recordButton.disabled = true;
     }
@@ -651,6 +652,7 @@
     fileInput.value = "";
     if (!file) return;
     const isAudio = /^audio\//i.test(file.type || "") || /\.(mp3|wav|m4a|aac|ogg|opus|flac|webm)$/i.test(file.name);
+    if (isAudio && !state.audioUploads) { uploadMessage("Audio transcription is not configured for CRARA", false); return; }
     if (isAudio && file.size > 5 * 1024 * 1024) { uploadMessage("Audio files must be 5 MB or smaller", false); return; }
     if (file.size > 10 * 1024 * 1024) { uploadMessage("Files must be 10 MB or smaller", false); return; }
     attachButton.disabled = true;
