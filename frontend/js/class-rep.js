@@ -387,7 +387,13 @@
       classroomSubtitle.textContent = "Lesson: " + topicLabel(state.classroom.topic) + " · " + result.room;
       const frame = document.createElement("iframe");
       frame.id = "crara-live-classroom-frame";
-      frame.className = "crara-classroom-frame";
+      // Must match the .cr-classroom-frame CSS rule; an unmatched class leaves
+      // the iframe at the browser's default 300x150 size.
+      frame.className = "cr-classroom-frame";
+      frame.style.display = "block";
+      frame.style.width = "100%";
+      frame.style.height = "100%";
+      frame.style.border = "0";
       frame.title = "CRARA one-to-one classroom";
       frame.setAttribute("allow", "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen");
       frame.setAttribute("allowfullscreen", "true");

@@ -55,11 +55,39 @@ def test_crara_ui_offers_lesson_scoped_classroom_panel():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert ".cr-classroom-panel[hidden]{display:none!important}" in css
     assert ".cr-classroom-frame-wrap" in css
+    assert "#crara-live-classroom-frame" in css
 
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
     assert "/resources/crara-classroom/index.html" in worker
     assert "/resources/crara-classroom/crara-classroom.js" in worker
     assert "/resources/crara-classroom/crara-classroom.css" in worker
+
+
+def test_classroom_iframe_class_matches_css_and_fills_the_stage():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+
+    assert 'frame.className = "cr-classroom-frame"' in js
+    assert 'frame.style.width = "100%"' in js
+    assert 'frame.style.height = "100%"' in js
+
+    # The iframe class assigned in JS must have a real CSS rule, otherwise the
+    # browser renders it at its default 300x150 size.
+    rule = ".cr-classroom-frame{"
+    assert rule in css
+    body = css.split(rule, 1)[1].split("}", 1)[0]
+    assert "display:block" in body
+    assert "width:100%" in body
+    assert "height:100%" in body
+
+    id_rule = "#crara-live-classroom-frame{"
+    assert id_rule in css
+    id_body = css.split(id_rule, 1)[1].split("}", 1)[0]
+    assert "width:100%!important" in id_body
+    assert "height:100%!important" in id_body
+
+    assert ".cr-classroom-panel:fullscreen" in css
+    assert "height:100dvh!important" in css
 
 
 def test_livekit_backend_routes_and_configuration_are_registered():
