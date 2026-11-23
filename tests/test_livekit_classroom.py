@@ -2,6 +2,12 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
+
+from app import config
+from app.database import connection
+from app.main import app
+from app.services import backup_service
 
 ROOT = Path(__file__).resolve().parents[1]
 CLASSROOM_DIR = ROOT / "frontend" / "resources" / "crara-classroom"
@@ -46,6 +52,9 @@ def test_crara_ui_offers_lesson_scoped_classroom_panel():
     assert "crara-live-classroom-wrapper" in js
     assert "crara-live-classroom-frame" in js
     assert "/api/class-rep/livekit/handoff" in js
+    assert "/api/class-rep/livekit/join-code" in js
+    assert "classroomCodeInput" in js and "useClassroomCode" in js and "createClassroomCode" in js
+    assert "join_code" in js
     assert "Join 1:1 Classroom" in js
     assert "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen" in js
     assert "classroomPanel.requestFullscreen()" in js
@@ -55,6 +64,7 @@ def test_crara_ui_offers_lesson_scoped_classroom_panel():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert ".cr-classroom-panel[hidden]{display:none!important}" in css
     assert ".cr-classroom-frame-wrap" in css
+    assert ".cr-classroom-code-input" in css
     assert "#crara-live-classroom-frame" in css
 
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
@@ -93,6 +103,8 @@ def test_classroom_iframe_class_matches_css_and_fills_the_stage():
 def test_livekit_backend_routes_and_configuration_are_registered():
     routes = (ROOT / "backend" / "app" / "livekit" / "routes.py").read_text(encoding="utf-8")
     assert '@router.post("/api/class-rep/livekit/handoff")' in routes
+    assert '@router.post("/api/class-rep/livekit/join-code")' in routes
+    assert '@router.post("/api/class-rep/livekit/join-code/revoke")' in routes
     assert '@router.post("/api/v1/livekit/token")' in routes
     assert '@router.post("/api/class-rep/livekit/token")' in routes
     assert '@router.post("/api/v1/system-audio/virtual-recordings")' in routes
@@ -136,3 +148,80 @@ def test_tampered_handoff_token_is_rejected(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         livekit_routes._verify_handoff("Bearer " + tampered)
     assert exc.value.status_code == 401
+
+
+def _test_storage(monkeypatch, tmp_path):
+    database_dir = tmp_path / "database"
+    monkeypatch.setattr(config, "DATABASE_DIR", database_dir)
+    monkeypatch.setattr(config, "BACKUP_DIR", tmp_path / "backups")
+    monkeypatch.setattr(connection, "DATABASE_PATH", database_dir / "calendar.db")
+    monkeypatch.setattr(backup_service, "DATABASE_PATH", database_dir / "calendar.db")
+    monkeypatch.setattr(backup_service, "BACKUP_DIR", tmp_path / "backups")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("MNH_ENV", "development")
+
+
+def _configure_livekit(monkeypatch):
+    from app.livekit import routes as livekit_routes
+
+    livekit_routes._JOIN_CODES.clear()
+    monkeypatch.setattr(livekit_routes, "LIVEKIT_URL", "wss://livekit.example.test")
+    monkeypatch.setattr(livekit_routes, "LIVEKIT_API_KEY", "unit-test-key")
+    monkeypatch.setattr(livekit_routes, "LIVEKIT_API_SECRET", "unit-test-secret")
+    monkeypatch.setattr(livekit_routes, "_handoff_secret", lambda: b"unit-test-secret")
+    return livekit_routes
+
+
+def test_host_join_code_joins_a_student_to_the_host_room(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    livekit_routes = _configure_livekit(monkeypatch)
+    from app.class_rep import memory
+
+    host = memory.create_account("Host", "majaliwamin@gmail.com", "strong-password-123")
+    host_token = memory.create_session(host["id"])
+    with TestClient(app) as client:
+        client.get("/api/class-rep/auth/me")
+        client.cookies.set("cara_session", host_token, path="/")
+        created = client.post("/api/class-rep/livekit/join-code", json={"lesson": "Hypothesis Testing"})
+        assert created.status_code == 200
+        issued = created.json()
+        assert len(issued["code"]) == livekit_routes._JOIN_CODE_LENGTH
+        assert issued["room"].startswith("crara_hypothesis_testing_")
+        assert issued["expires_in"] > 0
+
+    with TestClient(app) as student:
+        student.get("/api/class-rep/auth/me")
+        student.cookies.set("cara_guest", "guest_student_1234", path="/")
+        assert student.post("/api/class-rep/livekit/join-code", json={"lesson": "Hypothesis Testing"}).status_code == 403
+        assert student.post("/api/class-rep/livekit/handoff", json={
+            "lesson": "Hypothesis Testing", "join_code": "AAAAAAAA"
+        }).status_code == 400
+        assert student.post("/api/class-rep/livekit/handoff", json={
+            "lesson": "Different Lesson", "join_code": issued["code"]
+        }).status_code == 400
+
+        response = student.post("/api/class-rep/livekit/handoff", json={
+            "lesson": "Hypothesis Testing", "join_code": issued["code"]
+        })
+        assert response.status_code == 200
+        body = response.json()
+        assert body["room"] == issued["room"]
+        assert body["identity"] == "guest_student_1234"
+        assert body["role"] == "student"
+        assert body["permissions"]["canControl"] is False
+        assert body["joined_with_code"] is True
+        claims = livekit_routes._verify_handoff("Bearer " + body["token"])
+        assert claims["room"] == issued["room"]
+        assert claims["identity"] == "guest_student_1234"
+
+    with TestClient(app) as client:
+        client.get("/api/class-rep/auth/me")
+        client.cookies.set("cara_session", host_token, path="/")
+        revoked = client.post("/api/class-rep/livekit/join-code/revoke", json={"code": issued["code"]})
+        assert revoked.status_code == 200
+    with TestClient(app) as student:
+        student.get("/api/class-rep/auth/me")
+        student.cookies.set("cara_guest", "guest_student_1234", path="/")
+        assert student.post("/api/class-rep/livekit/handoff", json={
+            "lesson": "Hypothesis Testing", "join_code": issued["code"]
+        }).status_code == 400

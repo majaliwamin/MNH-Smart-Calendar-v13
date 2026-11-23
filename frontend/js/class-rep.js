@@ -7,7 +7,7 @@
   const LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com";
   const GUEST_STORAGE_KEY = "crara_guest_id";
   const GUEST_COOKIE_NAME = "cara_guest";
-  const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN", lastLessonTopic: "", classroom: { open: false, topic: "", busy: false, generation: 0, fullscreen: false } };
+  const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN", lastLessonTopic: "", classroom: { open: false, topic: "", busy: false, generation: 0, fullscreen: false, joinCode: "" } };
   function newGuestId() {
     const random = window.crypto && window.crypto.randomUUID
       ? window.crypto.randomUUID().replace(/-/g, "")
@@ -147,6 +147,24 @@
   const classroomSubtitle = el("span", "cr-classroom-subtitle", "Lesson: General CRARA support");
   classroomIdentity.append(classroomSubtitle);
   const classroomControls = el("div", "cr-classroom-controls");
+  const classroomCodeInput = el("input", "cr-classroom-code-input");
+  classroomCodeInput.type = "text";
+  classroomCodeInput.placeholder = "Join code";
+  classroomCodeInput.maxLength = 16;
+  classroomCodeInput.autocomplete = "off";
+  classroomCodeInput.spellcheck = false;
+  classroomCodeInput.setAttribute("aria-label", "Classroom join code");
+  classroomCodeInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") useClassroomCode();
+  });
+  const classroomCodeUse = el("button", "cr-classroom-control", "Use code");
+  classroomCodeUse.type = "button";
+  classroomCodeUse.title = "Join the host's lesson room with a code";
+  classroomCodeUse.addEventListener("click", useClassroomCode);
+  const classroomCodeCreate = el("button", "cr-classroom-control", "Create code");
+  classroomCodeCreate.type = "button";
+  classroomCodeCreate.title = "Create a short-lived join code for students (host only)";
+  classroomCodeCreate.addEventListener("click", createClassroomCode);
   const classroomReconnect = el("button", "cr-classroom-control", "Reconnect");
   classroomReconnect.type = "button";
   classroomReconnect.title = "Get a fresh classroom token and reconnect";
@@ -159,7 +177,7 @@
   classroomExit.type = "button";
   classroomExit.title = "Return to CRARA";
   classroomExit.addEventListener("click", closeClassroom);
-  classroomControls.append(classroomReconnect, classroomFullscreen, classroomExit);
+  classroomControls.append(classroomCodeInput, classroomCodeUse, classroomCodeCreate, classroomReconnect, classroomFullscreen, classroomExit);
   classroomHead.append(classroomIdentity, classroomControls);
   const classroomStage = el("div", "cr-classroom-stage");
   const classroomWrapper = el("div", "cr-classroom-frame-wrap");
@@ -351,6 +369,38 @@
     classroomNotice.dataset.state = busy ? "busy" : "error";
     classroomNotice.hidden = !message;
   }
+  function useClassroomCode() {
+    const code = String(classroomCodeInput.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if (code.length !== 8) {
+      showClassroomNotice("Enter the 8-character code shared by your host.", false);
+      return;
+    }
+    state.classroom.joinCode = code;
+    classroomCodeInput.value = code;
+    void openClassroom(state.classroom.topic || state.lastLessonTopic || "general");
+  }
+
+  async function createClassroomCode() {
+    const lesson = state.classroom.topic || state.lastLessonTopic || "general";
+    classroomCodeCreate.disabled = true;
+    try {
+      const { response, result } = await requestJson("/api/class-rep/livekit/join-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lesson })
+      });
+      if (!response.ok) throw new Error(readableError(result && (result.detail || result.error)) || apiError(response, result, "Could not create a join code."));
+      if (!result.code) throw new Error("The classroom did not return a join code.");
+      state.classroom.joinCode = result.code;
+      classroomCodeInput.value = result.code;
+      showClassroomNotice("Share this join code with your students: " + result.code + " (expires in " + Math.round((result.expires_in || 1800) / 60) + " minutes).", false);
+    } catch (error) {
+      showClassroomNotice(readableError(error) || "Only the classroom host can create a join code.", false);
+    } finally {
+      classroomCodeCreate.disabled = false;
+    }
+  }
+
   async function openClassroom(topic) {
     const lesson = String(topic || "general").trim() || "general";
     state.classroom.topic = lesson;
@@ -372,19 +422,21 @@
     state.classroom.busy = true;
     classroomReconnect.disabled = true;
     const generation = ++state.classroom.generation;
-    showClassroomNotice("Preparing your lesson room…", true);
+    showClassroomNotice(state.classroom.joinCode ? "Joining your host's lesson room…" : "Preparing your lesson room…", true);
     try {
+      const handoffBody = { lesson: state.classroom.topic };
+      if (state.classroom.joinCode) handoffBody.join_code = state.classroom.joinCode;
       const { response, result } = await requestJson("/api/class-rep/livekit/handoff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lesson: state.classroom.topic })
+        body: JSON.stringify(handoffBody)
       });
       if (!response.ok) throw new Error(readableError(result && (result.detail || result.error)) || apiError(response, result, "Could not open the CRARA classroom."));
       if (!result.configured || !result.token || !result.room || !result.identity) {
         throw new Error("The CRARA one-to-one classroom is not configured on this server yet.");
       }
       if (generation !== state.classroom.generation) return;
-      classroomSubtitle.textContent = "Lesson: " + topicLabel(state.classroom.topic) + " · " + result.room;
+      classroomSubtitle.textContent = "Lesson: " + topicLabel(state.classroom.topic) + " · " + result.room + (result.joined_with_code ? " · joined with code" : "");
       const frame = document.createElement("iframe");
       frame.id = "crara-live-classroom-frame";
       // Must match the .cr-classroom-frame CSS rule; an unmatched class leaves

@@ -14,6 +14,8 @@ import json
 import logging
 import os
 import re
+import secrets
+import threading
 import time
 import uuid
 from datetime import timedelta
@@ -42,6 +44,12 @@ _GUEST_COOKIE = "cara_guest"
 _GUEST_ID_RE = re.compile(r"^guest_[A-Za-z0-9_-]{8,96}$")
 _LESSON_RE = re.compile(r"[^a-z0-9]+")
 _HANDOFF_TYPE = "crara-classroom-handoff"
+_JOIN_CODE_TTL_SECONDS = 1800
+_JOIN_CODE_LENGTH = 8
+# Exclude look-alike characters so codes can be read aloud in a live lesson.
+_JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+_JOIN_CODES: dict[str, dict[str, Any]] = {}
+_JOIN_CODE_LOCK = threading.Lock()
 _MAX_RECORDING_BYTES = 100 * 1024 * 1024
 _RECORDING_EXTENSIONS = {
     "audio/webm": ".webm",
@@ -57,6 +65,15 @@ _RECORDING_EXTENSIONS = {
 
 class ClassroomHandoffRequest(BaseModel):
     lesson: str | None = Field(default=None, max_length=120)
+    join_code: str | None = Field(default=None, max_length=16)
+
+
+class ClassroomJoinCodeRequest(BaseModel):
+    lesson: str | None = Field(default=None, max_length=120)
+
+
+class ClassroomJoinCodeRevokeRequest(BaseModel):
+    code: str = Field(..., max_length=16)
 
 
 class LiveKitTokenRequest(BaseModel):
@@ -116,6 +133,59 @@ def _resolve_user(request: Request) -> dict:
     raise HTTPException(401, "Open CRARA first, then join the one-to-one classroom.")
 
 
+def _require_host(request: Request) -> dict:
+    user = _resolve_user(request)
+    if classroom_role(user) != "host":
+        raise HTTPException(403, "Only the classroom host can manage join codes.")
+    return user
+
+
+def _clean_join_code(value: Any) -> str:
+    code = re.sub(r"[^A-Z0-9]", "", str(value or "").upper())[:_JOIN_CODE_LENGTH]
+    return code if len(code) == _JOIN_CODE_LENGTH else ""
+
+
+def _issue_join_code(user: dict, lesson: str) -> dict:
+    """Create a short-lived code that maps a student to the host's lesson room."""
+    lesson = _lesson_slug(lesson)
+    room = _room_name(str(user["id"]), lesson)
+    now = int(time.time())
+    with _JOIN_CODE_LOCK:
+        for code, entry in list(_JOIN_CODES.items()):
+            if entry["exp"] <= now:
+                _JOIN_CODES.pop(code, None)
+        for _ in range(24):
+            code = "".join(secrets.choice(_JOIN_CODE_ALPHABET) for _ in range(_JOIN_CODE_LENGTH))
+            if code not in _JOIN_CODES:
+                break
+        _JOIN_CODES[code] = {
+            "room": room,
+            "lesson": lesson,
+            "host": str(user["id"]),
+            "iat": now,
+            "exp": now + _JOIN_CODE_TTL_SECONDS,
+        }
+    return {"code": code, "room": room, "lesson": lesson, "expires_in": _JOIN_CODE_TTL_SECONDS}
+
+
+def _resolve_join_code(value: Any, lesson: str) -> dict:
+    """Resolve a host-issued code without ever trusting a client-supplied room."""
+    code = _clean_join_code(value)
+    if not code:
+        raise HTTPException(400, "Enter a valid classroom join code.")
+    now = int(time.time())
+    with _JOIN_CODE_LOCK:
+        entry = _JOIN_CODES.get(code)
+        if entry and entry["exp"] <= now:
+            _JOIN_CODES.pop(code, None)
+            entry = None
+    if not entry:
+        raise HTTPException(400, "That classroom join code is invalid or has expired.")
+    if entry["lesson"] != _lesson_slug(lesson):
+        raise HTTPException(400, "That join code is for a different lesson.")
+    return entry
+
+
 def _b64url_encode(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
@@ -150,10 +220,10 @@ def _handoff_secret() -> bytes:
     return secret.encode("utf-8")
 
 
-def _issue_handoff(user: dict, lesson: str) -> str:
+def _issue_handoff(user: dict, lesson: str, room: str | None = None) -> str:
     lesson = _lesson_slug(lesson)
     now = int(time.time())
-    room = _room_name(str(user["id"]), lesson)
+    room = room or _room_name(str(user["id"]), lesson)
     payload = {
         "typ": _HANDOFF_TYPE,
         "sub": str(user["id"]),
@@ -262,15 +332,41 @@ def classroom_status() -> dict:
     }
 
 
+@router.post("/api/class-rep/livekit/join-code")
+def create_join_code(payload: ClassroomJoinCodeRequest, request: Request) -> dict:
+    """Issue a short-lived, host-only code for students to join this lesson room."""
+    _require_configured()
+    user = _require_host(request)
+    result = _issue_join_code(user, payload.lesson or "general")
+    return dict(result, configured=True)
+
+
+@router.post("/api/class-rep/livekit/join-code/revoke")
+def revoke_join_code(payload: ClassroomJoinCodeRevokeRequest, request: Request) -> dict:
+    """Allow the issuing host to invalidate a code before it expires."""
+    user = _require_host(request)
+    code = _clean_join_code(payload.code)
+    with _JOIN_CODE_LOCK:
+        entry = _JOIN_CODES.get(code)
+        if not entry or entry["host"] != str(user["id"]):
+            raise HTTPException(404, "That classroom join code was not found.")
+        _JOIN_CODES.pop(code, None)
+    return {"ok": True}
+
+
 @router.post("/api/class-rep/livekit/handoff")
 def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dict:
     """Issue a short-lived handoff from the CRARA cookie session."""
     _require_configured()
     user = _resolve_user(request)
     lesson = _lesson_slug(payload.lesson)
-    room = _room_name(str(user["id"]), lesson)
+    joined_with_code = bool(payload.join_code)
+    if joined_with_code:
+        room = str(_resolve_join_code(payload.join_code, lesson)["room"])
+    else:
+        room = _room_name(str(user["id"]), lesson)
     return {
-        "token": _issue_handoff(user, lesson),
+        "token": _issue_handoff(user, lesson, room),
         "url": LIVEKIT_URL,
         "room": room,
         "room_name": room,
@@ -280,6 +376,7 @@ def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dic
         "role": classroom_role(user),
         "permissions": classroom_permissions(user, room),
         "expires_in": LIVEKIT_HANDOFF_TTL_SECONDS,
+        "joined_with_code": joined_with_code,
         "configured": True,
     }
 
