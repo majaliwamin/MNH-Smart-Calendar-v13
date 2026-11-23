@@ -46,6 +46,7 @@ const APP_FILES = [
   "/resources/data/statistical-tables.json",
   "/resources/crara-classroom/index.html",
   "/resources/crara-classroom/crara-classroom.js",
+  "/resources/crara-classroom/crara-slides.js",
   "/resources/crara-classroom/crara-classroom.css",
   "/resources/crara-classroom/crara-whiteboard.js",
   "/resources/crara-classroom/crara-whiteboard.css",

@@ -13,6 +13,7 @@ from app.class_rep.assistant import reply
 from app.class_rep.error_hygiene import is_transient_error_text
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic, provider_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
+from app.class_rep.slides import MAX_UPLOAD_BYTES, SlideImportError, render_presentation
 from app.class_rep.voice import transcribe, speak, VoiceError, STT_MODEL_DEFAULT
 from app.class_rep import memory
 from app.class_rep.language_intelligence import resolve_response_language
@@ -601,6 +602,21 @@ def documents_delete(document_id: str, request: Request,
     if not delete_document(document_id, owner_id=_user(request)["id"]):
         raise HTTPException(404, "Document not found.")
     return {"deleted": True, "id": document_id}
+
+
+@router.post("/slides/render")
+async def slides_render(request: Request, file: UploadFile = File(...)):
+    """Convert a PDF/PPTX upload into JPEG pages for the existing slide channel."""
+    _user(request)
+    _rate("slides:" + _user(request)["id"], 8)
+    filename = (file.filename or "").replace("\\", "/").split("/")[-1][:180]
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    content_type = file.content_type or ""
+    await file.close()
+    try:
+        return render_presentation(filename, content_type, content)
+    except SlideImportError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.post("/transcribe")
