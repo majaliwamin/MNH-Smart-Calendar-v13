@@ -77,7 +77,7 @@ const context = {
   window,
   localStorage,
   navigator: { get onLine() { return online; } },
-  document: { hidden: false },
+  document: { hidden: false, addEventListener() {} },
   fetch: fetchMock,
   CustomEvent: CustomEventMock,
   URL,

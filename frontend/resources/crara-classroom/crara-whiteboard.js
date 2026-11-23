@@ -65,12 +65,25 @@
     questionQueue: [],
     aiBusy: false,
     narrationAudio: null,
+    audioPosition: 0,
     sessionKey: "local",
     identity: "",
     interrupted: false,
-    introduced: false
+    introduced: false,
+    timeline: {
+      id: "", version: 0, owner: "", segments: [], index: 0, elapsedMs: 0,
+      durationMs: 0, status: "idle", speech: null, authority: "", interruptOwner: ""
+    },
+    recentContext: [],
+    lastSeqByActor: {}
   };
   let session = null;
+  let timelineGeneration = 0;
+  let timelineWaits = [];
+  let instructionController = null;
+  let pendingPackets = [];
+  let lastCaption = "";
+  const seenQuestions = new Set();
   let open = false;
   let root = null;
   let svg = null;
@@ -214,16 +227,157 @@
     }
   }
 
-  function publish(type, extra) {
-    if (!session || typeof session.publishWhiteboardData !== "function" || session.status !== "connected") return;
-    state.seq = Math.max(state.seq, Date.now()) + 1;
-    const packet = Object.assign({ v: 1, type: type, actor: state.actor, seq: state.seq, lesson: state.lesson }, extra || {});
+  function sendPacket(packet) {
+    if (!connected() || typeof session.publishWhiteboardData !== "function") return false;
     const result = session.publishWhiteboardData(TOPIC, packet);
     if (result && typeof result.catch === "function") result.catch(function () {});
+    return true;
+  }
+
+  function publish(type, extra) {
+    state.seq = Math.max(state.seq, Date.now()) + 1;
+    const packet = Object.assign({ v: 1, type: type, actor: state.actor, seq: state.seq, lesson: state.lesson }, extra || {});
+    if (!sendPacket(packet)) {
+      pendingPackets.push(packet);
+      if (pendingPackets.length > 120) pendingPackets.shift();
+    }
+  }
+
+  function flushPendingPackets() {
+    if (!pendingPackets.length || !connected()) return;
+    const queued = pendingPackets.slice();
+    pendingPackets = [];
+    queued.forEach(sendPacket);
   }
 
   function publishState() {
     publish("state", { pages: state.pages, pageIndex: state.pageIndex });
+  }
+
+  function cleanTimeline(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const source = Array.isArray(raw.segments) ? raw.segments.slice(0, 80) : [];
+    if (!source.length) return null;
+    const segments = [];
+    const ids = new Set();
+    for (let index = 0; index < source.length; index += 1) {
+      const item = source[index];
+      if (!item || typeof item !== "object") return null;
+      const type = cleanText(item.type, 24).toUpperCase();
+      if (["TEACHING", "CAPTION", "SPEAK", "BOARD", "PAUSE", "RESUME", "INTERRUPT"].indexOf(type) < 0) return null;
+      const id = cleanText(item.id, 80) || ("seg-" + (index + 1));
+      if (!/^[A-Za-z0-9_-]{1,80}$/.test(id) || ids.has(id)) return null;
+      ids.add(id);
+      const atMs = Math.round(clamp(item.atMs, 0, 120000, index * 1000));
+      const body = item.payload && typeof item.payload === "object" ? item.payload : {};
+      let payload = {};
+      if (type === "SPEAK" || type === "CAPTION") {
+        const text = cleanText(body.text, type === "SPEAK" ? 600 : 300);
+        if (!text) return null;
+        payload = { text: text };
+      } else if (type === "BOARD") {
+        if (!body.instruction || !INSTRUCTIONS.has(cleanText(body.instruction.type, 40).toUpperCase())) return null;
+        payload = { instruction: body.instruction };
+      } else if (type === "TEACHING") {
+        const value = cleanText(body.value, 24);
+        if (TEACHING.indexOf(value) < 0) return null;
+        payload = { value: value };
+      } else if (type === "INTERRUPT") {
+        payload = { reason: cleanText(body.reason || body.text, 300) || "Question received." };
+      }
+      segments.push({ id: id, type: type, atMs: atMs, payload: payload });
+    }
+    segments.sort(function (a, b) { return a.atMs - b.atMs; });
+    const id = cleanText(raw.id, 80);
+    if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) return null;
+    const last = segments[segments.length - 1].atMs;
+    return {
+      id: id,
+      version: 1,
+      owner: cleanText(raw.owner, 160),
+      lesson: cleanText(raw.lesson, 120) || state.lesson,
+      startedAt: Math.round(clamp(raw.startedAt, 0, Number.MAX_SAFE_INTEGER, Date.now())),
+      durationMs: Math.round(clamp(raw.durationMs, 0, 120000, last + 600)),
+      segments: segments
+    };
+  }
+
+  function buildClientTimeline(payload) {
+    const source = payload || {};
+    const narration = cleanText(source.narration, 1200);
+    const caption = cleanText(source.caption || narration, 300);
+    const segments = [];
+    const add = function (type, atMs, body) {
+      segments.push({ id: "seg-" + (segments.length + 1), type: type, atMs: atMs, payload: body });
+    };
+    add("TEACHING", 0, { value: "teaching" });
+    if (caption) add("CAPTION", 0, { text: caption });
+    if (narration && source.speak !== false) add("SPEAK", 120, { text: narration });
+    const list = Array.isArray(source.instructions) ? source.instructions.slice(0, 40) : [];
+    list.forEach(function (instruction, index) {
+      add("BOARD", 480 + index * 900, { instruction: instruction });
+    });
+    return cleanTimeline({
+      id: "tl-client-" + Math.random().toString(36).slice(2, 10),
+      lesson: state.lesson,
+      segments: segments
+    });
+  }
+
+  function loadTimeline(raw, drive) {
+    const timeline = cleanTimeline(raw);
+    if (!timeline) return false;
+    timeline.owner = drive ? state.actor : timeline.owner;
+    timeline.status = drive ? "running" : "following";
+    timeline.index = 0;
+    timeline.elapsedMs = 0;
+    timeline.authority = cleanText(raw && raw.authority, 2000);
+    state.timeline = timeline;
+    state.recentContext = [];
+    return true;
+  }
+
+  function cancelTimeline() {
+    timelineGeneration += 1;
+    timelineWaits.slice().forEach(function (wait) {
+      window.clearTimeout(wait.id);
+      wait.resolve(false);
+    });
+    timelineWaits = [];
+    if (instructionController) {
+      try { instructionController.abort(); } catch (_) {}
+      instructionController = null;
+    }
+  }
+
+  function timelineDelay(ms, generation) {
+    return new Promise(function (resolve) {
+      const wait = { id: 0, resolve: null };
+      wait.id = window.setTimeout(function () {
+        timelineWaits = timelineWaits.filter(function (item) { return item !== wait; });
+        resolve(generation === timelineGeneration && state.timeline.status === "running");
+      }, Math.max(0, ms));
+      wait.resolve = function () {
+        timelineWaits = timelineWaits.filter(function (item) { return item !== wait; });
+        resolve(false);
+      };
+      timelineWaits.push(wait);
+    });
+  }
+
+  function isTimelineOwner() {
+    return Boolean(state.timeline.owner) && state.timeline.owner === state.actor;
+  }
+
+  function publishCaption(text, from, segmentId) {
+    const value = cleanText(text, 300);
+    publish("caption", {
+      text: value,
+      from: cleanText(from, 80),
+      segmentId: cleanText(segmentId, 80),
+      timelineId: state.timeline.id,
+      atMs: state.timeline.elapsedMs
+    });
   }
 
   function commit(options) {
@@ -262,15 +416,19 @@
 
   function setSession(value) {
     const previous = session;
+    const wasConnected = Boolean(previous && previous.status === "connected");
     session = value || null;
     state.sessionKey = session && session.roomName ? cleanText(session.roomName, 160) : "local";
     state.identity = session && session.selfName ? cleanText(session.selfName, 160) : "";
     if (statusEl) {
-      const connected = Boolean(session && session.status === "connected");
-      statusEl.textContent = connected ? "Live · synchronized" : "Local · reconnecting";
-      statusEl.className = "cr-wb-status " + (connected ? "live" : "");
+      const live = Boolean(session && session.status === "connected");
+      statusEl.textContent = live ? "Live · synchronized" : "Local · reconnecting";
+      statusEl.className = "cr-wb-status " + (live ? "live" : "");
     }
-    if (!previous && session && connected()) publish("hello");
+    if (connected() && (!wasConnected || !previous)) {
+      flushPendingPackets();
+      if (!previous) publish("hello");
+    }
     if (open && connected() && !state.introduced) startLessonIntro();
   }
 
@@ -288,8 +446,11 @@
     }
     if (!packet || packet.v !== 1 || packet.actor === state.actor) return;
     const seq = Number(packet.seq);
-    if (!Number.isFinite(seq) || seq <= state.lastSeq) return;
-    state.lastSeq = seq;
+    if (!Number.isFinite(seq)) return;
+    const actor = cleanText(packet.actor, 160) || "unknown";
+    if (seq <= (state.lastSeqByActor[actor] || 0)) return;
+    state.lastSeqByActor[actor] = seq;
+    state.lastSeq = Math.max(state.lastSeq, seq);
     if (packet.type === "hello") {
       publishState();
       return;
@@ -303,8 +464,38 @@
       render();
       return;
     }
+    if (packet.type === "timeline") {
+      if (packet.timeline && cleanTimeline(packet.timeline)) {
+        loadTimeline(Object.assign({}, packet.timeline, { authority: packet.authority || "" }), false);
+        if (packet.paused) state.timeline.status = "paused";
+        else if (packet.complete || state.timeline.durationMs <= state.timeline.segments[state.timeline.segments.length - 1].atMs) {
+          state.timeline.status = "complete";
+        }
+      }
+      return;
+    }
+    if (packet.type === "segment") {
+      if (packet.timelineId && packet.timelineId === state.timeline.id) {
+        state.timeline.elapsedMs = Math.round(clamp(packet.atMs, 0, 120000, state.timeline.elapsedMs));
+        const segment = state.timeline.segments.find(function (item) { return item.id === cleanText(packet.segmentId, 80); });
+        if (segment && segment.type === "CAPTION") setCaption(segment.payload.text, "CRARA", segment.id, false);
+        if (segment && segment.type === "SPEAK" && state.teaching !== "stopped" && !state.interrupted) {
+          speakNarration(segment.payload.text, segment.id, false);
+        }
+      }
+      return;
+    }
+    if (packet.type === "speech") {
+      if (packet.timelineId && packet.timelineId !== state.timeline.id) return;
+      state.timeline.speech = {
+        event: cleanText(packet.event, 24),
+        segmentId: cleanText(packet.segmentId, 80),
+        atMs: Math.round(clamp(packet.atMs, 0, 120000, state.timeline.elapsedMs))
+      };
+      return;
+    }
     if (packet.type === "caption") {
-      setCaption(cleanText(packet.text, 300), cleanText(packet.from, 80));
+      setCaption(cleanText(packet.text, 300), cleanText(packet.from, 80), cleanText(packet.segmentId, 80), false);
       return;
     }
     if (packet.type === "teaching" || packet.type === "mode" || packet.type === "permissions") {
@@ -312,20 +503,26 @@
       return;
     }
     if (packet.type === "interrupt") {
-      interruptLesson(cleanText(packet.reason, 300));
+      interruptLesson(cleanText(packet.reason, 300), false);
+      state.timeline.interruptOwner = actor;
       return;
     }
     if (packet.type === "question") {
+      const id = cleanText(packet.id, 80);
       const body = cleanText(packet.body, 600);
       if (body) {
-        state.questionQueue.push({
-          id: cleanText(packet.id, 80) || uid("q"),
-          body: body,
-          from: cleanText(packet.from, 80) || "Student"
-        });
-        state.questionQueue = state.questionQueue.slice(-20);
-        renderQueue();
-        setCaption("Question added to the host queue.", "CRARA");
+        if (!state.questionQueue.some(function (item) { return item.id === id; })) {
+          state.questionQueue.push({ id: id || uid("q"), body: body, from: cleanText(packet.from, 80) || "Student" });
+          state.questionQueue = state.questionQueue.slice(-20);
+          renderQueue();
+        }
+        setCaption("Question added to the host queue.", "CRARA", "", false);
+        if (id && !seenQuestions.has(id)) {
+          seenQuestions.add(id);
+          if (state.chatMode === "Active" && isHost()) {
+            respondToQuestion({ id: id, body: body, from: cleanText(packet.from, 80) || "Student", mine: false });
+          }
+        }
       }
       return;
     }
@@ -338,7 +535,7 @@
       return;
     }
     if (packet.type === "answer") {
-      setCaption(cleanText(packet.caption, 300), "CRARA");
+      setCaption(cleanText(packet.caption, 300), "CRARA", "", false);
     }
   }
 
@@ -1231,28 +1428,38 @@
     if (!message || state.teaching === "stopped" || state.aiBusy) return;
     const body = cleanText(message.body, 600);
     if (!body || /^crara\b/i.test(cleanText(message.from, 80))) return;
+    const id = cleanText(message.id, 80) || uid("q");
+    if (seenQuestions.has(id)) return;
+    seenQuestions.add(id);
     const hostQuestion = isHost() && message.mine === true;
+    const localQuestion = isHost() && message.mine !== false;
     if (state.chatMode === "Silent monitoring") {
       setCaption("Silent monitoring — question noted for the host.", "CRARA");
       return;
     }
-    if ((state.chatMode === "Question Queue" || state.chatMode === "Host-selected") && !hostQuestion) {
-      state.questionQueue.push({ id: cleanText(message.id, 80) || uid("q"), body: body, from: cleanText(message.from, 80) || "Student" });
+    if ((state.chatMode === "Question Queue" || state.chatMode === "Host-selected") && !(hostQuestion || localQuestion)) {
+      state.questionQueue.push({ id: id, body: body, from: cleanText(message.from, 80) || "Student" });
       state.questionQueue = state.questionQueue.slice(-20);
       renderQueue();
       setCaption("Question added to the host queue.", "CRARA");
       publish("question", { id: cleanText(message.id, 80), body: body, from: cleanText(message.from, 80) });
       return;
     }
-    return respondToQuestion({ id: cleanText(message.id, 80), body: body, from: cleanText(message.from, 80) || "Student" });
+    if (!(hostQuestion || localQuestion)) {
+      publish("question", { id: id, body: body, from: cleanText(message.from, 80) || "Student" });
+      setCaption("Question sent to CRARA for an answer.", "CRARA");
+      return;
+    }
+    return respondToQuestion({ id: id, body: body, from: cleanText(message.from, 80) || "Student" });
   }
 
-  async function postJson(url, body) {
+  async function postJson(url, body, signal) {
     const response = await fetch(url, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: signal
     });
     if (!response.ok) throw new Error("Request failed: " + response.status);
     return response.json();
@@ -1264,37 +1471,104 @@
     return response.json();
   }
 
-  async function runInstructions(instructions, caption) {
-    const results = [];
-    const list = Array.isArray(instructions) ? instructions.slice(0, 50) : [];
-    for (let index = 0; index < list.length; index += 1) {
-      await new Promise(function (resolve) { window.setTimeout(resolve, 180); });
-      const result = executeInstruction(list[index]);
-      results.push(result);
-      if (!result.ok) {
-        publish("instruction-error", { index: index, error: result.error });
-      } else if (caption) {
-        setCaption(caption + " · board step " + (index + 1) + "/" + list.length, "CRARA");
+  function applyTimelineSegment(segment, generation) {
+    const payload = segment.payload || {};
+    if (generation !== timelineGeneration) return { ok: false, error: "Timeline cancelled." };
+    if (segment.type === "SPEAK") {
+      if (isTimelineOwner()) speakNarration(payload.text, segment.id);
+      return { ok: true, type: segment.type, segmentId: segment.id };
+    }
+    if (segment.type === "CAPTION") {
+      setCaption(payload.text, "CRARA", segment.id);
+      return { ok: true, type: segment.type, segmentId: segment.id };
+    }
+    if (segment.type === "BOARD") {
+      let result = { ok: true, followed: true };
+      if (isTimelineOwner()) {
+        result = executeInstruction(payload.instruction);
+        if (result.ok) publishState();
+        else publish("instruction-error", { segmentId: segment.id, error: result.error });
       }
+      return Object.assign({ type: segment.type, segmentId: segment.id }, result);
+    }
+    if (segment.type === "TEACHING") {
+      setTeachingState(payload.value);
+      return { ok: true, type: segment.type, segmentId: segment.id };
+    }
+    if (segment.type === "PAUSE") {
+      pauseLesson();
+      return { ok: true, type: segment.type, segmentId: segment.id };
+    }
+    if (segment.type === "RESUME") {
+      resumeLesson("", state.timeline.authority);
+      return { ok: true, type: segment.type, segmentId: segment.id };
+    }
+    if (segment.type === "INTERRUPT") {
+      interruptLesson(payload.reason, false);
+      return { ok: true, type: segment.type, segmentId: segment.id };
+    }
+    return { ok: false, type: segment.type, segmentId: segment.id, error: "Unsupported timeline segment." };
+  }
+
+  async function runTimeline() {
+    if (!state.timeline.segments.length || state.timeline.status === "following") return [];
+    const generation = timelineGeneration;
+    state.timeline.status = "running";
+    const results = [];
+    while (state.timeline.index < state.timeline.segments.length) {
+      const segment = state.timeline.segments[state.timeline.index];
+      const proceed = await timelineDelay(segment.atMs - state.timeline.elapsedMs, generation);
+      if (!proceed || generation !== timelineGeneration || state.timeline.status !== "running") break;
+      state.timeline.elapsedMs = segment.atMs;
+      state.timeline.index += 1;
+      results.push(applyTimelineSegment(segment, generation));
+      publish("segment", {
+        segmentId: segment.id,
+        segmentType: segment.type,
+        atMs: segment.atMs,
+        timelineId: state.timeline.id
+      });
+      if (generation !== timelineGeneration) break;
+    }
+    if (generation === timelineGeneration && state.timeline.status === "running") {
+      state.timeline.status = "complete";
+      publish("timeline", { timeline: state.timeline, authority: state.timeline.authority, complete: true });
     }
     return results;
   }
 
-  function speakNarration(text) {
-    const narration = cleanText(text, 1200);
+  function speakNarration(text, segmentId, publishEvents) {
+    const narration = cleanText(text, 600);
     if (!narration) return;
+    const id = cleanText(segmentId, 80) || uid("speech");
+    const generation = timelineGeneration;
+    const shouldPublish = publishEvents !== false;
+    const describe = function (event) {
+      if (generation !== timelineGeneration) return;
+      state.timeline.speech = { event: event, segmentId: id, atMs: state.timeline.elapsedMs };
+      if (!shouldPublish) return;
+      publish("speech", {
+        event: event,
+        segmentId: id,
+        timelineId: state.timeline.id,
+        atMs: state.timeline.elapsedMs
+      });
+    };
     try {
       if (state.narrationAudio) {
-        state.narrationAudio.pause();
+        const previous = state.narrationAudio;
+        previous.__craraSilent = true;
+        try { previous.pause(); } catch (_) {}
         state.narrationAudio = null;
       }
       fetch("/api/class-rep/speak", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: narration, lesson: state.lesson })
+        body: JSON.stringify({ text: narration, lesson: state.lesson }),
+        signal: instructionController ? instructionController.signal : undefined
       }).then(async function (response) {
-        if (!response.ok) return;
+        if (!response.ok) throw new Error("Voice unavailable");
         const type = response.headers.get("content-type") || "";
         let url = "";
         if (type.indexOf("application/json") >= 0) {
@@ -1303,18 +1577,26 @@
         } else {
           url = URL.createObjectURL(await response.blob());
         }
-        if (!url) return;
+        if (!url || generation !== timelineGeneration) return;
         const audio = new Audio(url);
+        audio.__craraSilent = false;
         state.narrationAudio = audio;
-        audio.play().catch(function () {});
-      }).catch(function () {});
+        state.audioPosition = 0;
+        ["play", "pause", "ended"].forEach(function (name) {
+          audio.addEventListener(name, function () {
+            if (!audio.__craraSilent) describe(name);
+          });
+        });
+        audio.play().catch(function () { describe("error"); });
+      }).catch(function () { describe("error"); });
     } catch (_) {
-      /* Voice is optional; captions and the board still work. */
+      describe("error");
     }
   }
 
   function startLessonIntro() {
     if (state.introduced || state.aiBusy || state.teaching === "stopped") return;
+    if (!isHost() && state.role !== "crara") return;
     state.introduced = true;
     setTeachingState("teaching");
     setCaption("CRARA is introducing Hypothesis Testing…", "CRARA");
@@ -1328,8 +1610,11 @@
   }
 
   async function respondToQuestion(question) {
-    if (state.aiBusy) return;
+    if (state.aiBusy || state.teaching === "stopped") return;
     state.aiBusy = true;
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    instructionController = controller;
+    const generation = timelineGeneration;
     let finalCaption = "";
     let teachingToken = null;
     if (question && question.intro) {
@@ -1348,8 +1633,11 @@
         from: cleanText(question.from, 80) || "Student",
         mode: state.chatMode,
         pages: state.pages.length,
-        ids: currentPage().objects.map(function (object) { return object.id; })
-      });
+        ids: currentPage().objects.map(function (object) { return object.id; }),
+        position: state.timeline.elapsedMs,
+        context: state.recentContext.slice(-8)
+      }, controller ? controller.signal : undefined);
+      if (generation !== timelineGeneration) return;
       if (payload.control && payload.control.type === "teaching") {
         teachingToken = cleanText(payload.control.token, 2000);
         publish("teaching", {
@@ -1357,23 +1645,41 @@
           authority: teachingToken
         });
       }
+      const source = payload.timeline || {
+        narration: payload.narration,
+        caption: payload.caption,
+        speak: state.chatMode !== "Chat-only" && payload.speak !== false,
+        instructions: state.chatMode === "Chat-only" ? [] : payload.instructions
+      };
+      if (!loadTimeline(source, true)) throw new Error("The lesson timeline was rejected.");
+      state.timeline.authority = teachingToken || "";
+      publish("timeline", { timeline: state.timeline, authority: teachingToken || "" });
       setTeachingState("answering");
       const narration = cleanText(payload.narration, 1200);
       finalCaption = cleanText(payload.caption || narration, 300) || "Answer ready.";
-      setCaption(finalCaption, "CRARA");
-      if (payload.speak !== false && state.chatMode !== "Chat-only" && narration) speakNarration(narration);
-      const instructions = state.chatMode === "Chat-only" ? [] : payload.instructions;
-      const results = await runInstructions(instructions, finalCaption);
+      const captionSegment = state.timeline.segments.find(function (item) { return item.type === "CAPTION"; });
+      setCaption(finalCaption, "CRARA", captionSegment ? captionSegment.id : "");
+      const results = await runTimeline();
+      if (generation !== timelineGeneration) return;
       const failed = results.filter(function (result) { return !result.ok; }).length;
       finalCaption = finalCaption + (failed ? " · " + failed + " board step" + (failed === 1 ? "" : "s") + " skipped" : "");
-      setCaption(finalCaption, "CRARA");
-      publish("answer", { question: cleanText(question.body, 600), caption: finalCaption, narration: narration, results: results });
-    } catch (_) {
+      setCaption(finalCaption, "CRARA", captionSegment ? captionSegment.id : "");
+      publish("answer", {
+        question: cleanText(question.body, 600),
+        caption: finalCaption,
+        narration: narration,
+        results: results,
+        timelineId: state.timeline.id
+      });
+    } catch (error) {
+      if (generation !== timelineGeneration) return;
       finalCaption = "CRARA could not reach the lesson service. The classroom remains available.";
       setCaption(finalCaption, "CRARA");
+      publish("instruction-error", { error: cleanText(error && error.message, 300) });
     } finally {
       state.aiBusy = false;
-      resumeLesson(finalCaption, teachingToken);
+      if (instructionController === controller) instructionController = null;
+      if (generation === timelineGeneration) resumeLesson(finalCaption, teachingToken);
     }
   }
 
@@ -1421,16 +1727,18 @@
   async function hostAction(action) {
     if (!isHost()) return announce("Host controls are available to the classroom host.");
     if (action === "pause") {
-      if (state.narrationAudio) state.narrationAudio.pause();
+      pauseLesson(false);
       await hostSetTeaching("paused");
-      setCaption("CRARA lesson paused by the host.", "CRARA");
+      setCaption("CRARA lesson paused by the host.", "CRARA", "", false);
     } else if (action === "resume") {
-      await hostSetTeaching("teaching");
-      resumeLesson("CRARA lesson resumed by the host.");
+      const value = await hostSetTeaching("teaching");
+      if (value) resumeLesson("CRARA lesson resumed by the host.", null);
     } else if (action === "stop") {
-      if (state.narrationAudio) state.narrationAudio.pause();
+      cancelTimeline();
+      state.timeline.status = "stopped";
+      pauseAudio();
       await hostSetTeaching("stopped");
-      setCaption("CRARA lesson stopped by the host.", "CRARA");
+      setCaption("CRARA lesson stopped by the host.", "CRARA", "", false);
     } else if (action === "take") {
       const value = await hostSetPermissions({ boardOwner: state.actor, boardLocked: false });
       if (value) announce("You now control the board.");
@@ -1460,15 +1768,13 @@
   function onMedia(media) {
     const mic = media && media.mic ? media.mic : {};
     const active = mic.status === "active" && mic.enabled !== false;
-    if (active && state.teaching === "teaching" && !state.interrupted) {
-      state.interrupted = true;
-      const reason = "Microphone opened — CRARA is listening.";
-      interruptLesson(reason);
-      publish("interrupt", { reason: reason });
+    if (active && (state.teaching === "teaching" || state.teaching === "answering") && !state.interrupted) {
+      interruptLesson("Microphone opened — CRARA is listening.");
       return;
     }
-    if (!active && state.interrupted) {
+    if (!active && state.interrupted && state.timeline.interruptOwner === state.actor) {
       state.interrupted = false;
+      state.timeline.interruptOwner = "";
       respondToQuestion({
         id: uid("voice"),
         body: "The student interrupted the lesson with the microphone. Ask what they need about Hypothesis Testing, answer it, then resume the lesson.",
@@ -1478,10 +1784,21 @@
     }
   }
 
-  function setCaption(text, from) {
+  function setCaption(text, from, segmentId, broadcast) {
     const value = cleanText(text, 300);
     if (!captionEl) return;
-    captionEl.textContent = from ? from + ": " + value : value;
+    const rendered = from ? from + ": " + value : value;
+    if (captionEl.textContent === rendered) return;
+    captionEl.textContent = rendered;
+    state.recentContext.push(rendered);
+    if (state.recentContext.length > 20) state.recentContext.shift();
+    if (broadcast === false) {
+      lastCaption = rendered;
+      return;
+    }
+    if (lastCaption === rendered) return;
+    lastCaption = rendered;
+    publishCaption(value, from, segmentId);
   }
 
   function setTeachingState(value) {
@@ -1494,24 +1811,71 @@
     }
   }
 
-  function pauseAudio() {
+  function pauseAudio(keepHandle) {
     if (state.narrationAudio) {
-      state.narrationAudio.pause();
-      state.narrationAudio = null;
+      try {
+        state.audioPosition = state.narrationAudio.currentTime || 0;
+        state.narrationAudio.pause();
+      } catch (_) {}
+      if (!keepHandle) state.narrationAudio = null;
     }
   }
 
-  function interruptLesson(reason) {
-    pauseAudio();
+  function resumeAudio() {
+    if (!state.narrationAudio) return;
+    try { state.narrationAudio.currentTime = state.audioPosition || 0; } catch (_) {}
+    state.narrationAudio.play().catch(function () {});
+  }
+
+  function pauseLesson(broadcast) {
+    cancelTimeline();
+    state.timeline.status = "paused";
+    pauseAudio(true);
+    setTeachingState("paused");
+    if (broadcast !== false) publish("timeline", { timeline: state.timeline, paused: true });
+  }
+
+  function interruptLesson(reason, broadcast) {
+    cancelTimeline();
+    state.timeline.status = "interrupted";
+    state.timeline.interruptOwner = state.actor;
+    state.interrupted = true;
+    pauseAudio(true);
     setTeachingState("listening");
-    setCaption(cleanText(reason, 300) || "Question received — pausing the lesson.", "CRARA");
+    setCaption(
+      cleanText(reason, 300) || "Question received — pausing the lesson.",
+      "CRARA", "", broadcast !== false
+    );
+    if (broadcast !== false) {
+      publish("interrupt", {
+        reason: cleanText(reason, 300),
+        timelineId: state.timeline.id,
+        atMs: state.timeline.elapsedMs
+      });
+    }
   }
 
   function resumeLesson(caption, authority) {
     if (state.teaching === "stopped") return;
-    setTeachingState("teaching");
+    state.interrupted = false;
+    const pending = state.timeline.segments.length &&
+      state.timeline.index < state.timeline.segments.length &&
+      state.timeline.status !== "complete" && state.timeline.status !== "following" &&
+      state.timeline.status !== "stopped";
+    if (pending) {
+      state.timeline.status = "running";
+      resumeAudio();
+      const generation = timelineGeneration;
+      runTimeline().then(function () {
+        if (generation !== timelineGeneration) return;
+        setTeachingState("teaching");
+        publish("teaching", { value: "teaching", authority: authority || "" });
+      });
+    } else {
+      setTeachingState("teaching");
+      publish("teaching", { value: "teaching", authority: authority || "" });
+    }
     if (caption) setCaption(caption, "CRARA");
-    publish("teaching", { value: "teaching", authority: authority || "" });
   }
 
   function openBoard() {
@@ -1557,7 +1921,10 @@
         questionQueue: state.questionQueue,
         aiBusy: state.aiBusy,
         introduced: state.introduced,
-        sessionKey: state.sessionKey
+        sessionKey: state.sessionKey,
+        timeline: state.timeline,
+        recentContext: state.recentContext,
+        interrupted: state.interrupted
       }));
     },
     setCaption: setCaption,
@@ -1573,6 +1940,11 @@
     respondToQuestion: respondToQuestion,
     interruptLesson: interruptLesson,
     resumeLesson: resumeLesson,
+    pauseLesson: pauseLesson,
+    loadTimeline: loadTimeline,
+    runTimeline: runTimeline,
+    cleanTimeline: cleanTimeline,
+    setSession: setSession,
     saveServer: saveServer,
     restoreServer: restoreServer,
     hostAction: hostAction,

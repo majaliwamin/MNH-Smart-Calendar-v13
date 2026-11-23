@@ -53,6 +53,9 @@ _TEACHING_STATES = frozenset({"idle", "teaching", "listening", "answering", "pau
 _MAX_INSTRUCTIONS = 40
 _MAX_POINTS = 500
 _MAX_PAGES = 50
+_TIMELINE_TYPES = frozenset({"TEACHING", "CAPTION", "SPEAK", "BOARD", "PAUSE", "RESUME", "INTERRUPT"})
+_MAX_TIMELINE_SEGMENTS = 80
+_MAX_TIMELINE_AT_MS = 120_000
 
 _ALLOWED_ARGS: dict[str, frozenset[str]] = {
     "WRITE_TEXT": frozenset({"text", "x", "y", "style"}),
@@ -116,6 +119,8 @@ class WhiteboardInstructionRequest(BaseModel):
     mode: str = Field(default="Active", max_length=40)
     pages: int = Field(default=1, ge=1, le=_MAX_PAGES)
     ids: list[str] = Field(default_factory=list, max_length=100)
+    position: int = Field(default=0, ge=0, le=_MAX_TIMELINE_AT_MS)
+    context: list[str] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="before")
     @classmethod
@@ -124,6 +129,11 @@ class WhiteboardInstructionRequest(BaseModel):
             values = dict(values)
             values["sender"] = values.pop("from")
         return values
+
+    @model_validator(mode="after")
+    def _clean_context(self) -> "WhiteboardInstructionRequest":
+        self.context = [str(item)[:300] for item in self.context[:20] if str(item).strip()][-8:]
+        return self
 
 
 class WhiteboardInstructionResponse(BaseModel):
@@ -135,6 +145,7 @@ class WhiteboardInstructionResponse(BaseModel):
     provider: str
     model: str | None = None
     control: dict[str, Any] | None = None
+    timeline: dict[str, Any] | None = None
 
 
 class WhiteboardSessionRequest(BaseModel):
@@ -418,6 +429,8 @@ def _prompt(payload: WhiteboardInstructionRequest) -> list[dict[str, str]]:
             "role": "user",
             "content": (
                 f"Chat mode: {payload.mode}. Current page count: {payload.pages}. "
+                f"Timeline position: {payload.position}ms. "
+                f"Recent captions and voice context: {' | '.join(payload.context) or 'none'}.\n"
                 f"Question from {payload.sender}: {payload.prompt}\n"
                 "Plan a clear spoken explanation and a small synchronized whiteboard illustration."
             ),
@@ -437,6 +450,131 @@ def _fallback_response() -> dict[str, Any]:
     return json.loads(json.dumps(_LOCAL_FALLBACK))
 
 
+def _timeline_text(value: Any, limit: int) -> str:
+    text = repair_math_delimiters(str(value or "").strip())[:limit]
+    return "" if _has_banned_output(text) else text
+
+
+def validate_timeline(raw: Any) -> dict[str, Any] | None:
+    """Validate a bounded, code-free lesson timeline before it reaches clients."""
+    if not isinstance(raw, dict):
+        return None
+    segments = raw.get("segments")
+    if not isinstance(segments, list) or not segments or len(segments) > _MAX_TIMELINE_SEGMENTS:
+        return None
+    timeline_id = str(raw.get("id") or "")
+    if not _ID_RE.fullmatch(timeline_id):
+        return None
+    clean: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, segment in enumerate(segments):
+        if not isinstance(segment, dict):
+            return None
+        kind = str(segment.get("type") or "").strip().upper()
+        if kind not in _TIMELINE_TYPES:
+            return None
+        segment_id = str(segment.get("id") or "seg-" + str(index + 1))
+        if not _ID_RE.fullmatch(segment_id) or segment_id in seen:
+            return None
+        seen.add(segment_id)
+        raw_at = segment.get("atMs", segment.get("at_ms", index * 1000))
+        if (isinstance(raw_at, bool) or not isinstance(raw_at, (int, float)) or
+                not math.isfinite(float(raw_at)) or float(raw_at) < 0 or
+                float(raw_at) > _MAX_TIMELINE_AT_MS):
+            return None
+        number = float(raw_at)
+        payload = segment.get("payload") if isinstance(segment.get("payload"), dict) else {}
+        clean_payload: dict[str, Any] = {}
+        if kind == "SPEAK":
+            text = _timeline_text(payload.get("text"), 600)
+            if not text:
+                return None
+            clean_payload = {"text": text}
+        elif kind == "CAPTION":
+            text = _timeline_text(payload.get("text"), 300)
+            if not text:
+                return None
+            clean_payload = {"text": text}
+        elif kind == "BOARD":
+            instruction = validate_instruction(payload.get("instruction"))
+            if not instruction:
+                return None
+            clean_payload = {"instruction": instruction}
+        elif kind == "TEACHING":
+            value = str(payload.get("value") or "").strip()
+            if value not in _TEACHING_STATES:
+                return None
+            clean_payload = {"value": value}
+        elif kind == "INTERRUPT":
+            clean_payload = {"reason": _timeline_text(payload.get("reason") or payload.get("text"), 300) or "Question received."}
+        clean.append({"id": segment_id, "type": kind, "atMs": int(number), "payload": clean_payload})
+    clean.sort(key=lambda item: item["atMs"])
+    started = _number(raw.get("startedAt"), 0, 2**62, int(time.time() * 1000))
+    last_at = clean[-1]["atMs"]
+    duration = _number(raw.get("durationMs"), last_at, _MAX_TIMELINE_AT_MS, last_at)
+    return {
+        "id": timeline_id,
+        "version": 1,
+        "lesson": str(raw.get("lesson") or "Hypothesis Testing")[:120],
+        "owner": str(raw.get("owner") or "")[:160],
+        "startedAt": int(started or 0),
+        "durationMs": int(duration or 0),
+        "segments": clean,
+    }
+
+
+def _build_timeline(key: str, lesson: str, narration: str, caption: str,
+                    instructions: list[dict[str, Any]], speak: bool) -> dict[str, Any] | None:
+    """Derive a shared timeline locally; timing is never trusted from the model."""
+    segments: list[dict[str, Any]] = []
+
+    def add(kind: str, at_ms: int, segment_payload: dict[str, Any]) -> None:
+        segments.append({
+            "id": "seg-" + str(len(segments) + 1),
+            "type": kind,
+            "atMs": min(at_ms, _MAX_TIMELINE_AT_MS),
+            "payload": segment_payload,
+        })
+
+    add("TEACHING", 0, {"value": "teaching"})
+    board_caption = _timeline_text(caption, 300)
+    if board_caption:
+        add("CAPTION", 0, {"text": board_caption})
+    if speak:
+        sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", narration) if part.strip()][:8]
+        for index, sentence in enumerate(sentences):
+            text = _timeline_text(sentence, 600)
+            if text:
+                add("SPEAK", 120 + index * 2200, {"text": text})
+    for index, instruction in enumerate(instructions[:_MAX_INSTRUCTIONS]):
+        add("BOARD", 480 + index * 900, {"instruction": instruction})
+    seed = (key + "|" + narration + "|" + str(int(time.time() * 1000))).encode("utf-8")
+    last_at = max(segment["atMs"] for segment in segments)
+    return validate_timeline({
+        "id": "tl-" + hashlib.sha1(seed).hexdigest()[:12],
+        "lesson": lesson,
+        "startedAt": int(time.time() * 1000),
+        "durationMs": min(_MAX_TIMELINE_AT_MS, last_at + 600),
+        "segments": segments,
+    })
+
+
+def _finalize_response(payload: WhiteboardInstructionRequest, narration: str, caption: str,
+                       instructions: list[dict[str, Any]], provider: str,
+                       model: str | None) -> WhiteboardInstructionResponse:
+    speak = payload.mode != "Chat-only"
+    return WhiteboardInstructionResponse(
+        narration=narration,
+        caption=caption,
+        instructions=instructions,
+        speak=speak,
+        provider=provider,
+        model=model,
+        control=_teaching_control(payload.key),
+        timeline=_build_timeline(payload.key, payload.lesson, narration, caption, instructions, speak),
+    )
+
+
 def generate_instructions(payload: WhiteboardInstructionRequest) -> WhiteboardInstructionResponse:
     """Generate validated instructions, falling back to deterministic teaching data."""
     try:
@@ -448,14 +586,8 @@ def generate_instructions(payload: WhiteboardInstructionRequest) -> WhiteboardIn
         if _has_banned_output(caption):
             caption = ""
         if narration and instructions:
-            return WhiteboardInstructionResponse(
-                narration=narration,
-                caption=caption or narration[:160],
-                instructions=instructions,
-                speak=payload.mode != "Chat-only",
-                provider=provider,
-                model=model,
-                control=_teaching_control(payload.key),
+            return _finalize_response(
+                payload, narration, caption or narration[:160], instructions, provider, model
             )
     except ProviderError:
         logger.warning("CRARA whiteboard provider unavailable; using deterministic teaching data")
@@ -465,14 +597,9 @@ def generate_instructions(payload: WhiteboardInstructionRequest) -> WhiteboardIn
     fallback = _fallback_response()
     narration = _clean_narration(fallback["narration"], payload.prompt) or fallback["narration"]
     instructions = validate_instructions(fallback["instructions"])
-    return WhiteboardInstructionResponse(
-        narration=narration,
-        caption=fallback["caption"],
-        instructions=instructions,
-        speak=payload.mode != "Chat-only",
-        provider=fallback["provider"],
-        model=fallback["model"],
-        control=_teaching_control(payload.key),
+    return _finalize_response(
+        payload, narration, fallback["caption"], instructions,
+        fallback["provider"], fallback["model"]
     )
 
 

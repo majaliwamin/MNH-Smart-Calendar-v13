@@ -100,6 +100,104 @@ def test_whiteboard_instructions_fall_back_without_provider(monkeypatch):
     assert "p-value" in result.narration
 
 
+def test_whiteboard_timeline_coordinates_speech_caption_and_board(monkeypatch):
+    from app.class_rep import whiteboard
+
+    payload = {
+        "narration": "First we state H0. Next we choose alpha. Then we compare the p-value.",
+        "caption": "Hypothesis testing decision timeline",
+        "instructions": [
+            {"type": "WRITE_TEXT", "args": {"text": "H0 and H1", "x": 80, "y": 120}},
+            {"type": "RENDER_EQUATION", "args": {"latex": "z=\\frac{\\bar{x}-\\mu}{s/\\sqrt{n}}", "x": 80, "y": 220}},
+        ],
+    }
+    monkeypatch.setattr(
+        whiteboard,
+        "complete",
+        lambda messages: (json.dumps(payload), "unit-test-provider", "unit-model"),
+    )
+    result = whiteboard.generate_instructions(whiteboard.WhiteboardInstructionRequest(
+        prompt="Explain the decision rule",
+        position=1500,
+        context=["Earlier caption: choose alpha before the test"],
+    ))
+
+    timeline = result.timeline
+    assert timeline is not None
+    assert timeline["version"] == 1
+    assert timeline["id"].startswith("tl-")
+    assert timeline["durationMs"] >= timeline["segments"][-1]["atMs"]
+    types = [segment["type"] for segment in timeline["segments"]]
+    assert types[0] == "TEACHING"
+    assert "CAPTION" in types
+    assert types.count("SPEAK") == 3
+    assert types.count("BOARD") == 2
+    assert [segment["atMs"] for segment in timeline["segments"]] == sorted(
+        segment["atMs"] for segment in timeline["segments"]
+    )
+    assert all("code" not in segment["payload"] for segment in timeline["segments"])
+    assert all("script" not in segment["payload"] for segment in timeline["segments"])
+    assert result.control["type"] == "teaching"
+
+
+def test_whiteboard_timeline_validation_rejects_unsafe_or_malformed_segments(monkeypatch):
+    from app.class_rep import whiteboard
+
+    monkeypatch.setattr(
+        whiteboard,
+        "complete",
+        lambda messages: (json.dumps({
+            "narration": "State H0 then compute the statistic.",
+            "caption": "Decision flow",
+            "instructions": [{"type": "WRITE_TEXT", "args": {"text": "H0", "x": 80, "y": 120}}],
+        }), "unit-test-provider", "unit-model"),
+    )
+    result = whiteboard.generate_instructions(whiteboard.WhiteboardInstructionRequest(prompt="Explain H0"))
+    valid = result.timeline
+    assert valid is not None
+    assert whiteboard.validate_timeline(valid) == valid
+
+    def broken(mutate):
+        candidate = json.loads(json.dumps(valid))
+        mutate(candidate)
+        return whiteboard.validate_timeline(candidate)
+
+    assert broken(lambda value: value["segments"][0].update({"type": "RUN_CODE"})) is None
+    assert broken(lambda value: value["segments"][0].update({"atMs": 200000})) is None
+    assert broken(lambda value: value["segments"][1].update({"id": value["segments"][0]["id"]})) is None
+
+    def replace_board_type(value):
+        board = next(segment for segment in value["segments"] if segment["type"] == "BOARD")
+        board["payload"]["instruction"]["type"] = "EXECUTE_JAVASCRIPT"
+
+    assert broken(replace_board_type) is None
+    assert whiteboard.validate_timeline({"id": "tl-bad", "segments": []}) is None
+
+
+def test_whiteboard_instruction_prompt_receives_timeline_context(monkeypatch):
+    from app.class_rep import whiteboard
+
+    captured = {}
+
+    def fake_complete(messages):
+        captured["messages"] = messages
+        return json.dumps({
+            "narration": "The p-value guides the decision.",
+            "caption": "Decision rule",
+            "instructions": [{"type": "WRITE_TEXT", "args": {"text": "p < alpha", "x": 80, "y": 120}}],
+        }), "unit-test-provider", "unit-model"
+
+    monkeypatch.setattr(whiteboard, "complete", fake_complete)
+    whiteboard.generate_instructions(whiteboard.WhiteboardInstructionRequest(
+        prompt="When do I reject H0?",
+        position=2500,
+        context=["Earlier caption: choose alpha before the test"],
+    ))
+    prompt_text = " ".join(message["content"] for message in captured["messages"])
+    assert "Timeline position: 2500ms" in prompt_text
+    assert "Earlier caption: choose alpha before the test" in prompt_text
+
+
 def test_whiteboard_session_endpoints_require_host_and_persist(monkeypatch, tmp_path):
     _test_storage(monkeypatch, tmp_path)
     from app.class_rep import whiteboard
@@ -245,9 +343,9 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
     parent = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
 
-    assert "crara-whiteboard.js?v=crara-classroom-v5" in html
-    assert "crara-whiteboard.css?v=crara-classroom-v5" in html
-    assert 'data-crara-classroom-build="crara-classroom-v5"' in html
+    assert "crara-whiteboard.js?v=crara-classroom-v6" in html
+    assert "crara-whiteboard.css?v=crara-classroom-v6" in html
+    assert 'data-crara-classroom-build="crara-classroom-v6"' in html
     assert "/resources/crara-classroom/crara-whiteboard.js" in worker
     assert "/resources/crara-classroom/crara-whiteboard.css" in worker
     assert 'url.searchParams.set("role", result.role || "student")' in parent
@@ -269,6 +367,13 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     assert "const hostQuestion = isHost() && message.mine === true;" in js
     assert "function authorizeControl(packet)" in js
     assert "async function hostSetTeaching(value)" in js
+    assert "function cleanTimeline(raw)" in js
+    assert "async function runTimeline()" in js
+    assert 'publish("speech", {' in js
+    assert 'publish("caption", {' in js
+    assert 'publish("segment", {' in js
+    assert "function interruptLesson(reason, broadcast)" in js
+    assert "function cancelTimeline()" in js
 
     for content in (html, js, css, bundle):
         lowered = content.lower()
