@@ -82,7 +82,7 @@ def test_lab_is_integrated_into_existing_app_shell():
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
 
-    assert 'data-view="hypothesis-lab"' in index
+    assert 'data-view="hypothesis-lab"' not in index
     assert 'id="open-hypothesis-lab"' in index
     assert 'id="view-hypothesis-lab"' in index
     assert 'id="hypothesis-lab-back"' in index

@@ -333,7 +333,7 @@ def test_practical_view_is_additive_to_the_existing_full_screen_pattern():
     assert 'id="view-stat8100-practical"' in index
     assert 'id="open-stat8100-practical"' in index
     assert 'id="stat8100-practical-back"' in index
-    assert 'data-view="stat8100-practical"' in index
+    assert 'data-view="stat8100-practical"' not in index
     assert 'src="/resources/stat8100_practical_companion.html?v=2026.11.22-stat8100-practical-v2"' in index
     assert 'title="STAT 8100 Biostatistics and Epidemiology Practical Companion"' in index
 

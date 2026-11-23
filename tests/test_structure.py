@@ -531,7 +531,13 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v44"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
-    assert 'data-view="python-library"' in html
+    # All three reference views are launched from Resources only; they have no
+    # standalone navigation-menu item or bottom-nav tab.
+    assert 'data-view="python-library"' not in html
+    assert 'href="#python-library"' not in html
+    assert 'data-view="stat8100-practical"' not in html
+    assert 'data-view="hypothesis-lab"' not in html
+    assert 'id="open-python-library"' in html
     assert "Open Python Library full screen" in html
     # The Resources section is a launcher only; its old placeholder copy is gone.
     assert "Python &amp; Jupyter Command Library" not in html
