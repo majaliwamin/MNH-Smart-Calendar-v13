@@ -41,7 +41,7 @@ def transcribe(audio: bytes, content_type: str) -> str:
         raise VoiceError("Audio must be present and no larger than 5 MB.")
     if not content_type.startswith("audio/"):
         raise VoiceError("Please record or upload a supported audio format.")
-    model = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", STT_MODEL_DEFAULT).strip()
+    model = (os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL") or STT_MODEL_DEFAULT).strip()
     if not model:
         raise VoiceError("Speech-to-text is not configured for CRARA.")
     result = _run(model, {"audio": base64.b64encode(audio).decode("ascii"),
@@ -56,8 +56,8 @@ def speak(text: str) -> tuple[bytes, str]:
     clean = text.strip()[:1800]
     if not clean:
         raise VoiceError("There is no text to speak.")
-    model = os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL",
-                      "@cf/deepgram/aura-2-en").strip()
+    model = (os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL") or
+             "@cf/deepgram/aura-2-en").strip()
     result = _run(model, {"text": clean, "encoding": "mp3",
                           "speaker": os.getenv("MNH_CLASSREP_TTS_SPEAKER", "luna")})
     audio = result.get("audio")

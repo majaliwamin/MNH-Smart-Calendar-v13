@@ -16,6 +16,7 @@ from app.api.routes import router
 from app.api.comm_routes import router as comm_router
 from app.class_rep.routes import router as class_rep_router
 from app.ai_intelligence.routes import router as ai_router
+from app.livekit.routes import router as livekit_router
 from app.ai_intelligence import evaluation as ai_evaluation
 from app.services.backup_service import backup_worker, make_backup, list_backups
 from app.services.reminders import reminder_worker
@@ -141,6 +142,7 @@ async def request_validation_error_handler(request: Request, exc: RequestValidat
 app.include_router(router)
 app.include_router(comm_router)
 app.include_router(class_rep_router)
+app.include_router(livekit_router)
 app.include_router(ai_router)
 
 

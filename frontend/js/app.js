@@ -593,7 +593,7 @@ async function downloadPdf(){
    });
   });
   pdf.setFont("helvetica","normal");pdf.setFontSize(9);pdf.setTextColor(...cyan);
-  txt("Penrose ScholarMw · Your academic partner for excellence",M,PH-M+1);
+  txt("CRARA · Your academic partner for excellence",M,PH-M+1);
   txt("Monday–Sunday timetable · Fill empty cells to complete the schedule",PW-M,PH-M+1,{align:"right"});
   pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
   const blob=pdf.output("blob"),name="MNH-PhD-Timetable-"+WK.isoMonday(weekOffset)+"-"+(weekOffset===0?"this-week":"week-"+weekOffset)+".pdf";

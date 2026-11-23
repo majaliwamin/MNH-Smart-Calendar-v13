@@ -178,7 +178,7 @@ def provider_diagnostics(request: Request):
 def status():
     cfg, configured = provider_config(), provider_configs()
     cloudflare = bool(os.getenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "").strip() and os.getenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "").strip())
-    stt = os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", STT_MODEL_DEFAULT).strip()
+    stt = (os.getenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL") or STT_MODEL_DEFAULT).strip()
     return {"ready": bool(configured), "provider": cfg["provider"], "model": cfg["model"],
             "secret_configured": bool(configured), "connection": "not_tested",
             "fallbacks": [p["provider"] for p in configured[1:]],
@@ -201,7 +201,7 @@ def status():
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
             "voice": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
             "speech_to_text_model": stt or None,
-            "text_to_speech_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL", "@cf/deepgram/aura-2-en"),
+            "text_to_speech_model": (os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL") or "@cf/deepgram/aura-2-en").strip(),
             "management_analytics": "role_restricted",
             "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
             "account_memory": "persistent_account_scoped" if _durable_storage_ready() else "disabled_missing_durable_storage", "reminder_delivery": "in_app_only"}

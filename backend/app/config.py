@@ -13,6 +13,23 @@ SESSION_SECONDS = max(300, int(os.getenv("MNH_SESSION_SECONDS", str(12 * 60 * 60
 CORS_ORIGINS = [x.strip() for x in os.getenv("MNH_CORS_ORIGINS", "").split(",") if x.strip()]
 COOKIE_SECURE = os.getenv("MNH_COOKIE_SECURE", "auto").lower()
 
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, "").strip() or default)
+    except (TypeError, ValueError):
+        return default
+
+
+# ---- CRARA one-to-one classroom (LiveKit) ---------------------------------
+# The LiveKit secret is read only by the backend token service. The browser
+# receives a short-lived, server-signed handoff token and never sees a secret.
+LIVEKIT_URL = os.getenv("MNH_LIVEKIT_URL", os.getenv("LIVEKIT_URL", "")).strip()
+LIVEKIT_API_KEY = os.getenv("MNH_LIVEKIT_API_KEY", os.getenv("LIVEKIT_API_KEY", "")).strip()
+LIVEKIT_API_SECRET = os.getenv("MNH_LIVEKIT_API_SECRET", os.getenv("LIVEKIT_API_SECRET", "")).strip()
+LIVEKIT_TOKEN_TTL_SECONDS = min(86400, max(60, _int_env("MNH_LIVEKIT_TOKEN_TTL_SECONDS", 7200)))
+LIVEKIT_HANDOFF_TTL_SECONDS = min(900, max(60, _int_env("MNH_LIVEKIT_HANDOFF_TTL_SECONDS", 600)))
+
 # ---- Server binding -------------------------------------------------------
 # Local development: 127.0.0.1:8000 (set MNH_LAN=1 to expose on the LAN).
 # Hosting platforms (Render etc.) provide PORT and need 0.0.0.0.

@@ -7,7 +7,7 @@
   const LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com";
   const GUEST_STORAGE_KEY = "crara_guest_id";
   const GUEST_COOKIE_NAME = "cara_guest";
-  const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN" };
+  const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN", lastLessonTopic: "", classroom: { open: false, topic: "", busy: false, generation: 0, fullscreen: false } };
   function newGuestId() {
     const random = window.crypto && window.crypto.randomUUID
       ? window.crypto.randomUUID().replace(/-/g, "")
@@ -68,6 +68,11 @@
   signIn.type = "button";
   signIn.setAttribute("aria-label", "Sign in to save CRARA conversations");
   signIn.addEventListener("click", () => openAuthPanel());
+  const classroomButton = el("button", "cr-classroom-button", "1:1 Classroom");
+  classroomButton.type = "button";
+  classroomButton.setAttribute("aria-label", "Join a CRARA one-to-one classroom for this lesson");
+  classroomButton.title = "Join a CRARA one-to-one classroom for this lesson";
+  classroomButton.addEventListener("click", () => openClassroom(state.lastLessonTopic || "general"));
   function renderLanguageChoice() {
     [languageEN, languageCH].forEach(button => {
       const active = button.dataset.language === state.responseLanguage;
@@ -95,6 +100,7 @@
   languageCH.addEventListener("click", () => saveResponseLanguage("CH"));
   renderLanguageChoice();
   header.append(brand, languageSwitch, signIn, homeBack);
+  header.insertBefore(classroomButton, signIn);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -131,7 +137,40 @@
   authBack.type = "button";
   authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback, authBack);
   authPanel.append(authCard);
+
+  const classroomPanel = el("section", "cr-classroom-panel");
+  classroomPanel.hidden = true;
+  classroomPanel.setAttribute("aria-label", "CRARA one-to-one classroom");
+  const classroomHead = el("div", "cr-classroom-head");
+  const classroomIdentity = el("div", "cr-classroom-identity");
+  classroomIdentity.append(el("strong", "cr-classroom-title", "CRARA 1:1 Classroom"));
+  const classroomSubtitle = el("span", "cr-classroom-subtitle", "Lesson: General CRARA support");
+  classroomIdentity.append(classroomSubtitle);
+  const classroomControls = el("div", "cr-classroom-controls");
+  const classroomReconnect = el("button", "cr-classroom-control", "Reconnect");
+  classroomReconnect.type = "button";
+  classroomReconnect.title = "Get a fresh classroom token and reconnect";
+  classroomReconnect.addEventListener("click", reconnectClassroom);
+  const classroomFullscreen = el("button", "cr-classroom-control", "Fullscreen");
+  classroomFullscreen.type = "button";
+  classroomFullscreen.title = "Toggle fullscreen";
+  classroomFullscreen.addEventListener("click", toggleClassroomFullscreen);
+  const classroomExit = el("button", "cr-classroom-control cr-classroom-exit", "Exit");
+  classroomExit.type = "button";
+  classroomExit.title = "Return to CRARA";
+  classroomExit.addEventListener("click", closeClassroom);
+  classroomControls.append(classroomReconnect, classroomFullscreen, classroomExit);
+  classroomHead.append(classroomIdentity, classroomControls);
+  const classroomStage = el("div", "cr-classroom-stage");
+  const classroomWrapper = el("div", "cr-classroom-frame-wrap");
+  classroomWrapper.id = "crara-live-classroom-wrapper";
+  const classroomNotice = el("div", "cr-classroom-notice");
+  classroomNotice.setAttribute("role", "status");
+  classroomNotice.setAttribute("aria-live", "polite");
+  classroomStage.append(classroomWrapper, classroomNotice);
+  classroomPanel.append(classroomHead, classroomStage);
   root.append(body, authPanel);
+  root.append(classroomPanel);
   const landingNav = document.getElementById("view-tabs");
   if (landingNav) landingNav.appendChild(launcher);
   let landingVisible = true;
@@ -253,6 +292,156 @@
     if (status >= 500) return "CRARA is temporarily unavailable. Please try again shortly.";
     return readableError(result && (result.detail || result.error || result.message)) || fallback || "CRARA request failed.";
   }
+
+  const LESSON_LABELS = {
+    z_test: "One-sample Z-test",
+    one_sample_t: "One-sample t-test",
+    independent_t: "Independent-samples t-test",
+    paired_t: "Paired t-test",
+    anova: "ANOVA / F-test",
+    chi_square_independence: "Chi-square test of independence",
+    chi_square_goodness: "Chi-square goodness-of-fit test",
+    correlation: "Correlation",
+    regression: "Regression",
+    mann_whitney: "Mann–Whitney U test",
+    wilcoxon: "Wilcoxon signed-rank test",
+    general: "General CRARA support"
+  };
+  function topicLabel(topic) {
+    return LESSON_LABELS[String(topic || "general")] || String(topic || "general").replace(/_/g, " ");
+  }
+  function topicFromText(text) {
+    const value = String(text || "");
+    const marker = /topic=([a-z_]+)/i.exec(value);
+    if (marker) return marker[1].toLowerCase();
+    const rules = [
+      [/mann[-\s]?whitney|rank[-\s]?sum/i, "mann_whitney"],
+      [/wilcoxon|signed[-\s]?rank/i, "wilcoxon"],
+      [/goodness[-\s]?of[-\s]?fit/i, "chi_square_goodness"],
+      [/chi[-\s]?(?:square|sq)/i, "chi_square_independence"],
+      [/anova|f[-\s]?test/i, "anova"],
+      [/paired[-\s]?t|before\s+and\s+after/i, "paired_t"],
+      [/independent[-\s]?t|unpaired[-\s]?t/i, "independent_t"],
+      [/one[-\s]?sample[-\s]?t|t[-\s]?test/i, "one_sample_t"],
+      [/correlation|pearson/i, "correlation"],
+      [/regression|slope/i, "regression"],
+      [/z[-\s]?test|standard\s+normal|birth\s+weight/i, "z_test"]
+    ];
+    for (const [pattern, topic] of rules) if (pattern.test(value)) return topic;
+    return "general";
+  }
+  function isLessonText(text) {
+    return /Hypothesis testing, taught manually first|Manual stage complete|Open the Hypothesis Testing Lab|Python stage .* computational check/i.test(String(text || ""));
+  }
+  function addClassroomPrompt(bubble, response) {
+    if (!isLessonText(response) || !bubble || bubble.querySelector(".cr-classroom-prompt")) return;
+    const topic = topicFromText(response);
+    state.lastLessonTopic = topic;
+    const card = el("div", "cr-classroom-prompt");
+    card.append(el("span", "cr-classroom-prompt-text",
+      "Want to work through " + topicLabel(topic) + " one-to-one? CRARA can open a live lesson room for this topic."));
+    const button = el("button", "cr-classroom-prompt-button", "Join 1:1 Classroom");
+    button.type = "button";
+    button.addEventListener("click", () => openClassroom(topic));
+    card.append(button);
+    bubble.append(card);
+  }
+  function showClassroomNotice(message, busy) {
+    classroomNotice.textContent = String(message || "");
+    classroomNotice.dataset.state = busy ? "busy" : "error";
+    classroomNotice.hidden = !message;
+  }
+  async function openClassroom(topic) {
+    const lesson = String(topic || "general").trim() || "general";
+    state.classroom.topic = lesson;
+    state.lastLessonTopic = lesson;
+    classroomSubtitle.textContent = "Lesson: " + topicLabel(lesson);
+    classroomPanel.hidden = false;
+    state.classroom.open = true;
+    document.documentElement.classList.add("crara-classroom-open");
+    document.body.classList.add("crara-classroom-open");
+    await connectClassroom();
+  }
+  async function connectClassroom() {
+    if (state.classroom.busy) return;
+    state.classroom.busy = true;
+    classroomReconnect.disabled = true;
+    const generation = ++state.classroom.generation;
+    showClassroomNotice("Preparing your lesson room…", true);
+    try {
+      const { response, result } = await requestJson("/api/class-rep/livekit/handoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lesson: state.classroom.topic })
+      });
+      if (!response.ok) throw new Error(readableError(result && (result.detail || result.error)) || apiError(response, result, "Could not open the CRARA classroom."));
+      if (!result.configured || !result.token || !result.room || !result.identity) {
+        throw new Error("The CRARA one-to-one classroom is not configured on this server yet.");
+      }
+      if (generation !== state.classroom.generation) return;
+      classroomSubtitle.textContent = "Lesson: " + topicLabel(state.classroom.topic) + " · " + result.room;
+      const frame = document.createElement("iframe");
+      frame.id = "crara-live-classroom-frame";
+      frame.className = "crara-classroom-frame";
+      frame.title = "CRARA one-to-one classroom";
+      frame.setAttribute("allow", "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen");
+      frame.setAttribute("allowfullscreen", "true");
+      const url = new URL("/resources/crara-classroom/index.html", window.location.origin);
+      url.searchParams.set("embed", "1");
+      url.searchParams.set("room", result.room);
+      url.searchParams.set("name", result.name || (state.user && state.user.name) || "Guest");
+      url.searchParams.set("identity", result.identity);
+      url.searchParams.set("token", result.token);
+      frame.src = url.toString();
+      frame.addEventListener("load", () => {
+        if (generation === state.classroom.generation) showClassroomNotice("", false);
+      }, { once: true });
+      classroomWrapper.replaceChildren(frame);
+      showClassroomNotice("Connecting to the CRARA classroom…", true);
+    } catch (error) {
+      if (generation === state.classroom.generation) {
+        classroomWrapper.replaceChildren();
+        showClassroomNotice(readableError(error) || "Could not open the CRARA classroom.", false);
+      }
+    } finally {
+      if (generation === state.classroom.generation) {
+        state.classroom.busy = false;
+        classroomReconnect.disabled = false;
+      }
+    }
+  }
+  function reconnectClassroom() {
+    if (!state.classroom.open) return;
+    classroomWrapper.replaceChildren();
+    void connectClassroom();
+  }
+  function closeClassroom() {
+    if (!state.classroom.open) return;
+    state.classroom.generation++;
+    state.classroom.open = false;
+    if (document.fullscreenElement === classroomWrapper && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    classroomWrapper.replaceChildren();
+    classroomPanel.hidden = true;
+    document.documentElement.classList.remove("crara-classroom-open");
+    document.body.classList.remove("crara-classroom-open");
+    state.classroom.fullscreen = false;
+  }
+  async function toggleClassroomFullscreen() {
+    try {
+      if (document.fullscreenElement === classroomWrapper) await document.exitFullscreen();
+      else if (classroomWrapper.requestFullscreen) await classroomWrapper.requestFullscreen();
+      else showClassroomNotice("Fullscreen is not supported by this browser.", false);
+    } catch (_) {
+      showClassroomNotice("Fullscreen could not be started. The classroom is still open here.", false);
+    }
+  }
+  document.addEventListener("fullscreenchange", () => {
+    const active = document.fullscreenElement === classroomWrapper;
+    state.classroom.fullscreen = active;
+    classroomFullscreen.textContent = active ? "Exit fullscreen" : "Fullscreen";
+  });
 
   function cleanHistory(history, max = 10) {
     if (!Array.isArray(history)) return [];
@@ -397,6 +586,7 @@
     }
     const disclaimer = el("p", "cr-disclaimer", "I can sometimes make mistakes — please verify important details.");
     bubble.append(actions, disclaimer);
+    addClassroomPrompt(bubble, response);
     transcript.scrollTop = transcript.scrollHeight;
   }
   async function typeReply(bubble, value) {
@@ -719,6 +909,10 @@
     else setOpen(false);
   }
   window.addEventListener("popstate", () => {
+    if (state.classroom.open) {
+      closeClassroom();
+      return;
+    }
     if (root.classList.contains("is-open")) {
       caraBackStateActive = false;
       setOpen(false);
@@ -731,6 +925,7 @@
     }
   };
   function setOpen(open) {
+    if (!open) closeClassroom();
     if (open && !root.classList.contains("is-open")) {
       window.history.pushState({ ...(window.history.state || {}), caraAssistantOpen: true }, "", window.location.href);
       caraBackStateActive = true;

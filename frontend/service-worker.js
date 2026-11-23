@@ -41,6 +41,9 @@ const APP_FILES = [
   "/resources/stat8100_practical_companion.html",
   "/resources/hypothesis-testing-lab.html",
   "/resources/data/statistical-tables.json",
+  "/resources/crara-classroom/index.html",
+  "/resources/crara-classroom/crara-classroom.js",
+  "/resources/crara-classroom/crara-classroom.css",
   "/resources/stat8100_biostatistics_epidemiology_practical.ipynb",
   "/resources/stat8100_practical_results.json",
   ...KATEX_FONTS.map((name) => "/vendor/katex/fonts/" + name)

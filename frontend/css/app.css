@@ -477,7 +477,7 @@ tbody td{background:var(--page)}
 @media(max-width:700px){.activity-module-title{font-size:calc(8px * var(--text-scale))}}
 
 
-/* Penrose footer: anchored at the lower-left, above the fixed mobile navigation. */
+/* CRARA footer: anchored at the lower-left, above the fixed mobile navigation. */
 .footer.banner{position:static;left:auto;bottom:auto;z-index:auto;width:auto;max-width:none;margin:12px clamp(6px,1.5vw,20px) 12px;padding:7px 12px;border-radius:9px;box-shadow:none;font-size:calc(12px * var(--text-scale))}
 .footer.banner>svg{width:17px;height:17px}
 .bn-text{font-size:calc(10px * var(--text-scale));line-height:1.2}
@@ -524,7 +524,7 @@ tbody tr.lunch-row td.lunch-cell{height:clamp(22px,3.75vh,70px);padding:0;text-a
 .weekly-actions{gap:8px;max-width:none;flex-wrap:wrap}
 
 
-/* Penrose footer fixed at bottom-left */
+/* CRARA footer fixed at bottom-left */
 .footer.banner {
     position: fixed !important;
     left: 8px !important;
@@ -547,7 +547,7 @@ tbody tr.lunch-row td.lunch-cell{height:clamp(22px,3.75vh,70px);padding:0;text-a
     }
 }
 
-/* FINAL OVERRIDE: Penrose footer fixed at screen bottom-left */
+/* FINAL OVERRIDE: CRARA footer fixed at screen bottom-left */
 html body .footer.banner {
     position: fixed !important;
     left: 8px !important;

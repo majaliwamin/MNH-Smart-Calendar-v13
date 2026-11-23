@@ -42,7 +42,7 @@ The existing analytics implementation and dashboard calculations were retained. 
 
 ## 10 November 2026 — Footer placement and high-resolution image exports
 
-- Anchored the Penrose ScholarMw footer at the lower-left of the viewport. On mobile it sits above the fixed bottom navigation, leaving the Home/dashboard navigation control unobstructed.
+- Anchored the CRARA footer at the lower-left of the viewport. On mobile it sits above the fixed bottom navigation, leaving the Home/dashboard navigation control unobstructed.
 - Added weekly timetable image downloads in PNG, JPEG and WebP formats from Export & Sharing. Images are rendered at 4× scale; unsupported WebP encoding falls back to PNG with the correct file extension.
 - Bumped the service-worker shell cache to v9 so the updated interface is fetched.
 

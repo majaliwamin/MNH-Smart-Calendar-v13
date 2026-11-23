@@ -110,3 +110,15 @@ def test_status_uses_default_speech_to_text_model_without_extra_configuration(mo
     assert result["audio_uploads"] == "enabled"
     from app.class_rep.voice import STT_MODEL_DEFAULT
     assert result["speech_to_text_model"] == STT_MODEL_DEFAULT
+
+
+def test_status_uses_default_speech_to_text_model_when_env_is_blank(monkeypatch):
+    from app.class_rep.routes import status
+    from app.class_rep.voice import STT_MODEL_DEFAULT
+
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "test-key")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "test-account")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "")
+    result = status()
+    assert result["audio_uploads"] == "enabled"
+    assert result["speech_to_text_model"] == STT_MODEL_DEFAULT
