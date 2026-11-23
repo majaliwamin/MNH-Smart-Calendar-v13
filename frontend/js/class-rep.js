@@ -403,6 +403,8 @@
       url.searchParams.set("name", result.name || (state.user && state.user.name) || "Guest");
       url.searchParams.set("identity", result.identity);
       url.searchParams.set("token", result.token);
+      url.searchParams.set("role", result.role || "student");
+      url.searchParams.set("permissions", JSON.stringify(result.permissions || {}));
       frame.src = url.toString();
       frame.addEventListener("load", () => {
         if (generation === state.classroom.generation) showClassroomNotice("", false);

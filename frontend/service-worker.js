@@ -44,6 +44,8 @@ const APP_FILES = [
   "/resources/crara-classroom/index.html",
   "/resources/crara-classroom/crara-classroom.js",
   "/resources/crara-classroom/crara-classroom.css",
+  "/resources/crara-classroom/crara-whiteboard.js",
+  "/resources/crara-classroom/crara-whiteboard.css",
   "/resources/stat8100_biostatistics_epidemiology_practical.ipynb",
   "/resources/stat8100_practical_results.json",
   ...KATEX_FONTS.map((name) => "/vendor/katex/fonts/" + name)

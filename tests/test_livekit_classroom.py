@@ -123,6 +123,8 @@ def test_handoff_token_is_scoped_to_the_lesson_and_crara_identity(monkeypatch):
     assert claims["lesson"] == "one_sample_z_test"
     assert claims["room"].startswith("crara_one_sample_z_test_")
     assert claims["typ"] == "crara-classroom-handoff"
+    assert claims["role"] == "student"
+    assert claims["permissions"]["canControl"] is False
 
 
 def test_tampered_handoff_token_is_rejected(monkeypatch):

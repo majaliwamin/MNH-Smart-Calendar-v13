@@ -24,6 +24,7 @@ from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Uploa
 from pydantic import BaseModel, Field
 
 from app.class_rep import memory
+from app.class_rep.classroom_permissions import classroom_permissions, classroom_role
 from app.config import (
     DATA_DIR,
     LIVEKIT_API_KEY,
@@ -152,13 +153,16 @@ def _handoff_secret() -> bytes:
 def _issue_handoff(user: dict, lesson: str) -> str:
     lesson = _lesson_slug(lesson)
     now = int(time.time())
+    room = _room_name(str(user["id"]), lesson)
     payload = {
         "typ": _HANDOFF_TYPE,
         "sub": str(user["id"]),
         "identity": _identity(user),
         "name": _display_name(user),
-        "room": _room_name(str(user["id"]), lesson),
+        "room": room,
         "lesson": lesson,
+        "role": classroom_role(user),
+        "permissions": classroom_permissions(user, room),
         "iat": now,
         "exp": now + LIVEKIT_HANDOFF_TTL_SECONDS,
     }
@@ -264,14 +268,17 @@ def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dic
     _require_configured()
     user = _resolve_user(request)
     lesson = _lesson_slug(payload.lesson)
+    room = _room_name(str(user["id"]), lesson)
     return {
         "token": _issue_handoff(user, lesson),
         "url": LIVEKIT_URL,
-        "room": _room_name(str(user["id"]), lesson),
-        "room_name": _room_name(str(user["id"]), lesson),
+        "room": room,
+        "room_name": room,
         "identity": _identity(user),
         "name": _display_name(user),
         "lesson": lesson,
+        "role": classroom_role(user),
+        "permissions": classroom_permissions(user, room),
         "expires_in": LIVEKIT_HANDOFF_TTL_SECONDS,
         "configured": True,
     }
@@ -298,6 +305,8 @@ def livekit_token(
         "room_name": room,
         "identity": identity,
         "name": name,
+        "role": str(claims.get("role") or "student"),
+        "permissions": claims.get("permissions") or classroom_permissions({}, room),
         "expires_in": ttl,
     }
 
