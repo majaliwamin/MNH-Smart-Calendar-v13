@@ -253,3 +253,85 @@ def test_host_join_code_joins_a_student_to_the_host_room(monkeypatch, tmp_path):
         assert student.post("/api/class-rep/livekit/handoff", json={
             "lesson": "Hypothesis Testing", "join_code": issued["code"]
         }).status_code == 400
+
+
+def test_cohost_grant_can_create_and_revoke_a_room_scoped_join_code(monkeypatch, tmp_path):
+    _test_storage(monkeypatch, tmp_path)
+    livekit_routes = _configure_livekit(monkeypatch)
+    from app.class_rep import memory
+
+    host = memory.create_account("Host", "majaliwamin@gmail.com", "strong-password-123")
+    cohost = memory.create_account("Cohost", "cohost@example.org", "strong-password-123")
+    host_token = memory.create_session(host["id"])
+    cohost_token = memory.create_session(cohost["id"])
+    room = livekit_routes._room_name(str(host["id"]), "hypothesis_testing")
+
+    with TestClient(app) as client:
+        client.get("/api/class-rep/auth/me")
+        client.cookies.set("cara_session", host_token, path="/")
+        granted = client.post("/api/class-rep/whiteboard/control", json={
+            "key": room,
+            "type": "cohost",
+            "value": {"enabled": True},
+        })
+        assert granted.status_code == 200
+        authority = granted.json()["token"]
+
+    with TestClient(app) as client:
+        client.get("/api/class-rep/auth/me")
+        client.cookies.set("cara_session", cohost_token, path="/")
+        assert client.post("/api/class-rep/livekit/join-code", json={
+            "lesson": "Hypothesis Testing",
+        }).status_code == 403
+
+        created = client.post("/api/class-rep/livekit/join-code", json={
+            "lesson": "Hypothesis Testing",
+            "authority": authority,
+        })
+        assert created.status_code == 200
+        issued = created.json()
+        assert issued["room"] == room
+
+        wrong_lesson = client.post("/api/class-rep/livekit/join-code", json={
+            "lesson": "Different Lesson",
+            "authority": authority,
+        })
+        assert wrong_lesson.status_code == 403
+
+        tampered = client.post("/api/class-rep/livekit/join-code", json={
+            "lesson": "Hypothesis Testing",
+            "authority": authority + "x",
+        })
+        assert tampered.status_code == 403
+
+        revoked = client.post("/api/class-rep/livekit/join-code/revoke", json={
+            "code": issued["code"],
+            "authority": authority,
+        })
+        assert revoked.status_code == 200
+
+    with TestClient(app) as guest:
+        guest.get("/api/class-rep/auth/me")
+        guest.cookies.set("cara_guest", "guest_cohost_1234", path="/")
+        denied = guest.post("/api/class-rep/livekit/join-code", json={
+            "lesson": "Hypothesis Testing",
+            "authority": authority,
+        })
+        assert denied.status_code == 403
+
+
+def test_cohost_authority_is_forwarded_from_the_classroom_without_granting_board_control():
+    whiteboard = (CLASSROOM_DIR / "crara-whiteboard.js").read_text(encoding="utf-8")
+    parent = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+
+    assert "function notifyParentCohostGrant(enabled, authority)" in whiteboard
+    assert 'type: "crara-classroom-cohost"' in whiteboard
+    assert "notifyParentCohostGrant(value.enabled, packet.authority)" in whiteboard
+    assert "setCohost(value.enabled, false, false)" in whiteboard
+    assert "cohostAuthority" not in whiteboard.split("getState:", 1)[1].split("setCaption:", 1)[0]
+
+    assert 'data.type !== "crara-classroom-cohost"' in parent
+    assert "event.source !== frame.contentWindow" in parent
+    assert "state.classroom.cohostAuthority" in parent
+    assert "authority: state.classroom.cohostAuthority" in parent
+    assert "host or an authorized co-host" in parent

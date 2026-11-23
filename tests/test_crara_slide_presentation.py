@@ -28,7 +28,9 @@ def test_native_slide_navigation_assets_are_wired():
     assert 'data-crara-classroom-build="crara-classroom-v10"' in html
     assert "application/pdf,.pdf" in bundle
     assert "presentationml.presentation,.pptx" in bundle
-    assert "PDF, PowerPoint (.pptx) or slide images" in bundle
+    assert 'className:"stagefile"' in bundle
+    assert "No shared screen or slides yet" not in bundle
+    assert "Annotations stay attached to each slide" not in bundle
     assert "window.__craraSlides={deck:l,session:s,goTo:Z}" in bundle
 
     assert "/api/class-rep/slides/render" in slides
@@ -39,8 +41,12 @@ def test_native_slide_navigation_assets_are_wired():
     assert "Restore classroom layout" in slides
     assert "Only the presenter can change slides" in slides
     assert "stagebarright" in slides
+    assert ".cr-slide-import" in slides
+    assert '"Present slides"' in slides
+    assert "cr-slide-import-status" in slides
 
     assert ".presenter.cr-slides-active" in css
+    assert ".cr-slide-import" in css
     assert ".cr-slide-list" in css
     assert ".cr-slide-thumb.active" in css
     assert "body.crara-slide-fullview" not in css  # class is scoped without the body type selector

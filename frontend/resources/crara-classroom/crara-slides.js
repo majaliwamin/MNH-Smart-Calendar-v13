@@ -21,6 +21,8 @@
   let statusLabel = null;
   let expandButton = null;
   let reopenButton = null;
+  let importButton = null;
+  let importStatus = null;
   let presenter = null;
   let lastSignature = "";
   let observer = null;
@@ -49,6 +51,37 @@
     button.setAttribute("aria-label", title || label);
     button.title = title || label;
     return button;
+  }
+
+  function ensureImportControls() {
+    const bar = document.querySelector(".controls");
+    if (bar) {
+      let button = bar.querySelector(".cr-slide-import");
+      if (!button) {
+        button = makeButton("▤", "cr-slide-import", "Present slides");
+        const label = document.createElement("small");
+        label.textContent = "Present slides";
+        button.append(label);
+        button.addEventListener("click", () => {
+          const input = document.querySelector(".stagefile");
+          if (!input) {
+            setStatus("Stop the current presentation or screen share before loading slides.", true);
+            return;
+          }
+          input.click();
+        });
+        bar.appendChild(button);
+      }
+      importButton = button;
+    }
+
+    if (importStatus && importStatus.isConnected) return;
+    importStatus = document.createElement("p");
+    importStatus.className = "cr-slide-status cr-slide-import-status";
+    importStatus.setAttribute("role", "status");
+    importStatus.setAttribute("aria-live", "polite");
+    importStatus.hidden = true;
+    document.body.appendChild(importStatus);
   }
 
   function ensurePanel(host) {
@@ -111,10 +144,12 @@
   }
 
   function setStatus(message, isError) {
-    if (!statusLabel) return;
-    statusLabel.textContent = message || "";
-    statusLabel.classList.toggle("error", Boolean(isError));
-    statusLabel.hidden = !message;
+    for (const node of [statusLabel, importStatus]) {
+      if (!node || !node.isConnected) continue;
+      node.textContent = message || "";
+      node.classList.toggle("error", Boolean(isError));
+      node.hidden = !message;
+    }
   }
 
   function thumbnail(pages, index, deck, goTo) {
@@ -150,6 +185,16 @@
   }
 
   function update() {
+    ensureImportControls();
+    const bridge = window.__craraSlides || {};
+    if (importButton) {
+      const connected = Boolean(bridge.session && bridge.session.status === "connected");
+      importButton.disabled = !connected;
+      importButton.title = connected
+        ? "Load a PDF, PowerPoint (.pptx) or slide images for everyone"
+        : "Join the live classroom before presenting slides";
+    }
+
     const host = findPresenter();
     if (!host) {
       presenter = null;
@@ -163,7 +208,6 @@
     }
     presenter = host;
 
-    const bridge = window.__craraSlides || {};
     const deck = bridge.deck || null;
     const active = Boolean(deck && deck.count > 0);
 
@@ -245,7 +289,7 @@
       let detail = `The presentation could not be prepared (HTTP ${response.status}).`;
       try {
         const body = await response.json();
-        if (body && body.detail) detail = String(body.detail);
+        if (body && (body.detail || body.error)) detail = String(body.detail || body.error);
       } catch (_) {}
       throw new Error(detail);
     }

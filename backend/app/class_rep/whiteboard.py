@@ -263,21 +263,35 @@ def _verify_control(token: str, expected: dict[str, Any]) -> dict[str, Any] | No
     return payload
 
 
+def verify_cohost_grant(authority: str, room: str | None = None) -> dict[str, Any] | None:
+    """Return a live, enabled host-signed co-host grant for one lesson room.
+
+    This is a read-only verifier so other classroom routes can reuse the same
+    short-lived authority without learning how control tokens are signed. A
+    caller must still compare the grant's room with the lesson room it derives
+    server-side before acting on it.
+    """
+    expected = {"typ": "crara-whiteboard-control", "type": "cohost"}
+    if room is not None:
+        expected["room"] = _clean_key(room)
+    signed = _verify_control(authority, expected)
+    if signed and signed.get("value", {}).get("enabled") is True:
+        return signed
+    return None
+
+
 def _require_control_issuer(request: Request, key: str, authority: str = "") -> tuple[dict, str]:
     """Accept the human host or a signed, room-scoped CRARA co-host grant.
 
-    The grant is a bearer token issued by the host through /control. Sessions,
-    join codes and other account-level operations remain strictly host-only.
+    The grant is a bearer token issued by the host through /control. It can be
+    reused only for room-scoped classroom operations; sessions and other
+    account-level operations remain strictly host-only.
     """
     user = _user(request)
     if classroom_role(user) == "host":
         return user, user["id"]
-    signed = _verify_control(authority, {
-        "typ": "crara-whiteboard-control",
-        "room": _clean_key(key),
-        "type": "cohost",
-    })
-    if signed and signed.get("value", {}).get("enabled") is True:
+    signed = verify_cohost_grant(authority, _clean_key(key))
+    if signed:
         return user, str(signed.get("sub") or user["id"])
     raise HTTPException(403, "Only the classroom host or an authorised CRARA co-host can control this board.")
 

@@ -1395,6 +1395,18 @@
     announce("Chat mode: " + mode + ".");
   }
 
+  function notifyParentCohostGrant(enabled, authority) {
+    if (!window.parent || window.parent === window) return;
+    try {
+      window.parent.postMessage({
+        type: "crara-classroom-cohost",
+        room: state.sessionKey,
+        enabled: enabled === true,
+        authority: enabled === true ? cleanText(authority, 2000) : ""
+      }, window.location.origin);
+    } catch (_) {}
+  }
+
   function setCohost(enabled, localAuthority, broadcast, authority) {
     const value = enabled === true;
     state.craraDriving = value;
@@ -1412,6 +1424,7 @@
         authority: localAuthority ? cleanText(authority, 2000) : ""
       });
     }
+    if (localAuthority) notifyParentCohostGrant(value, authority);
     announce(value ? "CRARA now has board control." : "CRARA co-host control has ended.");
   }
 
@@ -1448,7 +1461,12 @@
       if (!result.ok) return;
       if (packet.type === "mode") setChatMode(value.mode, false);
       else if (packet.type === "teaching") setTeachingState(value.value);
-      else if (packet.type === "cohost") setCohost(value.enabled, false, false);
+      else if (packet.type === "cohost") {
+        setCohost(value.enabled, false, false);
+        // Share the host-signed grant with the parent so an authorised co-host
+        // can manage the same lesson's join codes. It never grants board control.
+        notifyParentCohostGrant(value.enabled, packet.authority);
+      }
       else setPermissions(value);
     }).catch(function () {});
   }

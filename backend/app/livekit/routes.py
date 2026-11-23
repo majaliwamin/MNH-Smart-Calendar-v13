@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from app.class_rep import memory
 from app.class_rep.classroom_permissions import classroom_permissions, classroom_role
+from app.class_rep.whiteboard import verify_cohost_grant
 from app.config import (
     DATA_DIR,
     LIVEKIT_API_KEY,
@@ -70,10 +71,12 @@ class ClassroomHandoffRequest(BaseModel):
 
 class ClassroomJoinCodeRequest(BaseModel):
     lesson: str | None = Field(default=None, max_length=120)
+    authority: str = Field(default="", max_length=2000)
 
 
 class ClassroomJoinCodeRevokeRequest(BaseModel):
     code: str = Field(..., max_length=16)
+    authority: str = Field(default="", max_length=2000)
 
 
 class LiveKitTokenRequest(BaseModel):
@@ -138,6 +141,27 @@ def _require_host(request: Request) -> dict:
     if classroom_role(user) != "host":
         raise HTTPException(403, "Only the classroom host can manage join codes.")
     return user
+
+
+def _require_code_issuer(request: Request, lesson: str, authority: str) -> dict:
+    """Accept the host, or a signed co-host grant scoped to this lesson room."""
+    user = _resolve_user(request)
+    if classroom_role(user) == "host":
+        return user
+
+    # Account sessions and guest identities never become hosts through a board
+    # grant. Only an authenticated CRARA user may wield delegated code control.
+    if not memory.resolve_session(request.cookies.get("cara_session")):
+        raise HTTPException(403, "Only a signed-in classroom host or co-host can manage join codes.")
+
+    grant = verify_cohost_grant(authority)
+    if not grant:
+        raise HTTPException(403, "Only the classroom host or a host-authorized co-host can manage join codes.")
+
+    host_id = str(grant.get("sub") or "")
+    if not host_id or grant.get("room") != _room_name(host_id, _lesson_slug(lesson)):
+        raise HTTPException(403, "That co-host grant is not valid for this lesson room.")
+    return {"id": host_id, "name": str(grant.get("name") or "")}
 
 
 def _clean_join_code(value: Any) -> str:
@@ -334,18 +358,22 @@ def classroom_status() -> dict:
 
 @router.post("/api/class-rep/livekit/join-code")
 def create_join_code(payload: ClassroomJoinCodeRequest, request: Request) -> dict:
-    """Issue a short-lived, host-only code for students to join this lesson room."""
+    """Issue a short-lived code for students to join the host's lesson room."""
     _require_configured()
-    user = _require_host(request)
+    user = _require_code_issuer(request, payload.lesson or "general", payload.authority)
     result = _issue_join_code(user, payload.lesson or "general")
     return dict(result, configured=True)
 
 
 @router.post("/api/class-rep/livekit/join-code/revoke")
 def revoke_join_code(payload: ClassroomJoinCodeRevokeRequest, request: Request) -> dict:
-    """Allow the issuing host to invalidate a code before it expires."""
-    user = _require_host(request)
+    """Allow the issuing host, or a delegated co-host, to revoke a code."""
     code = _clean_join_code(payload.code)
+    with _JOIN_CODE_LOCK:
+        entry = _JOIN_CODES.get(code)
+    if not entry:
+        raise HTTPException(404, "That classroom join code was not found.")
+    user = _require_code_issuer(request, str(entry["lesson"]), payload.authority)
     with _JOIN_CODE_LOCK:
         entry = _JOIN_CODES.get(code)
         if not entry or entry["host"] != str(user["id"]):
