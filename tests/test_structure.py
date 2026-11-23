@@ -539,7 +539,15 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert 'data-view="hypothesis-lab"' not in html
     assert 'data-view="statistical-glossary"' not in html
     assert 'id="open-python-library"' in html
-    assert "Open Python Library full screen" in html
+    assert 'class="resources-back resource-tab resource-tab--python" id="open-python-library"' in html
+    assert ">Python Library</button>" in html
+    for old_label in (
+        "Open Python Library full screen",
+        "Open Statistical Tests Glossary full screen",
+        "Open STAT 8100 Practical Companion",
+        "Open Hypothesis Testing Lab",
+    ):
+        assert old_label not in html
     # The Resources section is a launcher only; its old placeholder copy is gone.
     assert "Python &amp; Jupyter Command Library" not in html
     assert "Installation guidance, Python commands and Jupyter Notebook reference." not in html
@@ -803,11 +811,16 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     # The glossary is a first-class Resources-only special view again, so a
     # learner never has to hunt for the link buried in the Python Library.
     assert 'id="open-statistical-glossary"' in index
-    assert "Open Statistical Tests Glossary full screen" in index
+    assert 'class="resources-back resource-tab resource-tab--glossary" id="open-statistical-glossary"' in index
+    assert ">Statistical Tests Glossary</button>" in index
+    assert 'resource-tab--stat8100' in index
+    assert 'resource-tab--lab' in index
+    for color in ("#6d28d9", "#0f5f7d", "#8a5a00", "#17643b"):
+        assert color in css
     assert 'id="view-statistical-glossary"' in index
     assert 'id="statistical-glossary-back"' in index
     assert 'data-view="statistical-glossary"' not in index
-    assert f'src="/resources/python-statistical-tests-glossary.html?v={build}&amp;glossary-labels=1"' in index
+    assert f'src="/resources/python-statistical-tests-glossary.html?v={build}&amp;glossary-labels=1&amp;resource-tabs=1"' in index
     assert '"statistical-glossary"' in app
     assert 'glossary.hidden=name!=="statistical-glossary"' in app
     assert 'getElementById("open-statistical-glossary")?.addEventListener("click",()=>showView("statistical-glossary"))' in app
