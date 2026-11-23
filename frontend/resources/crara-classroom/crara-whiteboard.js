@@ -1462,8 +1462,9 @@
     const active = mic.status === "active" && mic.enabled !== false;
     if (active && state.teaching === "teaching" && !state.interrupted) {
       state.interrupted = true;
-      interruptLesson("Microphone opened — CRARA is listening.");
-      publish("interrupt", { reason: "microphone" });
+      const reason = "Microphone opened — CRARA is listening.";
+      interruptLesson(reason);
+      publish("interrupt", { reason: reason });
       return;
     }
     if (!active && state.interrupted) {

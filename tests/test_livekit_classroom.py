@@ -175,8 +175,9 @@ def _configure_livekit(monkeypatch):
 def test_host_join_code_joins_a_student_to_the_host_room(monkeypatch, tmp_path):
     _test_storage(monkeypatch, tmp_path)
     livekit_routes = _configure_livekit(monkeypatch)
-    from app.class_rep import memory
+    from app.class_rep import classroom_permissions, memory
 
+    assert "crara-e2e-host@example.com" not in classroom_permissions._DEFAULT_HOST_EMAILS
     host = memory.create_account("Host", "majaliwamin@gmail.com", "strong-password-123")
     host_token = memory.create_session(host["id"])
     with TestClient(app) as client:

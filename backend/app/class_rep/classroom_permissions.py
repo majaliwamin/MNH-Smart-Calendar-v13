@@ -9,11 +9,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-_DEFAULT_HOST_EMAILS = {
-    "majaliwamin@gmail.com",
-    # TEMPORARY: short-lived E2E host account. Remove after live verification.
-    "crara-e2e-host@example.com",
-}
+_DEFAULT_HOST_EMAILS = {"majaliwamin@gmail.com"}
 
 
 def _host_emails() -> set[str]:

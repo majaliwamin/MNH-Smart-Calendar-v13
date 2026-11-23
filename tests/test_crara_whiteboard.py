@@ -245,9 +245,9 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
     parent = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
 
-    assert "crara-whiteboard.js?v=crara-classroom-v4" in html
-    assert "crara-whiteboard.css?v=crara-classroom-v4" in html
-    assert 'data-crara-classroom-build="crara-classroom-v4"' in html
+    assert "crara-whiteboard.js?v=crara-classroom-v5" in html
+    assert "crara-whiteboard.css?v=crara-classroom-v5" in html
+    assert 'data-crara-classroom-build="crara-classroom-v5"' in html
     assert "/resources/crara-classroom/crara-whiteboard.js" in worker
     assert "/resources/crara-classroom/crara-whiteboard.css" in worker
     assert 'url.searchParams.set("role", result.role || "student")' in parent
