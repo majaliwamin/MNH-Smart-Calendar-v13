@@ -34,6 +34,25 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  function makePasswordField(input, label) {
+    const wrap = el("div", "cr-password-wrap");
+    const toggle = el("button", "cr-password-toggle", "Show");
+    toggle.type = "button";
+    function setVisible(visible) {
+      input.type = visible ? "text" : "password";
+      toggle.textContent = visible ? "Hide" : "Show";
+      toggle.setAttribute("aria-pressed", String(visible));
+      toggle.setAttribute("aria-label", (visible ? "Hide " : "Show ") + label);
+      toggle.title = (visible ? "Hide " : "Show ") + label;
+    }
+    toggle.addEventListener("click", () => {
+      setVisible(input.type === "password");
+      input.focus();
+    });
+    setVisible(false);
+    wrap.append(input, toggle);
+    return { wrap: wrap, toggle: toggle, setVisible: setVisible };
+  }
   const launcher = el("button", "cara-launcher", "CRARA");
   launcher.type = "button";
   launcher.setAttribute("aria-label", "Open CRARA, your intelligent academic relations assistant");
@@ -130,6 +149,7 @@
   const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
   const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
   const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.minLength = 4; authPassword.maxLength = 256; authPassword.placeholder = "Password (at least 4 characters)"; authPassword.autocomplete = "current-password";
+  const authPasswordView = makePasswordField(authPassword, "password");
   const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
   const authForgot = el("button", "cr-auth-forgot", "Forgot password?"); authForgot.type = "button";
   const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
@@ -140,11 +160,13 @@
   const resetTitle = el("strong", "cr-auth-reset-title", "Reset your password");
   const resetEmail = el("input", "cr-auth-input"); resetEmail.type = "email"; resetEmail.placeholder = "Email address"; resetEmail.autocomplete = "email";
   const resetPassword = el("input", "cr-auth-input"); resetPassword.type = "password"; resetPassword.minLength = 4; resetPassword.maxLength = 256; resetPassword.placeholder = "New password (at least 4 characters)"; resetPassword.autocomplete = "new-password"; resetPassword.hidden = true;
+  const resetPasswordView = makePasswordField(resetPassword, "new password");
+  resetPasswordView.wrap.hidden = true;
   const resetSubmit = el("button", "cr-auth-submit", "Send reset link"); resetSubmit.type = "button";
   const resetCancel = el("button", "cr-auth-switch", "Back to sign in"); resetCancel.type = "button";
   const resetFeedback = el("p", "cr-auth-feedback", "");
-  resetBox.append(resetTitle, resetEmail, resetPassword, resetSubmit, resetCancel, resetFeedback);
-  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authForgot, authSwitch, authFeedback, resetBox, authBack);
+  resetBox.append(resetTitle, resetEmail, resetPasswordView.wrap, resetSubmit, resetCancel, resetFeedback);
+  authCard.append(authTitle, authIntro, authName, authEmail, authPasswordView.wrap, authSubmit, authForgot, authSwitch, authFeedback, resetBox, authBack);
   authPanel.append(authCard);
 
   const classroomPanel = el("section", "cr-classroom-panel");
@@ -716,6 +738,7 @@
     authPassword.autocomplete = mode === "register" ? "new-password" : "current-password";
     authPassword.minLength = mode === "register" ? 4 : 0;
     authPassword.placeholder = mode === "register" ? "Password (at least 4 characters)" : "Password";
+    authPasswordView.setVisible(false);
     authSubmit.textContent = mode === "register" ? "Create account" : "Sign in";
     authSwitch.textContent = mode === "register" ? "I already have an account" : "Create a new account";
     authFeedback.textContent = "";
@@ -729,12 +752,15 @@
     authName.hidden = true;
     authEmail.hidden = true;
     authPassword.hidden = true;
+    authPasswordView.wrap.hidden = true;
     authSubmit.hidden = true;
     authForgot.hidden = true;
     authSwitch.hidden = true;
     authFeedback.hidden = true;
     resetEmail.hidden = mode !== "request";
     resetPassword.hidden = mode !== "complete";
+    resetPasswordView.wrap.hidden = mode !== "complete";
+    resetPasswordView.setVisible(false);
     resetTitle.textContent = mode === "request" ? "Reset your password" : "Choose a new password";
     resetSubmit.textContent = mode === "request" ? "Send reset link" : "Set new password";
     resetFeedback.textContent = "";
@@ -744,8 +770,11 @@
     resetTokenValue = "";
     resetEmail.value = "";
     resetPassword.value = "";
+    resetPasswordView.wrap.hidden = true;
+    resetPasswordView.setVisible(false);
     authEmail.hidden = false;
     authPassword.hidden = false;
+    authPasswordView.wrap.hidden = false;
     authSubmit.hidden = false;
     authForgot.hidden = false;
     authSwitch.hidden = false;

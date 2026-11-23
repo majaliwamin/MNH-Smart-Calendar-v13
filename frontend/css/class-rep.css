@@ -34,6 +34,10 @@ html.cara-open,body.cara-open{overflow:hidden!important;overscroll-behavior:none
 .cr-auth-title{font-size:19px;color:var(--text)}
 .cr-auth-intro,.cr-auth-feedback{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .cr-auth-input{width:100%;min-height:44px;box-sizing:border-box;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font:16px Arial,sans-serif}
+.cr-password-wrap{position:relative;width:100%}
+.cr-password-wrap .cr-auth-input{padding-right:78px}
+.cr-password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);min-height:30px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);font:12px Arial,sans-serif;cursor:pointer}
+.cr-password-toggle:hover,.cr-password-toggle:focus-visible{border-color:var(--gold);color:var(--gold)}
 .cr-auth-submit{min-height:44px;border:1px solid var(--gold);border-radius:999px;background:var(--gold);color:#171717;font-weight:700;cursor:pointer}
 .cr-auth-switch,.cr-auth-forgot{align-self:center;border:0;background:transparent;color:var(--text);text-decoration:underline;cursor:pointer;font-size:13px}
 .cr-auth-forgot{color:var(--gold)}

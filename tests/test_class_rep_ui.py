@@ -62,6 +62,24 @@ def test_cara_signup_advertises_four_character_password_minimum_and_page_lock():
 
 
 
+def test_cara_password_fields_offer_show_hide_control():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert "function makePasswordField(input, label)" in js
+    assert 'const authPasswordView = makePasswordField(authPassword, "password")' in js
+    assert 'const resetPasswordView = makePasswordField(resetPassword, "new password")' in js
+    assert 'input.type = visible ? "text" : "password"' in js
+    assert 'toggle.textContent = visible ? "Hide" : "Show"' in js
+    assert 'toggle.setAttribute("aria-pressed", String(visible))' in js
+    assert "authCard.append(authTitle, authIntro, authName, authEmail, authPasswordView.wrap" in js
+    assert "resetBox.append(resetTitle, resetEmail, resetPasswordView.wrap" in js
+    assert "authPasswordView.wrap.hidden = true" in js
+    assert "resetPasswordView.wrap.hidden = mode !== \"complete\"" in js
+    assert ".cr-password-wrap{position:relative;width:100%}" in css
+    assert ".cr-password-toggle{position:absolute" in css
+    assert ".cr-password-wrap .cr-auth-input{padding-right:78px}" in css
+
+
 def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
