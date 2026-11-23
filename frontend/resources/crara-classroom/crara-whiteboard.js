@@ -315,6 +315,28 @@
       interruptLesson(cleanText(packet.reason, 300));
       return;
     }
+    if (packet.type === "question") {
+      const body = cleanText(packet.body, 600);
+      if (body) {
+        state.questionQueue.push({
+          id: cleanText(packet.id, 80) || uid("q"),
+          body: body,
+          from: cleanText(packet.from, 80) || "Student"
+        });
+        state.questionQueue = state.questionQueue.slice(-20);
+        renderQueue();
+        setCaption("Question added to the host queue.", "CRARA");
+      }
+      return;
+    }
+    if (packet.type === "question-answered") {
+      const id = cleanText(packet.id, 80);
+      if (id) {
+        state.questionQueue = state.questionQueue.filter(function (item) { return item.id !== id; });
+        renderQueue();
+      }
+      return;
+    }
     if (packet.type === "answer") {
       setCaption(cleanText(packet.caption, 300), "CRARA");
     }
@@ -568,7 +590,7 @@
       const question = askInput.value.trim();
       if (!question) return announce("Type a question for CRARA first.");
       askInput.value = "";
-      askQuestion({ id: uid("ask"), body: question, from: state.role === "host" ? "Host" : "You", mine: true });
+      askQuestion({ id: uid("ask"), body: question, from: state.role === "host" ? "Host" : "You", mine: isHost() });
     });
     askInput.addEventListener("keydown", function (event) {
       if (event.key === "Enter") { event.preventDefault(); askBtn.click(); }
@@ -1190,7 +1212,10 @@
         answer.addEventListener("click", function () {
           const item = state.questionQueue.splice(index, 1)[0];
           renderQueue();
-          if (item) askQuestion(item);
+          if (item) {
+            publish("question-answered", { id: item.id });
+            askQuestion(Object.assign({}, item, { mine: true }));
+          }
         });
         row.appendChild(answer);
       }
@@ -1206,7 +1231,7 @@
     if (!message || state.teaching === "stopped" || state.aiBusy) return;
     const body = cleanText(message.body, 600);
     if (!body || /^crara\b/i.test(cleanText(message.from, 80))) return;
-    const hostQuestion = isHost() || message.mine === true;
+    const hostQuestion = isHost() && message.mine === true;
     if (state.chatMode === "Silent monitoring") {
       setCaption("Silent monitoring — question noted for the host.", "CRARA");
       return;
@@ -1216,7 +1241,7 @@
       state.questionQueue = state.questionQueue.slice(-20);
       renderQueue();
       setCaption("Question added to the host queue.", "CRARA");
-      publish("question", { body: body, from: cleanText(message.from, 80) });
+      publish("question", { id: cleanText(message.id, 80), body: body, from: cleanText(message.from, 80) });
       return;
     }
     return respondToQuestion({ id: cleanText(message.id, 80), body: body, from: cleanText(message.from, 80) || "Student" });
