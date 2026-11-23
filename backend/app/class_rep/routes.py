@@ -18,6 +18,7 @@ from app.class_rep import memory
 from app.class_rep.language_intelligence import resolve_response_language
 from app.class_rep.linguistic_knowledge import lexicon_stats
 from app.services.authentication import role_for_password
+from app.services import mail_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/class-rep", tags=["CRARA"])
@@ -84,6 +85,15 @@ def _user(request: Request):
     raise HTTPException(401, "Start a guest CRARA session before sending a message.")
 
 
+def _public_base_url(request: Request) -> str:
+    configured = os.getenv("MNH_PUBLIC_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip() or request.url.scheme
+    host = request.headers.get("x-forwarded-host", "").split(",")[0].strip() or request.headers.get("host", "")
+    return proto + "://" + host
+
+
 def _cookie(response: Response, token: str):
     production = os.getenv("MNH_ENV", "").lower() == "production" or bool(os.getenv("RENDER"))
     response.set_cookie("cara_session", token, max_age=memory.SESSION_SECONDS,
@@ -127,6 +137,50 @@ def login(payload: dict, request: Request, response: Response):
         raise HTTPException(401, "Email or password is incorrect.")
     _cookie(response, memory.create_session(user["id"]))
     return {"authenticated": True, "guest": False, "user": user}
+
+
+@router.post("/auth/forgot-password")
+def forgot_password(payload: dict, request: Request):
+    """Send a single-use reset link without revealing whether an account exists."""
+    _require_durable_storage()
+    _rate("forgot:" + (request.client.host if request.client else "unknown"), 5)
+    email = str(payload.get("email") or "").strip().lower()[:254]
+    generic = {"ok": True, "message": "If an account exists, a reset link has been sent."}
+    account = memory.find_account(email) if email else None
+    if account and mail_service.configured():
+        token = memory.create_reset_token(account["id"])
+        link = _public_base_url(request) + "/?crara_reset=" + token
+        try:
+            mail_service.send_text(
+                account["email"],
+                "Reset your CRARA password",
+                "Use this one-time link to choose a new CRARA password:\n\n"
+                + link + "\n\n"
+                + "The link expires in 30 minutes and can be used once. "
+                + "If you did not request this, you can ignore this message.",
+            )
+        except mail_service.MailError:
+            logger.warning("CRARA reset email could not be delivered")
+    return generic
+
+
+@router.post("/auth/reset-password")
+def reset_password(payload: dict, request: Request, response: Response):
+    """Exchange a valid reset token for a new password and a fresh session."""
+    _require_durable_storage()
+    _rate("reset:" + (request.client.host if request.client else "unknown"), 8)
+    password = str(payload.get("password") or "")
+    if len(password) < 4 or len(password) > 256:
+        raise HTTPException(400, "Use a password between 4 and 256 characters.")
+    user_id = memory.consume_reset_token(payload.get("token"))
+    if not user_id:
+        raise HTTPException(400, "This reset link is invalid or has expired.")
+    try:
+        user = memory.set_password(user_id, password)
+    except memory.MemoryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    _cookie(response, memory.create_session(user["id"]))
+    return {"authenticated": True, "guest": False, "user": user, "password_reset": True}
 
 
 @router.post("/auth/logout")

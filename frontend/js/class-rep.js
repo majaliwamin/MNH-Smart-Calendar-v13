@@ -131,11 +131,20 @@
   const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
   const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.minLength = 4; authPassword.maxLength = 256; authPassword.placeholder = "Password (at least 4 characters)"; authPassword.autocomplete = "current-password";
   const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
+  const authForgot = el("button", "cr-auth-forgot", "Forgot password?"); authForgot.type = "button";
   const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
   const authFeedback = el("p", "cr-auth-feedback", "");
   const authBack = el("button", "cr-auth-back", "Back to chat");
   authBack.type = "button";
-  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authSwitch, authFeedback, authBack);
+  const resetBox = el("div", "cr-auth-reset"); resetBox.hidden = true;
+  const resetTitle = el("strong", "cr-auth-reset-title", "Reset your password");
+  const resetEmail = el("input", "cr-auth-input"); resetEmail.type = "email"; resetEmail.placeholder = "Email address"; resetEmail.autocomplete = "email";
+  const resetPassword = el("input", "cr-auth-input"); resetPassword.type = "password"; resetPassword.minLength = 4; resetPassword.maxLength = 256; resetPassword.placeholder = "New password (at least 4 characters)"; resetPassword.autocomplete = "new-password"; resetPassword.hidden = true;
+  const resetSubmit = el("button", "cr-auth-submit", "Send reset link"); resetSubmit.type = "button";
+  const resetCancel = el("button", "cr-auth-switch", "Back to sign in"); resetCancel.type = "button";
+  const resetFeedback = el("p", "cr-auth-feedback", "");
+  resetBox.append(resetTitle, resetEmail, resetPassword, resetSubmit, resetCancel, resetFeedback);
+  authCard.append(authTitle, authIntro, authName, authEmail, authPassword, authSubmit, authForgot, authSwitch, authFeedback, resetBox, authBack);
   authPanel.append(authCard);
 
   const classroomPanel = el("section", "cr-classroom-panel");
@@ -711,6 +720,67 @@
     authSwitch.textContent = mode === "register" ? "I already have an account" : "Create a new account";
     authFeedback.textContent = "";
   }
+  let resetMode = "request";
+  let resetTokenValue = "";
+  function setResetView(mode, token) {
+    resetTokenValue = String(token || "").slice(0, 256);
+    resetMode = mode;
+    resetBox.hidden = false;
+    authName.hidden = true;
+    authEmail.hidden = true;
+    authPassword.hidden = true;
+    authSubmit.hidden = true;
+    authForgot.hidden = true;
+    authSwitch.hidden = true;
+    authFeedback.hidden = true;
+    resetEmail.hidden = mode !== "request";
+    resetPassword.hidden = mode !== "complete";
+    resetTitle.textContent = mode === "request" ? "Reset your password" : "Choose a new password";
+    resetSubmit.textContent = mode === "request" ? "Send reset link" : "Set new password";
+    resetFeedback.textContent = "";
+  }
+  function exitResetView() {
+    resetBox.hidden = true;
+    resetTokenValue = "";
+    resetEmail.value = "";
+    resetPassword.value = "";
+    authEmail.hidden = false;
+    authPassword.hidden = false;
+    authSubmit.hidden = false;
+    authForgot.hidden = false;
+    authSwitch.hidden = false;
+    authFeedback.hidden = false;
+    setAuthMode(authMode);
+  }
+  async function submitReset() {
+    resetSubmit.disabled = true;
+    try {
+      if (resetMode === "request") {
+        const email = resetEmail.value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter your account email address.");
+        const { response, result } = await requestJson("/api/class-rep/auth/forgot-password", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email })
+        });
+        if (!response.ok) throw new Error(readableError(result.detail || result.error || result.message) || `Could not send reset link (HTTP ${response.status}).`);
+        resetFeedback.textContent = result.message || "If an account exists, a reset link has been sent.";
+      } else {
+        if (resetPassword.value.length < 4) throw new Error("Use a password of at least 4 characters.");
+        const { response, result } = await requestJson("/api/class-rep/auth/reset-password", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: resetTokenValue, password: resetPassword.value })
+        });
+        if (!response.ok) throw new Error(readableError(result.detail || result.error || result.message) || `Could not reset your password (HTTP ${response.status}).`);
+        state.user = result.user; state.guest = false;
+        state.history = []; state.conversationId = null;
+        transcript.replaceChildren();
+        exitResetView();
+        closeAuthPanel();
+        status("Password updated · you are signed in", true);
+        await loadPreviousConversation();
+      }
+    } catch (error) { resetFeedback.textContent = error.message || "The reset request could not be completed."; }
+    finally { resetSubmit.disabled = false; }
+  }
   async function loadPreviousConversation() {
     try {
       const { response, result: data } = await requestJson("/api/class-rep/conversations");
@@ -791,6 +861,11 @@
   authSubmit.addEventListener("click", authenticate);
   authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
   authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
+  authForgot.addEventListener("click", () => { openAuthPanel(); setResetView("request", ""); });
+  resetCancel.addEventListener("click", exitResetView);
+  resetSubmit.addEventListener("click", submitReset);
+  resetEmail.addEventListener("keydown", event => { if (event.key === "Enter") submitReset(); });
+  resetPassword.addEventListener("keydown", event => { if (event.key === "Enter") submitReset(); });
   const waitingPhrases = [
     "Thinking…",
     "Looking up…",
@@ -1013,6 +1088,14 @@
     if (open) { void checkAuth(); }
   }
   setAuthMode("login");
+  const resetLinkToken = new URLSearchParams(window.location.search).get("crara_reset");
+  if (resetLinkToken) {
+    openAuthPanel();
+    setResetView("complete", resetLinkToken);
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("crara_reset");
+    window.history.replaceState({}, "", cleanUrl.toString());
+  }
   launcher.addEventListener("click", () => setOpen(true));
   // Open straight into chat with a local guest session. The background check
   // upgrades a saved account silently; login is only opened on request.

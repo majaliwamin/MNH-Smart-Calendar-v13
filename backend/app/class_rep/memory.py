@@ -26,7 +26,9 @@ COL_MEMORIES = "cara_memories"
 COL_TASKS = "cara_tasks"
 COL_PROJECTS = "cara_projects"
 COL_REMINDERS = "cara_reminders"
+COL_PASSWORD_RESETS = "cara_password_resets"
 SESSION_SECONDS = 60 * 60 * 24 * 30
+RESET_SECONDS = 30 * 60
 PBKDF2_ROUNDS = 310_000
 SECRET_PATTERN = re.compile(r"(api[_ -]?key|password|passwd|token|secret|authorization)\s*[:=]|\bbearer\s+\S+|\bsk-[A-Za-z0-9_-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
 WORD_PATTERN = re.compile(r"[a-z0-9]{3,}", re.I)
@@ -158,6 +160,77 @@ def revoke_session(token: str | None):
         digest = hashlib.sha256(token.encode()).hexdigest()
         with database() as db:
             db.execute("DELETE FROM docs WHERE col=? AND id=?", (COL_SESSIONS, digest))
+
+
+def find_account(email: str):
+    """Look up an account by email without exposing its password material."""
+    user_id = _email_id(email)
+    user = _read(COL_USERS, user_id)
+    return {"id": user_id, "name": user["name"], "email": user["email"]} if user else None
+
+
+def create_reset_token(user_id: str) -> str:
+    """Create a single-use reset token; only its digest is persisted."""
+    token = secrets.token_urlsafe(32)
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    now = int(time.time())
+    _write(COL_PASSWORD_RESETS, digest, {
+        "user_id": str(user_id),
+        "created_at": now,
+        "expires_at": now + RESET_SECONDS,
+    })
+    return token
+
+
+def consume_reset_token(token: str | None):
+    """Consume a reset token and return its account id, or None if invalid."""
+    raw = str(token or "").strip()
+    if not raw:
+        return None
+    digest = hashlib.sha256(raw.encode()).hexdigest()
+    reset = _read(COL_PASSWORD_RESETS, digest)
+    if not reset:
+        return None
+    with database() as db:
+        db.execute("DELETE FROM docs WHERE col=? AND id=?", (COL_PASSWORD_RESETS, digest))
+    if int(reset.get("expires_at", 0)) < int(time.time()):
+        return None
+    user_id = str(reset.get("user_id") or "")
+    return user_id or None
+
+
+def revoke_sessions_for_user(user_id: str) -> int:
+    """Sign out every existing session after a password change."""
+    with database() as db:
+        rows = db.execute("SELECT id,data FROM docs WHERE col=?", (COL_SESSIONS,)).fetchall()
+        stale = []
+        for row in rows:
+            try:
+                if json.loads(row["data"]).get("user_id") == user_id:
+                    stale.append(str(row["id"]))
+            except (TypeError, json.JSONDecodeError):
+                continue
+        for digest in stale:
+            db.execute("DELETE FROM docs WHERE col=? AND id=?", (COL_SESSIONS, digest))
+        return len(stale)
+
+
+def set_password(user_id: str, password: str) -> dict:
+    """Replace an account password and invalidate its existing sessions."""
+    password = str(password or "")
+    if len(password) < 4 or len(password) > 256:
+        raise MemoryError("Use a password between 4 and 256 characters.")
+    user = _read(COL_USERS, str(user_id))
+    if not user:
+        raise MemoryError("Account not found.")
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ROUNDS)
+    user["salt"] = salt.hex()
+    user["password_hash"] = digest.hex()
+    user["updated_at"] = _now()
+    _write(COL_USERS, str(user_id), user)
+    revoke_sessions_for_user(str(user_id))
+    return {"id": str(user_id), "name": user["name"], "email": user["email"]}
 
 
 def save_turn(user_id: str, conversation_id: str, user_message: str, assistant_message: str):
