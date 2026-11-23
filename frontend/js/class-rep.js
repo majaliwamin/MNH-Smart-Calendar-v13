@@ -360,6 +360,11 @@
     state.classroom.open = true;
     document.documentElement.classList.add("crara-classroom-open");
     document.body.classList.add("crara-classroom-open");
+    // Request fullscreen synchronously from the click gesture; awaiting the
+    // handoff first would lose the browser's user-activation window.
+    if (classroomPanel.requestFullscreen) {
+      void classroomPanel.requestFullscreen().catch(() => {});
+    }
     await connectClassroom();
   }
   async function connectClassroom() {
@@ -419,7 +424,7 @@
     if (!state.classroom.open) return;
     state.classroom.generation++;
     state.classroom.open = false;
-    if (document.fullscreenElement === classroomWrapper && document.exitFullscreen) {
+    if (document.fullscreenElement === classroomPanel && document.exitFullscreen) {
       document.exitFullscreen().catch(() => {});
     }
     classroomWrapper.replaceChildren();
@@ -430,15 +435,15 @@
   }
   async function toggleClassroomFullscreen() {
     try {
-      if (document.fullscreenElement === classroomWrapper) await document.exitFullscreen();
-      else if (classroomWrapper.requestFullscreen) await classroomWrapper.requestFullscreen();
+      if (document.fullscreenElement === classroomPanel) await document.exitFullscreen();
+      else if (classroomPanel.requestFullscreen) await classroomPanel.requestFullscreen();
       else showClassroomNotice("Fullscreen is not supported by this browser.", false);
     } catch (_) {
       showClassroomNotice("Fullscreen could not be started. The classroom is still open here.", false);
     }
   }
   document.addEventListener("fullscreenchange", () => {
-    const active = document.fullscreenElement === classroomWrapper;
+    const active = document.fullscreenElement === classroomPanel;
     state.classroom.fullscreen = active;
     classroomFullscreen.textContent = active ? "Exit fullscreen" : "Fullscreen";
   });

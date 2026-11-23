@@ -32,6 +32,12 @@ def test_classroom_bundle_is_present_and_rebranded():
     assert "/api/v1/livekit/token" in js
     assert "/api/v1/system-audio/virtual-recordings" in js
     assert "This classroom is not connected to a CRARA session" in js
+    assert "Physics" not in js
+    assert "Hypothesis Testing" in js
+    assert "Hypothesis Testing \u2014 Shared Screen" in js
+    assert "\u00b7 Hypothesis Testing \u00b7 Term 2" in js
+    assert "CRARA" in js
+    assert "Your CRARA classroom is ready" in js
 
 
 def test_crara_ui_offers_lesson_scoped_classroom_panel():
@@ -42,6 +48,8 @@ def test_crara_ui_offers_lesson_scoped_classroom_panel():
     assert "/api/class-rep/livekit/handoff" in js
     assert "Join 1:1 Classroom" in js
     assert "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen" in js
+    assert "classroomPanel.requestFullscreen()" in js
+    assert "Request fullscreen synchronously from the click gesture" in js
     assert "Reconnect" in js and "Fullscreen" in js and "Exit" in js
 
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
