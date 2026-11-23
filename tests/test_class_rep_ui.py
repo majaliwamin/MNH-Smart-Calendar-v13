@@ -77,12 +77,36 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     assert '.cr-record svg,.cr-attach svg' in css
 
 
-def test_cara_upload_success_is_silent_and_mobile_back_closes_assistant():
+def test_cara_upload_reports_indexed_file_and_mobile_back_closes_assistant():
     js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
     assert "File indexed successfully" not in js
+    assert '"Indexed " + file.name' in js
+    assert "cr-upload-status" in js
     assert "caraAssistantOpen: true" in js
     assert 'window.addEventListener("popstate"' in js
     assert "function closeCRARA()" in js
+
+
+def test_crara_reads_audio_uploads_and_adds_copy_and_disclaimer_to_replies():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    assert "audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm" in js
+    assert 'const isAudio = /^audio\\//i.test(file.type || "")' in js
+    assert "Audio files must be 5 MB or smaller" in js
+    assert '(isAudio ? "Transcribing " : "Reading ")' in js
+    assert '" · ask CRARA to summarise it"' in js
+    assert "function decorateAssistantResponse(bubble, response)" in js
+    assert "async function copyText(text)" in js
+    assert '"Copy reply"' in js
+    assert "navigator.clipboard.writeText(value)" in js
+    assert 'document.execCommand("copy")' in js
+    assert "I can sometimes make mistakes — please verify important details." in js
+    assert "decorateAssistantResponse(bubble, answer);" in js
+    assert "pending.dataset.query = message;" in js
+    assert ".cr-response-actions{" in css
+    assert ".cr-copy-button,.cr-feedback-button{" in css
+    assert ".cr-disclaimer{" in css
+    assert ".cr-upload-status{" in css
 
 
 def test_cara_header_and_composer_controls_have_no_button_shapes():

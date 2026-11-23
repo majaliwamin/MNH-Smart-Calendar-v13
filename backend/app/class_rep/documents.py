@@ -21,6 +21,16 @@ MAX_CHUNKS = 300
 CHUNK_CHARS = 1800
 OVERLAP_CHARS = 220
 EMBED_MODEL_DEFAULT = "@cf/google/embeddinggemma-2"
+AUDIO_TYPES = (
+    (".mp3", "audio/mpeg"),
+    (".wav", "audio/wav"),
+    (".m4a", "audio/mp4"),
+    (".aac", "audio/aac"),
+    (".ogg", "audio/ogg"),
+    (".opus", "audio/ogg"),
+    (".flac", "audio/flac"),
+    (".webm", "audio/webm"),
+)
 
 
 class DocumentError(RuntimeError):
@@ -49,9 +59,24 @@ def _cloudflare(payload: dict, timeout: int = 45) -> dict:
     return result.get("result") or result
 
 
+def _audio_content_type(lower_filename: str) -> str | None:
+    for suffix, content_type in AUDIO_TYPES:
+        if lower_filename.endswith(suffix):
+            return content_type
+    return None
+
+
 def _extract(filename: str, content: bytes) -> list[tuple[int | None, str]]:
     from app.class_rep.ocr import extract_pdf, extract_image, OCRDocumentError
     lower = filename.lower()
+    audio_type = _audio_content_type(lower)
+    if audio_type:
+        from app.class_rep.voice import transcribe, VoiceError
+        try:
+            transcript = transcribe(content, audio_type)
+        except VoiceError as exc:
+            raise DocumentError(str(exc)) from exc
+        return [(None, "Audio transcript from " + filename + ":\n" + transcript)]
     if lower.endswith(".pdf"):
         try:
             return extract_pdf(content)
@@ -127,7 +152,7 @@ def _extract(filename: str, content: bytes) -> list[tuple[int | None, str]]:
             return [(1, extract_image(content))]
         except OCRDocumentError as exc:
             raise DocumentError(str(exc)) from exc
-    raise DocumentError("This file type is not supported. Use PDF, DOCX, PPTX, XLSX, CSV, SVG, TXT, Markdown, PNG, JPG, TIFF, BMP or WEBP.")
+    raise DocumentError("This file type is not supported. Use PDF, DOCX, PPTX, XLSX, CSV, SVG, TXT, Markdown, PNG, JPG, TIFF, BMP, WEBP or audio (MP3, WAV, M4A, AAC, OGG, FLAC, WebM).")
 
 
 def _split(text: str) -> list[str]:
@@ -374,3 +399,79 @@ def search_documents(query: str, limit: int = 5, owner_id: str = 'shared') -> li
                 for score, item in ranked[:limit]]
 
     return []
+
+
+# A short request such as "summarise this" or "make notes from the lecture"
+# contains no topic words for keyword retrieval. These turns still need the
+# uploaded source, so they deliberately fall back to the newest indexed file.
+SUMMARY_REQUEST_RE = re.compile(
+    r"\b(?:summar(?:y|ise|ize|ising|izing)|summary\s+notes|make\s+notes|key\s+points|"
+    r"main\s+points|recap|outline|overview|read\s+(?:this|it|these|the\s+"
+    r"(?:notes?|document|file|upload|lecture))|what\s+(?:does|do)\s+(?:this|it|the\s+"
+    r"(?:notes?|document|file|upload|lecture))\s+say|lecture\s+notes?|"
+    r"uploaded\s+(?:notes?|document|file|audio|recording)|"
+    r"attached\s+(?:notes?|document|file|audio|recording))\b",
+    re.I,
+)
+
+
+def is_document_reference_request(message: str) -> bool:
+    """Whether a turn asks for a read-through without naming a source topic."""
+    return bool(SUMMARY_REQUEST_RE.search(str(message or "")[:1000]))
+
+
+def recent_document_passages(owner_id: str = 'shared', *, document_limit: int = 1,
+                             chunk_limit: int = 6, max_chars: int = 9000) -> list[dict]:
+    """Return passages from the newest indexed document(s) for summary turns.
+
+    Results stay inside the caller's document scope and reuse the existing
+    ``docs`` collections; no new database field or table is introduced.
+    """
+    if document_limit < 1 or chunk_limit < 1:
+        return []
+    with database() as connection:
+        rows = connection.execute(
+            "SELECT id,data,updated_at FROM docs WHERE col='cara_documents' "
+            "ORDER BY updated_at DESC LIMIT ?",
+            (max(100, document_limit * chunk_limit * 20),),
+        ).fetchall()
+    grouped: dict[str, list[dict]] = {}
+    order: list[str] = []
+    used = 0
+    for row in rows:
+        try:
+            item = json.loads(row["data"])
+        except (TypeError, KeyError, json.JSONDecodeError):
+            continue
+        if not isinstance(item, dict) or item.get("owner_id", "shared") not in ("shared", owner_id):
+            continue
+        doc_id = str(item.get("document_id") or "")
+        if not doc_id:
+            continue
+        if doc_id not in grouped:
+            if len(order) >= document_limit:
+                continue
+            order.append(doc_id)
+            grouped[doc_id] = []
+        if len(grouped[doc_id]) >= chunk_limit:
+            continue
+        text = str(item.get("text") or "").strip()
+        if not text:
+            continue
+        if used + len(text) > max_chars:
+            text = text[:max(0, max_chars - used)]
+        if not text:
+            break
+        used += len(text)
+        grouped[doc_id].append({
+            "title": item.get("title"),
+            "page": item.get("page"),
+            "text": text,
+            "retrieval": "recent_upload",
+        })
+        if used >= max_chars:
+            break
+    passages: list[dict] = []
+    for doc_id in order:
+        passages.extend(reversed(grouped[doc_id]))
+    return passages

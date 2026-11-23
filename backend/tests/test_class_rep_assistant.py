@@ -475,3 +475,57 @@ def test_default_ai_response_budget_supports_complete_academic_answers(monkeypat
 
     configured = provider_configs()
     assert configured[0]["max_tokens"] == 1800
+
+
+def test_recent_document_passages_are_owner_scoped_and_limited(monkeypatch):
+    from app.class_rep import documents
+
+    def record(doc_id, title, text, owner="student-1"):
+        return {"data": json.dumps({"document_id": doc_id, "title": title,
+                                    "owner_id": owner, "page": 1, "text": text}),
+                "updated_at": 100}
+
+    rows = [
+        record("doc-a", "week-4-notes.pdf", "Second paragraph from the newest upload."),
+        record("doc-a", "week-4-notes.pdf", "First paragraph from the newest upload."),
+        record("doc-b", "private-notes.txt", "Another student's private notes.", owner="student-2"),
+    ]
+
+    class FakeConnection:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def execute(self, query, params=()):
+            return type("Rows", (), {"fetchall": lambda self: rows})()
+
+    monkeypatch.setattr(documents, "database", lambda: FakeConnection())
+    passages = documents.recent_document_passages("student-1", document_limit=1, chunk_limit=2)
+    assert [item["text"] for item in passages] == [
+        "First paragraph from the newest upload.",
+        "Second paragraph from the newest upload.",
+    ]
+    assert all(item["title"] == "week-4-notes.pdf" for item in passages)
+    assert all(item["retrieval"] == "recent_upload" for item in passages)
+
+
+
+def test_generic_upload_summary_uses_most_recent_document(monkeypatch):
+    monkeypatch.setattr(assistant, "build_calendar_context",
+                        lambda query="": ("{}", None))
+    monkeypatch.setattr(assistant, "search_documents", lambda *args, **kwargs: [])
+    monkeypatch.setattr(assistant, "recent_document_passages", lambda *args, **kwargs: [
+        {"title": "week-4-lecture.mp3", "page": None,
+         "text": "Audio transcript from week-4-lecture.mp3: placental malaria.",
+         "retrieval": "recent_upload"},
+    ])
+    seen = {}
+
+    def fake_complete(messages):
+        seen["system"] = messages[0]["content"]
+        return "Summary of the uploaded lecture.", "test", "test-model"
+
+    monkeypatch.setattr(assistant, "complete", fake_complete)
+    answer, provider, _, _ = assistant.reply("Summarise my uploaded lecture notes", [])
+    assert answer == "Summary of the uploaded lecture."
+    assert provider == "test"
+    assert "Audio transcript from week-4-lecture.mp3" in seen["system"]
+    assert "most recently indexed document supplied" in seen["system"]

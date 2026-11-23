@@ -113,9 +113,10 @@
   const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
   function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
   const fileInput = el("input", "cr-file-input"); fileInput.type = "file"; fileInput.hidden = false; fileInput.tabIndex = -1; fileInput.setAttribute("aria-hidden", "true"); fileInput.style.cssText = "display:block;position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;";
-  fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain"; fileInput.hidden = true;
+  fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain,audio/webm,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac,audio/aac"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
-  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode);
+  const uploadStatus = el("span", "cr-upload-status"); uploadStatus.hidden = true; uploadStatus.setAttribute("aria-live", "polite");
+  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode, uploadStatus);
   const authPanel = el("section", "cr-auth-panel");
   const authCard = el("div", "cr-auth-card");
   const authTitle = el("strong", "cr-auth-title", "Your private CRARA account");
@@ -195,6 +196,11 @@
     const node = statusNode;
     node.textContent = text;
     node.dataset.state = ready ? "ready" : "unavailable";
+  }
+  function uploadMessage(text, ready) {
+    uploadStatus.textContent = text;
+    uploadStatus.dataset.state = ready ? "ready" : "unavailable";
+    uploadStatus.hidden = !text;
   }
   async function requestJson(path, options = {}) {
     let response;
@@ -321,42 +327,77 @@
   function addMessage(role, text) {
     const safe = typeof text === "string" ? text : "";
     const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"));
-    if (role === "assistant") renderMarkdown(bubble, safe);
-    else bubble.textContent = safe;
+    if (role === "assistant") {
+      renderMarkdown(bubble, safe);
+      if (safe.trim()) decorateAssistantResponse(bubble, safe);
+    } else bubble.textContent = safe;
     transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble;
   }
-  function attachFeedbackControl(bubble, query, response) {
-    if (!bubble || !query || !response) return;
-    const button = el("button", "cr-feedback-button", "Report an incorrect answer");
-    button.type = "button";
-    button.setAttribute("aria-label", "Report a correction for this answer");
-    button.addEventListener("click", async () => {
-      const correction = window.prompt("Enter the corrected answer for this question:");
-      if (!correction || !correction.trim()) return;
-      button.disabled = true;
-      button.textContent = "Saving correction…";
-      try {
-        const responseResult = await fetch("/api/ai/feedback", {
-          method: "POST", credentials: "same-origin", cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query, original_response: response,
-            correction: correction.trim(), response_language: state.responseLanguage,
-            conversation_id: state.conversationId
-          })
-        });
-        const result = await responseResult.json().catch(() => ({}));
-        if (!responseResult.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${responseResult.status}`);
-        button.textContent = result.learning_status === "accepted"
-          ? "Correction saved for learning"
-          : "Correction saved for review";
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = "Report an incorrect answer";
-        status(readableError(error) || "Could not save the correction.", false);
-      }
+  async function copyText(text) {
+    const value = String(text || "");
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(value); return true; } catch (_) {}
+    }
+    const area = document.createElement("textarea");
+    area.value = value;
+    area.setAttribute("readonly", "");
+    area.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.appendChild(area);
+    area.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch (_) {}
+    area.remove();
+    return copied;
+  }
+  function decorateAssistantResponse(bubble, response) {
+    if (!bubble || !response || bubble.querySelector(".cr-response-actions")) return;
+    const query = String(bubble.dataset.query || "");
+    const actions = el("div", "cr-response-actions");
+    const copy = el("button", "cr-copy-button", "Copy reply");
+    copy.type = "button";
+    copy.setAttribute("aria-label", "Copy this reply");
+    copy.addEventListener("click", async () => {
+      const copied = await copyText(response);
+      copy.textContent = copied ? "Copied" : "Copy failed";
+      copy.setAttribute("aria-live", "polite");
+      window.setTimeout(() => { copy.textContent = "Copy reply"; }, 1800);
     });
-    bubble.append(button);
+    actions.append(copy);
+    if (query) {
+      const button = el("button", "cr-feedback-button", "Report an incorrect answer");
+      button.type = "button";
+      button.setAttribute("aria-label", "Report a correction for this answer");
+      button.addEventListener("click", async () => {
+        const correction = window.prompt("Enter the corrected answer for this question:");
+        if (!correction || !correction.trim()) return;
+        button.disabled = true;
+        button.textContent = "Saving correction…";
+        try {
+          const responseResult = await fetch("/api/ai/feedback", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query, original_response: response,
+              correction: correction.trim(), response_language: state.responseLanguage,
+              conversation_id: state.conversationId
+            })
+          });
+          const result = await responseResult.json().catch(() => ({}));
+          if (!responseResult.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${responseResult.status}`);
+          button.textContent = result.learning_status === "accepted"
+            ? "Correction saved for learning"
+            : "Correction saved for review";
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = "Report an incorrect answer";
+          status(readableError(error) || "Could not save the correction.", false);
+        }
+      });
+      actions.append(button);
+    }
+    const disclaimer = el("p", "cr-disclaimer", "I can sometimes make mistakes — please verify important details.");
+    bubble.append(actions, disclaimer);
+    transcript.scrollTop = transcript.scrollHeight;
   }
   async function typeReply(bubble, value) {
     const answer = typeof value === "string" ? value : "";
@@ -365,7 +406,7 @@
     bubble.removeAttribute("aria-label");
     bubble.textContent = "";
     const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion || window.matchMedia("(max-width: 760px)").matches || answer.length < 90) { renderMarkdown(bubble, answer); return; }
+    if (reducedMotion || window.matchMedia("(max-width: 760px)").matches || answer.length < 90) { renderMarkdown(bubble, answer); decorateAssistantResponse(bubble, answer); return; }
     const step = answer.length > 1400 ? 10 : answer.length > 700 ? 7 : 4;
     for (let index = 0; index < answer.length; index += step) {
       bubble.textContent = answer.slice(0, index + step);
@@ -373,6 +414,7 @@
       await new Promise(resolve => window.setTimeout(resolve, 16));
     }
     renderMarkdown(bubble, answer);
+    decorateAssistantResponse(bubble, answer);
   }
   function demoReply(message) {
     const q = message.toLowerCase();
@@ -519,7 +561,7 @@
     if (!message || state.busy) return;
     const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
     if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
-    input.value = ""; updateComposerAction();
+    input.value = ""; updateComposerAction(); uploadMessage("");
     addMessage("user", message);
     const waitingLabel = nextWaitingPhrase().replace(/[.…]+$/, "");
     const pending = addMessage("assistant", "");
@@ -564,17 +606,19 @@
         if (!response.ok) throw new Error(apiError(response, result, "CRARA request failed."));
         const reply = typeof result.reply === "string" ? result.reply.trim() : "";
         if (!reply) throw new Error("CRARA returned an empty reply. Please try again.");
+        pending.dataset.query = message;
         await typeReply(pending, reply);
-        attachFeedbackControl(pending, message, reply);
         state.conversationId = result.conversation_id || state.conversationId;
         if (restrictedAnalytics) { state.history = []; }
         else { state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: reply.slice(0, 4000) }]), 12); }
         status("AI connected · " + readableError(result.provider), true);
       } else {
-        await typeReply(pending, demoReply(message));
+        pending.dataset.query = message;
+        const demoAnswer = demoReply(message);
+        await typeReply(pending, demoAnswer);
         const saved = await fetch("/api/class-rep/conversation/turn", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, reply: pending.textContent, conversation_id: state.conversationId })
+          body: JSON.stringify({ message, reply: demoAnswer, conversation_id: state.conversationId })
         }).then(r => r.ok ? r.json() : null).catch(() => null);
         if (saved) {
           state.conversationId = saved.conversation_id;
@@ -606,16 +650,20 @@
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = "";
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { status("Files must be 10 MB or smaller", false); return; }
+    const isAudio = /^audio\//i.test(file.type || "") || /\.(mp3|wav|m4a|aac|ogg|opus|flac|webm)$/i.test(file.name);
+    if (isAudio && file.size > 5 * 1024 * 1024) { uploadMessage("Audio files must be 5 MB or smaller", false); return; }
+    if (file.size > 10 * 1024 * 1024) { uploadMessage("Files must be 10 MB or smaller", false); return; }
+    attachButton.disabled = true;
+    uploadMessage((isAudio ? "Transcribing " : "Reading ") + file.name + "…", false);
     try {
       const data = new FormData(); data.append("file", file);
       const response = await fetch("/api/class-rep/documents", {
-        method: "POST", body: data
+        method: "POST", credentials: "same-origin", body: data
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(readableError(result.detail) || "Upload failed");
-      // Successful indexing is silent; the document is available to CRARA without a toast or transcript message.
-    } catch (error) { status(readableError(error) || "Document indexing failed", false); }
+      uploadMessage("Indexed " + file.name + (isAudio ? " (audio transcript)" : "") + " · ask CRARA to summarise it", true);
+    } catch (error) { uploadMessage(readableError(error) || "Document indexing failed", false); }
     finally { attachButton.disabled = false; }
   });
   recordButton.addEventListener("click", async () => {

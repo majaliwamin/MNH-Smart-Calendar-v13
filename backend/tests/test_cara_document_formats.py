@@ -77,3 +77,24 @@ def test_document_uploads_remain_enabled_without_embedding_credentials(monkeypat
     result = status()
     assert result["document_uploads"] == "enabled"
     assert result["document_search"] == "keyword_only"
+
+
+def test_audio_upload_is_transcribed_into_indexable_text(monkeypatch):
+    from app.class_rep import documents, voice
+
+    monkeypatch.setattr(voice, "transcribe", lambda audio, content_type:
+                        "Lecture notes on placental malaria and pregnancy outcomes.")
+    pages = _extract("week-4-lecture.mp3", b"audio-bytes")
+    assert "Lecture notes on placental malaria" in pages[0][1]
+    assert "Audio transcript from week-4-lecture.mp3" in pages[0][1]
+
+
+def test_status_advertises_audio_uploads_when_speech_to_text_is_configured(monkeypatch):
+    from app.class_rep.routes import status
+
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_API_KEY", "test-key")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_ACCOUNT_ID", "test-account")
+    monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "@cf/test/stt")
+    result = status()
+    assert result["audio_uploads"] == "enabled"
+    assert "uploaded_audio_transcripts" in result["knowledge_sources"]

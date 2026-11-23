@@ -149,6 +149,8 @@ RESOURCE_FILE_TYPES = {
     ".csv": "text/csv", ".xls": "application/vnd.ms-excel",
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp",
+    ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".aac": "audio/aac",
+    ".ogg": "audio/ogg", ".opus": "audio/ogg", ".flac": "audio/flac", ".webm": "audio/webm",
 }
 MAX_RESOURCE_FILE_BYTES = 25 * 1024 * 1024
 
@@ -159,7 +161,7 @@ async def upload_resource_file(file: UploadFile = File(...)):
     original_name = Path(file.filename or "resource").name
     extension = Path(original_name).suffix.lower()
     if extension not in RESOURCE_FILE_TYPES:
-        raise HTTPException(415, "Choose a PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG or WEBP file.")
+        raise HTTPException(415, "Choose a PDF, DOC/DOCX, CSV, XLS/XLSX, JPG, PNG, WEBP or audio file.")
     RESOURCE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     file_id = uuid4().hex
     destination = RESOURCE_UPLOAD_DIR / (file_id + extension)
