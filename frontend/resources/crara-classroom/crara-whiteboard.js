@@ -82,6 +82,7 @@
   let timelineWaits = [];
   let instructionController = null;
   let pendingPackets = [];
+  let pendingQuestions = [];
   let lastCaption = "";
   const seenQuestions = new Set();
   let open = false;
@@ -380,6 +381,22 @@
     });
   }
 
+  function dispatchAnswer(caption, narration, question, timelineId) {
+    const body = cleanText(caption, 600) || cleanText(narration, 600);
+    if (!body || typeof window.dispatchEvent !== "function") return;
+    try {
+      window.dispatchEvent(new CustomEvent("crara-whiteboard-answer", {
+        detail: {
+          caption: cleanText(caption, 600),
+          narration: cleanText(narration, 1200),
+          question: cleanText(question, 600),
+          timelineId: cleanText(timelineId, 80),
+          body: body
+        }
+      }));
+    } catch (_) {}
+  }
+
   function commit(options) {
     const config = options || {};
     if (config.history !== false) pushHistory();
@@ -519,7 +536,7 @@
         setCaption("Question added to the host queue.", "CRARA", "", false);
         if (id && !seenQuestions.has(id)) {
           seenQuestions.add(id);
-          if (state.chatMode === "Active" && isHost()) {
+          if (state.chatMode === "Active" && isHost() && packet.answered !== true) {
             respondToQuestion({ id: id, body: body, from: cleanText(packet.from, 80) || "Student", mine: false });
           }
         }
@@ -535,7 +552,9 @@
       return;
     }
     if (packet.type === "answer") {
-      setCaption(cleanText(packet.caption, 300), "CRARA", "", false);
+      const caption = cleanText(packet.caption, 300);
+      setCaption(caption, "CRARA", "", false);
+      dispatchAnswer(caption, cleanText(packet.narration, 1200), cleanText(packet.question, 600), cleanText(packet.timelineId, 80));
     }
   }
 
@@ -787,7 +806,7 @@
       const question = askInput.value.trim();
       if (!question) return announce("Type a question for CRARA first.");
       askInput.value = "";
-      askQuestion({ id: uid("ask"), body: question, from: state.role === "host" ? "Host" : "You", mine: isHost() });
+      askQuestion({ id: uid("ask"), body: question, from: state.role === "host" ? "Host" : "You", mine: true });
     });
     askInput.addEventListener("keydown", function (event) {
       if (event.key === "Enter") { event.preventDefault(); askBtn.click(); }
@@ -1273,6 +1292,26 @@
     return state.role === "host" || state.role === "owner" || state.role === "crara";
   }
 
+  function hasRemoteParticipants() {
+    if (!connected() || !session || !Array.isArray(session.participants)) return false;
+    return session.participants.some(function (participant) { return participant && !participant.isLocal; });
+  }
+
+  function canAnswerChatHere() {
+    // The host remains the single authoritative answerer when present. A solo
+    // participant (or a local/offline board) must still be able to ask CRARA.
+    return isHost() || !hasRemoteParticipants();
+  }
+
+  function drainPendingQuestions() {
+    if (state.aiBusy || state.teaching === "stopped" || !pendingQuestions.length) return;
+    const next = pendingQuestions.shift();
+    if (!next || seenQuestions.has(next.id)) return;
+    window.setTimeout(function () {
+      onChat({ id: next.id, body: next.body, from: next.from, mine: true });
+    }, 0);
+  }
+
   function canEditBoard() {
     if (isHost()) return true;
     const permissions = state.permissions;
@@ -1425,32 +1464,40 @@
   }
 
   function onChat(message) {
-    if (!message || state.teaching === "stopped" || state.aiBusy) return;
+    if (!message || message.mine !== true || state.teaching === "stopped") return;
     const body = cleanText(message.body, 600);
     if (!body || /^crara\b/i.test(cleanText(message.from, 80))) return;
     const id = cleanText(message.id, 80) || uid("q");
-    if (seenQuestions.has(id)) return;
-    seenQuestions.add(id);
-    const hostQuestion = isHost() && message.mine === true;
-    const localQuestion = isHost() && message.mine !== false;
+    if (seenQuestions.has(id) || pendingQuestions.some(function (item) { return item.id === id; })) return;
+    const from = cleanText(message.from, 80) || "Student";
+    const answerHere = canAnswerChatHere();
     if (state.chatMode === "Silent monitoring") {
       setCaption("Silent monitoring — question noted for the host.", "CRARA");
       return;
     }
-    if ((state.chatMode === "Question Queue" || state.chatMode === "Host-selected") && !(hostQuestion || localQuestion)) {
-      state.questionQueue.push({ id: id, body: body, from: cleanText(message.from, 80) || "Student" });
+    if (!answerHere && (state.chatMode === "Question Queue" || state.chatMode === "Host-selected")) {
+      state.questionQueue.push({ id: id, body: body, from: from });
       state.questionQueue = state.questionQueue.slice(-20);
       renderQueue();
       setCaption("Question added to the host queue.", "CRARA");
-      publish("question", { id: cleanText(message.id, 80), body: body, from: cleanText(message.from, 80) });
+      publish("question", { id: id, body: body, from: from, answered: false });
       return;
     }
-    if (!(hostQuestion || localQuestion)) {
-      publish("question", { id: id, body: body, from: cleanText(message.from, 80) || "Student" });
+    if (!answerHere) {
+      publish("question", { id: id, body: body, from: from, answered: false });
       setCaption("Question sent to CRARA for an answer.", "CRARA");
       return;
     }
-    return respondToQuestion({ id: id, body: body, from: cleanText(message.from, 80) || "Student" });
+    if (state.aiBusy) {
+      pendingQuestions.push({ id: id, body: body, from: from });
+      publish("question", { id: id, body: body, from: from, answered: true });
+      setCaption("Question queued — CRARA will answer after the current step.", "CRARA");
+      return;
+    }
+    seenQuestions.add(id);
+    publish("question", { id: id, body: body, from: from, answered: true });
+    setCaption("Question sent to CRARA for an answer.", "CRARA");
+    return respondToQuestion({ id: id, body: body, from: from });
   }
 
   async function postJson(url, body, signal) {
@@ -1645,12 +1692,12 @@
           authority: teachingToken
         });
       }
-      const source = payload.timeline || {
+      const source = payload.timeline || buildClientTimeline({
         narration: payload.narration,
         caption: payload.caption,
         speak: state.chatMode !== "Chat-only" && payload.speak !== false,
         instructions: state.chatMode === "Chat-only" ? [] : payload.instructions
-      };
+      });
       if (!loadTimeline(source, true)) throw new Error("The lesson timeline was rejected.");
       state.timeline.authority = teachingToken || "";
       publish("timeline", { timeline: state.timeline, authority: teachingToken || "" });
@@ -1671,6 +1718,7 @@
         results: results,
         timelineId: state.timeline.id
       });
+      dispatchAnswer(finalCaption, narration, cleanText(question.body, 600), state.timeline.id);
     } catch (error) {
       if (generation !== timelineGeneration) return;
       finalCaption = "CRARA could not reach the lesson service. The classroom remains available.";
@@ -1680,6 +1728,7 @@
       state.aiBusy = false;
       if (instructionController === controller) instructionController = null;
       if (generation === timelineGeneration) resumeLesson(finalCaption, teachingToken);
+      drainPendingQuestions();
     }
   }
 

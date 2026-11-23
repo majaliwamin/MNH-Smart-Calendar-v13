@@ -339,13 +339,14 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     html = (CLASSROOM_DIR / "index.html").read_text(encoding="utf-8")
     js = (CLASSROOM_DIR / "crara-whiteboard.js").read_text(encoding="utf-8")
     css = (CLASSROOM_DIR / "crara-whiteboard.css").read_text(encoding="utf-8")
+    classroom_css = (CLASSROOM_DIR / "crara-classroom.css").read_text(encoding="utf-8")
     bundle = (CLASSROOM_DIR / "crara-classroom.js").read_text(encoding="utf-8")
     worker = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
     parent = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
 
-    assert "crara-whiteboard.js?v=crara-classroom-v6" in html
-    assert "crara-whiteboard.css?v=crara-classroom-v6" in html
-    assert 'data-crara-classroom-build="crara-classroom-v6"' in html
+    assert "crara-whiteboard.js?v=crara-classroom-v7" in html
+    assert "crara-whiteboard.css?v=crara-classroom-v7" in html
+    assert 'data-crara-classroom-build="crara-classroom-v7"' in html
     assert "/resources/crara-classroom/crara-whiteboard.js" in worker
     assert "/resources/crara-classroom/crara-whiteboard.css" in worker
     assert 'url.searchParams.set("role", result.role || "student")' in parent
@@ -354,6 +355,16 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     assert "Cr&&Cr.onChat&&Cr.onChat(Aa)" in bundle
     assert "Cr&&Cr.onMedia&&Cr.onMedia(u)" in bundle
     assert 'children:"Whiteboard"' in bundle
+    assert "AI Learning Coach" not in bundle
+    assert "Not connected in this build" not in bundle
+    assert "Hide AI Learning Coach" not in bundle
+    assert '[qg,"AI Coach"' not in bundle
+    assert "b.jsx(zx,{}),k&&" not in bundle
+    assert "b.jsx(zx,{})" not in bundle
+    assert "addCraraReply:" in bundle
+    assert '"crara-whiteboard-answer"' in bundle
+    assert '"crara-reply"' in bundle
+    assert ".chat article.crara-reply" in classroom_css
     assert "/api/class-rep/whiteboard/instructions" in js
     assert "/api/class-rep/whiteboard/session" in js
     assert "function startLessonIntro()" in js
@@ -363,8 +374,10 @@ def test_whiteboard_assets_are_wired_without_branding_or_build_change():
     assert "/api/class-rep/whiteboard/authorize" in js
     assert 'packet.type === "question"' in js
     assert 'packet.type === "question-answered"' in js
-    assert 'publish("question", { id: cleanText(message.id, 80)' in js
-    assert "const hostQuestion = isHost() && message.mine === true;" in js
+    assert 'publish("question", { id: id, body: body, from: from, answered: true })' in js
+    assert 'packet.answered !== true' in js
+    assert "function canAnswerChatHere()" in js
+    assert "function drainPendingQuestions()" in js
     assert "function authorizeControl(packet)" in js
     assert "async function hostSetTeaching(value)" in js
     assert "function cleanTimeline(raw)" in js

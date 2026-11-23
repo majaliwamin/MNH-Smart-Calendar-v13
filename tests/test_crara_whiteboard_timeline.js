@@ -4,6 +4,7 @@ const vm = require("node:vm");
 
 const source = fs.readFileSync("frontend/resources/crara-classroom/crara-whiteboard.js", "utf8");
 const packets = [];
+const domEvents = [];
 const speakCalls = [];
 const instructionCalls = [];
 const storage = new Map();
@@ -88,7 +89,7 @@ const window = {
     setItem: (key, value) => storage.set(key, String(value)),
   },
   addEventListener() {},
-  dispatchEvent() { return true; },
+  dispatchEvent(event) { domEvents.push(event); return true; },
   setTimeout: (callback, ms) => setTimeout(callback, ms),
   clearTimeout: (id) => clearTimeout(id),
   prompt: () => null,
@@ -304,6 +305,62 @@ const context = {
     errorsBeforeInvalid + 1,
     "invalid timelines must publish a recoverable error"
   );
+
+  // A locally typed classroom chat message must drive the same synchronized
+  // timeline even when the participant is not the host and no host is present.
+  api.setRole("student");
+  const chatCallsBefore = instructionCalls.length;
+  const domEventsBeforeChat = domEvents.length;
+  await api.onChat({ id: "chat-local-student", body: "What is alpha?", from: "Student", mine: true });
+  assert.equal(instructionCalls.length, chatCallsBefore + 1, "local classroom chat must trigger a synchronized answer");
+  const answerEvents = domEvents.slice(domEventsBeforeChat).filter((event) => event.type === "crara-whiteboard-answer");
+  assert.equal(answerEvents.length, 1, "CRARA answers must be emitted into the classroom chat");
+  assert.ok(answerEvents[0].detail.body, "the chat answer event must carry visible text");
+  const localQuestionPackets = packets.filter((entry) => entry.packet.id === "chat-local-student");
+  assert.equal(localQuestionPackets.length, 1, "local chat should publish one authoritative question packet");
+  assert.equal(localQuestionPackets[0].packet.answered, true, "the answering sender must mark the question as answered");
+  await wait(320);
+
+  // A host must not answer a question that the sending participant already
+  // answered locally, otherwise two timelines would fight over the board.
+  api.setRole("host");
+  const hostCallsBefore = instructionCalls.length;
+  api.onRemote("crara-whiteboard", Buffer.from(JSON.stringify({
+    v: 1,
+    type: "question",
+    actor: "remote-student-answered",
+    seq: 9000000000002,
+    lesson: "Hypothesis Testing",
+    id: "q-answered-elsewhere",
+    body: "Already answered locally",
+    from: "Student",
+    answered: true,
+  })));
+  await wait(220);
+  assert.equal(instructionCalls.length, hostCallsBefore, "hosts must ignore questions already answered by the sender");
+
+  // Remote chat callbacks only update the visible transcript; the whiteboard
+  // question packet is the single source of answer work.
+  const questionPacketsBeforeRemoteChat = packets.filter((entry) => entry.packet.type === "question").length;
+  api.onChat({ id: "remote-chat-callback", body: "Remote only", from: "Student", mine: false });
+  assert.equal(
+    packets.filter((entry) => entry.packet.type === "question").length,
+    questionPacketsBeforeRemoteChat,
+    "remote chat callbacks must not re-publish question packets"
+  );
+
+  // Chat sent while CRARA is busy is retained and answered after the current
+  // response, rather than silently dropped.
+  api.setRole("student");
+  const busyAnswer = api.respondToQuestion({ id: "busy-answer", body: "Busy", from: "Student", mine: true });
+  api.onChat({ id: "chat-queued", body: "Queue me", from: "Student", mine: true });
+  const queuedPackets = packets.filter((entry) => entry.packet.id === "chat-queued");
+  assert.equal(queuedPackets.length, 1, "busy chat should still publish its question packet");
+  assert.equal(queuedPackets[0].packet.answered, true);
+  const beforeQueuedAnswer = instructionCalls.length;
+  await busyAnswer;
+  await wait(120);
+  assert.equal(instructionCalls.length, beforeQueuedAnswer + 1, "queued chat must be answered after the current response");
 
   console.log("CRARA whiteboard timeline checks passed.");
 })().catch((error) => {
