@@ -11,6 +11,7 @@ from app.class_rep.chichewa_academic import chichewa_quality_instruction
 from app.class_rep.language import response_language_instruction, CONVERSATION_CONTINUITY_INSTRUCTIONS
 from app.class_rep.local_knowledge import local_teaching_context
 from app.class_rep.stats_visuals import answer_visual
+from app.class_rep.book_resources import answer_book_chapter
 from app.class_rep.statistics_lessons import answer_lesson as answer_statistics_lesson
 from app.class_rep.language_intelligence import (
     detect_language, detect_mode, detect_tone, mode_instruction, tone_style_instruction,
@@ -68,6 +69,7 @@ LOCAL PYTHON LIBRARY GROUNDING
 - For Python, statistics, data-analysis and statistical-visual questions, treat the supplied local-library glossary, chapter and dataset evidence as the primary source. Use it before general knowledge and before any external or uploaded source; name the source file, chapter id or dataset when it supports a claim.
 - The bundled datasets are fixed simulated teaching data, never real patient records. Never turn a teaching result into a biomedical, programme or population finding, and never report a clinical threshold or guideline that is not in the supplied evidence.
 - If a verified chart block is supplied with the turn, reproduce it exactly and explain it in the selected language. Never alter chart values, sample size, source fingerprint or simulated-data wording.
+- The subscribed Springer reference is bundled as bibliographic metadata and a publisher chapter outline only. When it is supplied, cite its DOI and link, describe it as an outline, and never claim to have read or reproduced the licensed chapter text.
 
 ACADEMIC AND CLINICAL BOUNDARIES
 - You may provide general biomedical, pathophysiological, epidemiological and academic information, including explanations of diseases, drugs, investigations and maternal/neonatal risks at an educational level.
@@ -102,6 +104,14 @@ def reply(message: str, history: list[dict], management_analytics: dict | None =
     mode = detect_mode(message, history)
     detected_language = detect_language(message)
     tone = detect_tone(message, history)
+    # An explicit subscribed-book chapter reading must win over both the
+    # manual-first statistics lesson and the generic chart hook: titles such as
+    # "Survival Analysis" and "Linear Regression" are also lesson/chart cues,
+    # but the learner asked to read a publisher chapter outline.
+    if mode not in ("translate_into_chichewa", "translate_into_english"):
+        book_answer = answer_book_chapter(message, response_language)
+        if book_answer is not None:
+            return book_answer + (None,)
     # Manual-first statistics teaching must win over the generic chart hook:
     # words such as "distribution" or "show" would otherwise be mistaken for a
     # chart request and skip the reasoning, table and decision stages.

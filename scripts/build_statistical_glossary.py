@@ -2655,6 +2655,123 @@ VISUAL_RECIPES: list[dict[str, Any]] = [
     },
 ]
 
+# A licensed external reference that CRARA can discuss from bundled metadata.
+# Only the publisher's bibliographic record and table of contents are stored.
+# The paid chapter text is never copied, fetched or presented as if read.
+EXTERNAL_BOOKS = [
+    {
+        "id": "regression-methods-in-biostatistics",
+        "title": "Regression Methods in Biostatistics",
+        "subtitle": "Linear, Logistic, Survival, and Repeated Measures Models",
+        "authors": [
+            "Eric Vittinghoff",
+            "David V. Glidden",
+            "Stephen C. Shiboski",
+            "Charles E. McCulloch",
+        ],
+        "edition": 2,
+        "year": 2012,
+        "publisher": "Springer New York, NY",
+        "series": "Statistics for Biology and Health",
+        "doi": "10.1007/978-1-4614-1353-0",
+        "isbn": "978-1-4614-1353-0",
+        "url": "https://link.springer.com/book/10.1007/978-1-4614-1353-0",
+        "access_note_en": (
+            "Licensed text. CRARA supplies the publisher's chapter outline only; "
+            "open the Springer link for the full chapter (preview or subscription may be required)."
+        ),
+        "access_note_ny": (
+            "Buku lili ndi chilolezo. CRARA imapereka mndandanda wa mitu yokha; "
+            "tsegulani ulalo wa Springer kuti muwerenge chaputala chonse."
+        ),
+        "aliases": [
+            "Regression Methods in Biostatistics",
+            "Vittinghoff regression methods",
+            "biostatistics regression book",
+            "biostatistics textbook",
+            "10.1007/978-1-4614-1353-0",
+            "978-1-4614-1353-0",
+        ],
+        "scope_en": (
+            "A unified introduction to the multipredictor regression methods most widely used in "
+            "biostatistics: linear models for continuous outcomes, logistic models for binary outcomes, "
+            "the Cox model for right-censored survival times, repeated-measures models for longitudinal "
+            "and hierarchical outcomes, and generalized linear models for counts and other outcomes. "
+            "The same framework is used for selecting, estimating, checking and interpreting every model, "
+            "and for handling confounding, mediation and interaction. Examples use Stata and biomedical "
+            "data; a first course in statistics is assumed and a review chapter is included."
+        ),
+        "chapters": [
+            {
+                "number": 1, "id": "introduction", "title": "Introduction", "pages": "1-6",
+                "scope_en": "Frames the book's unified approach to multipredictor regression and the common workflow used throughout.",
+                "scope_ny": "Chiyambi: chimafotokoza njira imodzi yogwirizana yophunzirira ma regression okhala ndi zolosera zambiri.",
+            },
+            {
+                "number": 2, "id": "exploratory-descriptive", "title": "Exploratory and Descriptive Methods", "pages": "7-26",
+                "scope_en": "Describes and explores biomedical data before modelling, preparing the outcome and predictor summaries used later.",
+                "scope_ny": "Kufufuza ndi kufotokoza deta musanamange chitsanzo; kumakonza zidziwitso za zotsatira ndi zolosera.",
+            },
+            {
+                "number": 3, "id": "basic-statistical-methods", "title": "Basic Statistical Methods", "pages": "27-67",
+                "scope_en": "Reviews first-course statistical methods before the multipredictor models are introduced.",
+                "scope_ny": "Kubwereza njira zoyambirira za ziwerengero zisanaphunziridwe ma model okhala ndi zolosera zambiri.",
+            },
+            {
+                "number": 4, "id": "linear-regression", "title": "Linear Regression", "pages": "69-138",
+                "scope_en": "Multiple linear regression for continuous outcomes, using the shared framework for selection, estimation, checking and interpretation.",
+                "scope_ny": "Linear regression ya zotsatira zoyezeka mosalekeza, pogwiritsa ntchito njira yofanana yosankha, kuyerekeza, kuyang'ana ndi kutanthauzira.",
+            },
+            {
+                "number": 5, "id": "logistic-regression", "title": "Logistic Regression", "pages": "139-202",
+                "scope_en": "Logistic models for binary outcomes, applying the same model-choice, checking and interpretation framework.",
+                "scope_ny": "Logistic regression ya zotsatira za awiri (inde/ayi), pogwiritsa ntchito njira yomweyo yosankha ndi kutanthauzira.",
+            },
+            {
+                "number": 6, "id": "survival-analysis", "title": "Survival Analysis", "pages": "203-259",
+                "scope_en": "The Cox model and related methods for right-censored survival times.",
+                "scope_ny": "Cox model ndi njira zina za nthawi yopulumuka pamene deta ina sinamalizidwe (right-censored).",
+            },
+            {
+                "number": 7, "id": "repeated-measures", "title": "Repeated Measures and Longitudinal Data Analysis", "pages": "261-308",
+                "scope_en": "Models for longitudinal and hierarchical outcomes where observations are correlated, including repeated-measures approaches.",
+                "scope_ny": "Ma model a deta yobwerezedwa kapena yotsatira nthawi, pamene mfundo zaza deta zimagwirizana.",
+            },
+            {
+                "number": 8, "id": "generalized-linear-models", "title": "Generalized Linear Models", "pages": "309-330",
+                "scope_en": "Generalized linear models extending the regression framework to counts and other non-normal outcome types.",
+                "scope_ny": "Generalized linear models zowonjezera njira ya regression ku zotsatira zowerengeka ndi zina zosagwirizana ndi normal.",
+            },
+            {
+                "number": 9, "id": "strengthening-causal-inference", "title": "Strengthening Causal Inference", "pages": "331-394",
+                "scope_en": "How the regression methods handle confounding, mediation and interaction of causal effects in essentially the same way.",
+                "scope_ny": "Kulimbikitsa kutanthauzira kwa chifukwa: confounding, mediation ndi interaction zimayendetsedwa mofanana.",
+            },
+            {
+                "number": 10, "id": "predictor-selection", "title": "Predictor Selection", "pages": "395-429",
+                "scope_en": "Strategies for choosing predictors and checking the resulting multipredictor models.",
+                "scope_ny": "Njira zosankha zolosera zabwino ndikuyang'ana chitsanzo chomwe chatsatira.",
+            },
+            {
+                "number": 11, "id": "missing-data", "title": "Missing Data", "pages": "431-467",
+                "scope_en": "Approaches to missingness within the regression workflow, with applied guidance.",
+                "scope_ny": "Njira zothanirana ndi deta yosowa mu ntchito ya regression, ndi malangizo ogwiritsira ntchito.",
+            },
+            {
+                "number": 12, "id": "complex-surveys", "title": "Complex Surveys", "pages": "469-480",
+                "scope_en": "A brief introduction to regression analysis of complex survey data.",
+                "scope_ny": "Chiyambi chachifupi cha regression pa deta ya kafukufuku wovuta (complex surveys).",
+            },
+            {
+                "number": 13, "id": "summary", "title": "Summary", "pages": "481-488",
+                "scope_en": "Consolidates the elements shared across all the model families in the book.",
+                "scope_ny": "Kufotokoza mwachidule zinthu zofanana pakati pa ma model onse omwe ali m'bukuli.",
+            },
+        ],
+    },
+]
+
+
 def _sha256(path: Path) -> str:
     """Hash canonical LF bytes so Windows and Linux checkouts agree.
 
@@ -2742,6 +2859,7 @@ def _write_crara_knowledge(glossary_entries: list[dict[str, Any]]) -> None:
         "glossary": glossary_entries,
         "library_sections": _library_sections(),
         "visual_recipes": VISUAL_RECIPES,
+        "books": EXTERNAL_BOOKS,
     }
     CRARA_KNOWLEDGE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     CRARA_KNOWLEDGE_OUTPUT.write_bytes(

@@ -2168,7 +2168,7 @@ body[data-theme] .activity-marquee-text .marquee-detail{
 .resources-back{display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;padding:8px 13px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
 .resources-back:hover{border-color:var(--accent);}
 
-/* Resources: distinctive coloured tabs for the four full-screen references. */
+/* Resources: distinctive coloured tabs for the four full-screen references and the linked book. */
 .resource-tab{
   --tab-bg:#1f4f8b;
   --tab-border:#173b68;
@@ -2182,6 +2182,7 @@ body[data-theme] .activity-marquee-text .marquee-detail{
   color:#fff;
   font:700 14px/1.2 'Playfair Display',Georgia,'Times New Roman',serif;
   text-align:center;
+  text-decoration:none;
   white-space:normal;
   box-shadow:0 3px 0 var(--tab-shadow);
   transition:filter .12s ease,transform .12s ease,box-shadow .12s ease;
@@ -2200,6 +2201,7 @@ body[data-theme] .activity-marquee-text .marquee-detail{
 .resource-tab--python{--tab-bg:#0f5f7d;--tab-border:#08445c;--tab-shadow:#062f41}
 .resource-tab--stat8100{--tab-bg:#8a5a00;--tab-border:#654100;--tab-shadow:#472d00}
 .resource-tab--lab{--tab-bg:#17643b;--tab-border:#0f4729;--tab-shadow:#0a321c}
+.resource-tab--book{--tab-bg:#7b2d3a;--tab-border:#5c1f29;--tab-shadow:#41151c}
 
 
 /* Resources: named folders and readable in-app file previews */

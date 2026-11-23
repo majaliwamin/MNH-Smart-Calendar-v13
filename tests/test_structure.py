@@ -914,6 +914,43 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     assert "'/resources/python-statistical-tests-glossary.html'" in library
 
 
+def test_springer_book_is_a_resources_launcher_and_crara_reference():
+    import json
+
+    index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    url = "https://link.springer.com/book/10.1007/978-1-4614-1353-0"
+    launcher = (
+        f'<a class="resources-back resource-tab resource-tab--book" href="{url}" '
+        'target="_blank" rel="noopener noreferrer" '
+        'aria-label="Regression Methods in Biostatistics">Regression Methods in Biostatistics</a>'
+    )
+    assert launcher in index
+    assert ".resource-tab--book{--tab-bg:#7b2d3a" in css
+    assert "text-decoration:none" in css
+    assert "book-resource=1" in index
+    # The book opens the licensed publisher page; it is not a fifth iframe view.
+    assert 'id="view-regression-methods-in-biostatistics"' not in index
+    assert 'data-view="regression-methods-in-biostatistics"' not in index
+    assert '"regression-methods-in-biostatistics"' not in app
+    for old_label in ("Open Regression Methods in Biostatistics", "full screen"):
+        assert old_label not in launcher
+
+    payload = json.loads(
+        (ROOT / "backend" / "app" / "class_rep" / "data" / "local_teaching_knowledge.json")
+        .read_text(encoding="utf-8")
+    )
+    assert payload["build"] == "2026.11.22-statistical-tests-glossary-v44"
+    book = payload["books"][0]
+    assert book["doi"] == "10.1007/978-1-4614-1353-0"
+    assert book["url"] == url
+    assert [item["number"] for item in book["chapters"]] == list(range(1, 14))
+    assert all(item.get("scope_en") and item.get("scope_ny") for item in book["chapters"])
+    assert "not bundled" in book["access_note_en"].lower() or "licensed text" in book["access_note_en"].lower()
+
+
 def test_supplied_statistical_glossary_wording_is_preserved():
     import html
     import re

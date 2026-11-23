@@ -382,7 +382,7 @@ def test_no_third_party_browser_storage_sources_are_loaded():
         assert font in sw, font
     assert 'app.mount("/fonts"' in main
     assert 'url.pathname.startsWith("/fonts/")' in sw
-    assert "css/app.css?v=2026.11.22-statistical-tests-glossary-v44&amp;local-fonts=1&amp;resource-tabs=1" in html
+    assert "css/app.css?v=2026.11.22-statistical-tests-glossary-v44&amp;local-fonts=1&amp;resource-tabs=1&amp;book-resource=1" in html
     assert "js/app.js?v=2026.11.22-statistical-tests-glossary-v44&amp;local-resources=1" in html
 
 

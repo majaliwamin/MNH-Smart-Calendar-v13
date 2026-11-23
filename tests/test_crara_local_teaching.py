@@ -250,3 +250,82 @@ def test_chat_route_returns_verified_visual_to_guest(monkeypatch, tmp_path):
         chart = _chart_from(payload["reply"])
         assert chart["type"] == "line"
         assert len(chart["datasets"]) == 2
+
+
+def test_book_context_uses_publisher_outline_and_explicit_access_limit():
+    from app.class_rep import local_knowledge
+
+    english = local_knowledge.book_context(
+        "Read chapter 6 Survival Analysis from Regression Methods in Biostatistics", "EN"
+    )
+    chichewa = local_knowledge.book_context(
+        "Werengani chaputala 11 Missing Data mu Regression Methods in Biostatistics", "CH"
+    )
+    assert "EXTERNAL BOOK OUTLINE" in english
+    assert "licensed full text is NOT bundled" in english
+    assert "10.1007/978-1-4614-1353-0" in english
+    assert "Chapters: 1. Introduction" in english
+    assert "Chapter 6 — Survival Analysis" in english
+    assert "Chapter 11 — Missing Data" in chichewa
+    assert "CRARA BUNDLED REFERENCE" in chichewa
+    assert local_knowledge.book_context("What time is the next class?") == ""
+    assert "EXTERNAL BOOK OUTLINE" in local_knowledge.local_teaching_context(
+        "Explain chapter 4 Linear Regression from Regression Methods in Biostatistics", "EN"
+    )
+
+
+def test_book_chapter_reading_is_deterministic_and_does_not_claim_full_text():
+    from app.class_rep.book_resources import answer_book_chapter, MODEL, PROVIDER
+
+    result = answer_book_chapter(
+        "Read chapter 6, Survival Analysis, from Regression Methods in Biostatistics", "EN"
+    )
+    assert result is not None
+    answer, provider, model = result
+    assert provider == PROVIDER and model == MODEL
+    assert "## Chapter 6 — Survival Analysis" in answer
+    assert "10.1007/978-1-4614-1353-0" in answer
+    assert "https://link.springer.com/book/10.1007/978-1-4614-1353-0" in answer
+    assert "not the licensed chapter text" in answer
+    assert "Publisher's chapter outline (pages 203-259)" in answer
+
+    chichewa = answer_book_chapter(
+        "Werengani chaputala 11, Missing Data, mu Regression Methods in Biostatistics", "CH"
+    )
+    assert chichewa is not None
+    assert "## Chaputala 11 — Missing Data" in chichewa[0]
+    assert "osati malemba onse" in chichewa[0]
+
+    assert answer_book_chapter("Read chapter 6 of my uploaded lecture notes", "EN") is None
+    assert answer_book_chapter("Read chapter 99 from Regression Methods in Biostatistics", "EN") is None
+
+
+def test_crara_can_read_a_randomly_selected_publisher_chapter(capsys):
+    """Smoke test: select a chapter at random and drive real CRARA turns."""
+    import random
+
+    from app.class_rep import local_knowledge
+    from app.class_rep.assistant import reply
+
+    chapters = local_knowledge.knowledge()["books"][0]["chapters"]
+    chapter = random.SystemRandom().choice(chapters)
+    message = (
+        f"Read chapter {chapter['number']}, {chapter['title']}, "
+        "from Regression Methods in Biostatistics and tell me what it covers."
+    )
+    for language in ("EN", "CH"):
+        answer, provider, model, updated = reply(message, [], response_language=language)
+        assert updated is None
+        assert provider == "CRARA bundled reference"
+        assert model == "springer-regression-methods-outline-v1"
+        heading = (
+            f"Chaputala {chapter['number']} — {chapter['title']}"
+            if language == "CH"
+            else f"Chapter {chapter['number']} — {chapter['title']}"
+        )
+        pages_label = "masamba" if language == "CH" else "pages"
+        assert heading in answer
+        assert f"{pages_label} {chapter['pages']}" in answer
+        assert "10.1007/978-1-4614-1353-0" in answer
+        assert "not the licensed" in answer or "osati malemba onse" in answer
+    print(f"Random chapter smoke test: Chapter {chapter['number']} — {chapter['title']}")

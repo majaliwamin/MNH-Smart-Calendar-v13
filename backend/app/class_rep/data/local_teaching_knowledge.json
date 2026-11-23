@@ -1,4 +1,141 @@
 {
+  "books": [
+    {
+      "access_note_en": "Licensed text. CRARA supplies the publisher's chapter outline only; open the Springer link for the full chapter (preview or subscription may be required).",
+      "access_note_ny": "Buku lili ndi chilolezo. CRARA imapereka mndandanda wa mitu yokha; tsegulani ulalo wa Springer kuti muwerenge chaputala chonse.",
+      "aliases": [
+        "Regression Methods in Biostatistics",
+        "Vittinghoff regression methods",
+        "biostatistics regression book",
+        "biostatistics textbook",
+        "10.1007/978-1-4614-1353-0",
+        "978-1-4614-1353-0"
+      ],
+      "authors": [
+        "Eric Vittinghoff",
+        "David V. Glidden",
+        "Stephen C. Shiboski",
+        "Charles E. McCulloch"
+      ],
+      "chapters": [
+        {
+          "id": "introduction",
+          "number": 1,
+          "pages": "1-6",
+          "scope_en": "Frames the book's unified approach to multipredictor regression and the common workflow used throughout.",
+          "scope_ny": "Chiyambi: chimafotokoza njira imodzi yogwirizana yophunzirira ma regression okhala ndi zolosera zambiri.",
+          "title": "Introduction"
+        },
+        {
+          "id": "exploratory-descriptive",
+          "number": 2,
+          "pages": "7-26",
+          "scope_en": "Describes and explores biomedical data before modelling, preparing the outcome and predictor summaries used later.",
+          "scope_ny": "Kufufuza ndi kufotokoza deta musanamange chitsanzo; kumakonza zidziwitso za zotsatira ndi zolosera.",
+          "title": "Exploratory and Descriptive Methods"
+        },
+        {
+          "id": "basic-statistical-methods",
+          "number": 3,
+          "pages": "27-67",
+          "scope_en": "Reviews first-course statistical methods before the multipredictor models are introduced.",
+          "scope_ny": "Kubwereza njira zoyambirira za ziwerengero zisanaphunziridwe ma model okhala ndi zolosera zambiri.",
+          "title": "Basic Statistical Methods"
+        },
+        {
+          "id": "linear-regression",
+          "number": 4,
+          "pages": "69-138",
+          "scope_en": "Multiple linear regression for continuous outcomes, using the shared framework for selection, estimation, checking and interpretation.",
+          "scope_ny": "Linear regression ya zotsatira zoyezeka mosalekeza, pogwiritsa ntchito njira yofanana yosankha, kuyerekeza, kuyang'ana ndi kutanthauzira.",
+          "title": "Linear Regression"
+        },
+        {
+          "id": "logistic-regression",
+          "number": 5,
+          "pages": "139-202",
+          "scope_en": "Logistic models for binary outcomes, applying the same model-choice, checking and interpretation framework.",
+          "scope_ny": "Logistic regression ya zotsatira za awiri (inde/ayi), pogwiritsa ntchito njira yomweyo yosankha ndi kutanthauzira.",
+          "title": "Logistic Regression"
+        },
+        {
+          "id": "survival-analysis",
+          "number": 6,
+          "pages": "203-259",
+          "scope_en": "The Cox model and related methods for right-censored survival times.",
+          "scope_ny": "Cox model ndi njira zina za nthawi yopulumuka pamene deta ina sinamalizidwe (right-censored).",
+          "title": "Survival Analysis"
+        },
+        {
+          "id": "repeated-measures",
+          "number": 7,
+          "pages": "261-308",
+          "scope_en": "Models for longitudinal and hierarchical outcomes where observations are correlated, including repeated-measures approaches.",
+          "scope_ny": "Ma model a deta yobwerezedwa kapena yotsatira nthawi, pamene mfundo zaza deta zimagwirizana.",
+          "title": "Repeated Measures and Longitudinal Data Analysis"
+        },
+        {
+          "id": "generalized-linear-models",
+          "number": 8,
+          "pages": "309-330",
+          "scope_en": "Generalized linear models extending the regression framework to counts and other non-normal outcome types.",
+          "scope_ny": "Generalized linear models zowonjezera njira ya regression ku zotsatira zowerengeka ndi zina zosagwirizana ndi normal.",
+          "title": "Generalized Linear Models"
+        },
+        {
+          "id": "strengthening-causal-inference",
+          "number": 9,
+          "pages": "331-394",
+          "scope_en": "How the regression methods handle confounding, mediation and interaction of causal effects in essentially the same way.",
+          "scope_ny": "Kulimbikitsa kutanthauzira kwa chifukwa: confounding, mediation ndi interaction zimayendetsedwa mofanana.",
+          "title": "Strengthening Causal Inference"
+        },
+        {
+          "id": "predictor-selection",
+          "number": 10,
+          "pages": "395-429",
+          "scope_en": "Strategies for choosing predictors and checking the resulting multipredictor models.",
+          "scope_ny": "Njira zosankha zolosera zabwino ndikuyang'ana chitsanzo chomwe chatsatira.",
+          "title": "Predictor Selection"
+        },
+        {
+          "id": "missing-data",
+          "number": 11,
+          "pages": "431-467",
+          "scope_en": "Approaches to missingness within the regression workflow, with applied guidance.",
+          "scope_ny": "Njira zothanirana ndi deta yosowa mu ntchito ya regression, ndi malangizo ogwiritsira ntchito.",
+          "title": "Missing Data"
+        },
+        {
+          "id": "complex-surveys",
+          "number": 12,
+          "pages": "469-480",
+          "scope_en": "A brief introduction to regression analysis of complex survey data.",
+          "scope_ny": "Chiyambi chachifupi cha regression pa deta ya kafukufuku wovuta (complex surveys).",
+          "title": "Complex Surveys"
+        },
+        {
+          "id": "summary",
+          "number": 13,
+          "pages": "481-488",
+          "scope_en": "Consolidates the elements shared across all the model families in the book.",
+          "scope_ny": "Kufotokoza mwachidule zinthu zofanana pakati pa ma model onse omwe ali m'bukuli.",
+          "title": "Summary"
+        }
+      ],
+      "doi": "10.1007/978-1-4614-1353-0",
+      "edition": 2,
+      "id": "regression-methods-in-biostatistics",
+      "isbn": "978-1-4614-1353-0",
+      "publisher": "Springer New York, NY",
+      "scope_en": "A unified introduction to the multipredictor regression methods most widely used in biostatistics: linear models for continuous outcomes, logistic models for binary outcomes, the Cox model for right-censored survival times, repeated-measures models for longitudinal and hierarchical outcomes, and generalized linear models for counts and other outcomes. The same framework is used for selecting, estimating, checking and interpreting every model, and for handling confounding, mediation and interaction. Examples use Stata and biomedical data; a first course in statistics is assumed and a review chapter is included.",
+      "series": "Statistics for Biology and Health",
+      "subtitle": "Linear, Logistic, Survival, and Repeated Measures Models",
+      "title": "Regression Methods in Biostatistics",
+      "url": "https://link.springer.com/book/10.1007/978-1-4614-1353-0",
+      "year": 2012
+    }
+  ],
   "build": "2026.11.22-statistical-tests-glossary-v44",
   "datasets": {
     "anc_cohort.csv": {

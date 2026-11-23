@@ -7,9 +7,12 @@ The source index is generated at build time by
 
 * the executed bilingual statistical glossary,
 * ``frontend/resources/python-command-library.html``, and
-* the three fixed simulated teaching CSV files.
+* the three fixed simulated teaching CSV files, and
+* the publisher outline of one subscribed external reference book.
 
-Nothing in this module executes user code or fetches an internet source.
+Nothing in this module executes user code or fetches an internet source. The
+external book entry is bundled metadata only; its licensed full text is not
+stored, fetched or claimed as read.
 """
 from __future__ import annotations
 
@@ -163,6 +166,71 @@ def library_context(message: str, limit: int = 2) -> str:
     return "\n".join(lines)
 
 
+_BOOK_HINT = re.compile(
+    r"\b(?:regression\s+methods\s+in\s+biostatistics|vittinghoff|springer|"
+    r"biostatistics\s+(?:book|reference|textbook)|10\.1007/978-1-4614-1353-0|"
+    r"978-1-4614-1353-0)\b",
+    re.I,
+)
+
+
+def book_context(message: str, response_language: str = "EN", limit: int = 3) -> str:
+    """Return publisher-outline evidence for the subscribed regression reference.
+
+    This is bundled bibliographic metadata, not the licensed chapter text.
+    CRARA may quote the outline and cite the DOI, but must not claim to have
+    read the full book.
+    """
+    if not _BOOK_HINT.search(message):
+        return ""
+    chichewa = str(response_language).upper() == "CH"
+    lines = [
+        "CRARA BUNDLED REFERENCE — EXTERNAL BOOK OUTLINE "
+        "(publisher bibliographic record and table of contents; the licensed full text is NOT bundled):"
+    ]
+    matched = False
+    for book in knowledge().get("books", []):
+        chapter_terms = [str(item.get("title", "")) for item in book.get("chapters", [])]
+        score = _score_terms(message, list(book.get("aliases", [])) + chapter_terms)
+        if not score:
+            continue
+        matched = True
+        lines += [
+            f"Title: {book.get('title', '')}: {book.get('subtitle', '')}",
+            f"Authors: {', '.join(book.get('authors', []))}; "
+            f"{book.get('edition', '')} ed.; {book.get('year', '')}; {book.get('publisher', '')}",
+            f"DOI: {book.get('doi', '')} | ISBN: {book.get('isbn', '')} | URL: {book.get('url', '')}",
+            f"Overall scope: {str(book.get('scope_en', ''))[:700]}",
+        ]
+        chapters = book.get("chapters", [])
+        lines.append(
+            "Chapters: " + "; ".join(
+                f"{item.get('number', '')}. {item.get('title', '')} (pp. {item.get('pages', '')})"
+                for item in chapters
+            )
+        )
+        ranked: list[tuple[int, dict[str, Any]]] = []
+        for item in chapters:
+            title_score = _score_terms(message, [str(item.get("title", ""))])
+            number_hit = re.search(
+                r"\bchapter\s*#?\s*0*" + re.escape(str(item.get("number", ""))) + r"\b",
+                message, re.I,
+            )
+            if title_score or number_hit:
+                ranked.append((title_score + (20 if number_hit else 0), item))
+        ranked.sort(key=lambda pair: pair[0], reverse=True)
+        for _, item in ranked[:limit]:
+            scope = item.get("scope_ny", "") if chichewa else item.get("scope_en", "")
+            lines.append(
+                f"Chapter {item.get('number', '')} — {item.get('title', '')} "
+                f"(pp. {item.get('pages', '')}): {str(scope)[:300]}"
+            )
+        lines.append(
+            f"Access: {book.get('access_note_ny', '') if chichewa else book.get('access_note_en', '')}"
+        )
+    return "\n".join(lines) if matched else ""
+
+
 def dataset_context(message: str) -> str:
     """Describe the verified local teaching datasets when the request concerns data."""
     if not re.search(
@@ -184,7 +252,12 @@ def dataset_context(message: str) -> str:
 
 def local_teaching_context(message: str, response_language: str = "EN") -> str:
     """Build one bounded local-evidence block for the system prompt."""
-    blocks = [glossary_context(message, response_language), library_context(message), dataset_context(message)]
+    blocks = [
+        glossary_context(message, response_language),
+        library_context(message),
+        book_context(message, response_language),
+        dataset_context(message),
+    ]
     blocks = [block for block in blocks if block]
     if not blocks:
         return ""
