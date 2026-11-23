@@ -87,11 +87,39 @@
   signIn.type = "button";
   signIn.setAttribute("aria-label", "Sign in to save CRARA conversations");
   signIn.addEventListener("click", () => openAuthPanel());
-  const classroomButton = el("button", "cr-classroom-button", "1:1 Classroom");
-  classroomButton.type = "button";
-  classroomButton.setAttribute("aria-label", "Join a CRARA one-to-one classroom for this lesson");
-  classroomButton.title = "Join a CRARA one-to-one classroom for this lesson";
-  classroomButton.addEventListener("click", () => openClassroom(state.lastLessonTopic || "general"));
+  const headerActions = el("div", "cr-header-actions");
+  const headerMenuButton = el("button", "cr-header-menu");
+  headerMenuButton.type = "button";
+  headerMenuButton.setAttribute("aria-label", "Open CRARA options");
+  headerMenuButton.setAttribute("aria-haspopup", "true");
+  headerMenuButton.setAttribute("aria-expanded", "false");
+  headerMenuButton.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  const headerMenuPanel = el("div", "cr-header-menu-panel");
+  headerMenuPanel.hidden = true;
+  headerMenuPanel.setAttribute("role", "group");
+  headerMenuPanel.setAttribute("aria-label", "CRARA options");
+  headerMenuPanel.append(el("span", "cr-header-menu-label", "Response language"), languageSwitch);
+  function closeHeaderMenu() {
+    headerMenuPanel.hidden = true;
+    headerMenuButton.setAttribute("aria-expanded", "false");
+    headerMenuButton.setAttribute("aria-label", "Open CRARA options");
+  }
+  headerMenuButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = headerMenuPanel.hidden;
+    headerMenuPanel.hidden = !open;
+    headerMenuButton.setAttribute("aria-expanded", String(open));
+    headerMenuButton.setAttribute("aria-label", open ? "Hide CRARA options" : "Open CRARA options");
+  });
+  document.addEventListener("click", (event) => {
+    if (!headerMenuPanel.hidden && !event.target.closest(".cr-header-actions")) closeHeaderMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !headerMenuPanel.hidden) {
+      closeHeaderMenu();
+      headerMenuButton.focus();
+    }
+  });
   function renderLanguageChoice() {
     [languageEN, languageCH].forEach(button => {
       const active = button.dataset.language === state.responseLanguage;
@@ -118,8 +146,8 @@
   languageEN.addEventListener("click", () => saveResponseLanguage("EN"));
   languageCH.addEventListener("click", () => saveResponseLanguage("CH"));
   renderLanguageChoice();
-  header.append(brand, languageSwitch, signIn, homeBack);
-  header.insertBefore(classroomButton, signIn);
+  headerActions.append(headerMenuButton, signIn, homeBack, headerMenuPanel);
+  header.append(brand, headerActions);
   const body = el("div", "cr-body");
   const transcript = el("div", "cr-transcript");
   transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
@@ -129,6 +157,11 @@
   paperclip.setAttribute("viewBox", "0 0 24 24"); paperclip.setAttribute("width", "22"); paperclip.setAttribute("height", "22"); paperclip.setAttribute("fill", "none"); paperclip.setAttribute("stroke", "currentColor"); paperclip.setAttribute("stroke-width", "2"); paperclip.setAttribute("stroke-linecap", "round"); paperclip.setAttribute("stroke-linejoin", "round"); paperclip.setAttribute("aria-hidden", "true");
   const paperclipPath = document.createElementNS("http://www.w3.org/2000/svg", "path"); paperclipPath.setAttribute("d", "m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"); paperclip.append(paperclipPath); attachButton.append(paperclip);
   const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CRARA…"; input.setAttribute("aria-label", "Message CRARA");
+  const classroomLaunch = el("button", "cr-icon-button cr-classroom-launch");
+  classroomLaunch.type = "button";
+  classroomLaunch.setAttribute("aria-label", "Join the CRARA live classroom");
+  classroomLaunch.title = "Join the CRARA live classroom";
+  classroomLaunch.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M10 8.8l4.2 2.7L10 14.2V8.8Z"/></svg>';
   const recordButton = el("button", "cr-icon-button cr-record"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
   const micIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   micIcon.setAttribute("viewBox", "0 0 24 24"); micIcon.setAttribute("width", "22"); micIcon.setAttribute("height", "22"); micIcon.setAttribute("fill", "none"); micIcon.setAttribute("stroke", "currentColor"); micIcon.setAttribute("stroke-width", "2"); micIcon.setAttribute("stroke-linecap", "round"); micIcon.setAttribute("stroke-linejoin", "round"); micIcon.setAttribute("aria-hidden", "true");
@@ -141,7 +174,29 @@
   fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain,audio/webm,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac,audio/aac"; fileInput.hidden = true;
   const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
   const uploadStatus = el("span", "cr-upload-status"); uploadStatus.hidden = true; uploadStatus.setAttribute("aria-live", "polite");
-  form.append(attachButton, input, recordButton, sendButton); body.append(transcript, form, fileInput, statusNode, uploadStatus);
+  const classroomLaunchStatus = el("div", "cr-classroom-launch-status");
+  classroomLaunchStatus.hidden = true;
+  classroomLaunchStatus.setAttribute("role", "status");
+  classroomLaunchStatus.setAttribute("aria-live", "polite");
+  const CLASSROOM_OPENING_MESSAGES = [
+    "CRARA is opening live session…",
+    "CRARA is opening live class…",
+    "CRARA is opening the classroom…",
+    "CRARA is opening your lesson session…",
+    "CRARA is opening the live teaching board…"
+  ];
+  function classroomOpeningMessage() {
+    const index = Math.floor(Math.random() * CLASSROOM_OPENING_MESSAGES.length);
+    return CLASSROOM_OPENING_MESSAGES[index];
+  }
+  classroomLaunch.addEventListener("click", () => {
+    const opening = classroomOpeningMessage();
+    classroomLaunchStatus.textContent = opening;
+    classroomLaunchStatus.hidden = false;
+    void openClassroom(state.lastLessonTopic || "general", opening);
+  });
+  form.append(attachButton, input, classroomLaunch, recordButton, sendButton);
+  body.append(transcript, classroomLaunchStatus, form, fileInput, statusNode, uploadStatus);
   const authPanel = el("section", "cr-auth-panel");
   const authCard = el("div", "cr-auth-card");
   const authTitle = el("strong", "cr-auth-title", "Your private CRARA account");
@@ -238,12 +293,19 @@
   };
   updateLauncherVisibility();
   // The chat opens immediately for guests; the header is mounted only while CRARA is open.
+  function syncHeaderMenu() {
+    const available = canUseLanguageToggle();
+    headerMenuButton.hidden = !available;
+    languageSwitch.hidden = !available;
+    if (!available) closeHeaderMenu();
+  }
   function showHeader(visible) {
-    languageSwitch.hidden = !visible || !canUseLanguageToggle();
+    syncHeaderMenu();
     if (visible) {
       if (!header.isConnected) root.insertBefore(header, body);
       header.hidden = false;
     } else {
+      closeHeaderMenu();
       header.hidden = true;
       header.remove();
     }
@@ -382,18 +444,9 @@
   function isLessonText(text) {
     return /Hypothesis testing, taught manually first|Manual stage complete|Open the Hypothesis Testing Lab|Python stage .* computational check/i.test(String(text || ""));
   }
-  function addClassroomPrompt(bubble, response) {
-    if (!isLessonText(response) || !bubble || bubble.querySelector(".cr-classroom-prompt")) return;
-    const topic = topicFromText(response);
-    state.lastLessonTopic = topic;
-    const card = el("div", "cr-classroom-prompt");
-    card.append(el("span", "cr-classroom-prompt-text",
-      "Want to work through " + topicLabel(topic) + " one-to-one? CRARA can open a live lesson room for this topic."));
-    const button = el("button", "cr-classroom-prompt-button", "Join 1:1 Classroom");
-    button.type = "button";
-    button.addEventListener("click", () => openClassroom(topic));
-    card.append(button);
-    bubble.append(card);
+  function rememberLessonTopic(response) {
+    if (!isLessonText(response)) return;
+    state.lastLessonTopic = topicFromText(response);
   }
   function showClassroomNotice(message, busy) {
     classroomNotice.textContent = String(message || "");
@@ -432,7 +485,7 @@
     }
   }
 
-  async function openClassroom(topic) {
+  async function openClassroom(topic, openingMessage = "") {
     const lesson = String(topic || "general").trim() || "general";
     state.classroom.topic = lesson;
     state.lastLessonTopic = lesson;
@@ -446,14 +499,14 @@
     if (classroomPanel.requestFullscreen) {
       void classroomPanel.requestFullscreen().catch(() => {});
     }
-    await connectClassroom();
+    await connectClassroom(openingMessage);
   }
-  async function connectClassroom() {
+  async function connectClassroom(openingMessage = "") {
     if (state.classroom.busy) return;
     state.classroom.busy = true;
     classroomReconnect.disabled = true;
     const generation = ++state.classroom.generation;
-    showClassroomNotice(state.classroom.joinCode ? "Joining your host's lesson room…" : "Preparing your lesson room…", true);
+    showClassroomNotice(openingMessage || (state.classroom.joinCode ? "Joining your host's lesson room…" : "Preparing your lesson room…"), true);
     try {
       const handoffBody = { lesson: state.classroom.topic };
       if (state.classroom.joinCode) handoffBody.join_code = state.classroom.joinCode;
@@ -520,6 +573,7 @@
     }
     classroomWrapper.replaceChildren();
     classroomPanel.hidden = true;
+    classroomLaunchStatus.hidden = true;
     document.documentElement.classList.remove("crara-classroom-open");
     document.body.classList.remove("crara-classroom-open");
     state.classroom.fullscreen = false;
@@ -682,7 +736,7 @@
     }
     const disclaimer = el("p", "cr-disclaimer", "I can sometimes make mistakes — please verify important details.");
     bubble.append(actions, disclaimer);
-    addClassroomPrompt(bubble, response);
+    rememberLessonTopic(response);
     transcript.scrollTop = transcript.scrollHeight;
   }
   async function typeReply(bubble, value) {

@@ -175,9 +175,10 @@ async def install_help():
 
 app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
-# Math, Markdown, sanitisation and chart packages are vendored locally so CRARA
-# renders correctly on mobile networks where third-party CDNs are unreachable.
+# Math, Markdown, sanitisation, chart, export and font packages are vendored locally
+# so CRARA renders correctly on mobile networks and never asks third-party hosts for storage.
 app.mount("/vendor", StaticFiles(directory=str(FRONTEND_DIR / "vendor")), name="vendor")
+app.mount("/fonts", StaticFiles(directory=str(FRONTEND_DIR / "fonts")), name="fonts")
 app.mount("/icons", StaticFiles(directory=str(FRONTEND_DIR / "icons")), name="icons")
 app.mount("/resources", StaticFiles(directory=str(FRONTEND_DIR / "resources")), name="resources")
 

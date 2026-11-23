@@ -77,7 +77,12 @@ def test_crara_ui_offers_lesson_scoped_classroom_panel():
     assert "/api/class-rep/livekit/join-code" in js
     assert "classroomCodeInput" in js and "useClassroomCode" in js and "createClassroomCode" in js
     assert "join_code" in js
-    assert "Join 1:1 Classroom" in js
+    assert "cr-classroom-launch" in js
+    assert "cr-classroom-launch-status" in js
+    assert "CRARA is opening live session…" in js
+    assert "CRARA is opening live class…" in js
+    assert "cr-classroom-button" not in js
+    assert "Join 1:1 Classroom" not in js
     assert "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen" in js
     assert "classroomPanel.requestFullscreen()" in js
     assert "Request fullscreen synchronously from the click gesture" in js

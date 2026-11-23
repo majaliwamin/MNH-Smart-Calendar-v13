@@ -99,7 +99,8 @@ def test_cara_composer_hides_memory_control_and_uses_paperclip_file_picker():
     css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
     assert 'cr-account", "Memory"' not in js
     assert 'brand.append(brandMark, identity)' in js
-    assert 'header.append(brand, languageSwitch, signIn, homeBack)' in js
+    assert 'header.append(brand, headerActions)' in js
+    assert 'headerActions.append(headerMenuButton, signIn, homeBack, headerMenuPanel)' in js
     assert 'cr-toggle' not in js
     assert 'Sign out' not in js
     assert 'Close CRARA' not in js
@@ -314,9 +315,32 @@ def test_crara_language_toggle_is_only_rendered_for_designated_signed_in_email()
     assert 'LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com"' in js
     assert 'function canUseLanguageToggle(user = state.user)' in js
     assert 'String(user && user.email || "").trim().toLowerCase() === LANGUAGE_TOGGLE_OWNER_EMAIL' in js
-    assert 'languageSwitch.hidden = !visible || !canUseLanguageToggle()' in js
+    assert 'languageSwitch.hidden = !available' in js
+    assert 'headerMenuButton.hidden = !available' in js
+    assert 'headerMenuPanel.append(el("span", "cr-header-menu-label", "Response language"), languageSwitch)' in js
     assert 'if (state.user && canUseLanguageToggle())' in js
     assert '.cr-language-switch[hidden]{display:none!important}' in css
+    assert '.cr-header-menu-panel[hidden]{display:none!important}' in css
+
+
+def test_crara_mobile_header_and_composer_classroom_icon():
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert "cr-classroom-button" not in js
+    assert "Join 1:1 Classroom" not in js
+    assert "addClassroomPrompt" not in js
+    assert "cr-classroom-launch" in js
+    assert "classroomOpeningMessage" in js
+    assert "CRARA is opening live session…" in js
+    assert "cr-classroom-launch-status" in js
+    assert "flex-wrap:nowrap!important" in css
+    assert ".cr-header-actions{" in css
+    assert ".cr-header-menu-panel{" in css
+    assert ".cr-home-back span{display:none;}" in css
+    assert ".cr-classroom-launch svg{" in css
+    assert "class-rep.css?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1" in html
+    assert "class-rep.js?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1" in html
 
 
 def test_crara_math_packages_are_served_locally_for_mobile_reliability():
@@ -333,6 +357,47 @@ def test_crara_math_packages_are_served_locally_for_mobile_reliability():
     assert 'app.mount("/vendor"' in main
     assert 'url.pathname.startsWith("/vendor/")' in sw
     assert (vendor / "katex" / "fonts" / "KaTeX_Main-Regular.woff2").is_file()
+
+
+def test_no_third_party_browser_storage_sources_are_loaded():
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+    sw = (ROOT / "frontend" / "service-worker.js").read_text(encoding="utf-8")
+    vendor = ROOT / "frontend" / "vendor"
+    fonts = ROOT / "frontend" / "fonts"
+    for source in (html, app_js, css):
+        assert "fonts.googleapis.com" not in source
+        assert "fonts.gstatic.com" not in source
+        assert "cdnjs.cloudflare.com" not in source
+    for asset in ("html2canvas.min.js", "jspdf.umd.min.js",
+                  "mammoth.browser.min.js", "xlsx.full.min.js"):
+        assert (vendor / asset).is_file(), asset
+        assert "/vendor/" + asset in (html if asset.startswith(("html2canvas", "jspdf")) else app_js), asset
+        assert '"/vendor/' + asset + '"' in sw or asset in sw, asset
+    for font in ("playfair-display-latin.woff2", "playfair-display-italic-latin.woff2"):
+        assert (fonts / font).is_file(), font
+        assert "/fonts/" + font in css, font
+        assert font in sw, font
+    assert 'app.mount("/fonts"' in main
+    assert 'url.pathname.startsWith("/fonts/")' in sw
+    assert "css/app.css?v=2026.11.22-statistical-tests-glossary-v44&amp;local-fonts=1" in html
+    assert "js/app.js?v=2026.11.22-statistical-tests-glossary-v44&amp;local-resources=1" in html
+
+
+def test_first_party_scripts_do_not_register_deprecated_unload_handlers():
+    files = (
+        ROOT / "frontend" / "index.html",
+        ROOT / "frontend" / "js" / "app.js",
+        ROOT / "frontend" / "js" / "class-rep.js",
+        ROOT / "frontend" / "resources" / "crara-classroom" / "index.html",
+    )
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        assert "addEventListener(\"unload\"" not in text, path
+        assert "addEventListener('unload'" not in text, path
+        assert "onunload" not in text, path
 
 
 def test_crara_renderer_repairs_math_and_has_readable_fallback():

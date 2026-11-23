@@ -36,6 +36,9 @@ const APP_FILES = [
   "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png",
   "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js",
   "/vendor/marked.min.js", "/vendor/purify.min.js", "/vendor/chart.umd.min.js",
+  "/vendor/html2canvas.min.js", "/vendor/jspdf.umd.min.js",
+  "/vendor/mammoth.browser.min.js", "/vendor/xlsx.full.min.js",
+  "/fonts/playfair-display-latin.woff2", "/fonts/playfair-display-italic-latin.woff2",
   "/resources/python-command-library.html", "/resources/python-jupyter-windows-setup-simulation.html",
   "/resources/python-statistical-tests-glossary.html",
   "/resources/stat8100_practical_companion.html",
@@ -103,7 +106,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/") || url.pathname === "/health" || url.pathname === "/service-worker.js") return;
 
-  const isShell = request.mode === "navigate" || APP_FILES.includes(url.pathname) || url.pathname.startsWith("/vendor/");
+  const isShell = request.mode === "navigate" || APP_FILES.includes(url.pathname) || url.pathname.startsWith("/vendor/") || url.pathname.startsWith("/fonts/");
   if (!isShell) return;
 
   event.respondWith(
