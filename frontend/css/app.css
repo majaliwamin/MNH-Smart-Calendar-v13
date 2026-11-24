@@ -2584,3 +2584,36 @@ html body .colour-dialog .dialog-card h2{
 #view-weekly .wrap tbody td.weekend-day .activity-lecturer{
   color:var(--weekend-ink)!important;
 }
+
+
+/* ---- Public chat (main calendar) ---- */
+.pc-top .pc-status-row,.pc-compose-meta,.pc-chat-head,.pc-msg-head,.pc-msg-foot,.pc-compose-row,.pc-compose-actions,.pc-msg-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pc-chat-head,.pc-msg-foot{justify-content:space-between}
+.pc-status-row{margin-top:8px}
+.pc-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:rgba(242,193,78,.14);color:var(--text);font-size:12px;border:1px solid rgba(242,193,78,.28)}
+.pc-chip-private{background:rgba(142,184,232,.16);border-color:rgba(142,184,232,.35)}
+.pc-join{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.pc-chat-card{margin-top:12px}
+.pc-messages{height:min(52vh,560px);overflow:auto;padding:12px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));border:1px solid var(--line);border-radius:12px}
+.pc-msg-row{display:flex;margin:8px 0}
+.pc-msg-row.mine{justify-content:flex-end}
+.pc-bubble{max-width:min(720px,92%);padding:10px 12px;border-radius:14px;background:var(--field);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.pc-bubble.mine{background:rgba(242,193,78,.14);border-color:rgba(242,193,78,.28)}
+.pc-bubble.private{outline:1px dashed rgba(142,184,232,.55)}
+.pc-msg-sender{font-size:12px;font-weight:700;color:var(--gold)}
+.pc-msg-text{white-space:pre-wrap;word-break:break-word;margin-top:4px;font-size:14px;line-height:1.45}
+.pc-msg-text.pc-deleted{font-style:italic;color:var(--muted)}
+.pc-msg-time{font-size:11px;color:var(--muted)}
+.pc-msg-actions .pc-action{padding:2px 8px;font-size:11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}
+.pc-msg-actions .pc-action.danger{color:#ff8a8a}
+.pc-reply-ref{font-size:12px;color:var(--muted);padding:6px 8px;border-left:3px solid var(--gold);background:rgba(255,255,255,.03);border-radius:8px;margin-top:6px}
+.pc-composer{margin-top:12px;position:sticky;bottom:8px;z-index:5}
+.pc-compose-row{align-items:stretch}
+.pc-input{flex:1;min-height:56px;resize:vertical;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit}
+.pc-compose-actions{flex-direction:column}
+.pc-compose-actions button{min-width:88px}
+.pc-audio,.pc-audio-preview{width:100%;max-width:320px;margin-top:8px}
+.pc-retention{margin:8px 0 0;font-size:12px}
+.pc-nav-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e53935;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.pc-voice-btn.recording{background:#8b1e1e;color:#fff;border-color:#8b1e1e}
+@media (max-width:720px){.pc-messages{height:52vh}.pc-compose-actions{flex-direction:row;width:100%}.pc-compose-actions button{flex:1}.pc-bubble{max-width:95%}}

@@ -18,6 +18,7 @@ from app.class_rep.routes import router as class_rep_router
 from app.class_rep.whiteboard import router as class_rep_whiteboard_router
 from app.ai_intelligence.routes import router as ai_router
 from app.livekit.routes import router as livekit_router
+from app.public_chat.routes import router as public_chat_router
 from app.ai_intelligence import evaluation as ai_evaluation
 from app.services.backup_service import backup_worker, make_backup, list_backups
 from app.services.reminders import reminder_worker
@@ -64,6 +65,11 @@ async def lifespan(app: FastAPI):
                 comm_service.run_due_jobs()
                 from app.class_rep.memory import tick_reminders
                 tick_reminders()
+                try:
+                    from app.public_chat.routes import run_retention_cleanup
+                    run_retention_cleanup()
+                except Exception as chat_error:
+                    print(f"Public chat retention warning: {chat_error}", flush=True)
                 from app.services import ari_service, ai_trigger
                 if ai_trigger.enabled():
                     outcome = ai_trigger.auto_check()
@@ -146,6 +152,7 @@ app.include_router(class_rep_router)
 app.include_router(class_rep_whiteboard_router)
 app.include_router(livekit_router)
 app.include_router(ai_router)
+app.include_router(public_chat_router)
 
 
 @app.get("/", include_in_schema=False)

@@ -35,10 +35,10 @@ def test_run_script_resolves_backend_from_project_root():
 def test_full_navigation_and_pinned_settings_are_present():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     menu = html[html.index('<div class="menu-links">'):html.index("</div>", html.index('<div class="menu-links">'))]
-    for label in ("Monthly Calendar", "Modules", "Facilitators", "Examinations",
+    for label in ("Monthly Calendar", "Modules", "Chat", "Examinations",
                   "Analytics", "WhatsApp &amp; Communications", "Activity History", "Resources"):
         assert label in menu
-    for view in ("monthly", "modules", "facilitators", "examinations",
+    for view in ("monthly", "modules", "public-chat", "examinations",
                  "analytics", "communications", "history", "resources"):
         assert f'data-view="{view}"' in menu
     assert 'id="view-analytics"' in html
