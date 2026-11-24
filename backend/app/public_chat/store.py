@@ -6,10 +6,15 @@ All message visibility decisions live here and are reused by REST and WS paths.
 """
 from __future__ import annotations
 
+import base64
 import json
 import mimetypes
+import os
 import re
 import secrets
+import shutil
+import subprocess
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any
@@ -35,6 +40,8 @@ from .models import (
     ROLE_MODERATOR,
 )
 
+COL_MEDIA_BLOBS = "public_chat_media_blobs"
+
 CODE_PREFIX = "MNH-"
 CODE_RE = re.compile(r"^MNH-\d{4}$")
 MEDIA_DIR = DATA_DIR / "public_chat_media"
@@ -49,6 +56,10 @@ ALLOWED_AUDIO = {
     "audio/x-wav": ".wav",
     "video/webm": ".webm",  # MediaRecorder often reports video/webm for audio-only
 }
+# Preferred compressed delivery format for voice notes. WebM/Opus keeps quality high at low bitrate.
+VOICE_TARGET_MIME = "audio/webm"
+VOICE_TARGET_EXT = ".webm"
+VOICE_COMPRESS_BITRATE = "24k"
 ALLOWED_ATTACHMENTS = {
     ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
     ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf",
@@ -430,6 +441,8 @@ def _serialize_message(msg: dict, viewer: dict, reaction_map: dict | None = None
                 "file_id": fid,
                 "duration_ms": int(audio.get("duration_ms") or 0),
                 "mime_type": str(audio.get("mime_type") or "audio/webm"),
+                "size_bytes": int(audio.get("size_bytes") or 0),
+                "file_name": str(audio.get("file_name") or f"voice-note-{fid}.webm"),
                 "url": f"/api/public-chat/media/{fid}",
             }
         else:
@@ -637,6 +650,96 @@ def _extension_for_upload(upload: UploadFile, allowed: dict[str, str]) -> tuple[
     raise HTTPException(400, "Unsupported file format.")
 
 
+def _ffmpeg_bin() -> str | None:
+    for name in ("ffmpeg", "ffmpeg.exe"):
+        found = shutil.which(name)
+        if found:
+            return found
+    # Common local WinGet install location fallback
+    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages"
+    if local.exists():
+        for cand in local.rglob("ffmpeg.exe"):
+            if cand.is_file():
+                return str(cand)
+    return None
+
+
+def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, str, str]:
+    """Compress voice note to small Opus/WebM when ffmpeg is available.
+
+    Returns (data, ext, content_type). Falls back to original bytes on any failure.
+    """
+    ffmpeg = _ffmpeg_bin()
+    if not ffmpeg or not data:
+        return data, ext, content_type
+    src_suffix = ext if ext.startswith(".") else f".{ext.lstrip('.') or 'webm'}"
+    with tempfile.TemporaryDirectory(prefix="mnh-voice-") as td:
+        src = Path(td) / f"in{src_suffix}"
+        dst = Path(td) / f"out{VOICE_TARGET_EXT}"
+        try:
+            src.write_bytes(data)
+            cmd = [
+                ffmpeg, "-y", "-v", "error",
+                "-i", str(src),
+                "-vn",
+                "-ac", "1",
+                "-ar", "24000",
+                "-c:a", "libopus",
+                "-b:a", VOICE_COMPRESS_BITRATE,
+                "-application", "voip",
+                str(dst),
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=45, check=False)
+            if proc.returncode != 0 or not dst.exists():
+                return data, ext, content_type
+            out = dst.read_bytes()
+            # Keep compressed output only when it is meaningfully smaller or valid.
+            if not out:
+                return data, ext, content_type
+            if len(out) <= len(data) or content_type != VOICE_TARGET_MIME:
+                return out, VOICE_TARGET_EXT, VOICE_TARGET_MIME
+            return data, ext, content_type
+        except Exception:
+            return data, ext, content_type
+
+
+def _media_blob_write(file_id: str, data: bytes, mime_type: str, file_name: str) -> None:
+    doc = {
+        "id": file_id,
+        "mime_type": mime_type,
+        "file_name": file_name,
+        "size_bytes": len(data),
+        "b64": base64.b64encode(data).decode("ascii"),
+        "created_at": _now(),
+        "created_at_s": _now_s(),
+    }
+    _write(COL_MEDIA_BLOBS, file_id, doc)
+
+
+def _media_blob_read(file_id: str) -> dict | None:
+    doc = _read(COL_MEDIA_BLOBS, file_id)
+    if not doc or not isinstance(doc.get("b64"), str):
+        return None
+    try:
+        raw = base64.b64decode(doc["b64"].encode("ascii"), validate=False)
+    except Exception:
+        return None
+    return {
+        "file_id": file_id,
+        "mime_type": str(doc.get("mime_type") or "application/octet-stream"),
+        "file_name": str(doc.get("file_name") or file_id),
+        "size_bytes": int(doc.get("size_bytes") or len(raw)),
+        "data": raw,
+    }
+
+
+def _media_blob_delete(file_id: str) -> None:
+    try:
+        _delete(COL_MEDIA_BLOBS, file_id)
+    except Exception:
+        pass
+
+
 def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> dict:
     require_participant(user)
     ensure_directories()
@@ -647,15 +750,30 @@ def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> d
         raise HTTPException(400, "The voice note is empty.")
     if len(data) > settings.MAX_AUDIO_BYTES:
         raise HTTPException(413, "Voice notes must be 10 MB or smaller.")
+
+    data, ext, content_type = _compress_voice(data, ext, content_type or "audio/webm")
+
     file_id = uuid.uuid4().hex
     path = MEDIA_DIR / f"{file_id}{ext}"
-    path.write_bytes(data)
+    try:
+        path.write_bytes(data)
+    except Exception:
+        # Cloud blob still makes the note retrievable; local cache is best-effort.
+        pass
+    try:
+        _media_blob_write(file_id, data, content_type or "audio/webm", path.name)
+    except Exception as exc:
+        # If we couldn't persist to shared DB and no local file exists, fail clearly.
+        if not path.exists():
+            raise HTTPException(500, "Voice note could not be stored in cloud storage.") from exc
+
     return {
         "file_id": file_id,
         "file_name": path.name,
         "mime_type": content_type or "audio/webm",
         "size_bytes": len(data),
         "duration_ms": max(0, min(int(duration_ms or 0), 60 * 60 * 1000)),
+        "storage": "cloud",
     }
 
 
@@ -690,7 +808,32 @@ def get_media_path(file_id: str) -> Path | None:
     for path in MEDIA_DIR.glob(fid + ".*"):
         if path.is_file():
             return path
-    return None
+    # Cloud-backed fallback: restore blob to local cache for FileResponse/streaming.
+    blob = _media_blob_read(fid)
+    if not blob:
+        return None
+    mime = str(blob.get("mime_type") or "application/octet-stream")
+    ext = mimetypes.guess_extension(mime) or ".bin"
+    if mime == "audio/webm":
+        ext = ".webm"
+    elif mime == "audio/ogg":
+        ext = ".ogg"
+    elif mime in {"audio/mp4", "audio/m4a", "audio/x-m4a"}:
+        ext = ".m4a"
+    path = MEDIA_DIR / f"{fid}{ext}"
+    try:
+        path.write_bytes(blob["data"])
+        return path
+    except Exception:
+        return None
+
+
+def get_media_blob(file_id: str) -> dict | None:
+    """Return cloud-stored media bytes as a fallback when local file cache is missing."""
+    fid = re.sub(r"[^a-f0-9]", "", str(file_id or "").lower())
+    if not fid:
+        return None
+    return _media_blob_read(fid)
 
 
 def can_access_media(user: dict, file_id: str) -> bool:

@@ -2655,6 +2655,11 @@ html body .colour-dialog .dialog-card h2{
 .pc-audio-wrap{margin-top:8px;padding:10px;border-radius:14px;background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.05)}
 .pc-audio-label{font-size:12px;color:#aebac1;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .pc-audio,.pc-audio-preview{width:100%;max-width:340px;height:36px}
+.pc-audio-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pc-audio-actions .pc-action{text-decoration:none}
+.pc-audio-status{font-size:12px;color:#8696a0;margin-top:6px}
+.pc-record-indicator{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(229,57,53,.12);color:#ffb4b0;font-size:12px;font-weight:600;margin-bottom:8px}
+.pc-record-indicator::before{content:"";width:8px;height:8px;border-radius:50%;background:#e53935;box-shadow:0 0 0 4px rgba(229,57,53,.18)}
 .pc-composer{padding:12px 14px;background:#202c33;border-top:1px solid rgba(255,255,255,.06)}
 .pc-compose-meta{margin-bottom:10px}
 .pc-compose-row{align-items:flex-end;gap:10px}
