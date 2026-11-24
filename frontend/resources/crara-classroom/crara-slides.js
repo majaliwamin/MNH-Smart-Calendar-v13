@@ -34,6 +34,8 @@
   let filesStatus = null;
   let filesList = null;
   let resources = [];
+  let resourcesLoaded = false;
+  let resourcesError = "";
   let resourcesList = null;
   let resourcePreview = null;
   let sharedResourceId = "";
@@ -145,7 +147,8 @@
   function renderResourceList() {
     if (!resourcesList) return;
     if (!resources.length) {
-      resourcesList.textContent = "Loading CRARA resources…";
+      resourcesList.textContent = resourcesError
+        || (resourcesLoaded ? "No CRARA resources are available." : "Loading CRARA resources…");
       return;
     }
     const cards = resources.map((resource) => {
@@ -308,13 +311,17 @@
   }
 
   async function loadResources() {
+    resourcesLoaded = false;
+    resourcesError = "";
     try {
       const response = await fetch(RESOURCES_URL, { cache: "no-store" });
       if (!response.ok) throw new Error("Resources unavailable");
       const payload = await response.json();
       resources = Array.isArray(payload.resources) ? payload.resources : [];
+      resourcesLoaded = true;
     } catch (_) {
       resources = [];
+      resourcesError = "CRARA resources could not be loaded. Reconnect and try again.";
     }
     renderResourceList();
   }
@@ -395,7 +402,6 @@
       active ? deck.source || "" : "",
       active ? (deck.isOwner ? "1" : "0") : "",
       active ? deck.ownerName || "" : "",
-      active ? sharedResourceId : "",
       pages.map((page) => (page ? String(page).slice(-32) : "")).join("|"),
     ].join("~");
     if (signature === filesSignature) return;
@@ -418,9 +424,7 @@
     title.textContent = deck.title || "Shared presentation";
     const source = document.createElement("span");
     const owner = deck.isOwner ? "You" : String(deck.ownerName || "a participant");
-    const byCrara = Boolean(sharedResourceId)
-      || deck.source === CRARA_SOURCE
-      || /crara/i.test(owner)
+    const byCrara = deck.source === CRARA_SOURCE
       || CRARA_DECK_TITLES.has(deck.title || "");
     source.className = "cr-file-source" + (byCrara ? " crara" : "");
     source.textContent = byCrara ? "Shared by CRARA" : deck.isOwner ? "Shared by you" : "Shared by " + owner;
@@ -461,6 +465,7 @@
       });
       const stop = makeButton("Stop sharing", "cr-file-action danger", "Stop presenting these slides");
       stop.addEventListener("click", () => {
+        sharedResourceId = "";
         if (typeof bridge.stopSlides === "function") bridge.stopSlides();
       });
       actions.append(show, stop);
@@ -679,16 +684,20 @@
     }
   }
 
-  function setFullView(on) {
+  function applyFullViewClass(on) {
     document.body.classList.toggle(FULL_CLASS, Boolean(on));
     if (expandButton) {
       expandButton.textContent = on ? "Restore classroom" : "Expand slides";
       expandButton.setAttribute("aria-label", on ? "Restore classroom layout" : "Expand slide presentation");
       expandButton.title = on ? "Restore classroom layout" : "Expand slide presentation";
     }
+  }
+
+  function setFullView(on) {
+    applyFullViewClass(on);
     if (on && presenter && presenter.requestFullscreen && !document.fullscreenElement) {
       const request = presenter.requestFullscreen();
-      if (request && typeof request.catch === "function") request.catch(() => {});
+      if (request && typeof request.catch === "function") request.catch(() => applyFullViewClass(false));
     }
     if (!on && document.fullscreenElement && document.exitFullscreen) {
       const exit = document.exitFullscreen();
@@ -810,15 +819,8 @@
     if (tab && String(tab.textContent || "").trim() === "Files") window.setTimeout(update, 0);
   }, true);
   document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement) {
-      document.body.classList.remove(FULL_CLASS);
-      if (expandButton) {
-        expandButton.textContent = "Expand slides";
-        expandButton.setAttribute("aria-label", "Expand slide presentation");
-        expandButton.title = "Expand slide presentation";
-      }
-      update();
-    }
+    applyFullViewClass(Boolean(document.fullscreenElement && document.fullscreenElement === presenter));
+    update();
   });
   window.addEventListener("crara-whiteboard-session", update);
 

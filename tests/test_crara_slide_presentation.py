@@ -38,6 +38,13 @@ def test_native_slide_navigation_assets_are_wired():
     assert "__craraShare=window.__craraSlideShare" in bundle
     assert 'source:__craraFromCrara?"crara":""' in bundle
     assert 'source:B.source||""' in bundle
+    assert 'source:Fe.source||""' in bundle
+    assert 'source:H.source||""' in bundle
+    assert "us=O.useCallback((B,__craraSender)" in bundle
+    assert "__craraSender!==B.owner" in bundle
+    assert "tt&&us(tt,__craraSender&&__craraSender.identity)" in bundle
+    assert "G.ctrlKey||G.metaKey||G.altKey||G.isComposing" in bundle
+    assert 'n.closest("input,select,textarea,button,a[href]' in bundle
 
     assert "/api/class-rep/slides/render" in slides
     assert "cr-slide-panel" in slides
@@ -62,6 +69,10 @@ def test_native_slide_navigation_assets_are_wired():
     assert "licensed chapter text" in slides
     assert "window.__craraSlideShare" in slides
     assert "deck.source === CRARA_SOURCE" in slides
+    assert "Boolean(sharedResourceId)" not in slides
+    assert "resourcesError" in slides
+    assert "applyFullViewClass" in slides
+    assert "document.fullscreenElement === presenter" in slides
     assert "applyingUpdate" in slides
 
     assert ".presenter.cr-slides-active" in css

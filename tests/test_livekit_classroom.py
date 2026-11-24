@@ -218,8 +218,8 @@ def test_host_join_code_joins_a_student_to_the_host_room(monkeypatch, tmp_path):
         assert issued["expires_in"] > 0
 
     with TestClient(app) as student:
-        student.get("/api/class-rep/auth/me")
         student.cookies.set("cara_guest", "guest_student_1234", path="/")
+        student.get("/api/class-rep/auth/me")
         assert student.post("/api/class-rep/livekit/join-code", json={"lesson": "Hypothesis Testing"}).status_code == 403
         assert student.post("/api/class-rep/livekit/handoff", json={
             "lesson": "Hypothesis Testing", "join_code": "AAAAAAAA"
@@ -248,8 +248,8 @@ def test_host_join_code_joins_a_student_to_the_host_room(monkeypatch, tmp_path):
         revoked = client.post("/api/class-rep/livekit/join-code/revoke", json={"code": issued["code"]})
         assert revoked.status_code == 200
     with TestClient(app) as student:
-        student.get("/api/class-rep/auth/me")
         student.cookies.set("cara_guest", "guest_student_1234", path="/")
+        student.get("/api/class-rep/auth/me")
         assert student.post("/api/class-rep/livekit/handoff", json={
             "lesson": "Hypothesis Testing", "join_code": issued["code"]
         }).status_code == 400
