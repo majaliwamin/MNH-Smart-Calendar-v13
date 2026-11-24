@@ -46,6 +46,7 @@ CODE_PREFIX = "MNH-"
 CODE_RE = re.compile(r"^MNH-\d{4}$")
 MEDIA_DIR = DATA_DIR / "public_chat_media"
 MAX_AUDIO_BYTES = settings.MAX_AUDIO_BYTES
+MAX_AUDIO_UPLOAD_BYTES = 60 * 1024 * 1024  # raw upload; compressed output must fit MAX_AUDIO_BYTES
 MAX_VOICE_DURATION_MS = 40 * 60 * 1000
 MAX_ATTACHMENT_BYTES = settings.MAX_ATTACHMENT_BYTES
 ALLOWED_AUDIO = {
@@ -682,7 +683,7 @@ def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, st
             cmd = [
                 ffmpeg, "-y", "-v", "error",
                 "-i", str(src),
-                "-vn",
+                "-vn", "-sn", "-dn",
                 "-ac", "1",
                 "-ar", "24000",
                 "-c:a", "libopus",
@@ -690,14 +691,14 @@ def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, st
                 "-application", "voip",
                 str(dst),
             ]
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=45, check=False)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180, check=False)
             if proc.returncode != 0 or not dst.exists():
                 return data, ext, content_type
             out = dst.read_bytes()
-            # Keep compressed output only when it is meaningfully smaller or valid.
             if not out:
                 return data, ext, content_type
-            if len(out) <= len(data) or content_type != VOICE_TARGET_MIME:
+            # Prefer compressed output when it fits and is smaller, or when normalizing to target format.
+            if len(out) < len(data) or content_type != VOICE_TARGET_MIME or ext != VOICE_TARGET_EXT:
                 return out, VOICE_TARGET_EXT, VOICE_TARGET_MIME
             return data, ext, content_type
         except Exception:
@@ -705,16 +706,22 @@ def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, st
 
 
 def _media_blob_write(file_id: str, data: bytes, mime_type: str, file_name: str) -> None:
-    doc = {
-        "id": file_id,
-        "mime_type": mime_type,
-        "file_name": file_name,
-        "size_bytes": len(data),
-        "b64": base64.b64encode(data).decode("ascii"),
-        "created_at": _now(),
-        "created_at_s": _now_s(),
-    }
-    _write(COL_MEDIA_BLOBS, file_id, doc)
+    """Best-effort small metadata blob. Avoid storing large base64 audio in docs DB."""
+    try:
+        if len(data) > 2 * 1024 * 1024:
+            return
+        doc = {
+            "id": file_id,
+            "mime_type": mime_type,
+            "file_name": file_name,
+            "size_bytes": len(data),
+            "b64": base64.b64encode(data).decode("ascii"),
+            "created_at": _now(),
+            "created_at_s": _now_s(),
+        }
+        _write(COL_MEDIA_BLOBS, file_id, doc)
+    except Exception:
+        return
 
 
 def _media_blob_read(file_id: str) -> dict | None:
@@ -746,39 +753,37 @@ def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> d
     ensure_directories()
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     ext, content_type = _extension_for_upload(upload, ALLOWED_AUDIO)
-    data = upload.file.read(settings.MAX_AUDIO_BYTES + 1)
+    data = upload.file.read(MAX_AUDIO_UPLOAD_BYTES + 1)
     if not data:
         raise HTTPException(400, "The voice note is empty.")
-    if len(data) > settings.MAX_AUDIO_BYTES:
-        raise HTTPException(413, "Voice notes must be 25 MB or smaller.")
+    if len(data) > MAX_AUDIO_UPLOAD_BYTES:
+        raise HTTPException(413, "Voice note upload is too large.")
 
     duration_ms = max(0, min(int(duration_ms or 0), MAX_VOICE_DURATION_MS))
     data, ext, content_type = _compress_voice(data, ext, content_type or "audio/webm")
     if len(data) > settings.MAX_AUDIO_BYTES:
-        raise HTTPException(413, "Compressed voice note is still too large. Please record a shorter note.")
+        raise HTTPException(413, "Voice note is too large after compression. Please record a shorter note.")
 
     file_id = uuid.uuid4().hex
-    path = MEDIA_DIR / f"{file_id}{ext}"
-    try:
-        path.write_bytes(data)
-    except Exception:
-        # Cloud blob still makes the note retrievable; local cache is best-effort.
-        pass
-    try:
-        _media_blob_write(file_id, data, content_type or "audio/webm", path.name)
-    except Exception as exc:
-        # If we couldn't persist to shared DB and no local file exists, fail clearly.
-        if not path.exists():
-            raise HTTPException(500, "Voice note could not be stored in cloud storage.") from exc
+    file_name = f"{file_id}{ext}"
+    path = MEDIA_DIR / file_name
+    path.write_bytes(data)
+    # Best-effort small metadata backup only; large audio stays on persistent disk.
+    _media_blob_write(file_id, data, content_type or "audio/webm", file_name)
 
     return {
         "file_id": file_id,
-        "file_name": path.name,
+        "file_name": file_name,
         "mime_type": content_type or "audio/webm",
         "size_bytes": len(data),
         "duration_ms": duration_ms,
-        "storage": "cloud",
+        "storage": "file",
     }
+
+
+async def save_audio_upload_async(user: dict, upload: UploadFile, duration_ms: int = 0) -> dict:
+    import asyncio
+    return await asyncio.to_thread(save_audio_upload, user, upload, duration_ms)
 
 
 def save_attachment_upload(user: dict, upload: UploadFile) -> dict:

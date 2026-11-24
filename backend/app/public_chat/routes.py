@@ -238,8 +238,11 @@ async def upload_voice_note(request: Request, file: UploadFile = File(...)):
     reply_to_id = str(form.get("reply_to_id") or "").strip() or None
     private_recipient_code = str(form.get("private_recipient_code") or "").strip() or None
     mention_codes = [c.strip() for c in str(form.get("mention_codes") or "").split(",") if c.strip()]
-    duration_ms = int(str(form.get("duration_ms") or "0").strip() or 0)
-    audio = store.save_audio_upload(user, file, duration_ms=duration_ms)
+    try:
+        duration_ms = int(str(form.get("duration_ms") or "0").strip() or 0)
+    except Exception:
+        duration_ms = 0
+    audio = await store.save_audio_upload_async(user, file, duration_ms=duration_ms)
     message = store.create_message(user, text="", reply_to_id=reply_to_id,
                                    private_recipient_code=private_recipient_code,
                                    mention_codes=mention_codes, audio=audio)
