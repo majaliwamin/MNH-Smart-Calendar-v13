@@ -2729,9 +2729,10 @@ body[data-chat-bg]:not([data-chat-bg="default"]) .pc-day-chip{background:rgba(25
 .pc-tool-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:#8696a0;display:grid;place-items:center;cursor:pointer;font-size:20px;flex:0 0 40px}
 .pc-tool-btn:hover{color:#d1d7db;background:rgba(255,255,255,.04)}
 .pc-tool-btn.recording,.pc-send-btn.recording{color:#fff;background:#e53935}
-.pc-record-viz{display:flex;align-items:center;gap:2px;flex:1;min-width:0;height:34px;padding:0 6px;overflow:hidden}
-.pc-record-bar{width:3px;min-height:4px;border-radius:2px;background:#25d366;transition:height .08s linear,background-color .12s linear,opacity .12s linear}
+.pc-record-viz{display:flex;align-items:end;gap:3px;flex:1;min-width:0;height:38px;padding:4px 8px;overflow:hidden;border-radius:10px;background:linear-gradient(90deg,rgba(45,10,80,.45),rgba(88,28,135,.28),rgba(45,10,80,.45));background-size:200% 100%;animation:pcDopplerShift 2.4s linear infinite}
+.pc-record-bar{width:4px;min-height:4px;border-radius:999px;background:#6d28d9;box-shadow:0 0 8px rgba(168,85,247,.35);transition:height .06s linear,background-color .08s linear,opacity .08s linear,transform .08s linear;transform-origin:bottom}
 .pc-compose-main:has(.pc-record-viz) .pc-input{display:none}
+@keyframes pcDopplerShift{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 .pc-send-btn{width:46px;height:46px;border-radius:50%;border:0;background:#c9ced3;color:#1f2c34;display:grid;place-items:center;cursor:pointer;flex:0 0 46px}
 .pc-send-btn:hover{filter:brightness(1.03);background:#d7dbe0}
 .pc-record-send{background:#25d366;color:#062016}
