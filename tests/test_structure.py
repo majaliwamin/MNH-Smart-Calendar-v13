@@ -489,6 +489,20 @@ def test_secondary_views_offer_home_return_navigation():
     assert 'button.addEventListener("click",()=>showView("weekly"))' in app
     assert ".view-home-return" in css
 
+
+def test_secondary_views_hide_the_full_weekly_navigation_strip():
+    css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
+
+    # #view-tabs.view-tabs{display:flex!important} has ID specificity, so the
+    # page-state rules must match it or an empty sticky strip remains visible.
+    assert "#view-tabs.view-tabs{" in css
+    assert "display:flex!important" in css
+    assert "body.menu-page-view #view-tabs.view-tabs," in css
+    assert "body.resources-view #view-tabs.view-tabs{display:none!important}" in css
+    assert "body.python-library-view #view-tabs.view-tabs," in css
+    assert "body.is-content-view #view-tabs.view-tabs{" in css
+
+
 def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")

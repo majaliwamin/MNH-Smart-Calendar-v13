@@ -2018,7 +2018,7 @@ html,body{
 /* v15.06: secondary pages use the full viewport without the shared app masthead. */
 body.is-content-view .upcoming-announcements-row,
 body.is-content-view .site-header,
-body.is-content-view #view-tabs{
+body.is-content-view #view-tabs.view-tabs{
   display:none!important;
 }
 body.is-content-view main{
@@ -2044,11 +2044,11 @@ body.is-content-view #view-resources:not([hidden]){
 
 /* Resources screen: remove programme title, today badge and calendar week navigation. */
 body.resources-view .site-header,
-body.resources-view #view-tabs{display:none!important}
+body.resources-view #view-tabs.view-tabs{display:none!important}
 
 /* Python Library: a dedicated full-viewport page, with only a small back control. */
 body.python-library-view .site-header,
-body.python-library-view #view-tabs,
+body.python-library-view #view-tabs.view-tabs,
 body.python-library-view .bottom-nav,
 body.python-library-view .upcoming-announcements-row,
 body.python-library-view .status{display:none!important}
@@ -2642,9 +2642,11 @@ html body .colour-dialog .dialog-card h2{
 @media (max-width:720px){.pc-messages{height:52vh}.pc-compose-actions{flex:1 1 100%;flex-direction:row}.pc-compose-actions button{flex:1}.pc-bubble{max-width:95%}.pc-msg-actions .pc-action{font-size:10px}}
 
 
-/* Hide app header on hamburger-menu pages; navigation returns via the in-page Back to Home control. */
+/* Hide app header and the full weekly-navigation strip on hamburger-menu pages;
+   navigation returns via the in-page Back to Home control. The ID selector is
+   required to out-rank #view-tabs.view-tabs{display:flex!important}. */
 body.menu-page-view .site-header,
-body.menu-page-view .view-tabs,
+body.menu-page-view #view-tabs.view-tabs,
 body.menu-page-view .activity-marquee-shell{display:none!important}
 body.menu-page-view main.wrap{padding-top:16px}
 body.menu-page-view .view-home-return,
