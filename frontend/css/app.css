@@ -2677,14 +2677,11 @@ html body .colour-dialog .dialog-card h2{
 .pc-audio-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .pc-audio-actions .pc-action{text-decoration:none}
 .pc-audio-status{font-size:12px;color:#8696a0;margin-top:6px}
-.pc-record-indicator{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#1a262d;color:#ffb4b0;font-size:13px;border-top:1px solid rgba(255,255,255,.04)}
-.pc-record-indicator::before{content:"";width:8px;height:8px;border-radius:50%;background:#e53935;animation:pcPulse 1s infinite}
-@keyframes pcPulse{0%,100%{opacity:1}50%{opacity:.35}}
 .pc-composer{padding:10px 12px;background:#202c33;border-top:1px solid rgba(255,255,255,.06);flex:0 0 auto;z-index:4}
 .pc-compose-meta{margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pc-compose-row{display:flex;align-items:flex-end;gap:8px}
 .pc-compose-main{flex:1;display:flex;align-items:flex-end;gap:4px;background:#2a3942;border-radius:24px;padding:4px 8px;min-width:0}
-.pc-input{flex:1;width:100%;min-height:24px;max-height:140px;resize:none;padding:10px 8px;border:0;background:transparent;color:#e9edef;font:inherit;font-size:15px;line-height:1.4;outline:none}
+.pc-input{flex:1;width:100%;min-height:24px;max-height:140px;resize:none;padding:10px 8px;border:0;background:transparent;color:#aebac1;font:inherit;font-size:15px;line-height:1.4;outline:none;caret-color:#25d366}
 .pc-input::placeholder{color:#8696a0}
 .pc-compose-actions{display:flex;gap:0;align-items:center;padding-bottom:2px}
 .pc-tool-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:#8696a0;display:grid;place-items:center;cursor:pointer;font-size:20px;flex:0 0 40px}
@@ -2701,9 +2698,14 @@ html body .colour-dialog .dialog-card h2{
 .pc-action{padding:5px 10px;font-size:12px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#d1d7db;cursor:pointer}
 .pc-action:hover{background:rgba(255,255,255,.08)}
 .pc-action.danger{color:#ff9b9b}
-.pc-emoji-picker{display:flex;gap:2px;flex-wrap:wrap;padding:8px 12px;background:#182229;border-top:1px solid rgba(255,255,255,.04)}
-.pc-emoji{width:36px;height:36px;border-radius:8px;border:0;background:transparent;font-size:22px;cursor:pointer}
-.pc-emoji:hover{background:rgba(255,255,255,.06)}
+.pc-emoji-picker{display:flex;flex-direction:column;background:#182229;border-top:1px solid rgba(255,255,255,.04);max-height:320px}
+.pc-emoji-tabs{display:flex;gap:2px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);overflow-x:auto;flex:0 0 auto}
+.pc-emoji-tab{width:36px;height:36px;flex:0 0 36px;border:0;border-radius:8px;background:transparent;font-size:20px;cursor:pointer;opacity:.7}
+.pc-emoji-tab:hover,.pc-emoji-tab.active{background:rgba(255,255,255,.08);opacity:1}
+.pc-emoji-tab.active{box-shadow:inset 0 -2px 0 #25d366}
+.pc-emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:2px;padding:8px 10px;overflow-y:auto;min-height:0}
+.pc-emoji{width:38px;height:38px;border-radius:8px;border:0;background:transparent;font-size:24px;cursor:pointer;display:grid;place-items:center}
+.pc-emoji:hover{background:rgba(255,255,255,.08)}
 .pc-private-panel{width:320px;max-width:100%;border-left:1px solid rgba(255,255,255,.06);background:#111b21;display:flex;flex-direction:column}
 .pc-private-head{padding:12px 14px;background:#202c33;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;gap:8px;color:#e9edef}
 .pc-private-body{padding:12px 14px;overflow:auto}
