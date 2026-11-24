@@ -2040,7 +2040,12 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
   }
   row.appendChild(bubble);list.appendChild(row);});
  if(nearBottom)list.scrollTop=list.scrollHeight;if(currentView==="public-chat")pcMarkRead();}
-async function renderPublicChat(){const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");try{await pcLoadStatus(true);}catch(_e){}
+async function renderPublicChat(){
+ const token=(publicChatState._renderToken=(publicChatState._renderToken||0)+1);
+ publicChatState._rendering=true;
+ try{
+ const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");try{await pcLoadStatus(true);}catch(_e){}
+ if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
  const card=el("div","pc-chat-card");
  const head=el("div","pc-chat-headbar");
  const ident=el("div","pc-chat-identity");ident.appendChild(el("div","pc-room-avatar","M"));
@@ -2091,7 +2096,14 @@ async function renderPublicChat(){const root=workspace(...WORKSPACE_META["public
  card.appendChild(body);
  card.appendChild(pcComposerNode());root.appendChild(card);
  const toast=el("div","pc-toast","");toast.id="pc-toast";toast.hidden=true;root.appendChild(toast);
- if(publicChatState.joined){await pcLoadMessages(true);pcEnsureRealtime();pcSchedulePoll();}pcRenderMessages();}
+ if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+ if(publicChatState.joined){await pcLoadMessages(true);pcEnsureRealtime();pcSchedulePoll();}
+ if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+ pcRenderMessages();
+ } finally {
+  if(token===publicChatState._renderToken) publicChatState._rendering=false;
+ }
+}
 
 async function renderHistoryPage(){const root=workspace(...WORKSPACE_META.history);const card=el("div","card");root.appendChild(card);try{const rows=await apiRequest("GET","/api/history");if(!rows.length)card.appendChild(el("p","muted","No new sessions or activities have been recorded."));rows.forEach(r=>{const when=new Date(r.at).toLocaleString();card.appendChild(el("div","item",`${r.role} · ${r.summary} · ${when}`));});}catch(e){card.appendChild(el("p","muted",e.message));}}
 function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const card=el("div","card res-form");card.appendChild(el("h3",null,"Download and share calendar data"));
