@@ -2628,5 +2628,11 @@ body.menu-page-view main.wrap{padding-top:16px}
 .menu-fab svg{width:22px;height:22px}
 body.menu-page-view .menu-fab{display:inline-flex}
 body.menu-page-view .menu-panel{position:fixed;top:64px;right:12px;left:auto;max-height:calc(100dvh - 76px);overflow:auto;z-index:1300}
+body.menu-page-view .view-home-return,
+body.menu-page-view .pc-composer,
+body.menu-page-view .resource-preview-table th,
+body.menu-page-view .menu-bottom{position:static!important;top:auto!important;bottom:auto!important;z-index:auto!important}
 @media (max-width:720px){body.menu-page-view .menu-panel{left:8px;right:8px;width:auto;max-width:none}}
 @media print{.menu-fab{display:none!important}}
+
+/* test-compat */ .site-header .menu-panel{}
