@@ -2756,12 +2756,13 @@ body.menu-open .activity-marquee-shell[aria-label="Future academic events"]{z-in
 
 
 /* Public chat: full desktop width, fixed header/composer, only messages scroll */
-body.public-chat-view{overflow:hidden}
-body.public-chat-view main.wrap{max-width:none;width:100%;padding:8px 12px 12px;overflow:hidden}
-body.public-chat-view #view-workspace{max-width:none;width:100%;height:calc(100dvh - 16px);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+html:has(body.public-chat-view),body.public-chat-view{overflow:hidden!important;height:100dvh!important;max-height:100dvh!important}
+body.public-chat-view{padding-bottom:0!important;min-height:100dvh!important}
+body.public-chat-view main.wrap{max-width:none;width:100%;height:100dvh!important;max-height:100dvh!important;padding:8px 12px 12px!important;overflow:hidden!important;box-sizing:border-box}
+body.public-chat-view #view-workspace{max-width:none;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 body.public-chat-view #workspace-title,
 body.public-chat-view #workspace-lead{display:none!important}
-body.public-chat-view #workspace-body{width:100%;max-width:none;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+body.public-chat-view #workspace-body{width:100%;max-width:none;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-top:0!important}
 body.public-chat-view .pc-shell{max-width:none;margin:0;flex:1 1 auto;min-height:0;height:auto}
 body.public-chat-view .pc-chat-card{width:100%;height:100%;min-height:0}
 body.public-chat-view .pc-chat-headbar,
@@ -2769,8 +2770,8 @@ body.public-chat-view .pc-composer{flex:0 0 auto}
 body.public-chat-view .pc-chat-body{flex:1 1 auto;min-height:0;overflow:hidden}
 body.public-chat-view .pc-messages{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 @media (max-width:720px){
-  body.public-chat-view main.wrap{padding:6px 6px 8px}
-  body.public-chat-view #view-workspace{height:calc(100dvh - 12px)}
+  body.public-chat-view main.wrap{padding:6px 6px 8px!important;height:100dvh!important}
+  body.public-chat-view #view-workspace{height:100%}
   body.public-chat-view .pc-shell{min-height:0}
   body.public-chat-view .pc-chat-headbar{padding:10px 10px}
   body.public-chat-view .pc-room-avatar{width:36px;height:36px;flex-basis:36px;font-size:14px}
