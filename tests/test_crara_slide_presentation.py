@@ -1,4 +1,5 @@
 import base64
+import json
 from io import BytesIO
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from app.services import backup_service
 
 ROOT = Path(__file__).resolve().parents[1]
 CLASSROOM = ROOT / "frontend" / "resources" / "crara-classroom"
+RESOURCE_MANIFEST = CLASSROOM / "crara-resources.json"
+BUNDLED_DECK = CLASSROOM / "files" / "amr-maternal-neonatal-malawi"
 
 
 def test_native_slide_navigation_assets_are_wired():
@@ -31,7 +34,10 @@ def test_native_slide_navigation_assets_are_wired():
     assert 'className:"stagefile"' in bundle
     assert "No shared screen or slides yet" not in bundle
     assert "Annotations stay attached to each slide" not in bundle
-    assert "window.__craraSlides={deck:l,session:s,goTo:Z}" in bundle
+    assert "window.__craraSlides={deck:l,session:s,goTo:Z,stopSlides:()=>s.stopSlides()}" in bundle
+    assert "__craraShare=window.__craraSlideShare" in bundle
+    assert 'source:__craraFromCrara?"crara":""' in bundle
+    assert 'source:B.source||""' in bundle
 
     assert "/api/class-rep/slides/render" in slides
     assert "cr-slide-panel" in slides
@@ -44,8 +50,26 @@ def test_native_slide_navigation_assets_are_wired():
     assert ".cr-slide-import" in slides
     assert '"Present slides"' in slides
     assert "cr-slide-import-status" in slides
+    assert "cr-files-panel" in slides
+    assert "Add files from device" in slides
+    assert "Shared by CRARA" in slides
+    assert "Stop sharing" in slides
+    assert "activeTabName() === \"Files\"" in slides
+    assert "crara-resources.json" in slides
+    assert "CRARA resources" in slides
+    assert "Share in room" in slides
+    assert "View chapters" in slides
+    assert "licensed chapter text" in slides
+    assert "window.__craraSlideShare" in slides
+    assert "deck.source === CRARA_SOURCE" in slides
+    assert "applyingUpdate" in slides
 
     assert ".presenter.cr-slides-active" in css
+    assert ".right.cr-files-active>.empty" in css
+    assert ".cr-files-panel" in css
+    assert ".cr-file-add" in css
+    assert ".cr-resource-card" in css
+    assert ".cr-resource-honesty" in css
     assert ".cr-slide-import" in css
     assert ".cr-slide-list" in css
     assert ".cr-slide-thumb.active" in css
@@ -55,6 +79,9 @@ def test_native_slide_navigation_assets_are_wired():
     assert "@media(max-width:520px)" in css
 
     assert "/resources/crara-classroom/crara-slides.js" in worker
+    assert "/resources/crara-classroom/crara-resources.json" in worker
+    assert "/resources/crara-classroom/files/amr-maternal-neonatal-malawi/slides.json" in worker
+    assert "/resources/crara-classroom/files/amr-maternal-neonatal-malawi/slide-028.jpg" in worker
 
     for text in (html, bundle, slides, css):
         lowered = text.lower()
@@ -64,6 +91,42 @@ def test_native_slide_navigation_assets_are_wired():
         assert "vtc" not in lowered
         assert "your logo" not in lowered
         assert "physics" not in lowered
+
+
+def test_bundled_crara_resources_include_lecture_deck_and_honest_book_outlines():
+    manifest = json.loads(RESOURCE_MANIFEST.read_text(encoding="utf-8"))
+    assert manifest["schemaVersion"] == 1
+    by_id = {item["id"]: item for item in manifest["resources"]}
+
+    deck = by_id["amr-maternal-neonatal-malawi"]
+    assert deck["kind"] == "deck"
+    assert deck["category"] == "Lecture notes"
+    assert deck["title"] == "Antimicrobial Resistance in Maternal and Neonatal Health in Malawi"
+    assert deck["slides"] == 28
+    source = CLASSROOM / "files" / "amr-maternal-neonatal-malawi.pptx"
+    assert source.is_file() and source.stat().st_size > 50_000
+
+    payload = json.loads((BUNDLED_DECK / "slides.json").read_text(encoding="utf-8"))
+    assert payload["count"] == 28
+    assert len(payload["slides"]) == 28
+    for index, entry in enumerate(payload["slides"], start=1):
+        assert entry["name"] == f"slide-{index:03d}.jpg"
+        image_path = BUNDLED_DECK / entry["name"]
+        assert image_path.is_file()
+        with Image.open(image_path) as image:
+            image.verify()
+
+    book = by_id["regression-methods-chapter-outlines"]
+    assert book["kind"] == "chapters"
+    assert "licensed chapter text" in book["summary"].lower()
+    assert len(book["book"]["chapters"]) == 13
+    assert "Licensed text" in book["book"]["accessNoteEn"]
+    assert "chapter outline only" in book["book"]["accessNoteEn"]
+    assert "utm_source=chatgpt.com" not in book["book"]["url"]
+
+    lowered = RESOURCE_MANIFEST.read_text(encoding="utf-8").lower()
+    for term in ("penrose", "scholarmw", "voice training", "vtc", "your logo", "physics"):
+        assert term not in lowered
 
 
 def _storage(monkeypatch, tmp_path):

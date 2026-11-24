@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "source": "CRARA bundled resources",
+  "resources": [
+    {
+      "id": "amr-maternal-neonatal-malawi",
+      "kind": "deck",
+      "category": "Lecture notes",
+      "title": "Antimicrobial Resistance in Maternal and Neonatal Health in Malawi",
+      "summary": "ARMN-8100 PhD lecture: burden, evidence, transmission and research priorities in Malawi.",
+      "slides": 28,
+      "url": "/resources/crara-classroom/files/amr-maternal-neonatal-malawi/slides.json",
+      "downloadUrl": "/resources/crara-classroom/files/amr-maternal-neonatal-malawi.pptx",
+      "downloadName": "Antimicrobial Resistance in Maternal and Neonatal Health in Malawi.pptx"
+    },
+    {
+      "id": "regression-methods-chapter-outlines",
+      "kind": "chapters",
+      "category": "Book content / chapter summary",
+      "title": "Regression Methods in Biostatistics — chapter outlines",
+      "summary": "Publisher chapter titles and page ranges with CRARA study notes in English and Chichewa. Licensed chapter text is not bundled.",
+      "book": {
+        "title": "Regression Methods in Biostatistics",
+        "subtitle": "Linear, Logistic, Survival, and Repeated Measures Models",
+        "authors": [
+          "Eric Vittinghoff",
+          "David V. Glidden",
+          "Stephen C. Shiboski",
+          "Charles E. McCulloch"
+        ],
+        "edition": 2,
+        "year": 2012,
+        "publisher": "Springer New York, NY",
+        "doi": "10.1007/978-1-4614-1353-0",
+        "url": "https://link.springer.com/book/10.1007/978-1-4614-1353-0",
+        "accessNoteEn": "Licensed text. CRARA supplies the publisher's chapter outline only; open the Springer link for the full chapter (preview or subscription may be required).",
+        "accessNoteNy": "Buku lili ndi chilolezo. CRARA imapereka mndandanda wa mitu yokha; tsegulani ulalo wa Springer kuti muwerenge chaputala chonse.",
+        "chapters": [
+          {
+            "number": 1,
+            "title": "Introduction",
+            "pages": "1-6",
+            "scopeEn": "Frames the book's unified approach to multipredictor regression and the common workflow used throughout.",
+            "scopeNy": "Chiyambi: chimafotokoza njira imodzi yogwirizana yophunzirira ma regression okhala ndi zolosera zambiri."
+          },
+          {
+            "number": 2,
+            "title": "Exploratory and Descriptive Methods",
+            "pages": "7-26",
+            "scopeEn": "Describes and explores biomedical data before modelling, preparing the outcome and predictor summaries used later.",
+            "scopeNy": "Kufufuza ndi kufotokoza deta musanamange chitsanzo; kumakonza zidziwitso za zotsatira ndi zolosera."
+          },
+          {
+            "number": 3,
+            "title": "Basic Statistical Methods",
+            "pages": "27-67",
+            "scopeEn": "Reviews first-course statistical methods before the multipredictor models are introduced.",
+            "scopeNy": "Kubwereza njira zoyambirira za ziwerengero zisanaphunziridwe ma model okhala ndi zolosera zambiri."
+          },
+          {
+            "number": 4,
+            "title": "Linear Regression",
+            "pages": "69-138",
+            "scopeEn": "Multiple linear regression for continuous outcomes, using the shared framework for selection, estimation, checking and interpretation.",
+            "scopeNy": "Linear regression ya zotsatira zoyezeka mosalekeza, pogwiritsa ntchito njira yofanana yosankha, kuyerekeza, kuyang'ana ndi kutanthauzira."
+          },
+          {
+            "number": 5,
+            "title": "Logistic Regression",
+            "pages": "139-202",
+            "scopeEn": "Logistic models for binary outcomes, applying the same model-choice, checking and interpretation framework.",
+            "scopeNy": "Logistic regression ya zotsatira za awiri (inde/ayi), pogwiritsa ntchito njira yomweyo yosankha ndi kutanthauzira."
+          },
+          {
+            "number": 6,
+            "title": "Survival Analysis",
+            "pages": "203-259",
+            "scopeEn": "The Cox model and related methods for right-censored survival times.",
+            "scopeNy": "Cox model ndi njira zina za nthawi yopulumuka pamene deta ina sinamalizidwe (right-censored)."
+          },
+          {
+            "number": 7,
+            "title": "Repeated Measures and Longitudinal Data Analysis",
+            "pages": "261-308",
+            "scopeEn": "Models for longitudinal and hierarchical outcomes where observations are correlated, including repeated-measures approaches.",
+            "scopeNy": "Ma model a deta yobwerezedwa kapena yotsatira nthawi, pamene mfundo zaza deta zimagwirizana."
+          },
+          {
+            "number": 8,
+            "title": "Generalized Linear Models",
+            "pages": "309-330",
+            "scopeEn": "Generalized linear models extending the regression framework to counts and other non-normal outcome types.",
+            "scopeNy": "Generalized linear models zowonjezera njira ya regression ku zotsatira zowerengeka ndi zina zosagwirizana ndi normal."
+          },
+          {
+            "number": 9,
+            "title": "Strengthening Causal Inference",
+            "pages": "331-394",
+            "scopeEn": "How the regression methods handle confounding, mediation and interaction of causal effects in essentially the same way.",
+            "scopeNy": "Kulimbikitsa kutanthauzira kwa chifukwa: confounding, mediation ndi interaction zimayendetsedwa mofanana."
+          },
+          {
+            "number": 10,
+            "title": "Predictor Selection",
+            "pages": "395-429",
+            "scopeEn": "Strategies for choosing predictors and checking the resulting multipredictor models.",
+            "scopeNy": "Njira zosankha zolosera zabwino ndikuyang'ana chitsanzo chomwe chatsatira."
+          },
+          {
+            "number": 11,
+            "title": "Missing Data",
+            "pages": "431-467",
+            "scopeEn": "Approaches to missingness within the regression workflow, with applied guidance.",
+            "scopeNy": "Njira zothanirana ndi deta yosowa mu ntchito ya regression, ndi malangizo ogwiritsira ntchito."
+          },
+          {
+            "number": 12,
+            "title": "Complex Surveys",
+            "pages": "469-480",
+            "scopeEn": "A brief introduction to regression analysis of complex survey data.",
+            "scopeNy": "Chiyambi chachifupi cha regression pa deta ya kafukufuku wovuta (complex surveys)."
+          },
+          {
+            "number": 13,
+            "title": "Summary",
+            "pages": "481-488",
+            "scopeEn": "Consolidates the elements shared across all the model families in the book.",
+            "scopeNy": "Kufotokoza mwachidule zinthu zofanana pakati pa ma model onse omwe ali m'bukuli."
+          }
+        ]
+      }
+    },
+    {
+      "id": "python-library",
+      "kind": "link",
+      "category": "Reference",
+      "title": "Python Library",
+      "summary": "Bundled Python commands and worked examples for biomedical and health sciences.",
+      "url": "/resources/python-command-library.html?runner=off&full=1"
+    },
+    {
+      "id": "stat8100-practical",
+      "kind": "link",
+      "category": "Reference",
+      "title": "STAT 8100 Practical Companion",
+      "summary": "Executed practical companion with verified code cells and simulated teaching data.",
+      "url": "/resources/stat8100_practical_companion.html"
+    },
+    {
+      "id": "hypothesis-testing-lab",
+      "kind": "link",
+      "category": "Reference",
+      "title": "Hypothesis Testing Lab",
+      "summary": "Manual-first hypothesis testing workflow with validated statistical tables.",
+      "url": "/resources/hypothesis-testing-lab.html"
+    },
+    {
+      "id": "statistical-tests-glossary",
+      "kind": "link",
+      "category": "Reference",
+      "title": "Statistical Tests Glossary",
+      "summary": "Bilingual glossary of statistical tests and modelling terms.",
+      "url": "/resources/python-statistical-tests-glossary.html"
+    }
+  ]
+}
