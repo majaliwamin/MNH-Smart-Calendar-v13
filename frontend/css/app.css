@@ -309,7 +309,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 /* ---- Hamburger menu ---- */
 .toolbar{position:relative}
 .menu-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;margin-left:auto;align-self:flex-start}
-.menu-panel{position:fixed;right:20px;top:76px;z-index:1300;width:260px;max-width:calc(100vw - 24px);display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--panel);border:1px solid var(--gold);border-radius:10px;box-shadow:0 14px 40px #0007;max-height:calc(100dvh - 88px);overflow:auto}
+.menu-panel{position:absolute;right:20px;top:calc(100% - 6px);z-index:900;width:260px;max-width:calc(100vw - 24px);display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--panel);border:1px solid var(--gold);border-radius:10px;box-shadow:0 14px 40px #0007}
 .menu-panel[hidden]{display:none}
 .menu-panel button{width:100%;text-align:left}
 .menu-theme{display:grid;gap:5px;padding:2px 0 6px;border-bottom:1px solid var(--line);margin-bottom:2px}
@@ -342,7 +342,7 @@ tbody th.daycell .date{font-size:calc(11px * var(--text-scale));margin-top:2px}
 .hd-burger:hover{box-shadow:0 0 0 2px #d4ab5588}
 .hd-burger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .site-header .menu-panel,body>.menu-panel{left:14px;right:auto;top:clamp(70px,7.5vw,125px);display:grid;grid-template-columns:repeat(4,52px);gap:8px;width:auto;padding:12px}
-.site-header .menu-panel,body>.menu-panel[hidden]{display:none}
+.site-header .menu-panel[hidden],body>.menu-panel[hidden]{display:none}
 .mi{display:block}
 .mi button{width:52px;height:52px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px}
 .mi button:disabled{pointer-events:none}
@@ -428,7 +428,7 @@ thead th.corner{width:clamp(56px,10vw,130px);position:static}
 
 /* Unified hamburger navigation: scrollable main links and pinned Settings. */
 .site-header .menu-panel,body>.menu-panel{width:min(340px,calc(100vw - 20px));max-height:min(78vh,720px);overflow:auto;display:flex;flex-direction:column;gap:0;padding:12px;background:#091a31;border:1px solid #b58d42;border-radius:12px;box-shadow:0 18px 50px #000b;font-family:Arial,Helvetica,sans-serif}
-.site-header .menu-panel,body>.menu-panel[hidden]{display:none}
+.site-header .menu-panel[hidden],body>.menu-panel[hidden]{display:none}
 .menu-heading{padding:8px 10px 12px;border-bottom:1px solid #ffffff20;display:flex;flex-direction:column;gap:3px}
 .menu-heading strong{font:700 calc(17px * var(--text-scale)) Georgia,serif;color:var(--text)}.menu-heading span{font-size:calc(11px * var(--text-scale));letter-spacing:.12em;text-transform:uppercase;color:#d5b66e}
 .menu-links{display:grid;gap:3px;padding:9px 0}
@@ -2619,20 +2619,18 @@ html body .colour-dialog .dialog-card h2{
 @media (max-width:720px){.pc-messages{height:52vh}.pc-compose-actions{flex-direction:row;width:100%}.pc-compose-actions button{flex:1}.pc-bubble{max-width:95%}}
 
 
-/* Hide app header on hamburger-menu pages; keep navigation via in-page back/menu controls */
+/* Hide app header on hamburger-menu pages; navigation returns via the in-page Back to Home control. */
 body.menu-page-view .site-header,
 body.menu-page-view .view-tabs,
 body.menu-page-view .activity-marquee-shell{display:none!important}
 body.menu-page-view main.wrap{padding-top:16px}
-.menu-fab{display:none;position:fixed;top:12px;right:12px;z-index:1300;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
-.menu-fab svg{width:22px;height:22px}
-body.menu-page-view .menu-fab{display:inline-flex}
-body.menu-page-view .menu-panel{position:fixed;top:64px;right:12px;left:auto;max-height:calc(100dvh - 76px);overflow:auto;z-index:1300}
 body.menu-page-view .view-home-return,
 body.menu-page-view .pc-composer,
 body.menu-page-view .resource-preview-table th,
 body.menu-page-view .menu-bottom{position:static!important;top:auto!important;bottom:auto!important;z-index:auto!important}
-@media (max-width:720px){body.menu-page-view .menu-panel{left:8px;right:8px;width:auto;max-width:none}}
-@media print{.menu-fab{display:none!important}}
+/* Keep the hamburger in its original header position; lift it above the sticky bands only while open. */
+.site-header .menu-panel{z-index:20003!important}
+body.menu-open .site-header{z-index:20002!important}
+body.menu-open .activity-marquee-shell[aria-label="Future academic events"]{z-index:20001!important}
 
 /* test-compat */ .site-header .menu-panel{}

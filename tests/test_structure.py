@@ -496,7 +496,11 @@ def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
     assert 'id="menu-panel" role="navigation" aria-label="Calendar navigation"' in html
     assert 'class="menu-nav" data-view="monthly"' in html
     assert "Monthly Calendar" in html
+    assert 'class="menu-fab"' not in html
     assert ".site-header .menu-panel{" in css
+    assert ".site-header .menu-panel{z-index:20003!important}" in css
+    assert "body.menu-open .site-header{z-index:20002!important}" in css
+    assert 'document.body.classList.add("menu-open")' in app
     assert ".menu-nav{min-height:44px" in css
     assert "touch-action:manipulation" in css
     assert 'document.querySelectorAll(".menu-nav[data-view]")' in app

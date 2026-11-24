@@ -2578,15 +2578,14 @@ function initHeader(){
  initWeekNav();
 }
 // ---- Hamburger menu ----
-const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel"),menuFab=document.getElementById("menu-fab");
-function setMenuExpanded(on){if(menuBtn)menuBtn.setAttribute("aria-expanded",on?"true":"false");if(menuFab)menuFab.setAttribute("aria-expanded",on?"true":"false");if(menuBtn)menuBtn.setAttribute("aria-label",on?"Close menu":"Open menu");if(menuFab)menuFab.setAttribute("aria-label",on?"Close menu":"Open menu");}
-function openMenu(){menuPanel.hidden=false;setMenuExpanded(true);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}}
-function closeMenu(){menuPanel.hidden=true;setMenuExpanded(false);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot)craraRoot.hidden=currentView!=="weekly";}
+const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
+function setMenuExpanded(on){if(menuBtn){menuBtn.setAttribute("aria-expanded",on?"true":"false");menuBtn.setAttribute("aria-label",on?"Close menu":"Open menu");}}
+function openMenu(){menuPanel.hidden=false;document.body.classList.add("menu-open");setMenuExpanded(true);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}}
+function closeMenu(){menuPanel.hidden=true;document.body.classList.remove("menu-open");setMenuExpanded(false);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot)craraRoot.hidden=currentView!=="weekly";}
 if(menuBtn)menuBtn.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
- if(menuFab)menuFab.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
 menuPanel.addEventListener("click",e=>{e.stopPropagation();if(e.target.closest("button:not([data-keep])"))closeMenu();});
-document.addEventListener("click",e=>{if(!menuPanel.hidden&&!menuPanel.contains(e.target)&&!(menuBtn&&(e.target===menuBtn||menuBtn.contains(e.target)))&&!(menuFab&&(e.target===menuFab||menuFab.contains(e.target))))closeMenu();});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menuPanel.hidden){closeMenu();(menuFab&&getComputedStyle(menuFab).display!=="none"?menuFab:menuBtn)?.focus();}});
+document.addEventListener("click",e=>{if(!menuPanel.hidden&&!menuPanel.contains(e.target)&&!(menuBtn&&(e.target===menuBtn||menuBtn.contains(e.target))))closeMenu();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menuPanel.hidden){closeMenu();menuBtn?.focus();}});
 // Status messages are temporary: they clear themselves so the dashboard stays clean.
 let statusTimer;
 new MutationObserver(()=>{
