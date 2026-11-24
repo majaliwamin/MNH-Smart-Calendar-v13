@@ -1020,7 +1020,8 @@ function initWeekNav(){
  window.addEventListener("online",resumeApp);
 }
 function ensureHomeReturnButton(name){
- if(name==="weekly")return;
+ const ws=document.getElementById("view-workspace");
+ if(name==="weekly"||name==="public-chat"){if(ws)ws.querySelectorAll(":scope > .view-home-return").forEach(b=>b.remove());return;}
  let view=null,before=null;
  if(name==="analytics"){
   view=document.getElementById("view-analytics");
@@ -2056,7 +2057,8 @@ async function renderPublicChat(){
  const headActions=el("div","pc-head-actions");
  const searchBtn=el("button","pc-icon-btn"+(publicChatState.searchResults?" active":""));searchBtn.type="button";searchBtn.title="Search messages";searchBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';searchBtn.disabled=!publicChatState.joined;searchBtn.onclick=()=>{publicChatState.searchOpen=!publicChatState.searchOpen;publicChatState.headerMenu=false;renderPublicChat();if(publicChatState.searchOpen){setTimeout(()=>{const i=document.getElementById("pc-search-input");if(i)i.focus();},0);}};
  const menuBtn=el("button","pc-icon-btn");menuBtn.type="button";menuBtn.setAttribute("aria-label","Chat options");menuBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';menuBtn.onclick=(e)=>{e.stopPropagation();publicChatState.headerMenu=!publicChatState.headerMenu;pcRefreshHeadMenu();};
- headActions.append(searchBtn,menuBtn);head.appendChild(headActions);card.appendChild(head);
+ const exitBtn=el("button","pc-icon-btn pc-exit-btn");exitBtn.type="button";exitBtn.title="Exit chat";exitBtn.setAttribute("aria-label","Exit chat");exitBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';exitBtn.onclick=()=>{pcCloseWS();showView("weekly");};
+ headActions.append(searchBtn,menuBtn,exitBtn);head.appendChild(headActions);card.appendChild(head);
 
  if(publicChatState.headerMenu){
   const menu=el("div","pc-head-menu");
