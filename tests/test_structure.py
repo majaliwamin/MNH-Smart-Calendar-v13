@@ -157,6 +157,31 @@ def test_windows_startup_helper_and_correct_teaching_dates_are_documented():
     assert '"1_5"' not in backend
 
 
+def test_windows_autostart_keeps_the_installed_pwa_backend_running():
+    watchdog = (ROOT / "scripts" / "local-autostart.ps1").read_text(encoding="utf-8")
+    installer = (ROOT / "scripts" / "install-local-autostart.ps1").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    # The installed Edge app opens port 8017 at logon, so the hidden launcher
+    # must use that port, wait for health, and keep restarting the real backend.
+    assert "else { 8017 }" in watchdog
+    assert "backend\\run.py" in watchdog
+    assert '-ArgumentList $pythonArgs' in watchdog
+    assert "http://127.0.0.1:$Port/health" in watchdog
+    assert "while ($true)" in watchdog
+    assert "Start-MnhServer" in watchdog
+    assert "startup-config.json" in watchdog
+
+    assert "MNH Calendar.lnk" in installer
+    assert "local-autostart.ps1" in installer
+    assert "-LaunchApp" in installer
+    assert "-Uninstall" in installer
+    assert "http://127.0.0.1:$Port/" in installer
+
+    assert "http://127.0.0.1:8017/" in readme
+    assert "install-local-autostart.ps1" in readme
+
+
 def test_month_view_renders_weekdays_only_from_the_shared_malawi_week_model():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     monthly = app[app.index("function renderMonthly()"):app.index("function localActivityDate(", app.index("function renderMonthly()"))]

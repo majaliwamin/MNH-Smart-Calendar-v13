@@ -35,7 +35,8 @@ MNH-Calendar/
 ├── database/                    # Local SQLite database (created at runtime)
 ├── backups/                     # Automatic SQLite snapshots (created at runtime)
 ├── render.yaml           # Render Blueprint configuration
-├── run.ps1               # Windows local startup helper
+├── run.ps1               # Windows manual startup helper
+├── scripts/              # Diagnostics and hidden autostart/watchdog helpers
 ├── docs/
 └── tests/
 ```
@@ -56,6 +57,24 @@ Alternatively, run `Set-ExecutionPolicy -Scope Process Bypass` once in the curre
 Open `http://127.0.0.1:8000/` (or `http://localhost:8000/`). Do not enter `http://0.0.0.0:8000/` in a browser: `0.0.0.0` is only the server listening address. The server binds to `0.0.0.0` so it can accept connections from other devices on the same LAN. The terminal prints the local network address. This LAN address is only for the same network; it is not an internet address.
 
 To stop the local server, press `Ctrl+C` in the terminal. Do not open `frontend/index.html` directly or use VS Code Live Server: the application requires the API server for shared records.
+
+### Run automatically after reboot (Windows)
+
+The installed desktop/PWA shortcut opens `http://127.0.0.1:8017/`, so a reboot otherwise leaves the app with no backend behind it. Install the hidden self-healing launcher once:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-local-autostart.ps1
+```
+
+It saves the existing shortcut, replaces it with a hidden launcher, creates/reuses `.venv`, installs missing backend requirements, starts the backend on port `8017`, opens the saved app window only after `/health` passes, and restarts the backend if it crashes. It runs at every login and needs no terminal. Logs are in `logs\local-autostart.log` and `logs\local-server.err.log`.
+
+Remove autostart with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-local-autostart.ps1 -Uninstall
+```
+
+Manual development with `.\run.ps1` still uses port `8000`; do not run it at the same time as the autostart service against the same local database. `MNH_PORT` overrides either port when needed.
 
 ## CARA — Classroom and Academic Relations Assistant
 
