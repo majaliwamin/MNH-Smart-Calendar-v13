@@ -2118,14 +2118,13 @@ async function renderPublicChat(){
  publicChatState._rendering=true;
  pcLoadChatTheme();
  try{
- const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");try{await pcLoadStatus(true);}catch(_e){}
- if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+ const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");
  root.querySelectorAll('.pc-chat-card,.pc-toast').forEach(n=>n.remove());
  const card=el("div","pc-chat-card");
  const head=el("div","pc-chat-headbar");
  const ident=el("div","pc-chat-identity");ident.appendChild(el("div","pc-room-avatar","M"));
  const meta=el("div");meta.appendChild(el("div","pc-chat-title","MNH Group Chat"));
- const sub=el("div","pc-chat-meta",publicChatState.joined?((publicChatState.online||0)+" online · "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting");sub.id="pc-online";meta.appendChild(sub);
+ const sub=el("div","pc-chat-meta",publicChatState.joined?((publicChatState.online||0)+" online • "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting");sub.id="pc-online";meta.appendChild(sub);
  const typing=el("div","pc-typing","");typing.id="pc-typing";typing.hidden=true;meta.appendChild(typing);ident.appendChild(meta);head.appendChild(ident);
  const headActions=el("div","pc-head-actions");
  const searchBtn=el("button","pc-icon-btn"+(publicChatState.searchResults?" active":""));searchBtn.type="button";searchBtn.title="Search messages";searchBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';searchBtn.disabled=!publicChatState.joined;searchBtn.onclick=()=>{publicChatState.searchOpen=!publicChatState.searchOpen;publicChatState.headerMenu=false;if(publicChatState.searchOpen){pcRefreshSearchBar();setTimeout(()=>{const i=document.getElementById("pc-search-input");if(i)i.focus();},0);}else{const card=document.querySelector('.pc-chat-card');const bar=card&&card.querySelector('.pc-search-bar');if(bar)bar.remove();publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.memberQuery="";pcRenderMessages();}};
@@ -2153,7 +2152,7 @@ async function renderPublicChat(){
  if(!publicChatState.joined){
   const join=el("div","pc-join");join.appendChild(el("h4",null,"Join MNH Group Chat"));join.appendChild(el("p",null,"Request a unique identification code (MNH-XXXX). It identifies you in chat and is not a password."));
   const name=fieldInput("Display name (optional)",80,"text");name.className="pc-join-input";
-  const btn=el("button","primary","Request chat code");btn.type="button";btn.onclick=async()=>{btn.disabled=true;btn.textContent="Requesting…";try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:name.value.trim()}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];publicChatState.emojiOpen=false;if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);renderPublicChat();if(!publicChatState.joined)pcToast(res.access_request&&res.access_request.status==="pending"?"Access request awaiting moderator approval.":"Chat access is not active yet.");}catch(e){pcToast(e.message||String(e));}finally{btn.disabled=false;btn.textContent="Request chat code";}};join.append(name,btn);card.appendChild(join);
+  const btn=el("button","primary","Request chat code");btn.type="button";btn.onclick=async()=>{btn.disabled=true;btn.textContent="Requesting...";try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:name.value.trim()}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];publicChatState.emojiOpen=false;if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);renderPublicChat();if(!publicChatState.joined)pcToast(res.access_request&&res.access_request.status==="pending"?"Access request awaiting moderator approval.":"Chat access is not active yet.");}catch(e){pcToast(e.message||String(e));}finally{btn.disabled=false;btn.textContent="Request chat code";}};join.append(name,btn);card.appendChild(join);
  }
 
  if(publicChatState.searchResults)card.appendChild(el("div","pc-search-note","Showing search results for \u201c"+publicChatState.searchQuery+"\u201d"));
@@ -2164,10 +2163,19 @@ async function renderPublicChat(){
  card.appendChild(body);
  card.appendChild(pcComposerNode());root.appendChild(card);
  const toast=el("div","pc-toast","");toast.id="pc-toast";toast.hidden=true;root.appendChild(toast);
- if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
- if(publicChatState.joined){await pcLoadMessages(true);pcEnsureRealtime();pcSchedulePoll();}
- if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
  pcRenderMessages();
+ if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+ (async()=>{
+  try{await pcLoadStatus(true);}catch(_e){}
+  if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+  if(publicChatState.joined){try{await pcLoadMessages(true);}catch(_e){}}
+  if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+  const subNow=document.getElementById("pc-online");
+  if(subNow)subNow.textContent=publicChatState.joined?((publicChatState.online||0)+" online • "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting";
+  const searchNow=document.querySelector('.pc-chat-card .pc-icon-btn[title="Search messages"]');
+  if(searchNow)searchNow.disabled=!publicChatState.joined;
+  pcRenderMessages();
+ })();
  } finally {
   if(token===publicChatState._renderToken) publicChatState._rendering=false;
  }
