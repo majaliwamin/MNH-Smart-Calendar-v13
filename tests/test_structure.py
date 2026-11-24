@@ -171,6 +171,9 @@ def test_windows_autostart_keeps_the_installed_pwa_backend_running():
     assert "while ($true)" in watchdog
     assert "Start-MnhServer" in watchdog
     assert "startup-config.json" in watchdog
+    assert "MNH_CLOUD_MIRROR_URL" in watchdog
+    assert "https://mnh-smart-calendar-v13.onrender.com" in watchdog
+    assert "-LocalOnly" in watchdog
 
     assert "MNH Calendar.lnk" in installer
     assert "local-autostart.ps1" in installer
@@ -180,6 +183,26 @@ def test_windows_autostart_keeps_the_installed_pwa_backend_running():
 
     assert "http://127.0.0.1:8017/" in readme
     assert "install-local-autostart.ps1" in readme
+    assert "cloud mirror" in readme
+    assert "-LocalOnly" in readme
+
+
+def test_local_pwa_can_mirror_the_cloud_api_without_changing_production():
+    config = (ROOT / "backend" / "app" / "config.py").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+    mirror = (ROOT / "backend" / "app" / "cloud_mirror.py").read_text(encoding="utf-8")
+    requirements = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
+    env = (ROOT / ".env.example").read_text(encoding="utf-8")
+
+    assert 'os.getenv("MNH_CLOUD_MIRROR_URL"' in config
+    assert "if CLOUD_MIRROR_URL:" in main
+    assert "install_websocket_proxy(app, CLOUD_MIRROR_URL)" in main
+    assert "proxy_http(request, CLOUD_MIRROR_URL)" in main
+    assert 'LOCAL_API_PASSTHROUGH = frozenset({"/api/build", "/api/health/ready"})' in mirror
+    assert "_localise_set_cookie" in mirror
+    assert "relay_websocket" in mirror or "_relay_websocket" in mirror
+    assert "httpx>=0.27,<1.0" in requirements
+    assert "MNH_CLOUD_MIRROR_URL" in env
 
 
 def test_month_view_renders_weekdays_only_from_the_shared_malawi_week_model():

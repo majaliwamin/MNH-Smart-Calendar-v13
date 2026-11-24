@@ -10,7 +10,10 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
-from app.config import PROJECT_ROOT, CORS_ORIGINS, BUILD_ID, APP_VERSION, ensure_directories
+from app.config import (PROJECT_ROOT, CORS_ORIGINS, BUILD_ID, APP_VERSION,
+                        CLOUD_MIRROR_URL, ensure_directories)
+from app.cloud_mirror import (LOCAL_API_PASSTHROUGH, MIRROR_HEADER,
+                              install_websocket_proxy, proxy_http)
 from app.database.connection import connect, database
 from app.api.routes import router
 from app.api.comm_routes import router as comm_router
@@ -104,6 +107,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MNH Calendar API", version=APP_VERSION, lifespan=lifespan,
               description="Shared academic calendar API for web and Flutter clients.")
+# The mirror WebSocket route must precede the local public-chat WebSocket route.
+# Production leaves MNH_CLOUD_MIRROR_URL unset, so this is a laptop-only mode.
+if CLOUD_MIRROR_URL:
+    install_websocket_proxy(app, CLOUD_MIRROR_URL)
 if CORS_ORIGINS:
     app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
                        allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -112,7 +119,13 @@ if CORS_ORIGINS:
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
-    response = await call_next(request)
+    if (CLOUD_MIRROR_URL and request.url.path.startswith("/api/")
+            and request.url.path not in LOCAL_API_PASSTHROUGH):
+        response = await proxy_http(request, CLOUD_MIRROR_URL)
+    else:
+        response = await call_next(request)
+    if CLOUD_MIRROR_URL:
+        response.headers.setdefault(MIRROR_HEADER, "local")
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Cache-Control"] = (

@@ -5,13 +5,18 @@ Started hidden from the Windows Startup shortcut. It:
   1. reuses (or creates) the project .venv,
   2. installs backend requirements only when missing,
   3. starts the existing backend entry point on the PWA port (default 8017),
-  4. waits for /health before opening the saved Edge app shortcut,
-  5. keeps watching and restarts the server if it crashes.
+  4. mirrors the API to the deployed cloud service so the laptop shows the
+     same schedules, public chat and CRARA data,
+  5. waits for /health before opening the saved Edge app shortcut,
+  6. keeps watching and restarts the server if it crashes.
 
+Use -LocalOnly to keep a separate local SQLite copy instead of the cloud mirror.
 It never kills an unidentified process holding the port.
 #>
 param(
     [int]$Port = $(if ($env:MNH_PORT) { [int]$env:MNH_PORT } elseif ($env:PORT) { [int]$env:PORT } else { 8017 }),
+    [string]$CloudUrl = $(if ($env:MNH_CLOUD_MIRROR_URL) { $env:MNH_CLOUD_MIRROR_URL } else { 'https://mnh-smart-calendar-v13.onrender.com' }),
+    [switch]$LocalOnly,
     [switch]$LaunchApp,
     [switch]$NoWatch
 )
@@ -104,6 +109,13 @@ function Start-MnhServer {
     $env:MNH_HOST = '127.0.0.1'
     $env:MNH_PORT = "$Port"
     $env:PORT = "$Port"
+    if ($LocalOnly) {
+        Remove-Item Env:MNH_CLOUD_MIRROR_URL -ErrorAction SilentlyContinue
+        Write-Log 'Local-only mode: using this computer''s SQLite database.'
+    } elseif ($CloudUrl) {
+        $env:MNH_CLOUD_MIRROR_URL = $CloudUrl
+        Write-Log "Cloud mirror enabled: $CloudUrl"
+    }
     # The project path contains spaces; quote the script argument so Python
     # receives one path instead of splitting at "Default Project".
     $runScript = Join-Path $ProjectRoot 'backend\run.py'

@@ -68,6 +68,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-local-autostart.ps1
 
 It saves the existing shortcut, replaces it with a hidden launcher, creates/reuses `.venv`, installs missing backend requirements, starts the backend on port `8017`, opens the saved app window only after `/health` passes, and restarts the backend if it crashes. It runs at every login and needs no terminal. Logs are in `logs\local-autostart.log` and `logs\local-server.err.log`.
 
+The launcher also enables a same-origin **cloud mirror**: pages and files are served locally, but `/api/*` requests and the chat WebSocket are forwarded to `https://mnh-smart-calendar-v13.onrender.com`. The laptop therefore shows the same schedules, public community chat and CRARA data as the deployed app while keeping the familiar `127.0.0.1:8017` app window. Do not separately run `./run.ps1` while this autostart service is active. For a deliberately separate local SQLite copy, start the launcher with `-LocalOnly` instead.
+
 Remove autostart with:
 
 ```powershell
@@ -223,6 +225,7 @@ The JSON endpoint `/api/backup` is an application-data export for compatibility;
 | `MNH_COORDINATOR_PASSWORD` | Optional coordinator password | Disabled |
 | `MNH_ED_PASSWORD` | Optional Executive Dean password | Disabled |
 | `MNH_CORS_ORIGINS` | Comma-separated trusted web origins when hosting frontend separately | Same-origin only |
+| `MNH_CLOUD_MIRROR_URL` | Local-only: forward `/api/*` and chat WebSocket to this deployed HTTPS service | Unset (manual development uses local SQLite) |
 | `MNH_BACKUP_RETENTION` | Number of snapshots retained | `30` |
 
 Do not expose the local development server directly to the public internet. Use Render HTTPS or another properly secured hosting provider for remote access.

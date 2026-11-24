@@ -12,6 +12,11 @@ BACKUP_RETENTION = max(1, int(os.getenv("MNH_BACKUP_RETENTION", "30")))
 SESSION_SECONDS = max(300, int(os.getenv("MNH_SESSION_SECONDS", str(12 * 60 * 60))))
 CORS_ORIGINS = [x.strip() for x in os.getenv("MNH_CORS_ORIGINS", "").split(",") if x.strip()]
 COOKIE_SECURE = os.getenv("MNH_COOKIE_SECURE", "auto").lower()
+# Optional same-origin cloud mirror for the Windows PWA. When set, the local
+# backend forwards /api/* (including cookies and WebSockets) to this HTTPS
+# service so the laptop uses the deployed database instead of its own SQLite
+# copy. Intended for the local launcher only; leave unset on the server itself.
+CLOUD_MIRROR_URL = os.getenv("MNH_CLOUD_MIRROR_URL", "").strip().rstrip("/")
 
 
 def _int_env(name: str, default: int) -> int:
