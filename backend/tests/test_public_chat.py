@@ -458,7 +458,8 @@ def test_chat_routes_allow_microphone_policy(app_ctx):
     assert response.status_code == 200
     policy = response.headers.get("permissions-policy", "")
     assert "microphone=(self)" in policy
-    assert "unload=*" in policy
+    assert "unload=self" in policy
+    assert "unload=*" not in policy
 
 
 def test_chat_promoted_moderator_can_moderate(app_ctx):

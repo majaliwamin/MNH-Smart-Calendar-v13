@@ -119,11 +119,12 @@ async def security_headers(request: Request, call_next):
         "no-cache" if request.url.path == "/service-worker.js" else "no-store"
     )
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
-    # Explicitly allow chat voice notes and legacy export cleanup in this app's
-    # own documents. The microphone still requires the browser's normal
-    # click-initiated permission prompt; this only prevents a policy from
-    # blocking that prompt or logging an unload violation.
-    response.headers["Permissions-Policy"] = "microphone=(self), unload=*"
+    # Chat voice notes need the microphone in this app's own documents; the
+    # browser still requires the normal click-initiated permission prompt.
+    # `unload=self` is Chrome's documented opt-in for first-party documents.
+    # Every embedded resource frame also delegates it via allow="unload", so
+    # extensions or bundled scripts cannot log one unload violation per frame.
+    response.headers["Permissions-Policy"] = "microphone=(self), unload=self"
     # Every response identifies the exact build that produced it. A stale PWA
     # can compare this with its own build marker and recover automatically.
     response.headers["X-MNH-Build"] = BUILD_ID

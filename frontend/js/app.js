@@ -1049,6 +1049,9 @@ function syncCurrentAcademicWeek(){
  refreshHeader();
 }
 function showView(name){
+ // A tap-to-see-name tip is fixed above the page. Dismiss it before rendering
+ // a new view so it can never cover the title or text underneath.
+ document.querySelector(".tip")?.classList.remove("show");
  if(!VIEWS.includes(name))name="weekly";
  const enteringSimulation=name==="python-setup-simulation"&&currentView!=="python-setup-simulation";
  const craraRoot=document.getElementById("class-rep-assistant");
@@ -1116,7 +1119,7 @@ function renderView(name){
 const WORKSPACE_META={
  monthly:["Monthly Calendar","Browse the current academic month and its scheduled sessions."],
  modules:["Modules","Manage programme modules and review their scheduled sessions."],
- "public-chat":["Chat","Public MNH chat for participants. Messages are automatically cleared after 7 days."],
+ "public-chat":["Chat","MNH community chat."],
  examinations:["Examinations","Examination dates, times, venues and notes."],
  recurring:["Recurring Activities","Regular academic activities and their schedules."],
  communications:["WhatsApp & Communications","Shared announcements, communication notes and useful links."],
@@ -1924,7 +1927,7 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
   }
   bubble.appendChild(foot);row.appendChild(bubble);list.appendChild(row);});
  if(nearBottom)list.scrollTop=list.scrollHeight;if(currentView==="public-chat")pcMarkRead();}
-async function renderPublicChat(){const root=workspace(...WORKSPACE_META["public-chat"]);const top=el("div","card pc-top");top.appendChild(el("h3",null,"Public Chat"));top.appendChild(el("p","muted","WhatsApp-style community chat for MNH participants. Public messages are automatically cleared after 7 days."));
+async function renderPublicChat(){const root=workspace(...WORKSPACE_META["public-chat"]);const top=el("div","card pc-top");
  try{await pcLoadStatus(true);}catch(_e){}
  const status=el("div","pc-status-row");if(publicChatState.participant){status.appendChild(el("span","pc-chip","Your code: "+publicChatState.participant.code));status.appendChild(el("span","pc-chip","Identity: "+publicChatState.participant.public_identity));if(publicChatState.participant.status==="pending")status.appendChild(el("span","pc-chip pc-chip-pending","Access pending approval"));if(publicChatState.participant.role!=="member")status.appendChild(el("span","pc-chip pc-chip-private","Moderator"));}else{status.appendChild(el("span","pc-chip","Join with a unique MNH code before sending messages."));}
  const searchRow=el("div","pc-search-row");const search=fieldInput("Search messages",200,"text");search.value=publicChatState.searchQuery||"";const runSearch=el("button","secondary","Search");runSearch.type="button";runSearch.disabled=!publicChatState.joined;runSearch.onclick=async()=>{const q=search.value.trim();if(!q){publicChatState.searchResults=null;publicChatState.searchQuery="";renderPublicChat();return;}try{const res=await pcApi("/api/public-chat/search?q="+encodeURIComponent(q));publicChatState.searchQuery=q;publicChatState.searchResults=Array.isArray(res.messages)?res.messages:[];renderPublicChat();}catch(e){pcToast(e.message||String(e));}};const clearSearch=el("button","secondary","Clear");clearSearch.type="button";clearSearch.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";renderPublicChat();};searchRow.append(search,runSearch,clearSearch);top.appendChild(searchRow);
@@ -2655,7 +2658,7 @@ function initHeader(){
 const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
 function setMenuExpanded(on){if(menuBtn){menuBtn.setAttribute("aria-expanded",on?"true":"false");menuBtn.setAttribute("aria-label",on?"Close menu":"Open menu");}}
 function openMenu(){menuPanel.hidden=false;document.body.classList.add("menu-open");setMenuExpanded(true);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}}
-function closeMenu(){menuPanel.hidden=true;document.body.classList.remove("menu-open");setMenuExpanded(false);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot)craraRoot.hidden=currentView!=="weekly";}
+function closeMenu(){menuPanel.hidden=true;document.body.classList.remove("menu-open");setMenuExpanded(false);document.querySelector(".tip")?.classList.remove("show");const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot)craraRoot.hidden=currentView!=="weekly";}
 if(menuBtn)menuBtn.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
 menuPanel.addEventListener("click",e=>{e.stopPropagation();if(e.target.closest("button:not([data-keep])"))closeMenu();});
 document.addEventListener("click",e=>{if(!menuPanel.hidden&&!menuPanel.contains(e.target)&&!(menuBtn&&(e.target===menuBtn||menuBtn.contains(e.target))))closeMenu();});

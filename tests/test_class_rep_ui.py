@@ -404,17 +404,33 @@ def test_no_third_party_browser_storage_sources_are_loaded():
 
 
 def test_first_party_scripts_do_not_register_deprecated_unload_handlers():
-    files = (
-        ROOT / "frontend" / "index.html",
-        ROOT / "frontend" / "js" / "app.js",
-        ROOT / "frontend" / "js" / "class-rep.js",
-        ROOT / "frontend" / "resources" / "crara-classroom" / "index.html",
-    )
+    frontend = ROOT / "frontend"
+    files = [frontend / "index.html"]
+    for folder in ("js", "resources"):
+        for pattern in ("*.js", "*.html"):
+            files.extend(
+                path for path in (frontend / folder).rglob(pattern)
+                if "vendor" not in path.parts
+            )
     for path in files:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8", errors="ignore")
         assert "addEventListener(\"unload\"" not in text, path
         assert "addEventListener('unload'" not in text, path
         assert "onunload" not in text, path
+
+
+def test_every_embedded_frame_delegates_unload_permission():
+    # Chrome's default unload allowlist is (); without allow="unload" on each
+    # iframe, handlers registered inside that frame are blocked and Chrome logs
+    # one violation per frame on navigation.
+    html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    frames = [block.split("</iframe>")[0] for block in html.split("<iframe")[1:]]
+    resource_frames = [frame for frame in frames if 'class="python-library-frame"' in frame]
+    assert len(resource_frames) == 5
+    for frame in resource_frames:
+        assert 'allow="unload"' in frame
+    js = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    assert 'clipboard-write; fullscreen; unload"' in js
 
 
 def test_crara_renderer_repairs_math_and_has_readable_fallback():

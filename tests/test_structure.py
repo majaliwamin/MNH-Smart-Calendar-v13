@@ -503,6 +503,18 @@ def test_secondary_views_hide_the_full_weekly_navigation_strip():
     assert "body.is-content-view #view-tabs.view-tabs{" in css
 
 
+def test_view_changes_dismiss_the_fixed_name_tip_and_chat_stays_clean():
+    app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+    # The fixed tip is positioned over the title band; it must not survive a
+    # navigation or a menu close, otherwise it covers words on the new view.
+    assert app.count('document.querySelector(".tip")?.classList.remove("show")') == 2
+    assert "WhatsApp-style community chat" not in app
+    assert 'el("p","muted","WhatsApp-style' not in app
+    assert '"public-chat":["Chat","MNH community chat."],' in app
+    assert 'top.appendChild(el("h3",null,"Public Chat"))' not in app
+
+
 def test_hamburger_menu_fits_content_and_has_mobile_back_navigation():
     html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")

@@ -590,7 +590,7 @@
       frame.style.height = "100%";
       frame.style.border = "0";
       frame.title = "CRARA one-to-one classroom";
-      frame.setAttribute("allow", "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen");
+      frame.setAttribute("allow", "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen; unload");
       frame.setAttribute("allowfullscreen", "true");
       const url = new URL("/resources/crara-classroom/index.html", window.location.origin);
       url.searchParams.set("embed", "1");
