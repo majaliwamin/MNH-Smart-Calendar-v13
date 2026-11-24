@@ -233,27 +233,31 @@
    <button type="button" class="hd-user" id="menu-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-panel" data-label="Menu"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span></button>
   </div>
  </div>
-  <div class="menu-panel" id="menu-panel" role="navigation" aria-label="Calendar navigation" hidden>
-   <div class="menu-heading"><strong>MNH Calendar</strong><span>Navigation</span></div>
-   <div class="menu-links">
-    <button type="button" class="menu-nav" data-view="monthly"><span>&#9638;</span>Monthly Calendar</button>
-    <button type="button" class="menu-nav" data-view="modules"><span>&#9636;</span>Modules</button>
-    <button type="button" class="menu-nav" data-view="public-chat"><span>&#128172;</span>Chat</button>
-    <button type="button" class="menu-nav" data-view="examinations"><span>&#9635;</span>Examinations</button>
-    <button type="button" class="menu-nav" data-view="analytics"><span>&#9636;</span>Analytics</button>
-    <button type="button" class="menu-nav" data-view="communications"><span>&#9993;</span>WhatsApp &amp; Communications</button>
-    <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
-     <button type="button" class="menu-nav" data-view="resources"><span>&#9633;</span>Resources</button>
-   </div>
-      <div id="legacy-actions" hidden>
-    <button type="button" id="edit-header" disabled></button><button type="button" id="save" disabled></button>
-    <button type="button" id="backup" disabled></button><button type="button" id="import" disabled></button>
-    <button type="button" id="print"></button><button type="button" id="theme-btn"></button><button type="button" id="alarms"></button>
-   </div>
-   <input type="file" id="import-file" accept="application/json,.json" hidden>
-  </div>
+
  <div class="bell-panel" id="bell-panel" hidden></div>
 </header>
+
+<div class="menu-panel" id="menu-panel" role="navigation" aria-label="Calendar navigation" hidden>
+ <div class="menu-heading"><strong>MNH Calendar</strong><span>Navigation</span></div>
+ <div class="menu-links">
+  <button type="button" class="menu-nav" data-view="monthly"><span>&#9638;</span>Monthly Calendar</button>
+  <button type="button" class="menu-nav" data-view="modules"><span>&#9636;</span>Modules</button>
+  <button type="button" class="menu-nav" data-view="public-chat"><span>&#128172;</span>Chat</button>
+  <button type="button" class="menu-nav" data-view="examinations"><span>&#9635;</span>Examinations</button>
+  <button type="button" class="menu-nav" data-view="analytics"><span>&#9636;</span>Analytics</button>
+  <button type="button" class="menu-nav" data-view="communications"><span>&#9993;</span>WhatsApp &amp; Communications</button>
+  <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
+  <button type="button" class="menu-nav" data-view="resources"><span>&#9633;</span>Resources</button>
+ </div>
+ <div id="legacy-actions" hidden>
+  <button type="button" id="edit-header" disabled></button><button type="button" id="save" disabled></button>
+  <button type="button" id="backup" disabled></button><button type="button" id="import" disabled></button>
+  <button type="button" id="print"></button><button type="button" id="theme-btn"></button><button type="button" id="alarms"></button>
+ </div>
+ <input type="file" id="import-file" accept="application/json,.json" hidden>
+</div>
+<button type="button" class="menu-fab" id="menu-fab" aria-label="Open menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+
 
 <nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
  <button type="button" class="view-tab active weekly-date-tab" data-view="weekly" aria-current="page" aria-label="Home — Weekly timetable" title="Home — Weekly timetable"><svg class="weekly-date-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8M5.5 9.2V21h13V9.2M9.5 21v-7h5v7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="current-day-date">--</span></button>
