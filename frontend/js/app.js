@@ -1847,9 +1847,26 @@ function pcClearVoice(){if(publicChatState.voiceUrl){try{URL.revokeObjectURL(pub
 function pcClearAttachment(){publicChatState.attachmentFile=null;}
 function pcMentionCodes(text){const out=[];const re=/@(MNH-\d{4})/g;let m;while((m=re.exec(String(text||"")))!==null){if(out.indexOf(m[1])<0)out.push(m[1]);}return out.slice(0,20);}
 function pcReplySnapshot(m){return m?{id:m.id,sender_identity:m.sender_identity||m.sender_code,sender_code:m.sender_code,text:m.text||"",deleted:!!m.deleted,has_audio:!!(m.audio&&m.audio.url)}:null;}
+function pcMicBlockedMessage(){return "Microphone access is blocked for this site. Tap the site lock icon, allow Microphone, then tap Voice again.";}
 async function pcToggleRecording(btn){if(publicChatState.recorder){try{publicChatState.recorder.stop();}catch(_e){}return;}
- if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert("Voice recording is not supported in this browser.");return;}
- try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const chunks=[];const rec=new MediaRecorder(stream);publicChatState.recorder=rec;btn.textContent="Stop";btn.classList.add("recording");rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());publicChatState.recorder=null;btn.textContent="Voice";btn.classList.remove("recording");const blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});if(blob.size>0){pcClearVoice();publicChatState.voiceBlob=blob;publicChatState.voiceUrl=URL.createObjectURL(blob);renderPublicChat();}};rec.start();}catch(e){alert("Could not start recording: "+(e.message||e));}}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){pcToast("Voice recording is not supported in this browser.");return;}
+ btn.disabled=true;btn.textContent="Allow mic…";
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  const chunks=[];const rec=new MediaRecorder(stream);publicChatState.recorder=rec;
+  btn.disabled=false;btn.textContent="Stop";btn.classList.add("recording");
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());publicChatState.recorder=null;btn.textContent="🎙 Voice";btn.classList.remove("recording");const blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});if(blob.size>0){pcClearVoice();publicChatState.voiceBlob=blob;publicChatState.voiceUrl=URL.createObjectURL(blob);renderPublicChat();}};
+  rec.start();
+ }catch(e){
+  const name=String((e&&e.name)||"");
+  if(name==="NotAllowedError"||name==="SecurityError"||name==="PermissionDeniedError"){pcToast(pcMicBlockedMessage());}
+  else if(name==="NotFoundError"||name==="DevicesNotFoundError"){pcToast("No microphone was found on this device.");}
+  else if(name==="NotReadableError"||name==="TrackStartError"){pcToast("The microphone is busy or unavailable. Close other apps using it and try again.");}
+  else{pcToast("Could not start recording: "+((e&&e.message)||String(e)));}
+  btn.disabled=false;btn.textContent="🎙 Voice";btn.classList.remove("recording");
+ }
+}
 function pcEmojiPicker(targetId){const box=el("div","pc-emoji-picker");["👍","❤️","😂","😮","😢","🙏","🎉","👏"].forEach(emoji=>{const b=el("button","pc-emoji",emoji);b.type="button";b.onclick=async()=>{if(targetId){try{const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(targetId)}/reactions`,{method:"POST",body:{emoji}});const target=(publicChatState.messages||[]).find(m=>m.id===targetId);if(target)target.reactions=res.reactions||{};pcRenderMessages();}catch(e){pcToast(e.message||String(e));}}else{const ta=publicChatState.composerInput;if(ta){ta.value+=emoji;ta.focus();}}publicChatState.emojiOpen=false;publicChatState.emojiTarget=null;renderPublicChat();};box.appendChild(b);});return box;}
 async function pcSendMessage(payload,tempId){try{const res=await pcApi("/api/public-chat/messages",{method:"POST",body:payload});delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}return false;}finally{if(currentView==="public-chat")pcRenderMessages();}}
 async function pcUploadVoice(tempId){const blob=publicChatState.voiceBlob;if(!blob)return false;const form=new FormData();form.append("file",blob,"voice-note.webm");if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);form.append("mention_codes",pcMentionCodes(publicChatState.voiceNoteText||"").join(","));try{const res=await pcFormApi("/api/public-chat/voice-notes",form);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearVoice();publicChatState.voiceNoteText="";return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}return false;}}

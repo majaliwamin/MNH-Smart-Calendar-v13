@@ -119,6 +119,11 @@ async def security_headers(request: Request, call_next):
         "no-cache" if request.url.path == "/service-worker.js" else "no-store"
     )
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    # Explicitly allow chat voice notes and legacy export cleanup in this app's
+    # own documents. The microphone still requires the browser's normal
+    # click-initiated permission prompt; this only prevents a policy from
+    # blocking that prompt or logging an unload violation.
+    response.headers["Permissions-Policy"] = "microphone=(self), unload=*"
     # Every response identifies the exact build that produced it. A stale PWA
     # can compare this with its own build marker and recover automatically.
     response.headers["X-MNH-Build"] = BUILD_ID

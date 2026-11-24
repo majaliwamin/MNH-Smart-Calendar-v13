@@ -452,6 +452,15 @@ def test_reaction_events_are_serialized_for_each_viewer(app_ctx):
     assert other_view["reactions"]["👍"]["mine"] is False
 
 
+def test_chat_routes_allow_microphone_policy(app_ctx):
+    app, authentication, store = app_ctx
+    response = TestClient(app).get("/api/public-chat/status")
+    assert response.status_code == 200
+    policy = response.headers.get("permissions-policy", "")
+    assert "microphone=(self)" in policy
+    assert "unload=*" in policy
+
+
 def test_chat_promoted_moderator_can_moderate(app_ctx):
     app, authentication, store = app_ctx
     admin = _auth_client(app, authentication)
