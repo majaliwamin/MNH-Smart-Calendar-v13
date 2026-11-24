@@ -1817,9 +1817,9 @@ async function renderCommunications(){
  await renderReminderCard(root);
  await renderCommHistoryCard(root);
 }
-let publicChatState={joined:false,participant:null,participants:[],messages:[],searchResults:null,searchQuery:"",searchOpen:false,headerMenu:false,msgMenu:null,voiceShareMenu:null,deleteConfirm:null,loading:false,error:"",replyTo:null,privateTo:null,editingId:null,ws:null,wsTimer:null,pollTimer:null,unread:0,online:0,recorder:null,recordStartedAt:0,recordChunks:[],recordTimer:null,recording:false,voiceBlob:null,voiceUrl:null,voiceDurationMs:0,voiceMime:"audio/webm",attachmentFile:null,emojiOpen:false,emojiTarget:null,privatePanel:false,prefs:null,pending:{},typingTimer:null,toastTimer:null,composerInput:null,readAt:0,voiceSeq:Number(localStorage.getItem("mnh_chat_voice_seq")||"0")||0};
+let publicChatState={joined:false,participant:null,participants:[],messages:[],searchResults:null,searchQuery:"",searchOpen:false,headerMenu:false,msgMenu:null,deleteConfirm:null,loading:false,error:"",replyTo:null,privateTo:null,editingId:null,ws:null,wsTimer:null,pollTimer:null,unread:0,online:0,recorder:null,recordStartedAt:0,recordChunks:[],recordTimer:null,recording:false,voiceBlob:null,voiceUrl:null,voiceDurationMs:0,voiceMime:"audio/webm",attachmentFile:null,emojiOpen:false,emojiTarget:null,privatePanel:false,prefs:null,pending:{},typingTimer:null,toastTimer:null,composerInput:null,readAt:0,voiceSeq:Number(localStorage.getItem("mnh_chat_voice_seq")||"0")||0};
 const PC_MAX_VOICE_MS=40*60*1000;
-document.addEventListener("click",(e)=>{if(!publicChatState.headerMenu&&!publicChatState.msgMenu&&!publicChatState.voiceShareMenu)return;if(e.target.closest(".pc-head-menu,.pc-msg-menu,.pc-msg-menu-btn,.pc-icon-btn,.pc-voice-share-wrap"))return;publicChatState.headerMenu=false;publicChatState.msgMenu=null;publicChatState.voiceShareMenu=null;if(currentView==="public-chat")pcRenderMessages();});
+document.addEventListener("click",(e)=>{if(!publicChatState.headerMenu&&!publicChatState.msgMenu)return;if(e.target.closest(".pc-head-menu,.pc-msg-menu,.pc-msg-menu-btn,.pc-icon-btn"))return;publicChatState.headerMenu=false;publicChatState.msgMenu=null;if(currentView==="public-chat")pcRenderMessages();});
 function pcEsc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 function pcFmtTime(ms){try{return new Date(ms).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch(_e){return "";}}
 function pcDay(ms){const d=new Date(ms),today=new Date();const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();if(same(d,today))return "Today";const y=new Date(today);y.setDate(today.getDate()-1);if(same(d,y))return "Yesterday";return d.toLocaleDateString([], {month:"short",day:"numeric",year:d.getFullYear()===today.getFullYear()?undefined:"numeric"});}
@@ -1955,7 +1955,7 @@ function pcLoadChatTheme(){
  try{publicChatState.chatTheme=localStorage.getItem("mnh_chat_theme")||"default";publicChatState.chatBg=localStorage.getItem("mnh_chat_bg")||"default";}catch(_e){publicChatState.chatTheme="default";publicChatState.chatBg="default";}
  pcApplyChatTheme();
 }
-function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=document.querySelector(".pc-chat-card");if(!card){renderPublicChat();return;}const old=card.querySelector(".pc-head-menu");if(old)old.remove();if(!publicChatState.headerMenu)return;
+function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=document.querySelector(".pc-chat-card");if(!card){renderPublicChat();return;}const old=card.querySelector(".pc-head-menu");const scrollTop=old?old.scrollTop:0;if(old)old.remove();if(!publicChatState.headerMenu)return;
  const menu=el("div","pc-head-menu pc-inpage-menu");
  const head=el("div","pc-menu-head");
  head.appendChild(el("div","pc-menu-title","Chat Menu"));
@@ -1963,7 +1963,7 @@ function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=do
 
  const userSec=el("div","pc-menu-section");userSec.appendChild(el("div","pc-menu-label","User"));
  const me=publicChatState.participant||{};
- userSec.appendChild(el("div","pc-menu-row","Identity: "+(me.public_identity||me.code||"Not joined")));
+ userSec.appendChild(el("div","pc-menu-row","ID: "+(me.code||"Not joined")));
  userSec.appendChild(el("div","pc-menu-row","Name: "+(me.display_name||"Not set")));
  userSec.appendChild(el("div","pc-menu-row","Status: "+(publicChatState.joined?"Joined":"Not joined")));
  menu.appendChild(userSec);
@@ -1987,6 +1987,7 @@ function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=do
 
  const exit=el("button","pc-head-menu-item pc-menu-exit","Exit chat");exit.type="button";exit.onclick=()=>{publicChatState.headerMenu=false;pcCloseWS();showView("weekly");};menu.appendChild(exit);
  const headbar=card.querySelector('.pc-chat-headbar');if(headbar)headbar.insertAdjacentElement('afterend',menu);
+ menu.scrollTop=scrollTop;
 }
 function pcRenderMemberResults(){const box=document.getElementById('pc-member-results');if(!box)return;box.innerHTML='';const q=String(publicChatState.memberQuery||'').trim().toLowerCase();const me=(publicChatState.participant&&publicChatState.participant.code)||'';const people=(publicChatState.participants||[]).filter(p=>p.code&&p.code!==me).filter(p=>!q||String(p.public_identity||p.code||'').toLowerCase().includes(q)||String(p.display_name||'').toLowerCase().includes(q)).slice(0,20);
  if(!people.length){box.appendChild(el('div','pc-member-empty','No members found'));return;}
@@ -2042,6 +2043,15 @@ function pcMessageMenu(m, mine){
  add("Reply",()=>{publicChatState.replyTo=m;const targetCode=m.kind==="private"?(m.mine?m.private_recipient_code:m.sender_code):"";publicChatState.privateTo=targetCode?(publicChatState.participants||[]).find(p=>p.code===targetCode)||null:null;publicChatState.editingId=null;renderPublicChat();});
  add("React",()=>{publicChatState.emojiTarget=m.id;publicChatState.emojiOpen=!publicChatState.emojiOpen;renderPublicChat();});
  if(!m.deleted&&m.text)add("Copy",async()=>{try{await navigator.clipboard.writeText(m.text||"");pcToast("Message copied");}catch(_e){}});
+ if(!m.deleted&&m.audio&&m.audio.url){
+  const url=new URL(m.audio.url,location.origin).href;
+  const ext=(String(m.audio.mime_type||"").includes("mp4")?"m4a":String(m.audio.mime_type||"").includes("ogg")?"ogg":"webm");
+  const fileName=m.audio.file_name||`record${String(Math.max(1,((publicChatState.messages||[]).indexOf(m)+1))).padStart(3,"0")}.${ext}`;
+  add("Download",()=>{const a=document.createElement("a");a.href=m.audio.url;a.download=fileName;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();});
+  add("Share",async()=>{try{if(navigator.share){try{const resp=await fetch(m.audio.url,{credentials:"same-origin"});const blob=await resp.blob();const ext2=(blob.type||"").includes("mp4")?"m4a":(blob.type||"").includes("ogg")?"ogg":"webm";const file=new File([blob],fileName||`record001.${ext2}`,{type:blob.type||"audio/webm"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:fileName||"MNH voice note",text:"MNH Group Chat voice note",files:[file]});return;}}catch(_e){}await navigator.share({title:fileName||"MNH voice note",text:"MNH Group Chat voice note",url});return;}}catch(_e){}try{await navigator.clipboard.writeText(url);pcToast("Voice note link copied");}catch(_e){window.prompt("Copy voice note link",url);}});
+  add("WhatsApp",()=>{window.open("https://wa.me/?text="+encodeURIComponent("MNH Group Chat voice note: "+url),"_blank","noopener");});
+  add("Email",()=>{location.href="mailto:?subject="+encodeURIComponent("MNH Group Chat voice note")+"&body="+encodeURIComponent("Listen/download this voice note: "+url);});
+ }
  if(!mine&&!m.deleted){add("Private reply",()=>{const target=(publicChatState.participants||[]).find(p=>p.code===m.sender_code);if(target){publicChatState.privateTo=target;publicChatState.replyTo=m;renderPublicChat();}});add("Report",async()=>{const category=prompt("Report category (spam, harassment, abuse, inappropriate, misinformation, other):","spam");if(!category)return;const reason=prompt("Reason (optional):","")||"";try{await pcApi("/api/public-chat/reports",{method:"POST",body:{message_id:m.id,category,reason}});pcToast("Report sent to moderators");}catch(e){pcToast(e.message||String(e));}},"danger");}
  if(mine&&!m.deleted){add("Edit",()=>{publicChatState.editingId=m.id;publicChatState.replyTo=null;publicChatState.privateTo=null;renderPublicChat();});add("Delete",()=>{publicChatState.deleteConfirm=m.id;publicChatState.msgMenu=null;pcRenderMessages();},"danger");}
  return menu;
@@ -2073,20 +2083,6 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
       const url=new URL(m.audio.url,location.origin).href;
       const ext=(String(m.audio.mime_type||"").includes("mp4")?"m4a":String(m.audio.mime_type||"").includes("ogg")?"ogg":"webm");
       const fileName=m.audio.file_name||`record${String(Math.max(1,((publicChatState.messages||[]).indexOf(m)+1))).padStart(3,"0")}.${ext}`;
-      const shareWrap=el("div","pc-voice-share-wrap");
-      const shareBtn=el("button","pc-icon-btn pc-voice-share-btn");shareBtn.type="button";shareBtn.title="Share voice note";shareBtn.setAttribute("aria-label","Share voice note");
-      shareBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5 8.6 10.5"/></svg>';
-      shareBtn.onclick=(e)=>{e.stopPropagation();publicChatState.voiceShareMenu=publicChatState.voiceShareMenu===m.id?null:m.id;pcRenderMessages();};
-      shareWrap.appendChild(shareBtn);
-      if(publicChatState.voiceShareMenu===m.id){
-        const menu=el("div","pc-voice-share-menu");
-        const dl=el("a","pc-head-menu-item","Download");dl.href=m.audio.url;dl.download=fileName;dl.target="_blank";dl.rel="noopener";
-        const share=el("button","pc-head-menu-item","Share");share.type="button";share.onclick=async()=>{try{if(navigator.share){try{const resp=await fetch(m.audio.url,{credentials:"same-origin"});const blob=await resp.blob();const ext2=(blob.type||"").includes("mp4")?"m4a":(blob.type||"").includes("ogg")?"ogg":"webm";const file=new File([blob],fileName||`record001.${ext2}`,{type:blob.type||"audio/webm"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:fileName||"MNH voice note",text:"MNH Group Chat voice note",files:[file]});publicChatState.voiceShareMenu=null;pcRenderMessages();return;}}catch(_e){}await navigator.share({title:fileName||"MNH voice note",text:"MNH Group Chat voice note",url});publicChatState.voiceShareMenu=null;pcRenderMessages();return;}}catch(_e){}try{await navigator.clipboard.writeText(url);pcToast("Voice note link copied");}catch(_e){window.prompt("Copy voice note link",url);}publicChatState.voiceShareMenu=null;pcRenderMessages();};
-        const wa=el("a","pc-head-menu-item","WhatsApp");wa.href="https://wa.me/?text="+encodeURIComponent("MNH Group Chat voice note: "+url);wa.target="_blank";wa.rel="noopener";
-        const mail=el("a","pc-head-menu-item","Email");mail.href="mailto:?subject="+encodeURIComponent("MNH Group Chat voice note")+"&body="+encodeURIComponent("Listen/download this voice note: "+url);
-        menu.append(dl,share,wa,mail);shareWrap.appendChild(menu);
-      }
-      actionsA.appendChild(shareWrap);
       wrapA.appendChild(actionsA);
     } else if(m.status==="sending"){ wrapA.appendChild(el("div","pc-audio-status","Uploading voice note…")); }
     bubble.appendChild(wrapA);
