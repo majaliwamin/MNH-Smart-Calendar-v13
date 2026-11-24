@@ -52,7 +52,9 @@ def _export_rows():
     try:
         with database() as connection:
             return connection.execute(
-                "SELECT col,id,data FROM docs WHERE substr(col,1,5) <> 'cara_' ORDER BY col,id"
+                "SELECT col,id,data FROM docs "
+                "WHERE substr(col,1,5) <> 'cara_' AND substr(col,1,12) <> 'public_chat_' "
+                "ORDER BY col,id"
             ).fetchall()
     except Exception as exc:
         logger.exception("Export document query failed")
@@ -818,8 +820,12 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
     except Exception as exc:
         logger.exception("Pre-restore safety backup failed; restore was not applied")
         raise HTTPException(503, "A safety backup could not be created. No data was restored; please retry.") from exc
+    allowed = sorted(ALLOWED_COLLECTIONS)
+    placeholders = ",".join("?" for _ in allowed)
     with database() as c:
-        c.execute("DELETE FROM docs")
+        # A calendar restore replaces only shared timetable collections. Chat,
+        # private CRARA records, and other application data are never erased.
+        c.execute(f"DELETE FROM docs WHERE col IN ({placeholders})", tuple(allowed))
         c.executemany("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)", cleaned)
         write_activity(c, "public", "restored", None, None,
                        f"Restored {len(cleaned)} shared timetable records from a validated backup.")

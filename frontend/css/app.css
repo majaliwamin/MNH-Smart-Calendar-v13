@@ -2587,36 +2587,59 @@ html body .colour-dialog .dialog-card h2{
 
 
 /* ---- Public chat (main calendar) ---- */
-.pc-top .pc-status-row,.pc-compose-meta,.pc-chat-head,.pc-msg-head,.pc-msg-foot,.pc-compose-row,.pc-compose-actions,.pc-msg-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pc-chat-head,.pc-msg-foot{justify-content:space-between}
-.pc-status-row{margin-top:8px}
+.pc-top .pc-status-row,.pc-compose-meta,.pc-chat-head,.pc-msg-head,.pc-msg-foot,.pc-compose-row,.pc-compose-actions,.pc-msg-actions,.pc-search-row,.pc-top-actions,.pc-private-head,.pc-private-person,.pc-reactions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pc-chat-head,.pc-msg-foot,.pc-private-head{justify-content:space-between}
+.pc-status-row,.pc-search-row,.pc-top-actions{margin-top:8px}
 .pc-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:rgba(242,193,78,.14);color:var(--text);font-size:12px;border:1px solid rgba(242,193,78,.28)}
 .pc-chip-private{background:rgba(142,184,232,.16);border-color:rgba(142,184,232,.35)}
+.pc-chip-pending{background:rgba(242,193,78,.24);border-color:rgba(242,193,78,.5)}
 .pc-join{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .pc-chat-card{margin-top:12px}
-.pc-messages{height:min(52vh,560px);overflow:auto;padding:12px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));border:1px solid var(--line);border-radius:12px}
-.pc-msg-row{display:flex;margin:8px 0}
+.pc-messages{height:min(52vh,560px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;padding:12px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));border:1px solid var(--line);border-radius:12px}
+.pc-day-chip{align-self:center;margin:8px 0 4px;padding:3px 10px;border-radius:999px;background:var(--field);border:1px solid var(--line);color:var(--muted);font-size:11px}
+.pc-msg-row{display:flex;gap:8px;margin:8px 0;align-items:flex-end}
 .pc-msg-row.mine{justify-content:flex-end}
+.pc-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(142,184,232,.2);border:1px solid rgba(142,184,232,.35);color:var(--gold);font-size:12px;font-weight:700}
+.pc-avatar.mine{background:rgba(242,193,78,.16);border-color:rgba(242,193,78,.35)}
 .pc-bubble{max-width:min(720px,92%);padding:10px 12px;border-radius:14px;background:var(--field);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .pc-bubble.mine{background:rgba(242,193,78,.14);border-color:rgba(242,193,78,.28)}
 .pc-bubble.private{outline:1px dashed rgba(142,184,232,.55)}
+.pc-bubble.failed{border-color:#ff8a8a}
 .pc-msg-sender{font-size:12px;font-weight:700;color:var(--gold)}
 .pc-msg-text{white-space:pre-wrap;word-break:break-word;margin-top:4px;font-size:14px;line-height:1.45}
 .pc-msg-text.pc-deleted{font-style:italic;color:var(--muted)}
 .pc-msg-time{font-size:11px;color:var(--muted)}
+.pc-msg-status{font-size:11px;color:var(--muted)}
+.pc-msg-status.failed{color:#ff8a8a}
+.pc-ticks{font-size:12px;color:var(--gold);font-weight:700}
 .pc-msg-actions .pc-action{padding:2px 8px;font-size:11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}
 .pc-msg-actions .pc-action.danger{color:#ff8a8a}
 .pc-reply-ref{font-size:12px;color:var(--muted);padding:6px 8px;border-left:3px solid var(--gold);background:rgba(255,255,255,.03);border-radius:8px;margin-top:6px}
+.pc-reactions{margin-top:6px;gap:4px}
+.pc-reaction{padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text);font-size:12px;cursor:pointer}
+.pc-reaction.mine{border-color:rgba(242,193,78,.5);background:rgba(242,193,78,.14)}
+.pc-attachment{display:block;margin-top:6px;color:var(--gold);font-size:13px;text-decoration:underline}
 .pc-composer{margin-top:12px;position:sticky;bottom:8px;z-index:5}
 .pc-compose-row{align-items:stretch}
 .pc-input{flex:1;min-height:56px;resize:vertical;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit}
-.pc-compose-actions{flex-direction:column}
-.pc-compose-actions button{min-width:88px}
+.pc-compose-actions{flex:0 0 130px;align-content:flex-start}
+.pc-compose-actions button{flex:1 1 72px;min-width:72px;padding:8px 6px;font-size:12px}
+.pc-file-input{display:none}
+.pc-attachment-preview{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .pc-audio,.pc-audio-preview{width:100%;max-width:320px;margin-top:8px}
 .pc-retention{margin:8px 0 0;font-size:12px}
 .pc-nav-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e53935;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
 .pc-voice-btn.recording{background:#8b1e1e;color:#fff;border-color:#8b1e1e}
-@media (max-width:720px){.pc-messages{height:52vh}.pc-compose-actions{flex-direction:row;width:100%}.pc-compose-actions button{flex:1}.pc-bubble{max-width:95%}}
+.pc-emoji-picker{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--field)}
+.pc-emoji{width:34px;height:30px;border-radius:8px;border:1px solid var(--line);background:transparent;font-size:16px;cursor:pointer}
+.pc-private-panel{margin-top:12px}
+.pc-private-person{padding:6px 0;border-bottom:1px solid var(--line)}
+.pc-private-person>span{flex:1}
+.pc-typing{font-size:12px;color:var(--gold)}
+.pc-unread-jump{position:fixed;right:18px;bottom:18px;z-index:10000;padding:9px 14px;border-radius:999px;border:1px solid rgba(242,193,78,.45);background:#e53935;color:#fff;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}
+.pc-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10001;max-width:min(90vw,520px);padding:10px 14px;border-radius:10px;background:var(--field);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px}
+.pc-toast[hidden]{display:none}
+@media (max-width:720px){.pc-messages{height:52vh}.pc-compose-actions{flex:1 1 100%;flex-direction:row}.pc-compose-actions button{flex:1}.pc-bubble{max-width:95%}.pc-msg-actions .pc-action{font-size:10px}}
 
 
 /* Hide app header on hamburger-menu pages; navigation returns via the in-page Back to Home control. */

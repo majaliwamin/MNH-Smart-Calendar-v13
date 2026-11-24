@@ -1,12 +1,15 @@
+"""Persistence and serialization helpers for the native public chat.
+
+The app uses a shared SQLite ``docs`` collection store (with a Postgres
+adapter), so chat data needs no new migration framework or external database.
+All message visibility decisions live here and are reused by REST and WS paths.
+"""
 from __future__ import annotations
 
-import hashlib
 import json
 import mimetypes
-import os
 import re
 import secrets
-import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -16,13 +19,27 @@ from fastapi import HTTPException, UploadFile
 from app.config import DATA_DIR, ensure_directories
 from app.database.connection import database
 
-COL_PARTICIPANTS = "public_chat_participants"
-COL_MESSAGES = "public_chat_messages"
-PUBLIC_RETENTION_SECONDS = 7 * 24 * 60 * 60
+from . import permissions, settings
+from .models import (
+    COL_CODE_RESERVATIONS,
+    COL_MESSAGES,
+    COL_PARTICIPANTS,
+    COL_REACTIONS,
+    COL_READ_STATE,
+    MEMBER_STATUS_ACTIVE,
+    MEMBER_STATUS_PENDING,
+    MEMBER_STATUS_SUSPENDED,
+    PUBLIC_RETENTION_SECONDS,
+    ROLE_ADMIN,
+    ROLE_MEMBER,
+    ROLE_MODERATOR,
+)
+
 CODE_PREFIX = "MNH-"
 CODE_RE = re.compile(r"^MNH-\d{4}$")
 MEDIA_DIR = DATA_DIR / "public_chat_media"
-MAX_AUDIO_BYTES = 10 * 1024 * 1024
+MAX_AUDIO_BYTES = settings.MAX_AUDIO_BYTES
+MAX_ATTACHMENT_BYTES = settings.MAX_ATTACHMENT_BYTES
 ALLOWED_AUDIO = {
     "audio/webm": ".webm",
     "audio/ogg": ".ogg",
@@ -32,14 +49,23 @@ ALLOWED_AUDIO = {
     "audio/x-wav": ".wav",
     "video/webm": ".webm",  # MediaRecorder often reports video/webm for audio-only
 }
+ALLOWED_ATTACHMENTS = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf",
+    ".txt": "text/plain", ".csv": "text/csv",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
 
 
 def _now() -> int:
-    return int(time.time() * 1000)
+    return int(__import__("time").time() * 1000)
 
 
 def _now_s() -> int:
-    return int(time.time())
+    return int(__import__("time").time())
 
 
 def _json_load(value: str, fallback):
@@ -97,17 +123,26 @@ def _participant_id(user: dict[str, Any]) -> str:
 
 def _display_name(user: dict[str, Any], requested: str = "") -> str:
     name = str(requested or user.get("name") or "").strip()
-    name = re.sub(r"\s+", " ", name)[:80]
+    name = re.sub(r"\s+", " ", name)[:settings.MAX_DISPLAY_NAME_LENGTH]
     if not name:
         email = str(user.get("email") or "").strip()
         if email and "@" in email:
-            name = email.split("@", 1)[0][:80]
+            name = email.split("@", 1)[0][:settings.MAX_DISPLAY_NAME_LENGTH]
     return name or "Participant"
 
 
 def _public_identity(code: str, name: str) -> str:
-    clean = re.sub(r"\s+", " ", str(name or "")).strip()[:80] or "Participant"
+    clean = re.sub(r"\s+", " ", str(name or "")).strip()[:settings.MAX_DISPLAY_NAME_LENGTH] or "Participant"
     return f"{code} — {clean}"
+
+
+def _member_role(user: dict[str, Any]) -> str:
+    role = str(user.get("role") or "").strip().lower()
+    if role == "administrator":
+        return ROLE_ADMIN
+    if permissions.is_moderator(user):
+        return ROLE_MODERATOR
+    return ROLE_MEMBER
 
 
 def _active_codes(exclude_user_id: str = "") -> set[str]:
@@ -115,7 +150,7 @@ def _active_codes(exclude_user_id: str = "") -> set[str]:
     for item in _list(COL_PARTICIPANTS, 5000):
         if exclude_user_id and str(item.get("user_id") or "") == exclude_user_id:
             continue
-        if str(item.get("status") or "active") != "active":
+        if str(item.get("status") or MEMBER_STATUS_ACTIVE) not in {MEMBER_STATUS_ACTIVE, MEMBER_STATUS_PENDING}:
             continue
         code = str(item.get("code") or "")
         if CODE_RE.fullmatch(code):
@@ -123,60 +158,141 @@ def _active_codes(exclude_user_id: str = "") -> set[str]:
     return codes
 
 
+def _reserved_codes(exclude_user_id: str = "") -> set[str]:
+    """Codes already claimed by a reservation, optionally ignoring one owner."""
+    with database() as db:
+        rows = db.execute("SELECT id,data FROM docs WHERE col=?", (COL_CODE_RESERVATIONS,)).fetchall()
+    used = set()
+    for row in rows:
+        code = str(row["id"])
+        if not CODE_RE.fullmatch(code):
+            continue
+        reservation = _json_load(row["data"], {}) or {}
+        if exclude_user_id and str(reservation.get("user_id") or "") == exclude_user_id:
+            continue
+        used.add(code)
+    return used
+
+
+def _reserved_code_for_user(user_id: str) -> str:
+    """Reuse a reservation if a write was interrupted after claiming a code."""
+    if not user_id:
+        return ""
+    with database() as db:
+        rows = db.execute("SELECT id,data FROM docs WHERE col=?", (COL_CODE_RESERVATIONS,)).fetchall()
+    for row in rows:
+        code = str(row["id"])
+        if not CODE_RE.fullmatch(code):
+            continue
+        reservation = _json_load(row["data"], {}) or {}
+        if str(reservation.get("user_id") or "") == user_id:
+            return code
+    return ""
+
+
+def _reserve_code(code: str, user_id: str) -> bool:
+    """Claim a code with a primary-key insert shared by SQLite and PostgreSQL."""
+    with database() as db:
+        cur = db.execute(
+            "INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+            (COL_CODE_RESERVATIONS, code, json.dumps(
+                {"code": code, "user_id": user_id, "reserved_at": _now_s()},
+                ensure_ascii=False,
+            ), _now()),
+        )
+        return cur.rowcount > 0
+
+
 def generate_code(exclude_user_id: str = "") -> str:
-    used = _active_codes(exclude_user_id)
+    """Return a random, non-sequential MNH-XXXX code that is still free."""
+    used = _active_codes(exclude_user_id) | _reserved_codes(exclude_user_id)
     available = [f"{CODE_PREFIX}{i:04d}" for i in range(10000) if f"{CODE_PREFIX}{i:04d}" not in used]
     if not available:
         raise HTTPException(409, "No public chat identification codes are currently available.")
-    # Non-sequential random selection from remaining space.
     return secrets.choice(available)
 
 
-def ensure_participant(user: dict[str, Any], display_name: str = "") -> dict:
+def _write_participant_if_code_free(user_id: str, code: str, doc: dict) -> bool:
+    """Write the participant only if no other member already holds ``code``."""
+    with database() as db:
+        rows = db.execute("SELECT id,data FROM docs WHERE col=?", (COL_PARTICIPANTS,)).fetchall()
+        for row in rows:
+            if str(row["id"]) == user_id:
+                continue
+            other = _json_load(row["data"], {}) or {}
+            if str(other.get("code") or "") == code and str(other.get("status") or MEMBER_STATUS_ACTIVE) != "suspended":
+                return False
+        db.execute(
+            "INSERT OR REPLACE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
+            (COL_PARTICIPANTS, user_id, json.dumps(doc, ensure_ascii=False), _now()),
+        )
+        return True
+
+
+def ensure_participant(user: dict[str, Any], display_name: str = "", status: str | None = None) -> dict:
     uid = _participant_id(user)
     now = _now_s()
+    desired_status = status or (MEMBER_STATUS_PENDING if settings.REQUIRE_ACCESS_APPROVAL else MEMBER_STATUS_ACTIVE)
+    if desired_status not in {MEMBER_STATUS_ACTIVE, MEMBER_STATUS_PENDING}:
+        desired_status = MEMBER_STATUS_PENDING
     existing = _read(COL_PARTICIPANTS, uid)
     name = _display_name(user, display_name or (existing or {}).get("display_name", ""))
+
     if existing and CODE_RE.fullmatch(str(existing.get("code") or "")):
+        # Reserve legacy codes too, so a future join cannot be assigned one.
+        _reserve_code(existing["code"], uid)
+        # Suspension is a moderator decision: rejoining must never clear it.
+        current = str(existing.get("status") or MEMBER_STATUS_ACTIVE)
+        if current == MEMBER_STATUS_SUSPENDED:
+            existing["status"] = MEMBER_STATUS_SUSPENDED
+        else:
+            # Never downgrade an already active member to pending.
+            existing["status"] = MEMBER_STATUS_ACTIVE if current == MEMBER_STATUS_ACTIVE else desired_status
         existing["display_name"] = name
         existing["public_identity"] = _public_identity(existing["code"], name)
+        existing["role"] = existing.get("role") or _member_role(user)
         existing["updated_at"] = now
-        existing["status"] = "active"
         if str(user.get("email") or "").strip():
             existing["email"] = str(user.get("email") or "").strip().lower()[:254]
         _write(COL_PARTICIPANTS, uid, existing)
         return existing
-    # Collision-safe assignment: write candidate if slot still free.
-    for _ in range(30):
-        code = generate_code(exclude_user_id=uid)
+
+    preferred = _reserved_code_for_user(uid)
+    for _ in range(40):
+        code = preferred or generate_code(exclude_user_id=uid)
+        # A primary-key reservation claim is what makes concurrent joins safe;
+        # the participant write below only re-checks the human-readable doc.
+        if not _reserve_code(code, uid) and code != preferred:
+            continue
         doc = {
             "user_id": uid,
             "code": code,
             "display_name": name,
             "public_identity": _public_identity(code, name),
             "email": str(user.get("email") or "").strip().lower()[:254],
-            "status": "active",
+            "role": _member_role(user),
+            "status": desired_status,
+            "joined_at": now,
             "created_at": now,
             "updated_at": now,
         }
-        # Verify no other active participant took the code between generation and write.
-        if any(p.get("code") == code and p.get("user_id") != uid and p.get("status") == "active" for p in _list(COL_PARTICIPANTS, 5000)):
-            continue
-        _write(COL_PARTICIPANTS, uid, doc)
-        return doc
+        if _write_participant_if_code_free(uid, code, doc):
+            return doc
+        preferred = ""
     raise HTTPException(409, "Unable to assign a unique public chat identification code.")
 
 
-def get_participant(user: dict[str, Any]) -> dict | None:
+def get_participant(user: dict[str, Any], include_pending: bool = False) -> dict | None:
     uid = str(user.get("id") or "").strip()
     if not uid:
         return None
     doc = _read(COL_PARTICIPANTS, uid)
-    if not doc or str(doc.get("status") or "active") != "active":
+    if not doc or not CODE_RE.fullmatch(str(doc.get("code") or "")):
         return None
-    if not CODE_RE.fullmatch(str(doc.get("code") or "")):
-        return None
-    return doc
+    status = str(doc.get("status") or MEMBER_STATUS_ACTIVE)
+    if status == MEMBER_STATUS_ACTIVE:
+        return doc
+    return doc if include_pending else None
 
 
 def require_participant(user: dict[str, Any]) -> dict:
@@ -186,41 +302,106 @@ def require_participant(user: dict[str, Any]) -> dict:
     return p
 
 
-def participant_by_code(code: str) -> dict | None:
+def _viewer_for_action(user: dict[str, Any]) -> dict:
+    p = get_participant(user)
+    if p:
+        return p
+    if permissions.can_moderate(user):
+        return {"user_id": str(user.get("id") or ""), "code": "", "role": _member_role(user)}
+    raise HTTPException(403, "Request a public chat identification code before using the public chat.")
+
+
+def participant_by_code(code: str, include_inactive: bool = False) -> dict | None:
     code = str(code or "").strip().upper()
     if not CODE_RE.fullmatch(code):
         return None
     for item in _list(COL_PARTICIPANTS, 5000):
-        if str(item.get("code") or "").upper() == code and str(item.get("status") or "active") == "active":
+        if str(item.get("code") or "").upper() != code:
+            continue
+        status = str(item.get("status") or MEMBER_STATUS_ACTIVE)
+        if include_inactive or status == MEMBER_STATUS_ACTIVE:
             return item
     return None
 
 
-def _message_visible(msg: dict, viewer: dict) -> bool:
-    if str(msg.get("kind") or "public") == "deleted":
-        # Deleted placeholders visible in public timeline if they were public.
-        pass
-    viewer_uid = str(viewer.get("user_id") or "")
-    viewer_code = str(viewer.get("code") or "")
+def _message_visible(msg: dict, viewer: dict, blocked_codes: set[str] | None = None) -> bool:
+    sender_code = str(msg.get("sender_code") or "")
+    if blocked_codes and sender_code in blocked_codes:
+        return False
     kind = str(msg.get("kind") or "public")
     if kind == "private":
-        sender_uid = str(msg.get("sender_user_id") or "")
-        recipient_uid = str(msg.get("private_recipient_user_id") or "")
-        return viewer_uid and viewer_uid in {sender_uid, recipient_uid}
+        viewer_uid = str(viewer.get("user_id") or "")
+        return bool(viewer_uid) and viewer_uid in {
+            str(msg.get("sender_user_id") or ""),
+            str(msg.get("private_recipient_user_id") or ""),
+        }
+    # Moderators can remove public content, but never gain access to private threads.
     return True
 
 
-def _serialize_message(msg: dict, viewer: dict) -> dict:
+def _reaction_summaries(viewer_uid: str) -> dict[str, dict[str, Any]]:
+    by_message: dict[str, dict[str, Any]] = {}
+    for doc in _list(COL_REACTIONS, 2000):
+        message_id = str(doc.get("message_id") or "")
+        emoji = str(doc.get("emoji") or "")
+        uid = str(doc.get("user_id") or "")
+        if not message_id or not emoji:
+            continue
+        entry = by_message.setdefault(message_id, {})
+        emoji_entry = entry.setdefault(emoji, {"count": 0, "mine": False})
+        emoji_entry["count"] = int(emoji_entry["count"]) + 1
+        if uid and uid == viewer_uid:
+            emoji_entry["mine"] = True
+    return by_message
+
+
+def _read_counts() -> list[tuple[str, int]]:
+    readers = []
+    for doc in _list(COL_READ_STATE, 500):
+        uid = str(doc.get("user_id") or "")
+        if uid:
+            readers.append((uid, int(doc.get("last_read_at") or 0)))
+    return readers
+
+
+def _serialize_message(msg: dict, viewer: dict, reaction_map: dict | None = None,
+                       readers: list[tuple[str, int]] | None = None) -> dict:
     kind = str(msg.get("kind") or "public")
     sender_uid = str(msg.get("sender_user_id") or "")
     viewer_uid = str(viewer.get("user_id") or "")
     deleted = bool(msg.get("deleted"))
     reply = msg.get("reply_to") if isinstance(msg.get("reply_to"), dict) else None
-    # Hide private reply metadata from unauthorized viewers by construction; callers should filter first.
+    if reply and str(reply.get("kind") or "") == "private":
+        # A quote of a private thread is never public, even on a legacy message
+        # that was created before this redaction rule existed.
+        members = {str(uid) for uid in (reply.get("participants") or []) if str(uid)}
+        if not viewer_uid or viewer_uid not in members:
+            reply = {**reply, "text": "", "has_audio": False, "redacted": True}
+    created_at = int(msg.get("created_at") or 0)
+    readers = readers if readers is not None else _read_counts()
+    read_count = sum(1 for uid, stamp in readers if uid and uid != sender_uid and stamp >= created_at and created_at)
+    reaction_map = reaction_map if reaction_map is not None else _reaction_summaries(viewer_uid)
+    attachments = []
+    raw_attachments = msg.get("attachments") if isinstance(msg.get("attachments"), list) else []
+    if not deleted:
+        for item in raw_attachments:
+            if not isinstance(item, dict):
+                continue
+            fid = str(item.get("file_id") or "")
+            if not fid:
+                continue
+            attachments.append({
+                "file_id": fid,
+                "file_name": str(item.get("file_name") or fid),
+                "mime_type": str(item.get("mime_type") or "application/octet-stream"),
+                "size_bytes": int(item.get("size_bytes") or 0),
+                "kind": str(item.get("kind") or "document"),
+                "url": f"/api/public-chat/media/{fid}",
+            })
     out = {
         "id": str(msg.get("id") or ""),
         "kind": kind,
-        "created_at": int(msg.get("created_at") or 0),
+        "created_at": created_at,
         "updated_at": int(msg.get("updated_at") or 0),
         "edited": bool(msg.get("edited")),
         "deleted": deleted,
@@ -232,6 +413,9 @@ def _serialize_message(msg: dict, viewer: dict) -> dict:
         "mentions": [str(x) for x in (msg.get("mentions") or []) if CODE_RE.fullmatch(str(x))],
         "private_recipient_code": str(msg.get("private_recipient_code") or "") if kind == "private" else "",
         "private_recipient_name": str(msg.get("private_recipient_name") or "") if kind == "private" else "",
+        "reactions": reaction_map.get(str(msg.get("id") or ""), {}),
+        "read_count": read_count,
+        "attachments": attachments,
     }
     if deleted:
         out["text"] = ""
@@ -241,11 +425,12 @@ def _serialize_message(msg: dict, viewer: dict) -> dict:
         out["text"] = str(msg.get("text") or "")
         audio = msg.get("audio") if isinstance(msg.get("audio"), dict) else None
         if audio and str(audio.get("file_id") or ""):
+            fid = str(audio.get("file_id") or "")
             out["audio"] = {
-                "file_id": str(audio.get("file_id") or ""),
+                "file_id": fid,
                 "duration_ms": int(audio.get("duration_ms") or 0),
                 "mime_type": str(audio.get("mime_type") or "audio/webm"),
-                "url": f"/api/public-chat/media/{str(audio.get('file_id') or '')}",
+                "url": f"/api/public-chat/media/{fid}",
             }
         else:
             out["audio"] = None
@@ -253,20 +438,29 @@ def _serialize_message(msg: dict, viewer: dict) -> dict:
     return out
 
 
-def list_messages(viewer: dict, limit: int = 100, before_ms: int | None = None) -> list[dict]:
+def list_messages(viewer: dict, limit: int = 100, before_ms: int | None = None,
+                  query: str = "", blocked_codes: set[str] | None = None) -> list[dict]:
     cutoff = _now_s() - PUBLIC_RETENTION_SECONDS
+    needle = str(query or "").strip().lower()
     items = []
     for msg in _list(COL_MESSAGES, 1000):
-        if int(msg.get("created_at_s") or 0) < cutoff and str(msg.get("kind") or "public") == "public":
+        kind = str(msg.get("kind") or "public")
+        created_s = int(msg.get("created_at_s") or 0)
+        expired = created_s < cutoff and (kind == "public" or settings.EXPIRE_PRIVATE_MESSAGES)
+        if expired:
             continue
         if before_ms and int(msg.get("created_at") or 0) >= int(before_ms):
             continue
-        if _message_visible(msg, viewer):
+        if needle and needle not in str(msg.get("text") or "").lower():
+            continue
+        if _message_visible(msg, viewer, blocked_codes):
             items.append(msg)
     items.sort(key=lambda m: int(m.get("created_at") or 0))
     if limit > 0:
         items = items[-max(1, min(int(limit), 300)):]
-    return [_serialize_message(m, viewer) for m in items]
+    reactions = _reaction_summaries(str(viewer.get("user_id") or ""))
+    readers = _read_counts()
+    return [_serialize_message(m, viewer, reactions, readers) for m in items]
 
 
 def _message_doc(message_id: str) -> dict | None:
@@ -287,27 +481,36 @@ def _reply_snapshot(msg: dict) -> dict:
         "text": "" if msg.get("deleted") else str(msg.get("text") or "")[:240],
         "deleted": bool(msg.get("deleted")),
         "has_audio": bool((msg.get("audio") or {}).get("file_id")),
+        "participants": [
+            str(msg.get("sender_user_id") or ""),
+            str(msg.get("private_recipient_user_id") or ""),
+        ] if str(msg.get("kind") or "") == "private" else [],
     }
 
 
 def _normalize_mentions(codes: list[str] | None) -> list[str]:
-    out = []
+    out: list[str] = []
     for code in codes or []:
         c = str(code or "").strip().upper()
         if CODE_RE.fullmatch(c) and c not in out:
             out.append(c)
-        if len(out) >= 20:
+        if len(out) >= settings.MAX_MENTIONS:
             break
     return out
 
 
-def create_message(user: dict, text: str, reply_to_id: str | None = None, private_recipient_code: str | None = None, mention_codes: list[str] | None = None, audio: dict | None = None) -> dict:
+def create_message(user: dict, text: str, reply_to_id: str | None = None,
+                   private_recipient_code: str | None = None,
+                   mention_codes: list[str] | None = None,
+                   audio: dict | None = None,
+                   attachments: list[dict] | None = None) -> dict:
     sender = require_participant(user)
     body = str(text or "").strip()
-    if not body and not audio:
-        raise HTTPException(400, "Enter a message or record a voice note.")
-    if len(body) > 4000:
+    if not body and not audio and not attachments:
+        raise HTTPException(400, "Enter a message, attach a file, or record a voice note.")
+    if len(body) > settings.MAX_MESSAGE_LENGTH:
         raise HTTPException(400, "Message is too long.")
+
     kind = "public"
     recipient = None
     recipient_code = str(private_recipient_code or "").strip().upper()
@@ -325,7 +528,6 @@ def create_message(user: dict, text: str, reply_to_id: str | None = None, privat
         parent = _message_doc(reply_to)
         if not parent or not _message_visible(parent, sender):
             raise HTTPException(404, "The message you are replying to is unavailable.")
-        # Private reply target must stay within same private conversation.
         if kind == "private":
             parent_kind = str(parent.get("kind") or "public")
             if parent_kind == "private":
@@ -334,15 +536,34 @@ def create_message(user: dict, text: str, reply_to_id: str | None = None, privat
                     raise HTTPException(403, "You cannot reply privately across a different private conversation.")
         reply_snapshot = _reply_snapshot(parent)
 
+    # Replying to a private thread must stay private. Otherwise the quoted text
+    # would become visible to the whole room even though the sender can see it.
+    if reply_snapshot and str(reply_snapshot.get("kind") or "") == "private" and kind != "private":
+        parent_sender = str(parent.get("sender_user_id") or "")
+        sender_uid = str(sender.get("user_id") or "")
+        other_code = (str(parent.get("private_recipient_code") or "")
+                      if parent_sender == sender_uid else str(parent.get("sender_code") or ""))
+        promoted = participant_by_code(other_code)
+        if not promoted:
+            raise HTTPException(404, "The private conversation is no longer available.")
+        recipient = promoted
+        recipient_code = other_code
+        kind = "private"
+
+    mentions = _normalize_mentions(mention_codes)
+    for code in mentions:
+        if not participant_by_code(code):
+            raise HTTPException(404, f"Mentioned participant {code} is not available.")
+
     now = _now()
     now_s = _now_s()
     msg_id = uuid.uuid4().hex
-    mentions = _normalize_mentions(mention_codes)
     doc = {
         "id": msg_id,
         "kind": kind,
         "text": body,
         "audio": audio or None,
+        "attachments": attachments or [],
         "sender_user_id": str(sender.get("user_id") or ""),
         "sender_code": str(sender.get("code") or ""),
         "sender_name": str(sender.get("display_name") or ""),
@@ -364,65 +585,67 @@ def create_message(user: dict, text: str, reply_to_id: str | None = None, privat
 
 
 def edit_message(user: dict, message_id: str, text: str) -> dict:
-    sender = require_participant(user)
+    viewer = _viewer_for_action(user)
     doc = _message_doc(message_id)
-    if not doc or not _message_visible(doc, sender):
+    if not doc or not _message_visible(doc, viewer):
         raise HTTPException(404, "Message not found.")
-    if str(doc.get("sender_user_id") or "") != str(sender.get("user_id") or ""):
+    if not permissions.can_edit_message(user, doc):
         raise HTTPException(403, "You can only edit your own messages.")
     if doc.get("deleted"):
         raise HTTPException(400, "Deleted messages cannot be edited.")
     body = str(text or "").strip()
     if not body:
         raise HTTPException(400, "Message text cannot be empty.")
-    doc["text"] = body[:4000]
+    if len(body) > settings.MAX_MESSAGE_LENGTH:
+        raise HTTPException(400, "Message is too long.")
+    doc["text"] = body
     doc["edited"] = True
     doc["updated_at"] = _now()
     doc["updated_at_s"] = _now_s()
     _write(COL_MESSAGES, str(doc.get("id") or message_id), doc)
-    return _serialize_message(doc, sender)
+    return _serialize_message(doc, viewer)
 
 
 def delete_message(user: dict, message_id: str) -> dict:
-    sender = require_participant(user)
+    viewer = _viewer_for_action(user)
     doc = _message_doc(message_id)
-    if not doc or not _message_visible(doc, sender):
+    if not doc or not _message_visible(doc, viewer):
         raise HTTPException(404, "Message not found.")
-    is_author = str(doc.get("sender_user_id") or "") == str(sender.get("user_id") or "")
-    is_admin = str(user.get("role") or "").strip().lower() in {"administrator", "hod", "coordinator", "executive_dean"}
-    if not is_author and not is_admin:
+    if not permissions.can_delete_message(user, doc):
         raise HTTPException(403, "You can only delete your own messages.")
     if doc.get("deleted"):
-        return _serialize_message(doc, sender)
+        return _serialize_message(doc, viewer)
     doc["deleted"] = True
     doc["text"] = ""
-    # Keep audio file reference cleanup for retention sweep to avoid race with open streams.
+    # Keep media on disk until the retention sweep so open streams are not broken.
     doc["audio"] = None
-    doc["edited"] = bool(doc.get("edited"))
+    doc["attachments"] = []
     doc["updated_at"] = _now()
     doc["updated_at_s"] = _now_s()
     _write(COL_MESSAGES, str(doc.get("id") or message_id), doc)
-    return _serialize_message(doc, sender)
+    return _serialize_message(doc, viewer)
 
 
-def save_audio_upload(user: dict, upload: UploadFile) -> dict:
+def _extension_for_upload(upload: UploadFile, allowed: dict[str, str]) -> tuple[str, str]:
+    content_type = str(upload.content_type or "").lower().split(";", 1)[0].strip()
+    guessed = Path(upload.filename or "").suffix.lower()
+    if content_type in allowed:
+        return allowed[content_type], content_type
+    if guessed in allowed:
+        ext = guessed
+        return ext, content_type or allowed[ext]
+    raise HTTPException(400, "Unsupported file format.")
+
+
+def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> dict:
     require_participant(user)
     ensure_directories()
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-    content_type = str(upload.content_type or mimetypes.guess_type(upload.filename or "")[0] or "").lower()
-    ext = ALLOWED_AUDIO.get(content_type)
-    if not ext:
-        # Accept common browser blobs by filename fallback.
-        guessed = Path(upload.filename or "").suffix.lower()
-        if guessed in {".webm", ".ogg", ".m4a", ".mp3", ".wav"}:
-            ext = guessed
-            content_type = content_type or (mimetypes.guess_type("x" + ext)[0] or "audio/webm")
-    if not ext:
-        raise HTTPException(400, "Unsupported audio format.")
-    data = upload.file.read(MAX_AUDIO_BYTES + 1)
+    ext, content_type = _extension_for_upload(upload, ALLOWED_AUDIO)
+    data = upload.file.read(settings.MAX_AUDIO_BYTES + 1)
     if not data:
         raise HTTPException(400, "The voice note is empty.")
-    if len(data) > MAX_AUDIO_BYTES:
+    if len(data) > settings.MAX_AUDIO_BYTES:
         raise HTTPException(413, "Voice notes must be 10 MB or smaller.")
     file_id = uuid.uuid4().hex
     path = MEDIA_DIR / f"{file_id}{ext}"
@@ -432,6 +655,29 @@ def save_audio_upload(user: dict, upload: UploadFile) -> dict:
         "file_name": path.name,
         "mime_type": content_type or "audio/webm",
         "size_bytes": len(data),
+        "duration_ms": max(0, min(int(duration_ms or 0), 60 * 60 * 1000)),
+    }
+
+
+def save_attachment_upload(user: dict, upload: UploadFile) -> dict:
+    require_participant(user)
+    ensure_directories()
+    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    ext, content_type = _extension_for_upload(upload, ALLOWED_ATTACHMENTS)
+    data = upload.file.read(settings.MAX_ATTACHMENT_BYTES + 1)
+    if not data:
+        raise HTTPException(400, "The attachment is empty.")
+    if len(data) > settings.MAX_ATTACHMENT_BYTES:
+        raise HTTPException(413, "Attachments must be 15 MB or smaller.")
+    file_id = uuid.uuid4().hex
+    path = MEDIA_DIR / f"{file_id}{ext}"
+    path.write_bytes(data)
+    return {
+        "file_id": file_id,
+        "file_name": str(upload.filename or path.name)[:120],
+        "mime_type": content_type or ALLOWED_ATTACHMENTS.get(ext, "application/octet-stream"),
+        "size_bytes": len(data),
+        "kind": "image" if content_type.startswith("image/") or ext in {".png", ".jpg", ".jpeg", ".gif", ".webp"} else "document",
     }
 
 
@@ -452,47 +698,62 @@ def can_access_media(user: dict, file_id: str) -> bool:
     if not viewer:
         return False
     fid = re.sub(r"[^a-f0-9]", "", str(file_id or "").lower())
-    for msg in _list(COL_MESSAGES, 2000):
+    for msg in _list(COL_MESSAGES, 5000):
         audio = msg.get("audio") if isinstance(msg.get("audio"), dict) else None
-        if str((audio or {}).get("file_id") or "") != fid:
+        media = [audio] if audio and str(audio.get("file_id") or "") else []
+        attachments = msg.get("attachments") if isinstance(msg.get("attachments"), list) else []
+        media.extend(a for a in attachments if isinstance(a, dict))
+        if not any(str((item or {}).get("file_id") or "") == fid for item in media):
             continue
         if not _message_visible(msg, viewer):
             return False
         if msg.get("deleted"):
             return False
-        # Public messages are accessible to registered participants; private only to members.
         return True
     return False
 
 
-def cleanup_public_retention(now_s: int | None = None) -> dict:
+def cleanup_public_retention(now_s: int | None = None, expire_private: bool | None = None) -> dict:
     now_s = int(now_s or _now_s())
     cutoff = now_s - PUBLIC_RETENTION_SECONDS
+    expire_private = settings.EXPIRE_PRIVATE_MESSAGES if expire_private is None else bool(expire_private)
     deleted_messages = 0
     deleted_files = 0
     referenced = set()
-    # Determine referenced files from retained, non-deleted messages.
     all_msgs = _list(COL_MESSAGES, 5000)
+    surviving_ids = set()
     for msg in all_msgs:
         kind = str(msg.get("kind") or "public")
         created = int(msg.get("created_at_s") or 0)
-        expired_public = kind == "public" and created < cutoff
-        if expired_public:
+        expired = created < cutoff and (kind == "public" or (kind == "private" and expire_private))
+        if expired:
             continue
+        surviving_ids.add(str(msg.get("_id") or msg.get("id") or ""))
         if msg.get("deleted"):
             continue
         audio = msg.get("audio") if isinstance(msg.get("audio"), dict) else None
-        fid = re.sub(r"[^a-f0-9]", "", str((audio or {}).get("file_id") or "").lower())
-        if fid:
-            referenced.add(fid)
-    # Delete expired public messages.
+        media = [audio] if audio and str(audio.get("file_id") or "") else []
+        attachments = msg.get("attachments") if isinstance(msg.get("attachments"), list) else []
+        media.extend(a for a in attachments if isinstance(a, dict))
+        for item in media:
+            fid = re.sub(r"[^a-f0-9]", "", str((item or {}).get("file_id") or "").lower())
+            if fid:
+                referenced.add(fid)
+
     for msg in all_msgs:
         kind = str(msg.get("kind") or "public")
         created = int(msg.get("created_at_s") or 0)
-        if kind == "public" and created < cutoff:
+        if created < cutoff and (kind == "public" or (kind == "private" and expire_private)):
             if _delete(COL_MESSAGES, str(msg.get("_id") or msg.get("id") or "")):
                 deleted_messages += 1
-    # Delete orphaned media files.
+
+    deleted_reactions = 0
+    for reaction in _list(COL_REACTIONS, 2000):
+        message_id = str(reaction.get("message_id") or "")
+        if message_id and not _message_doc(message_id):
+            if _delete(COL_REACTIONS, str(reaction.get("_id") or "")):
+                deleted_reactions += 1
+
     ensure_directories()
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     for path in MEDIA_DIR.glob("*"):
@@ -505,4 +766,11 @@ def cleanup_public_retention(now_s: int | None = None) -> dict:
                 deleted_files += 1
             except OSError:
                 pass
-    return {"deleted_messages": deleted_messages, "deleted_files": deleted_files, "cutoff": cutoff}
+    return {
+        "deleted_messages": deleted_messages,
+        "deleted_files": deleted_files,
+        "deleted_reactions": deleted_reactions,
+        "surviving_messages": len(surviving_ids),
+        "cutoff": cutoff,
+        "expired_private": expire_private,
+    }

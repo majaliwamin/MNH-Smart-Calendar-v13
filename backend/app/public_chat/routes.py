@@ -1,307 +1,312 @@
 from __future__ import annotations
 
-import asyncio
-import json
-import re
-import time
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile, WebSocket
+from fastapi.responses import JSONResponse
 
-from app.class_rep import memory
-from app.services import authentication
-
-from .schemas import JoinRequest, MessageCreateRequest, MessageEditRequest
-from .store import (
-    PUBLIC_RETENTION_SECONDS,
-    COL_PARTICIPANTS,
-    can_access_media,
-    cleanup_public_retention,
-    create_message,
-    delete_message,
-    edit_message,
-    ensure_participant,
-    get_media_path,
-    get_participant,
-    list_messages,
-    participant_by_code,
-    require_participant,
-    save_audio_upload,
-    _list,
-    _message_doc,
-    _message_visible,
-    _serialize_message,
+from . import (auth, cleanup, media, moderation, notifications, permissions,
+               reactions, service, settings, store, websocket as chat_ws)
+from .schemas import (
+    AccessDecisionRequest, JoinRequest, MessageCreateRequest, MessageEditRequest,
+    ModerationRequest, PreferencesRequest, ReactionRequest, ReadRequest,
+    ReportRequest, RestrictRequest, RoleRequest,
 )
 
 router = APIRouter(prefix="/api/public-chat", tags=["Public Chat"])
-def _read_raw_message(message_id: str) -> dict | None:
-    return _message_doc(message_id)
 
 
-def _message_visible_raw(msg: dict, viewer: dict) -> bool:
-    return _message_visible(msg, viewer)
+def _user(request: Request, allow_guest: bool = False) -> dict[str, Any]:
+    return auth.resolve_user(request, allow_create_guest=allow_guest)
 
 
-def _serialize_raw_for_viewer(msg: dict, viewer: dict) -> dict:
-    return _serialize_message(msg, viewer)
+def _require_moderator(user: dict[str, Any]) -> None:
+    if not permissions.can_moderate(user):
+        raise HTTPException(403, "Moderator access is required.")
 
 
-
-_WS_LOCK = asyncio.Lock()
-_WS_CLIENTS: dict[WebSocket, dict[str, Any]] = {}
-
-
-async def _broadcast(event: dict) -> None:
-    """Broadcast event. For message events, filter private messages per viewer."""
-    async with _WS_LOCK:
-        clients = list(_WS_CLIENTS.items())
-    stale = []
-    for ws, info in clients:
-        try:
-            payload = event
-            if event.get("type", "").startswith("message.") and isinstance(event.get("message"), dict):
-                msg = event["message"]
-                # Re-fetch and serialize per viewer to enforce private visibility.
-                viewer = info.get("participant") or {}
-                raw = _read_raw_message(str(msg.get("id") or ""))
-                if raw:
-                    if not _message_visible_raw(raw, viewer):
-                        continue
-                    payload = {**event, "message": _serialize_raw_for_viewer(raw, viewer)}
-                else:
-                    # deleted/expired
-                    if str(msg.get("kind")) == "private":
-                        continue
-            await ws.send_text(json.dumps(payload, ensure_ascii=False))
-        except Exception:
-            stale.append(ws)
-    if stale:
-        async with _WS_LOCK:
-            for ws in stale:
-                _WS_CLIENTS.pop(ws, None)
-
-
-PC_GUEST_COOKIE = "mnh_pc_guest"
-PC_GUEST_RE = re.compile(r"^pc_guest_[A-Za-z0-9_-]{8,96}$")
-
-
-def _ensure_guest_cookie(request: Request, response=None) -> str | None:
-    gid = str(request.cookies.get(PC_GUEST_COOKIE) or "").strip()
-    if PC_GUEST_RE.fullmatch(gid):
-        return gid
-    return None
-
-
-def _resolve_user(request: Request, allow_create_guest: bool = False) -> dict[str, Any]:
-    token = request.cookies.get("mnh_session")
-    session = authentication.get_session(token)
-    if session:
-        role = str(session.get("role") or "")
-        return {
-            "id": f"mnh_{role}",
-            "name": role.replace("_", " ").title(),
-            "email": "",
-            "role": role,
-            "auth": "mnh_session",
-        }
-    cara_user = memory.resolve_session(request.cookies.get("cara_session"))
-    if cara_user:
-        return {**cara_user, "auth": "cara_session"}
-    guest = str(request.cookies.get("cara_guest") or "").strip()
-    if re.fullmatch(r"guest_[A-Za-z0-9_-]{8,96}", guest):
-        return {"id": guest, "name": "Guest", "email": "", "guest": True, "auth": "cara_guest"}
-    pc_guest = str(request.cookies.get(PC_GUEST_COOKIE) or "").strip()
-    if PC_GUEST_RE.fullmatch(pc_guest):
-        return {"id": pc_guest, "name": "Guest", "email": "", "guest": True, "auth": "mnh_pc_guest"}
-    if allow_create_guest:
-        import secrets
-        gid = "pc_guest_" + secrets.token_urlsafe(18)
-        return {"id": gid, "name": "Guest", "email": "", "guest": True, "auth": "mnh_pc_guest", "_new_cookie": gid}
-    raise HTTPException(401, "Sign in to use public chat.")
-
-
-def _public_participant_payload(p: dict | None) -> dict | None:
-    if not p:
-        return None
+def _status_payload(user: dict[str, Any], joined: bool) -> dict[str, Any]:
+    participant = store.get_participant(user, include_pending=True)
     return {
-        "code": str(p.get("code") or ""),
-        "display_name": str(p.get("display_name") or ""),
-        "public_identity": str(p.get("public_identity") or ""),
+        "authenticated": True,
+        "joined": joined,
+        "participant": service.participant_payload(participant),
+        "access_request": service.access_status(user),
+        "retention_days": settings.RETENTION_DAYS,
+        "retention_notice": "Public chat messages are cleared automatically after 7 days.",
+        "participants": service.public_participants() if joined else [],
     }
 
 
-def _participants_payload() -> list[dict]:
-    items = []
-    for p in _list(COL_PARTICIPANTS, 1000):
-        if str(p.get("status") or "active") != "active":
-            continue
-        code = str(p.get("code") or "")
-        if not re.fullmatch(r"MNH-\d{4}", code):
-            continue
-        items.append({
-            "code": code,
-            "display_name": str(p.get("display_name") or ""),
-            "public_identity": str(p.get("public_identity") or ""),
-        })
-    items.sort(key=lambda x: x["code"])
-    return items
+def _json_with_guest(request: Request, user: dict[str, Any], payload: dict[str, Any]) -> JSONResponse:
+    response = JSONResponse(payload)
+    auth.set_guest_cookie(response, request, user)
+    return response
 
 
 @router.get("/status")
 def status(request: Request):
-    user = _resolve_user(request, allow_create_guest=True)
-    participant = get_participant(user)
-    data = {
-        "authenticated": True,
-        "joined": bool(participant),
-        "participant": _public_participant_payload(participant),
-        "retention_days": 7,
-        "retention_notice": "Public chat messages are cleared automatically after 7 days.",
-        "participants": _participants_payload() if participant else [],
-    }
-    resp = JSONResponse(data)
-    if user.get("_new_cookie"):
-        resp.set_cookie(PC_GUEST_COOKIE, user["_new_cookie"], httponly=True, samesite="lax", secure=request.url.scheme=="https", max_age=60*60*24*30, path="/")
-    return resp
+    user = _user(request, allow_guest=True)
+    participant = store.get_participant(user)
+    return _json_with_guest(request, user, _status_payload(user, bool(participant)))
 
 
 @router.post("/join")
 async def join(payload: JoinRequest, request: Request):
-    from fastapi.responses import JSONResponse
-    user = _resolve_user(request, allow_create_guest=True)
-    participant = ensure_participant(user, payload.display_name)
-    data = {
-        "joined": True,
-        "participant": _public_participant_payload(participant),
-        "retention_days": 7,
-        "retention_notice": "Public chat messages are cleared automatically after 7 days.",
-        "participants": _participants_payload(),
-    }
-    resp = JSONResponse(data)
-    if user.get("_new_cookie"):
-        resp.set_cookie(PC_GUEST_COOKIE, user["_new_cookie"], httponly=True, samesite="lax", secure=request.url.scheme=="https", max_age=60*60*24*30, path="/")
-    await _broadcast({"type": "participant.joined", "participant": data["participant"]})
-    return resp
+    user = _user(request, allow_guest=True)
+    result = service.join_chat(user, payload.display_name)
+    response = _json_with_guest(request, user, result)
+    if result.get("joined") and result.get("participant"):
+        await chat_ws.broadcast({"type": "participant.joined", "participant": result["participant"]})
+        chat_ws.dispatch_to_users(
+            notifications.access_event("access", "Your public chat access is ready.", {str(user.get("id") or "")}),
+            {str(user.get("id") or "")},
+        )
+    else:
+        chat_ws.dispatch_to_users(
+            notifications.access_event("access", "Your chat access request is awaiting approval.", {str(user.get("id") or "")}),
+            {str(user.get("id") or "")},
+        )
+    return response
+
+
+@router.get("/access-request")
+def access_request_status(request: Request):
+    return service.access_status(_user(request))
+
+
+@router.delete("/access-request")
+def access_request_cancel(request: Request):
+    return service.cancel_access_request(_user(request))
+
+
+@router.get("/admin/access-requests")
+def admin_access_requests(request: Request):
+    _require_moderator(_user(request))
+    return {"requests": service.pending_access_requests()}
+
+
+@router.post("/admin/access-requests/{user_id}/decision")
+async def admin_access_decision(user_id: str, payload: AccessDecisionRequest, request: Request):
+    user = _user(request)
+    result = service.decide_access_request(user_id, payload.approved, user, payload.note)
+    chat_ws.dispatch_to_users(
+        notifications.access_event(
+            "access",
+            "Your public chat access request was approved." if payload.approved else "Your public chat access request was not approved.",
+            {user_id},
+        ),
+        {user_id},
+    )
+    return result
 
 
 @router.get("/participants")
 def participants(request: Request):
-    user = _resolve_user(request)
-    require_participant(user)
-    return {"participants": _participants_payload()}
+    store.require_participant(_user(request))
+    return {"participants": service.public_participants()}
 
 
 @router.get("/messages")
 def messages(request: Request, limit: int = 100, before: int | None = None):
-    user = _resolve_user(request)
-    participant = require_participant(user)
-    return {"messages": list_messages(participant, limit=limit, before_ms=before)}
+    user = _user(request)
+    participant = store.require_participant(user)
+    return {"messages": store.list_messages(participant, limit=limit, before_ms=before,
+                                            blocked_codes=service.blocked_codes(user))}
+
+
+@router.get("/search")
+def search_messages(request: Request, q: str = "", limit: int = 50):
+    user = _user(request)
+    participant = store.require_participant(user)
+    query = str(q or "").strip()
+    if not query or len(query) > 200:
+        raise HTTPException(400, "Enter a search term of 200 characters or fewer.")
+    return {"messages": store.list_messages(participant, limit=limit, query=query,
+                                            blocked_codes=service.blocked_codes(user))}
 
 
 @router.post("/messages")
 async def post_message(payload: MessageCreateRequest, request: Request):
-    user = _resolve_user(request)
-    msg = create_message(
+    user = _user(request)
+    service.check_rate(user, "message")
+    message = store.create_message(
         user,
         text=payload.text,
         reply_to_id=payload.reply_to_id,
         private_recipient_code=payload.private_recipient_code,
         mention_codes=payload.mention_codes,
     )
-    await _broadcast({"type": "message.created", "message": msg})
-    return {"message": msg}
+    await chat_ws.broadcast({"type": "message.created", "message": message})
+    notifications.dispatch_for_message(message, chat_ws.dispatch_to_users)
+    return {"message": message}
 
 
 @router.put("/messages/{message_id}")
 async def put_message(message_id: str, payload: MessageEditRequest, request: Request):
-    user = _resolve_user(request)
-    msg = edit_message(user, message_id, payload.text)
-    await _broadcast({"type": "message.updated", "message": msg})
-    return {"message": msg}
+    user = _user(request)
+    message = store.edit_message(user, message_id, payload.text)
+    await chat_ws.broadcast({"type": "message.updated", "message": message})
+    return {"message": message}
 
 
 @router.delete("/messages/{message_id}")
 async def remove_message(message_id: str, request: Request):
-    user = _resolve_user(request)
-    msg = delete_message(user, message_id)
-    await _broadcast({"type": "message.deleted", "message": msg})
-    return {"message": msg}
+    user = _user(request)
+    message = store.delete_message(user, message_id)
+    await chat_ws.broadcast({"type": "message.deleted", "message": message})
+    return {"message": message}
+
+
+@router.post("/messages/{message_id}/reactions")
+async def toggle_reaction(message_id: str, payload: ReactionRequest, request: Request):
+    user = _user(request)
+    result = reactions.toggle_reaction(user, message_id, payload.emoji)
+    await chat_ws.broadcast({"type": "message.reaction", **result})
+    return result
+
+
+@router.post("/reports")
+def report_message(payload: ReportRequest, request: Request):
+    return moderation.report_message(_user(request), payload.message_id, payload.category, payload.reason)
+
+
+@router.get("/admin/reports")
+def admin_reports(request: Request, status: str = ""):
+    return {"reports": moderation.list_reports(_user(request), status)}
+
+
+@router.post("/admin/reports/{report_id}/resolve")
+async def admin_resolve_report(report_id: str, payload: ModerationRequest, request: Request):
+    user = _user(request)
+    result = moderation.resolve_report(user, report_id, payload.action, payload.note)
+    await chat_ws.broadcast({"type": "moderation.action", **result})
+    return result
+
+
+@router.get("/admin/moderation")
+def admin_moderation_history(request: Request):
+    return {"actions": moderation.moderation_history(_user(request))}
+
+
+@router.post("/admin/participants/{code}/status")
+async def admin_participant_status(code: str, payload: RestrictRequest, request: Request):
+    user = _user(request)
+    result = moderation.restrict_participant(user, code, payload.status)
+    await chat_ws.broadcast({"type": "moderation.membership", **result})
+    return result
+
+
+@router.post("/admin/participants/{code}/role")
+async def admin_participant_role(code: str, payload: RoleRequest, request: Request):
+    user = _user(request)
+    result = moderation.set_member_role(user, code, payload.role)
+    await chat_ws.broadcast({"type": "moderation.membership", **result})
+    return result
+
+
+@router.get("/blocks")
+def moderation_lists(request: Request):
+    return moderation.moderation_lists(_user(request))
+
+
+@router.post("/blocks/{code}")
+def block_participant(code: str, request: Request):
+    return moderation.block_participant(_user(request), code)
+
+
+@router.delete("/blocks/{code}")
+def unblock_participant(code: str, request: Request):
+    return moderation.unblock_participant(_user(request), code)
+
+
+@router.post("/mutes/{code}")
+def mute_participant(code: str, request: Request):
+    return moderation.mute_participant(_user(request), code)
+
+
+@router.delete("/mutes/{code}")
+def unmute_participant(code: str, request: Request):
+    return moderation.unmute_participant(_user(request), code)
 
 
 @router.post("/voice-notes")
 async def upload_voice_note(request: Request, file: UploadFile = File(...)):
-    user = _resolve_user(request)
-    # parse optional form fields
+    user = _user(request)
+    service.check_rate(user, "upload")
     form = await request.form()
     reply_to_id = str(form.get("reply_to_id") or "").strip() or None
     private_recipient_code = str(form.get("private_recipient_code") or "").strip() or None
     mention_codes = [c.strip() for c in str(form.get("mention_codes") or "").split(",") if c.strip()]
-    audio = save_audio_upload(user, file)
-    msg = create_message(user, text="", reply_to_id=reply_to_id, private_recipient_code=private_recipient_code, mention_codes=mention_codes, audio=audio)
-    await _broadcast({"type": "message.created", "message": msg})
-    return {"message": msg}
+    duration_ms = int(str(form.get("duration_ms") or "0").strip() or 0)
+    audio = store.save_audio_upload(user, file, duration_ms=duration_ms)
+    message = store.create_message(user, text="", reply_to_id=reply_to_id,
+                                   private_recipient_code=private_recipient_code,
+                                   mention_codes=mention_codes, audio=audio)
+    await chat_ws.broadcast({"type": "message.created", "message": message})
+    notifications.dispatch_for_message(message, chat_ws.dispatch_to_users)
+    return {"message": message}
+
+
+@router.post("/attachments")
+async def upload_attachment(request: Request, file: UploadFile = File(...)):
+    user = _user(request)
+    service.check_rate(user, "upload")
+    form = await request.form()
+    reply_to_id = str(form.get("reply_to_id") or "").strip() or None
+    private_recipient_code = str(form.get("private_recipient_code") or "").strip() or None
+    mention_codes = [c.strip() for c in str(form.get("mention_codes") or "").split(",") if c.strip()]
+    text = str(form.get("text") or "").strip()
+    attachment = store.save_attachment_upload(user, file)
+    message = store.create_message(user, text=text, reply_to_id=reply_to_id,
+                                   private_recipient_code=private_recipient_code,
+                                   mention_codes=mention_codes, attachments=[attachment])
+    await chat_ws.broadcast({"type": "message.created", "message": message})
+    notifications.dispatch_for_message(message, chat_ws.dispatch_to_users)
+    return {"message": message}
 
 
 @router.get("/media/{file_id}")
 def get_media(file_id: str, request: Request):
-    user = _resolve_user(request)
-    if not can_access_media(user, file_id):
-        raise HTTPException(404, "Media not found.")
-    path = get_media_path(file_id)
-    if not path:
-        raise HTTPException(404, "Media not found.")
-    return FileResponse(path, media_type=None, filename=path.name, headers={"Cache-Control": "private, no-store"})
+    return media.media_response(_user(request), file_id)
+
+
+@router.get("/unread")
+def unread(request: Request):
+    return service.unread_summary(_user(request))
+
+
+@router.post("/read")
+def mark_read(payload: ReadRequest, request: Request):
+    return service.mark_read(_user(request), payload.at)
+
+
+@router.get("/preferences")
+def get_preferences(request: Request):
+    return {"values": service.notification_preferences(_user(request))}
+
+
+@router.put("/preferences")
+def put_preferences(payload: PreferencesRequest, request: Request):
+    return {"values": service.set_notification_preferences(_user(request), payload.values)}
+
+
+@router.get("/cleanup/status")
+def cleanup_status(request: Request):
+    _require_moderator(_user(request))
+    return cleanup.cleanup_status()
+
+
+@router.post("/cleanup/run")
+def cleanup_run(request: Request):
+    _require_moderator(_user(request))
+    return cleanup.run_cleanup()
 
 
 @router.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
-    # WebSocket auth via cookies; accept first then validate.
-    await websocket.accept()
-    try:
-        # Build a fake Request-like cookie read through websocket.cookies.
-        token = websocket.cookies.get("mnh_session")
-        session = authentication.get_session(token)
-        if session:
-            role = str(session.get("role") or "")
-            user = {"id": f"mnh_{role}", "name": role.replace("_", " ").title(), "email": "", "role": role}
-        else:
-            cara_user = memory.resolve_session(websocket.cookies.get("cara_session"))
-            if cara_user:
-                user = cara_user
-            else:
-                guest = str(websocket.cookies.get("cara_guest") or websocket.cookies.get(PC_GUEST_COOKIE) or "").strip()
-                if re.fullmatch(r"(?:guest|pc_guest)_[A-Za-z0-9_-]{8,96}", guest):
-                    user = {"id": guest, "name": "Guest", "email": "", "guest": True}
-                else:
-                    await websocket.send_text(json.dumps({"type": "error", "error": "Authentication required."}))
-                    await websocket.close(code=4401)
-                    return
-        participant = get_participant(user)
-        async with _WS_LOCK:
-            _WS_CLIENTS[websocket] = {"user_id": str(user.get("id") or ""), "participant": participant or {}}
-        await websocket.send_text(json.dumps({
-            "type": "hello",
-            "joined": bool(participant),
-            "participant": _public_participant_payload(participant),
-            "retention_days": 7,
-        }, ensure_ascii=False))
-        while True:
-            # Keepalive / ignore client pings; clients receive broadcasts.
-            msg = await websocket.receive_text()
-            if msg == "ping":
-                await websocket.send_text('{"type":"pong"}')
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        try:
-            await websocket.close()
-        except Exception:
-            pass
-    finally:
-        async with _WS_LOCK:
-            _WS_CLIENTS.pop(websocket, None)
+    await chat_ws.websocket_endpoint(websocket)
 
 
 def run_retention_cleanup() -> dict:
-    return cleanup_public_retention()
+    return cleanup.run_cleanup()
