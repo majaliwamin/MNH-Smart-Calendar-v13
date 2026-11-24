@@ -2046,6 +2046,7 @@ async function renderPublicChat(){
  try{
  const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");try{await pcLoadStatus(true);}catch(_e){}
  if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+ root.querySelectorAll('.pc-chat-card,.pc-toast').forEach(n=>n.remove());
  const card=el("div","pc-chat-card");
  const head=el("div","pc-chat-headbar");
  const ident=el("div","pc-chat-identity");ident.appendChild(el("div","pc-room-avatar","M"));
