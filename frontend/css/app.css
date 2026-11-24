@@ -2700,6 +2700,9 @@ html body .colour-dialog .dialog-card h2{
 .pc-compose-main:has(.pc-record-viz) .pc-input{display:none}
 .pc-send-btn{width:46px;height:46px;border-radius:50%;border:0;background:#c9ced3;color:#1f2c34;display:grid;place-items:center;cursor:pointer;flex:0 0 46px}
 .pc-send-btn:hover{filter:brightness(1.03);background:#d7dbe0}
+.pc-record-send{background:#25d366;color:#062016}
+.pc-record-send:hover{background:#2be06d}
+.pc-record-send[hidden]{display:none!important}
 .pc-send-btn:disabled{opacity:.5;cursor:not-allowed}
 .pc-file-input{display:none}
 .pc-attachment-preview{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:#182229;border-top:1px solid rgba(255,255,255,.04)}
