@@ -2674,8 +2674,13 @@ html body .colour-dialog .dialog-card h2{
 .pc-audio-wrap{margin-top:6px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.04)}
 .pc-audio-label{font-size:12px;color:#aebac1;margin-bottom:6px}
 .pc-audio,.pc-audio-preview{width:100%;max-width:320px;height:34px}
-.pc-audio-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pc-audio-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .pc-audio-actions .pc-action{text-decoration:none}
+.pc-voice-share-wrap{position:relative}
+.pc-voice-share-btn{width:32px;height:32px;color:#aebac1}
+.pc-voice-share-btn:hover{background:rgba(255,255,255,.08);color:#e9edef}
+.pc-voice-share-menu{position:absolute;left:0;top:calc(100% + 6px);z-index:30;min-width:170px;background:#233138;border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px}
+.pc-voice-share-menu .pc-head-menu-item{text-decoration:none}
 .pc-audio-status{font-size:12px;color:#8696a0;margin-top:6px}
 .pc-composer{padding:10px 12px;background:#202c33;border-top:1px solid rgba(255,255,255,.06);flex:0 0 auto;z-index:4}
 .pc-compose-meta{margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
