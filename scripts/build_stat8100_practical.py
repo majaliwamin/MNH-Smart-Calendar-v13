@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import tempfile
 from pathlib import Path
 
 from stat8100_code_cells import CODE, QUESTION_CODE, QUESTION_TITLES
@@ -15,6 +16,17 @@ RESOURCE_DIR = ROOT / "frontend" / "resources"
 NOTEBOOK_PATH = RESOURCE_DIR / "stat8100_biostatistics_epidemiology_practical.ipynb"
 HTML_PATH = RESOURCE_DIR / "stat8100_practical_companion.html"
 RESULTS_PATH = RESOURCE_DIR / "stat8100_practical_results.json"
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Write a generated text artifact without exposing a partially written file."""
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", newline="\n", dir=path.parent,
+        prefix=f".{path.name}.", delete=False,
+    ) as handle:
+        handle.write(text)
+        temporary = Path(handle.name)
+    temporary.replace(path)
+
 
 BUILD_LABEL = "STAT 8100 · Lectures 1–6 · simulated teaching datasets"
 DATA_HASHES = {
@@ -29,7 +41,7 @@ AUDIT_FACTS = [
     ("Required columns are present.",
      "No expected analysis variable is absent. bp_paired.csv also contains an id column, which is useful for confirming the pairing."),
     ("Missingness is variable-specific.",
-     "ANC: education 55, bmi 10, hb 18, anaemia 18; all other ANC variables complete. BP and survival datasets have no missing values."),
+     "ANC: bmi 10, hb 18, anaemia 18; all other ANC variables have zero missing values. BP and survival datasets have no missing values."),
     ("Education uses a literal category name.",
      "The 55 'None' values are a real education level, not missing data. The loader uses keep_default_na=False so pandas does not silently convert them to NaN."),
     ("Binary coding is consistent.",
@@ -48,6 +60,16 @@ AUDIT_FACTS = [
 
 QUESTION_ORDER = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"]
 SUBQUESTION_ORDER = list(GUIDES.keys())
+
+# Cells that reuse objects created by an earlier question cell. "Copy setup +
+# cell" must carry these prerequisites too, otherwise the pasted code fails.
+CELL_PREREQUISITES = {
+    "q8c": ["q8b"],
+    "q8d": ["q8b"],
+    "q8e": ["q8b", "q8d"],
+    "q10d": ["q10a"],
+    "q10f": ["q10e"],
+}
 
 
 def _md_table(headers, rows):
@@ -162,7 +184,7 @@ def build_notebook():
 
     results = {}
     if RESULTS_PATH.is_file():
-        results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+        results = _strict_load(RESULTS_PATH)
     cells = []
 
     cells.append(nbf.v4.new_markdown_cell("\n".join([
@@ -301,14 +323,23 @@ def build_notebook():
 
 
 def _code_block(key):
-    code = html.escape(CODE[key].rstrip())
+    # Preserve the executable source byte-for-byte, including its final newline.
+    # The browser highlighter uses textContent, so copy buttons return this
+    # exact string rather than a separately maintained UI representation.
+    code = html.escape(CODE[key])
     requires_setup = key != "setup"
     attrs = f' data-cell="{html.escape(key)}"'
+    prerequisites = CELL_PREREQUISITES.get(key, [])
     if requires_setup:
         attrs += ' data-requires-setup="true"'
+        if prerequisites:
+            attrs += ' data-prereqs="' + html.escape(" ".join(prerequisites)) + '"'
     label = "Code cell <code>" + html.escape(key) + "</code>"
     if requires_setup:
         label += " <span class=\"code-prereq\">· requires Reusable setup</span>"
+        if prerequisites:
+            label += (" <span class=\"code-prereq\">· also needs "
+                      + html.escape(", ".join(prerequisites)) + "</span>")
         buttons = (
             '<span class="code-actions">'
             '<button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button>'
@@ -332,7 +363,7 @@ def _verified_output(qid, results):
     value = results.get(qid)
     if value is None:
         return '<pre class="verified-output">No code output required — use the conceptual guidance above.</pre>'
-    text = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+    text = _strict_json(value, indent=2, sort_keys=True)
     return '<pre class="verified-output">' + html.escape(text) + '</pre>'
 
 
@@ -360,8 +391,9 @@ def _guide_html(qid, results):
     if question_codes:
         codes = (
             '<p class="setup-note"><strong>Run setup first:</strong> '
-            'the reusable setup cell creates <code>anc</code> and <code>record()</code>. '
-            '“Copy setup + cell” includes it automatically.</p>' + codes
+            'the reusable setup cell creates <code>anc</code>, <code>record()</code> and the '
+            'objects shared by the question cells. “Copy setup + cell” includes the setup '
+            'and any earlier question cell this cell reuses.</p>' + codes
         )
     badge_class = {
         "Code": "tag-code", "Interpretation": "tag-interp",
@@ -394,7 +426,7 @@ def _guide_html(qid, results):
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
-          {_verified_output(qid, RESULTS_PLACEHOLDER)}
+          {_verified_output(qid, results)}
         </section>
         <section class="card-section two-col">
           <div>
@@ -433,6 +465,21 @@ RESULTS_PLACEHOLDER = {}
 JS_LABELS = {}
 
 
+def _reject_json_constant(value):
+    raise ValueError(f"Non-finite JSON value: {value}")
+
+
+def _strict_load(path: Path) -> dict:
+    return json.loads(
+        path.read_text(encoding="utf-8"), parse_constant=_reject_json_constant
+    )
+
+
+def _strict_json(value, **kwargs):
+    """Serialize verified results without silently accepting non-finite values."""
+    return json.dumps(value, ensure_ascii=False, allow_nan=False, **kwargs)
+
+
 def _js_string(value):
     return json.dumps(value, ensure_ascii=False)
 
@@ -453,7 +500,15 @@ def _prepare_labels():
 
 
 def build_html(results=None):
-    results = results if results is not None else {}
+    if results is None:
+        if not RESULTS_PATH.is_file():
+            raise FileNotFoundError(
+                "Verified results are required before building the companion. "
+                "Run scripts/execute_stat8100_practical.py first."
+            )
+        results = _strict_load(RESULTS_PATH)
+    if not results:
+        raise ValueError("Refusing to build a companion with empty verified results.")
     global RESULTS_PLACEHOLDER
     RESULTS_PLACEHOLDER = results
     _prepare_labels()
@@ -505,7 +560,10 @@ def build_html(results=None):
         for name, digest in DATA_HASHES.items()
     )
 
-    embedded_results = json.dumps(results, ensure_ascii=False, sort_keys=True).replace("<", "\\u003c")
+    embedded_results = (_strict_json(results, sort_keys=True)
+                        .replace("<", "\\u003c")
+                        .replace("\u2028", "\\u2028")
+                        .replace("\u2029", "\\u2029"))
 
     document = rf"""<!doctype html>
 <html lang="en">
@@ -514,8 +572,8 @@ def build_html(results=None):
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>STAT 8100 Practical Companion</title>
 <style>
-:root{{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--summary:#fbfdff;--subtle:#f1f5f9;--code:#0b1b2e;--code-head:#132947;--code-ink:#e6edf7;--on-navy:#fff;--warning-bg:#fff8e8;--worked-bg:#f8fbff;--worked-line:#c8dcf2;--hover-bg:#eaf2fb;--progress-bg:#dbe4ef;--tag-code-bg:#e4f0ff;--tag-code-ink:#0b4f8a;--tag-concept-bg:#f3e9ff;--tag-concept-ink:#6b21a8;--tag-calc-bg:#e8f7ee;--tag-calc-ink:#166534;--tag-report-bg:#fff4d8;--tag-report-ink:#8a5a00}}
-body[data-companion-theme="dark"]{{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--summary:#15243a;--subtle:#17263a;--code:#070f1c;--code-head:#10233c;--code-ink:#eaf1f9;--on-navy:#0b1220;--warning-bg:#3b2f13;--worked-bg:#132842;--worked-line:#31547b;--hover-bg:#1d3554;--progress-bg:#23344a;--tag-code-bg:#15365a;--tag-code-ink:#bfdbfe;--tag-concept-bg:#352057;--tag-concept-ink:#e9d5ff;--tag-calc-bg:#16452c;--tag-calc-ink:#bbf7d0;--tag-report-bg:#4a3410;--tag-report-ink:#fde68a}}
+:root{{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--summary:#fbfdff;--subtle:#f1f5f9;--code:#0f172a;--code-head:#1e293b;--code-ink:#e2e8f0;--on-navy:#fff;--warning-bg:#fff8e8;--worked-bg:#f8fbff;--worked-line:#c8dcf2;--hover-bg:#eaf2fb;--progress-bg:#dbe4ef;--tag-code-bg:#e4f0ff;--tag-code-ink:#0b4f8a;--tag-concept-bg:#f3e9ff;--tag-concept-ink:#6b21a8;--tag-calc-bg:#e8f7ee;--tag-calc-ink:#166534;--tag-report-bg:#fff4d8;--tag-report-ink:#8a5a00}}
+body[data-companion-theme="dark"]{{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--summary:#15243a;--subtle:#17263a;--code:#020617;--code-head:#0f172a;--code-ink:#e2e8f0;--on-navy:#0b1220;--warning-bg:#3b2f13;--worked-bg:#132842;--worked-line:#31547b;--hover-bg:#1d3554;--progress-bg:#23344a;--tag-code-bg:#15365a;--tag-code-ink:#bfdbfe;--tag-concept-bg:#352057;--tag-concept-ink:#e9d5ff;--tag-calc-bg:#16452c;--tag-calc-ink:#bbf7d0;--tag-report-bg:#4a3410;--tag-report-ink:#fde68a}}
 *{{box-sizing:border-box}}
 body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility}}
 a{{color:var(--blue)}}
@@ -566,13 +624,14 @@ input[type=search]{{flex:1;min-width:220px;padding:11px 13px;border:1px solid va
 .worked-report p:first-of-type{{margin-top:0}}
 .template-example{{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:var(--card)}}
 .template-example h5{{margin:12px 0 5px;color:var(--navy);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}}
-.code-wrap{{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid var(--code)}}
+.code-wrap{{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid #334155;color-scheme:dark;scrollbar-color:#475569 var(--code)}}
 .code-head{{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--code-head);color:#dbeafe;font-size:.82rem}}
 .code-head code{{color:#fff}}
 .copy-code{{background:#1d4ed8;color:#fff;border:0;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}}
-pre{{margin:0;overflow:auto}}
+pre{{margin:0;overflow:auto;white-space:pre;tab-size:4;overscroll-behavior-x:contain}}
 .code-wrap pre{{padding:13px;max-height:420px}}
-pre code{{font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:var(--code-ink)}}
+pre code{{display:block;min-width:max-content;padding-right:16px;font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:var(--code-ink)}}
+.code-line::before{{content:attr(data-line);display:inline-block;width:2.4em;margin-right:1em;text-align:right;color:#64748b;user-select:none;-webkit-user-select:none;font-weight:400}}
 .verified-output{{background:var(--subtle);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;padding:12px;max-height:340px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 "Cascadia Code",Consolas,monospace}}
 .no-code{{color:var(--muted);font-style:italic}}
 .card-actions{{display:flex;gap:12px;align-items:center;margin-top:12px}}
@@ -584,10 +643,14 @@ table{{border-collapse:collapse;width:100%;font-size:.88rem}}
 th,td{{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}}
 th{{background:var(--subtle);color:var(--navy)}}
 code{{font-family:"Cascadia Code",Consolas,monospace}}
-.tok-comment{{color:#7dd3fc}}
+.tok-comment{{color:#7dd3fc;font-style:italic}}
 .tok-string{{color:#fbbf24}}
-.tok-keyword{{color:#c084fc}}
+.tok-keyword{{color:#c084fc;font-weight:600}}
 .tok-number{{color:#86efac}}
+.tok-function{{color:#93c5fd}}
+.tok-builtin{{color:#f472b6}}
+.tok-variable{{color:#e2e8f0}}
+.tok-operator{{color:#94a3b8}}
 .code-actions{{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}}
 .code-prereq{{font-size:.74rem;font-weight:600;color:#cfe0f7}}
 .copy-cell-only{{background:#334155;color:#fff;border:1px solid #64748b;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}}
@@ -597,11 +660,29 @@ code{{font-family:"Cascadia Code",Consolas,monospace}}
 .theme-switch button.active{{background:#fff;color:var(--navy)}}
 body[data-companion-theme="dark"] .theme-switch button{{background:#ffffff14;color:#eaf1f9;border-color:#ffffff44}}
 body[data-companion-theme="dark"] .theme-switch button.active{{background:#eaf1f9;color:#0b1220}}
-@media(prefers-contrast:more){{.card-section,.question-card,.panel,aside{{border-width:2px}}.muted{{color:var(--ink)}}.tok-comment,.tok-string,.tok-keyword,.tok-number{{color:#fff}}}}
+@media(prefers-contrast:more){{
+  .card-section,.question-card,.panel,aside{{border-width:2px}}
+  .muted{{color:var(--ink)}}
+  .tok-comment{{color:#bae6fd}}
+  .tok-string{{color:#fde68a}}
+  .tok-keyword{{color:#f5d0fe;font-weight:700}}
+  .tok-number{{color:#bbf7d0}}
+  .tok-function{{color:#bfdbfe}}
+  .tok-builtin{{color:#fbcfe8}}
+  .tok-variable{{color:#fff}}
+  .tok-operator{{color:#e2e8f0}}
+}}
 @media(forced-colors:active){{
   .code-wrap,.verified-output,.warning,.worked-report,.question-card,.panel,aside{{border:1px solid CanvasText!important}}
   .copy-code,.copy-cell-only,.chip,.mark-complete,.theme-switch button{{border:1px solid ButtonText!important}}
-  pre code,.tok-comment,.tok-string,.tok-keyword,.tok-number{{color:CanvasText!important;forced-color-adjust:auto}}
+  pre code{{color:CanvasText!important;forced-color-adjust:auto}}
+  .tok-comment{{color:GrayText!important;forced-color-adjust:auto}}
+  .tok-string{{color:LinkText!important;forced-color-adjust:auto}}
+  .tok-keyword{{color:Highlight!important;forced-color-adjust:auto}}
+  .tok-number{{color:ButtonText!important;forced-color-adjust:auto}}
+  .tok-function{{color:HighlightText!important;forced-color-adjust:auto}}
+  .tok-builtin{{color:LinkText!important;forced-color-adjust:auto}}
+  .tok-variable,.tok-operator{{color:CanvasText!important;forced-color-adjust:auto}}
   .done-state{{color:CanvasText!important}}
 }}
 footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);font-size:.86rem}}
@@ -712,20 +793,50 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
   }}
   function highlight(code){{
     const source=code.textContent;
-    const pattern=/(#.*$|\x22\x22\x22[\s\S]*?\x22\x22\x22|'''[\s\S]*?'''|\x22(?:\\.|[^\x22\\])*\x22|'(?:\\.|[^'\\])*'|\b(?:import|from|as|def|return|for|in|if|else|elif|while|try|except|with|class|lambda|None|True|False|and|or|not|is)\b|\b\d+(?:\.\d+)?\b)/gm;
-    let out='';let last=0;let match;
+    // Tokens deliberately stop at newlines so every source line can be wrapped
+    // in its own span. textContent remains the exact executable Python source;
+    // Pseudo-element line numbers are never copied.
+    const pattern=/(#.*$|\x22\x22\x22[^\n]*?\x22\x22\x22|'''[^'\n]*?'''|\x22(?:\\.|[^\x22\\\n])*\x22|'(?:\\.|[^'\\\n])*'|\b(?:import|from|as|def|return|for|in|if|else|elif|while|try|except|finally|with|class|lambda|None|True|False|and|or|not|is|pass|break|continue|global|nonlocal|yield|assert|del|raise|async|await)\b|\b(?:print|len|range|int|float|str|bool|list|dict|set|tuple|sum|min|max|abs|round|sorted|enumerate|zip|isinstance|type|open|super)\b|\b[A-Za-z_]\w*(?=\s*\()|[-+*/%=<>!&|^~]+|\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b[A-Za-z_]\w*\b)/gm;
+    const keyword=/^(?:import|from|as|def|return|for|in|if|else|elif|while|try|except|finally|with|class|lambda|None|True|False|and|or|not|is|pass|break|continue|global|nonlocal|yield|assert|del|raise|async|await)$/;
+    const builtin=/^(?:print|len|range|int|float|str|bool|list|dict|set|tuple|sum|min|max|abs|round|sorted|enumerate|zip|isinstance|type|open|super)$/;
+    const fragment=document.createDocumentFragment();
+    let lineNo=1;
+    let line=document.createElement('span');
+    line.className='code-line';
+    line.dataset.line=String(lineNo);
+    function appendText(value){{
+      value.split('\n').forEach((part,index)=>{{
+        if(index>0){{
+          line.appendChild(document.createTextNode('\n'));
+          fragment.appendChild(line);
+          line=document.createElement('span');
+          line.className='code-line';
+          line.dataset.line=String(++lineNo);
+        }}
+        if(part)line.appendChild(document.createTextNode(part));
+      }});
+    }}
+    let last=0;let match;
     while((match=pattern.exec(source))!==null){{
-      out+=source.slice(last,match.index);
+      appendText(source.slice(last,match.index));
       const token=match[0];
-      let cls='tok-number';
+      let cls='tok-variable';
       if(token.startsWith('#'))cls='tok-comment';
       else if(token[0]==='\x22'||token[0]==="'"||token.startsWith('\x22\x22\x22')||token.startsWith("'''"))cls='tok-string';
-      else if(/^[A-Za-z_]/.test(token))cls='tok-keyword';
-      out+='<span class="'+cls+'">'+token.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>';
+      else if(keyword.test(token))cls='tok-keyword';
+      else if(builtin.test(token))cls='tok-builtin';
+      else if(/^[A-Za-z_]\w*$/.test(token))cls='tok-function';
+      else if(/^[-+*/%=<>!&|^~]+$/.test(token))cls='tok-operator';
+      else if(/^\d/.test(token))cls='tok-number';
+      const span=document.createElement('span');
+      span.className=cls;
+      span.textContent=token;
+      line.appendChild(span);
       last=pattern.lastIndex;
     }}
-    out+=source.slice(last);
-    code.innerHTML=out;
+    appendText(source.slice(last));
+    fragment.appendChild(line);
+    code.replaceChildren(fragment);
   }}
   document.querySelectorAll('pre code.language-python').forEach(highlight);
 
@@ -748,18 +859,43 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
     chip.classList.add('active');active=chip.dataset.filter;filter();
   }}));
   const setupCode=document.querySelector('.code-wrap[data-cell="setup"] pre code');
+  function fallbackCopy(text){{
+    const area=document.createElement('textarea');
+    area.value=text;
+    area.setAttribute('readonly','');
+    area.style.position='fixed';
+    area.style.top='0';
+    area.style.left='-9999px';
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0,area.value.length);
+    let copied=false;
+    try{{copied=document.execCommand('copy')}}catch(e){{}}
+    area.remove();
+    if(!copied)throw new Error('Clipboard unavailable');
+  }}
   async function copyText(text,btn,label){{
-    try{{await navigator.clipboard.writeText(text);btn.textContent={JS_LABELS['copied']}}}
-    catch(e){{btn.textContent={JS_LABELS['copy_failed']}}}
+    let copied=false;
+    try{{await navigator.clipboard.writeText(text);copied=true}}catch(e){{}}
+    if(!copied){{try{{fallbackCopy(text);copied=true}}catch(e){{}}}}
+    btn.textContent=copied?{JS_LABELS['copied']}:{JS_LABELS['copy_failed']};
     setTimeout(()=>btn.textContent=label,1400);
   }}
+  const cellSeparator=String.fromCharCode(10,10);
   document.querySelectorAll('.copy-code').forEach(btn=>btn.addEventListener('click',async()=>{{
     const wrap=btn.closest('.code-wrap');
     const code=wrap.querySelector('pre code');
-    let text=code.textContent;
+    let text='';
     if(wrap.dataset.requiresSetup==='true'&&setupCode){{
-      text=setupCode.textContent+'\\n\\n'+text;
+      // String.fromCharCode avoids ambiguity in this raw f-string: the pasted
+      // result must contain two real newlines, never literal backslash-n text.
+      text+=setupCode.textContent+cellSeparator;
+      (wrap.dataset.prereqs||'').split(' ').filter(Boolean).forEach(key=>{{
+        const earlier=document.querySelector('.code-wrap[data-cell="'+key+'"] pre code');
+        if(earlier)text+=earlier.textContent+cellSeparator;
+      }});
     }}
+    text+=code.textContent;
     await copyText(text,btn,btn.dataset.copyMode==='with-setup'?{JS_LABELS['copy_setup_cell']}:{JS_LABELS['copy_code']});
   }}));
   document.querySelectorAll('.copy-cell-only').forEach(btn=>btn.addEventListener('click',async()=>{{
@@ -792,11 +928,10 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
 </body>
 </html>
 """
-    HTML_PATH.write_text(document, encoding="utf-8", newline="\n")
+    _atomic_write_text(HTML_PATH, document)
     if results:
-        RESULTS_PATH.write_text(
-            json.dumps(results, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8", newline="\n",
+        _atomic_write_text(
+            RESULTS_PATH, _strict_json(results, indent=2, sort_keys=True) + "\n"
         )
     return HTML_PATH
 

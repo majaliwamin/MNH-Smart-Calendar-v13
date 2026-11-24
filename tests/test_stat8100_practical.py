@@ -1,17 +1,27 @@
 """Structural and reproducibility checks for the STAT 8100 practical companion.
 
-The delivered notebook was executed against the three uploaded teaching CSVs.
-These tests deliberately use only the standard library so CI does not need a
-Jupyter kernel; they validate the committed artefacts and the app integration.
+The structural checks use only the standard library. The runtime checks replay
+the canonical code cells in one shared namespace when the declared scientific
+stack is available; no Jupyter kernel is required to run the test suite.
 """
 
 from __future__ import annotations
 
+import ast
+import contextlib
 import hashlib
 import html as html_module
+import importlib
+import io
 import json
+import math
+import os
 import re
+import sys
+import warnings
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCES = ROOT / "frontend" / "resources"
@@ -108,6 +118,12 @@ def test_notebook_is_executed_has_no_errors_and_contains_every_subquestion():
     cells = notebook["cells"]
     code_cells = [cell for cell in cells if cell.get("cell_type") == "code"]
     assert len(code_cells) >= 30
+    mark_done_cells = [
+        _source(cell).strip()
+        for cell in code_cells
+        if _source(cell).strip().startswith("mark_done(")
+    ]
+    assert mark_done_cells == [f'mark_done("{group}")' for group in QUESTION_GROUPS]
     assert all(cell.get("execution_count") is not None for cell in code_cells)
     assert not [
         output
@@ -391,7 +407,8 @@ def test_generators_and_dev_dependencies_are_present():
     assert "def build_notebook()" in builder
     assert "def build_html(results=None):" in builder
     assert "from stat8100_reporting import work_report, worked_template_examples" in builder
-    assert "nbformat.write(" in runner
+    assert "nbformat.writes(" in runner
+    assert "_atomic_write_text(" in runner
     assert "NotebookClient(" in runner
     assert "MARKER" in runner
 
@@ -404,3 +421,183 @@ def test_generators_and_dev_dependencies_are_present():
         assert "TODO" not in text
         assert "FIXME" not in text
         assert "coming soon" not in text.lower()
+
+
+def _code_cells_module(monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / "scripts"))
+    return importlib.import_module("stat8100_code_cells")
+
+
+def _close_enough(left, right) -> bool:
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        if isinstance(left, int) and isinstance(right, int):
+            return left == right
+        return math.isclose(float(left), float(right), rel_tol=1e-9, abs_tol=1e-9)
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(
+            _close_enough(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(
+            _close_enough(a, b) for a, b in zip(left, right)
+        )
+    return left == right
+
+
+def test_canonical_code_cells_parse_and_html_shows_exact_source(monkeypatch):
+    module = _code_cells_module(monkeypatch)
+    guides = importlib.import_module("stat8100_guides")
+    for key, source in module.CODE.items():
+        ast.parse(source, filename=f"CODE[{key!r}]")
+
+    companion = COMPANION.read_text(encoding="utf-8")
+    blocks = re.findall(
+        r'<pre><code class="language-python">(.*?)</code></pre>',
+        companion,
+        flags=re.S,
+    )
+    decoded = [html_module.unescape(block) for block in blocks]
+    expected = [module.CODE["setup"]] + [
+        module.CODE[cell]
+        for qid in guides.GUIDES
+        for cell in module.QUESTION_CODE[qid]
+    ]
+    assert decoded == expected
+    assert all(block.endswith("\n") for block in decoded)
+
+
+def test_copy_buttons_use_real_newlines_and_prerequisite_chain():
+    companion = COMPANION.read_text(encoding="utf-8")
+    assert "String.fromCharCode(10,10)" in companion
+    assert "'\\\\n\\\\n'" not in companion
+    assert "function fallbackCopy(text)" in companion
+    assert "document.execCommand('copy')" in companion
+    assert "(wrap.dataset.prereqs||'').split(' ')" in companion
+    for key, prerequisites in (
+        ("q8c", "q8b"),
+        ("q8d", "q8b"),
+        ("q8e", "q8b q8d"),
+        ("q10d", "q10a"),
+        ("q10f", "q10e"),
+    ):
+        assert f'data-cell="{key}" data-requires-setup="true" data-prereqs="{prerequisites}"' in companion
+
+
+def test_code_window_is_dark_and_high_contrast_in_both_themes():
+    companion = COMPANION.read_text(encoding="utf-8")
+    # Light resources page, dark editor: the code palette is fixed on :root.
+    assert "--code:#0f172a" in companion
+    assert "--code-head:#1e293b" in companion
+    assert "--code:#020617" in companion
+    assert "color-scheme:dark" in companion
+    assert ".code-line::before" in companion
+    assert "user-select:none" in companion
+    assert "min-width:max-content" in companion
+    assert "overscroll-behavior-x:contain" in companion
+    for token in ("comment", "string", "keyword", "number", "function",
+                  "builtin", "variable", "operator"):
+        assert f".tok-{token}{{" in companion
+    assert "forced-color-adjust:auto" in companion
+
+
+def test_runtime_replay_reproduces_the_committed_verified_results(monkeypatch):
+    for package in ("numpy", "pandas", "scipy", "statsmodels", "seaborn"):
+        pytest.importorskip(package)
+    matplotlib = pytest.importorskip("matplotlib")
+    # A GUI backend imported by another test would make plt.show() block.
+    matplotlib.use("Agg", force=True)
+    module = _code_cells_module(monkeypatch)
+    monkeypatch.setenv("MPLBACKEND", "Agg")
+    monkeypatch.setenv("MNH_DATA_DIR", str(SAMPLES))
+    monkeypatch.chdir(ROOT)
+
+    namespace = {"__name__": "__main__"}
+    streams = []
+    marker = "MNH_VERIFIED_RESULTS_JSON:"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for key, source in module.CODE.items():
+            ast.parse(source)
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                exec(compile(source, f"cell:{key}", "exec"), namespace)
+            streams.append(buffer.getvalue())
+
+    marker_outputs = [text for text in streams if marker in text]
+    assert len(marker_outputs) == 1
+    fresh = json.loads(marker_outputs[0].split(marker, 1)[1].strip())
+    committed = _results()
+    assert set(fresh) == set(committed)
+    assert _close_enough(fresh, committed)
+    assert all(math.isfinite(value) for value in _flatten_numbers(fresh))
+
+    # The canonical CODE cells print the initial 0/10 state. The notebook's
+    # separate mark_done cells advance it to 10/10 and are checked above.
+    progress = [
+        int(match.group(1))
+        for match in re.finditer(
+            r"Progress:.*?\b(\d+)/10 questions covered", "\n".join(streams)
+        )
+    ]
+    assert progress == [0]
+
+
+def _flatten_numbers(value):
+    if isinstance(value, bool):
+        return []
+    if isinstance(value, (int, float)):
+        return [value]
+    if isinstance(value, dict):
+        return [item for child in value.values() for item in _flatten_numbers(child)]
+    if isinstance(value, list):
+        return [item for child in value for item in _flatten_numbers(child)]
+    return []
+
+
+def test_chained_cells_report_missing_prerequisites(monkeypatch):
+    module = _code_cells_module(monkeypatch)
+    # Supply only the setup objects so the setup guard passes and the new
+    # cell-specific guard is the one under test.
+    namespace = {"anc": object(), "record": lambda *args, **kwargs: None}
+    for key, expected in (
+        ("q8c", ("q8b", "model_multi")),
+        ("q8d", ("q8b", "formula_base")),
+        ("q8e", ("q8b", "q8d", "model_extended")),
+        ("q10d", ("q10a", "events")),
+        ("q10f", ("q10e", "cox_design")),
+    ):
+        with pytest.raises(RuntimeError) as raised:
+            exec(compile(module.CODE[key], f"cell:{key}", "exec"), dict(namespace))
+        message = str(raised.value)
+        assert "Run prerequisite code cell(s)" in message
+        for token in expected:
+            assert token in message
+
+
+def test_worked_reports_use_correct_statistical_direction_and_wording(monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / "scripts"))
+    reporting = importlib.import_module("stat8100_reporting")
+    results = _results()
+
+    q6 = reporting.work_report("Q6", results)
+    assert "Rural minus Peri-urban = -0.11 g/dL" in q6["text"]
+    assert "Urban minus Peri-urban = 0.64 g/dL" in q6["text"]
+    assert "group2 minus group1" in q6["teach"]
+    assert "Alexander-Govern" in q6["text"]
+
+    q8c = reporting.work_report("Q8c", results)
+    assert "descriptive only" in q8c["text"]
+    assert "row index 243" in q8c["text"]
+
+    q8d = reporting.work_report("Q8d", results)
+    assert "mixed, weak evidence of improvement" in q8d["text"]
+
+    q10e = reporting.work_report("Q10e", results)
+    assert "age HR 1.020 (95% CI 0.998 to 1.042" in q10e["text"]
+    assert "no clear change in hazard" in q10e["text"]
+    assert "flags a time trend for anaemia and caesarean" in q10e["text"]
+
+    assert "still needed" in reporting.work_report("Q2d", results)["text"]
+    assert "Q8d" in reporting.work_report("Q3d", results)["teach"]

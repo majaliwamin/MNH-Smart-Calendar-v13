@@ -199,7 +199,8 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
             f"(Pearson r={_num(value.get('pearson_r'), 3)}, 95% CI {_ci(value.get('pearson_ci'), 3)}, "
             f"{_p_eq(value.get('pearson_p'))}; Spearman rho={_num(value.get('spearman_rho'), 3)}, "
             f"{_p_eq(value.get('spearman_p'))}; n={_i(value.get('n'))}). The rank-based estimate is close "
-            "to the Pearson estimate, so a few extreme points are unlikely to explain the association.",
+            "to the Pearson estimate, which is reassuring, but the scatterplot and influence diagnostics "
+            "are still needed before ruling out influential points.",
             "Q2c and Q2d outputs · anc_cohort.csv",
             "Report both coefficients and inspect the scatterplot first. An observational association is not evidence that gestational age causes birthweight.",
         )
@@ -257,7 +258,7 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
             "Mean birthweight was " + "; ".join(parts) + ". These separate intervals show precision "
             "within each facility group; overlap alone is not a formal test of equal means.",
             "Q3d output · anc_cohort.csv",
-            "A formal comparison requires the model-based approach in Q6. Unequal subgroup sample sizes make interval widths hard to compare informally.",
+            "A formal comparison requires a model-based approach such as the birthweight model in Q8d. Unequal subgroup sample sizes make interval widths hard to compare informally.",
         )
 
     if qid == "Q4":
@@ -297,8 +298,11 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
     if qid == "Q6":
         value = data.get("Q6", {})
         tukey = value.get("tukey", [])
+        # statsmodels lists group1/group2 alphabetically but computes
+        # meandiff as mean(group2) - mean(group1). Keep the stored CI and use
+        # the same direction in the wording.
         pairs = "; ".join(
-            f"{r.get('group1')} minus {r.get('group2')} = {_num(r.get('meandiff'))} g/dL "
+            f"{r.get('group2')} minus {r.get('group1')} = {_num(r.get('meandiff'))} g/dL "
             f"(95% CI {_ci([r.get('lower'), r.get('upper')])}, adjusted {_p_eq(r.get('p-adj'))})"
             for r in tukey
         )
@@ -307,10 +311,15 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
             f"One-way ANOVA comparing haemoglobin across facility type gave "
             f"F({_i(value.get('anova_df_between'))},{_i(value.get('anova_df_within'))})="
             f"{_num(value.get('anova_f'), 2)}, {_p_eq(value.get('anova_p'))}; Levene "
-            f"{_p_eq(value.get('levene_p'))} and Kruskal-Wallis H={_num(value.get('kruskal_h'), 2)}, "
-            f"{_p_eq(value.get('kruskal_p'))}. Tukey-adjusted pairwise differences were: {pairs}.",
+            f"{_p_eq(value.get('levene_p'))}, Alexander-Govern A={_num(value.get('alexander_govern_a'), 2)} "
+            f"({_p_eq(value.get('alexander_govern_p'))}) and Kruskal-Wallis H="
+            f"{_num(value.get('kruskal_h'), 2)}, {_p_eq(value.get('kruskal_p'))}. "
+            "Because Levene is significant, the equal-variance ANOVA/Tukey results are "
+            "assumption-dependent; the Alexander-Govern and rank-based tests are the "
+            "preferred sensitivity checks here. "
+            f"Tukey-adjusted pairwise differences were: {pairs}.",
             "Q6 output · anc_cohort.csv",
-            "Report the overall test before the adjusted contrasts. The rank-based test is an important sensitivity check because the variance test is borderline.",
+            "Report the heteroscedastic and rank-based results before relying on classical ANOVA/Tukey when Levene is significant. Tukey differences are written in the same direction statsmodels computes them: group2 minus group1.",
         )
 
     if qid == "Q7a":
@@ -412,11 +421,15 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
     if qid == "Q8c":
         value = data.get("Q8c", {})
         top = value.get("top_cooks", [])
-        largest = _num(top[0], 3) if top else "not available"
+        largest_row = top[0] if top and isinstance(top[0], dict) else {}
+        largest = _num(largest_row.get("cooks_d"), 3) if largest_row else "not available"
+        row_index = largest_row.get("row_index")
+        row_note = f" at row index {row_index}" if row_index is not None else ""
         return _work(
             qid,
-            f"For the Q8b model, Durbin-Watson={_num(value.get('durbin_watson'), 2)}, suggesting no obvious "
-            f"serial correlation. The largest Cook's distance was {largest} against a 4/n screening threshold "
+            f"For the Q8b model, Durbin-Watson={_num(value.get('durbin_watson'), 2)} is descriptive only "
+            f"because ANC rows have no meaningful time order; independence rests on one row per woman "
+            f"and the study design. The largest Cook's distance was {largest}{row_note} against a 4/n screening threshold "
             f"of {_num(value.get('cooks_threshold'), 4)}. The residual-versus-fitted, scale-location, "
             "Q-Q and influence plots must also be described in words because the numbers alone do not check linearity or normality.",
             "Q8c output · anc_cohort.csv",
@@ -427,10 +440,15 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
         value = data.get("Q8d", {})
         aic_change = _f(value.get("aic_extended")) - _f(value.get("aic_base"))
         r2_change = _f(value.get("adj_r2_extended")) - _f(value.get("adj_r2_base"))
-        conclusion = "does not improve" if _f(value.get("p_value"), 1.0) >= 0.05 and aic_change > 0 else "may improve"
+        if _f(value.get("p_value"), 1.0) >= 0.05 and abs(aic_change) < 2 and r2_change > 0:
+            conclusion = "gives mixed, weak evidence of improvement"
+        elif _f(value.get("p_value"), 1.0) < 0.05 and aic_change < 0:
+            conclusion = "improves"
+        else:
+            conclusion = "gives mixed evidence about fit"
         return _work(
             qid,
-            f"Adding facility type to the Q8b model {conclusion} fit on the same complete cases "
+            f"Adding facility type to the Q8b model {conclusion} on the same complete cases "
             f"(n={_i(value.get('n'))}): nested F with {_i(value.get('df_diff'))} numerator degrees of freedom="
             f"{_num(value.get('f_statistic'), 2)}, {_p_eq(value.get('p_value'))}; AIC "
             f"{_num(value.get('aic_extended'), 2)} versus {_num(value.get('aic_base'), 2)} (change "
@@ -540,21 +558,46 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
 
     if qid == "Q10e":
         rows = data.get("Q10e", [])
-        parts = [
-            f"{r.get('term')} HR {_num(r.get('hazard_ratio'), 2)} (95% CI "
-            f"{_ci([r.get('hr_ci_low'), r.get('hr_ci_high')], 2)}, {_p_eq(r.get('p_value'))}) — "
-            f"{_ratio_text(r.get('hazard_ratio'))} hazard at fixed covariates"
-            for r in rows
+        parts = []
+        for r in rows:
+            hr = _f(r.get("hazard_ratio"), 1.0)
+            low = _f(r.get("hr_ci_low"), 1.0)
+            high = _f(r.get("hr_ci_high"), 1.0)
+            if low > 1 and _f(r.get("p_value"), 1.0) < 0.05:
+                direction = "higher"
+            elif high < 1 and _f(r.get("p_value"), 1.0) < 0.05:
+                direction = "lower"
+            else:
+                direction = "no clear change in"
+            parts.append(
+                f"{r.get('term')} HR {_num(hr, 3)} (95% CI {_num(low, 3)} to {_num(high, 3)}, "
+                f"{_p_eq(r.get('p_value'))}) — {direction} hazard at fixed covariates"
+            )
+        flagged = [
+            str(r.get("term")) for r in data.get("Q10f", [])
+            if r.get("flag_ph_concern")
         ]
+        if len(flagged) == 1:
+            flagged_text = flagged[0]
+        elif len(flagged) == 2:
+            flagged_text = " and ".join(flagged)
+        else:
+            flagged_text = ", ".join(flagged[:-1]) + ", and " + flagged[-1]
+        ph_note = (
+            f" Q10f's Schoenfeld screen flags a time trend for {flagged_text}, "
+            "so constant hazard ratios for those terms should be treated cautiously."
+            if flagged else
+            " Q10f did not flag a time trend, although the screen cannot prove proportional hazards."
+        )
         events = _i(data.get("Q10a", {}).get("events"))
         participants = _i(data.get("Q10a", {}).get("participants"))
         return _work(
             qid,
             "In the Cox model, adjusted hazard ratios were " + "; ".join(parts) +
-            f" (analysis of {participants} women and {events} events). Binary terms use the recorded "
-            "reference categories printed in the notebook output.",
-            "Q10a and Q10e outputs · postpartum_survival.csv",
-            "A hazard ratio is a relative instantaneous event rate, not a risk ratio. Report reference levels and the PH diagnostic before interpreting it.",
+            f" (analysis of {participants} women and {events} events). Reference levels are "
+            "anaemia = No anaemia, delivery_mode = Vaginal and age = per one-year increase." + ph_note,
+            "Q10a, Q10e and Q10f outputs · postpartum_survival.csv",
+            "A hazard ratio is a relative instantaneous event rate, not a risk ratio. The age point estimate is above 1 but its interval includes 1 and p>0.05, so it is not clear evidence at the 5% level.",
         )
 
     if qid == "Q10f":

@@ -34,7 +34,8 @@ CODE["setup"] = dedent(r'''
     from statsmodels.duration.survfunc import SurvfuncRight
     from statsmodels.duration.hazard_regression import PHReg
 
-    %matplotlib inline
+    # Matplotlib's inline backend is the Jupyter default; no IPython-only magic
+    # is needed, so this cell also parses and runs under plain Python.
     sns.set_theme(style="whitegrid", context="notebook")
     plt.rcParams["figure.dpi"] = 110
     pd.set_option("display.max_columns", 50)
@@ -112,9 +113,13 @@ CODE["setup"] = dedent(r'''
 
     def jsonable(obj):
         """Convert pandas/numpy results into JSON-safe plain Python values."""
+        if obj is pd.NA or obj is pd.NaT:
+            return None
         if isinstance(obj, dict):
             return {str(k): jsonable(_clean_nan(v)) for k, v in obj.items()}
-        if isinstance(obj, (list, tuple, set)):
+        if isinstance(obj, (set, frozenset)):
+            return [jsonable(_clean_nan(v)) for v in sorted(obj, key=repr)]
+        if isinstance(obj, (list, tuple)):
             return [jsonable(_clean_nan(v)) for v in obj]
         if isinstance(obj, pd.DataFrame):
             return jsonable(obj.to_dict(orient="records"))
@@ -124,6 +129,8 @@ CODE["setup"] = dedent(r'''
             return jsonable(obj.tolist())
         if isinstance(obj, np.generic):
             return jsonable(obj.item())
+        if isinstance(obj, complex):
+            raise ValueError("Complex results are not JSON-serialisable.")
         return _clean_nan(obj)
 
 
@@ -198,13 +205,14 @@ CODE["audit"] = dedent(r'''
 ''').strip() + "\n"
 
 CODE["q1a"] = dedent(r'''
-    n_anc = int(anc["preterm"].notna().sum())
+    n_preterm = int(anc["preterm"].notna().sum())
+    n_lowbw = int(anc["low_bw"].notna().sum())
     p_preterm = float(anc["preterm"].mean())
     p_lowbw = float(anc["low_bw"].mean())
     q1a_table = pd.DataFrame({
         "event": ["Preterm delivery", "Low birth weight"],
         "count": [int(anc["preterm"].sum()), int(anc["low_bw"].sum())],
-        "denominator": [n_anc, n_anc],
+        "denominator": [n_preterm, n_lowbw],
         "sample_proportion": [p_preterm, p_lowbw],
     })
     print(q1a_table.to_string(index=False, formatters={
@@ -382,13 +390,21 @@ CODE["q3d"] = dedent(r'''
     facility_summary = pd.DataFrame(facility_rows)
     print(facility_summary.to_string(index=False, float_format=lambda v: f"{v:.2f}"))
 
-    sns.pointplot(
-        data=anc, x="facility_type", y="birthweight", order=facility_order,
-        errorbar=("ci", 95), capsize=0.12, linestyles="", color="#0b4f8a",
-    )
-    plt.title("Mean birthweight by facility type with 95% CIs")
-    plt.xlabel("Facility type")
-    plt.ylabel("Birthweight (g)")
+    # Plot the same deterministic t intervals shown in the table. Seaborn's
+    # errorbar=("ci", 95) is a bootstrap interval and would not match them.
+    x_positions = np.arange(len(facility_order))
+    yerr = np.array([
+        facility_summary["mean"] - facility_summary["ci_low"],
+        facility_summary["ci_high"] - facility_summary["mean"],
+    ])
+    fig, ax = plt.subplots(figsize=(7, 4.4))
+    ax.errorbar(x_positions, facility_summary["mean"], yerr=yerr,
+                fmt="o", capsize=5, color="#0b4f8a")
+    ax.set_xticks(x_positions, facility_order)
+    ax.set_title("Mean birthweight by facility type with 95% t CIs")
+    ax.set_xlabel("Facility type")
+    ax.set_ylabel("Birthweight (g)")
+    ax.grid(axis="y", alpha=0.3)
     plt.tight_layout()
     plt.show()
     plt.close("all")
@@ -516,6 +532,9 @@ CODE["q6"] = dedent(r'''
     )
     tukey_data = tukey.summary().data
     tukey_df = pd.DataFrame(tukey_data[1:], columns=tukey_data[0])
+    # Levene is significant on these data, so report a heteroscedastic
+    # alternative and treat classical ANOVA/Tukey as assumption-dependent.
+    alex_govern = st.alexandergovern(*hb_groups)
     kruskal = st.kruskal(*hb_groups)
 
     temp = anc.loc[anc["hb"].notna(), ["facility_type", "hb"]].copy()
@@ -539,9 +558,11 @@ CODE["q6"] = dedent(r'''
     print(f"Levene p = {levene_hb.pvalue:.4f}")
     print(f"One-way ANOVA: F({anova_df_between},{anova_df_within}) = "
           f"{anova.statistic:.3f}, p = {anova.pvalue:.4g}")
-    print("\nTukey HSD (multiplicity-adjusted):")
+    print("\nTukey HSD (equal-variance assumption; multiplicity-adjusted):")
     print(tukey_df.to_string(index=False))
-    print(f"\nKruskal-Wallis H = {kruskal.statistic:.4f}, p = {kruskal.pvalue:.4g}")
+    print(f"\nAlexander-Govern test for unequal variances: A = "
+          f"{alex_govern.statistic:.4f}, p = {alex_govern.pvalue:.4g}")
+    print(f"Kruskal-Wallis H = {kruskal.statistic:.4f}, p = {kruskal.pvalue:.4g}")
     record("Q6", {
         "groups": hb_summary.to_dict(orient="records"),
         "levene_p": float(levene_hb.pvalue),
@@ -549,6 +570,8 @@ CODE["q6"] = dedent(r'''
         "anova_df_between": int(anova_df_between),
         "anova_df_within": int(anova_df_within),
         "tukey": tukey_df.to_dict(orient="records"),
+        "alexander_govern_a": float(alex_govern.statistic),
+        "alexander_govern_p": float(alex_govern.pvalue),
         "kruskal_h": float(kruskal.statistic), "kruskal_p": float(kruskal.pvalue),
     })
 ''').strip() + "\n"
@@ -725,7 +748,9 @@ CODE["q8c"] = dedent(r'''
     residuals = model_multi.resid
     student_resid = influence.resid_studentized_internal
     leverage = influence.hat_matrix_diag
-    cooks = pd.Series(influence.cooks_distance[0], index=anc_model.index)
+    # Cook's distance is positional in the fitted model; use the model's own
+    # row labels so any rows dropped by the formula are handled correctly.
+    cooks = pd.Series(influence.cooks_distance[0], index=fitted.index)
     top_influential = cooks.sort_values(ascending=False).head(5)
     threshold = 4 / int(model_multi.nobs)
 
@@ -748,14 +773,18 @@ CODE["q8c"] = dedent(r'''
     plt.show()
     plt.close("all")
 
-    print(f"Durbin-Watson statistic = {durbin_watson(residuals):.4f}")
+    print(f"Durbin-Watson statistic = {durbin_watson(residuals):.4f} "
+          "(descriptive only: ANC rows have no meaningful time order)")
     print(f"Cook's D warning threshold 4/n = {threshold:.5f}")
     print("Largest Cook's D values (row index, value):")
     print(top_influential.round(5).to_string())
     record("Q8c", {
         "durbin_watson": float(durbin_watson(residuals)),
         "cooks_threshold": float(threshold),
-        "top_cooks": [float(v) for v in top_influential.values],
+        "top_cooks": [
+            {"row_index": str(index), "cooks_d": float(value)}
+            for index, value in top_influential.items()
+        ],
     })
 ''').strip() + "\n"
 
@@ -1001,8 +1030,11 @@ CODE["q10c"] = dedent(r'''
     for group in strata:
         km = km_by_group[group]
         idx90 = int(np.searchsorted(km.surv_times, 90, side="right")) - 1
-        print(f"{group}: n = {int((surv['anaemia'] == group).sum())}, "
-              f"S(90) = {km.surv_prob[idx90]:.4f}" if idx90 >= 0 else group)
+        n_group = int((surv["anaemia"] == group).sum())
+        if idx90 >= 0:
+            print(f"{group}: n = {n_group}, S(90) = {km.surv_prob[idx90]:.4f}")
+        else:
+            print(f"{group}: n = {n_group}, S(90) = not estimable before first event")
     record("Q10c", {
         "logrank_chi2": float(logrank_chi2), "logrank_p": logrank_p,
         "groups": strata,
@@ -1107,7 +1139,7 @@ CODE["q10f"] = dedent(r'''
 
 CODE["results"] = dedent(r'''
     print("MNH_VERIFIED_RESULTS_JSON:" +
-          json.dumps(RESULTS, ensure_ascii=False, sort_keys=True, default=str))
+          json.dumps(RESULTS, ensure_ascii=False, sort_keys=True, allow_nan=False))
 ''').strip() + "\n"
 
 # Every non-setup cell depends on objects created by the setup cell.  A clear
@@ -1125,9 +1157,37 @@ SETUP_GUARD = dedent(r'''
         ) from exc
 ''').strip() + "\n\n"
 
+# Some question cells reuse fitted models or computed values from an earlier
+# question. The notebook runs them in order, but a cell copied from the HTML
+# companion needs a clear prerequisite error instead of a bare NameError.
+CELL_PREREQUISITE_NAMES = {
+    "q8c": (("q8b",), ("model_multi", "anc_model")),
+    "q8d": (("q8b",), ("model_multi", "anc_model", "formula_base")),
+    "q8e": (("q8b", "q8d"), ("model_multi", "model_extended")),
+    "q10d": (("q10a",), ("events",)),
+    "q10f": (("q10e",), ("cox_model", "cox_design")),
+}
+
+
+def _prerequisite_guard(source_cells, names):
+    return dedent(f'''
+        _required_cells = {source_cells!r}
+        _required_names = {names!r}
+        _missing = [name for name in _required_names if name not in globals()]
+        if _missing:
+            raise RuntimeError(
+                "Run prerequisite code cell(s) " + ", ".join(_required_cells)
+                + " before this cell. Missing objects: " + ", ".join(_missing)
+            )
+    ''').strip() + "\n\n"
+
+
 for _key in list(CODE):
     if _key != "setup":
         CODE[_key] = SETUP_GUARD + CODE[_key]
+        if _key in CELL_PREREQUISITE_NAMES:
+            _cells, _names = CELL_PREREQUISITE_NAMES[_key]
+            CODE[_key] = _prerequisite_guard(_cells, _names) + CODE[_key]
 
 # Which code cells appear inside each navigation card.
 QUESTION_CODE = {
@@ -1141,11 +1201,6 @@ QUESTION_CODE = {
     "Q9": ["q9"],
     "Q10a": ["q10a"], "Q10b": ["q10b"], "Q10c": ["q10c"],
     "Q10d": ["q10d"], "Q10e": ["q10e"], "Q10f": ["q10f"],
-}
-
-QUESTION_OF = {
-    qid: ("Q" + qid.split("(")[0][1:] if "(" in qid else qid)
-    for qid in QUESTION_CODE
 }
 
 QUESTION_TITLES = {

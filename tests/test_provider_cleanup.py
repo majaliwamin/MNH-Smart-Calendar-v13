@@ -9,8 +9,12 @@ def test_no_retired_ai_vendor_references_remain_in_working_tree():
     retired = "".join(("open", "ai"))
     model_marker = "".join(("gpt", "-4o"))
     endpoint_marker = "api." + retired + ".com"
+    dependency_dirs = {
+        ".git", "__pycache__", ".pytest_cache", ".venv", "venv",
+        "site-packages", "node_modules",
+    }
     for path in ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts or "__pycache__" in path.parts:
+        if not path.is_file() or any(part in dependency_dirs for part in path.parts):
             continue
         if path.suffix.lower() not in {".py", ".js", ".css", ".html", ".json", ".yml", ".yaml", ".toml", ".md", ".txt", ".dart"}:
             continue

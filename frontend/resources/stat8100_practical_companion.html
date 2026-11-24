@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>STAT 8100 Practical Companion</title>
 <style>
-:root{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--summary:#fbfdff;--subtle:#f1f5f9;--code:#0b1b2e;--code-head:#132947;--code-ink:#e6edf7;--on-navy:#fff;--warning-bg:#fff8e8;--worked-bg:#f8fbff;--worked-line:#c8dcf2;--hover-bg:#eaf2fb;--progress-bg:#dbe4ef;--tag-code-bg:#e4f0ff;--tag-code-ink:#0b4f8a;--tag-concept-bg:#f3e9ff;--tag-concept-ink:#6b21a8;--tag-calc-bg:#e8f7ee;--tag-calc-ink:#166534;--tag-report-bg:#fff4d8;--tag-report-ink:#8a5a00}
-body[data-companion-theme="dark"]{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--summary:#15243a;--subtle:#17263a;--code:#070f1c;--code-head:#10233c;--code-ink:#eaf1f9;--on-navy:#0b1220;--warning-bg:#3b2f13;--worked-bg:#132842;--worked-line:#31547b;--hover-bg:#1d3554;--progress-bg:#23344a;--tag-code-bg:#15365a;--tag-code-ink:#bfdbfe;--tag-concept-bg:#352057;--tag-concept-ink:#e9d5ff;--tag-calc-bg:#16452c;--tag-calc-ink:#bbf7d0;--tag-report-bg:#4a3410;--tag-report-ink:#fde68a}
+:root{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--summary:#fbfdff;--subtle:#f1f5f9;--code:#0f172a;--code-head:#1e293b;--code-ink:#e2e8f0;--on-navy:#fff;--warning-bg:#fff8e8;--worked-bg:#f8fbff;--worked-line:#c8dcf2;--hover-bg:#eaf2fb;--progress-bg:#dbe4ef;--tag-code-bg:#e4f0ff;--tag-code-ink:#0b4f8a;--tag-concept-bg:#f3e9ff;--tag-concept-ink:#6b21a8;--tag-calc-bg:#e8f7ee;--tag-calc-ink:#166534;--tag-report-bg:#fff4d8;--tag-report-ink:#8a5a00}
+body[data-companion-theme="dark"]{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--summary:#15243a;--subtle:#17263a;--code:#020617;--code-head:#0f172a;--code-ink:#e2e8f0;--on-navy:#0b1220;--warning-bg:#3b2f13;--worked-bg:#132842;--worked-line:#31547b;--hover-bg:#1d3554;--progress-bg:#23344a;--tag-code-bg:#15365a;--tag-code-ink:#bfdbfe;--tag-concept-bg:#352057;--tag-concept-ink:#e9d5ff;--tag-calc-bg:#16452c;--tag-calc-ink:#bbf7d0;--tag-report-bg:#4a3410;--tag-report-ink:#fde68a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility}
 a{color:var(--blue)}
@@ -57,13 +57,14 @@ input[type=search]{flex:1;min-width:220px;padding:11px 13px;border:1px solid var
 .worked-report p:first-of-type{margin-top:0}
 .template-example{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:10px 0;background:var(--card)}
 .template-example h5{margin:12px 0 5px;color:var(--navy);font-size:.86rem;text-transform:uppercase;letter-spacing:.05em}
-.code-wrap{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid var(--code)}
+.code-wrap{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid #334155;color-scheme:dark;scrollbar-color:#475569 var(--code)}
 .code-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--code-head);color:#dbeafe;font-size:.82rem}
 .code-head code{color:#fff}
 .copy-code{background:#1d4ed8;color:#fff;border:0;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}
-pre{margin:0;overflow:auto}
+pre{margin:0;overflow:auto;white-space:pre;tab-size:4;overscroll-behavior-x:contain}
 .code-wrap pre{padding:13px;max-height:420px}
-pre code{font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:var(--code-ink)}
+pre code{display:block;min-width:max-content;padding-right:16px;font:13px/1.5 "Cascadia Code","Consolas","SFMono-Regular",monospace;color:var(--code-ink)}
+.code-line::before{content:attr(data-line);display:inline-block;width:2.4em;margin-right:1em;text-align:right;color:#64748b;user-select:none;-webkit-user-select:none;font-weight:400}
 .verified-output{background:var(--subtle);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;padding:12px;max-height:340px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 "Cascadia Code",Consolas,monospace}
 .no-code{color:var(--muted);font-style:italic}
 .card-actions{display:flex;gap:12px;align-items:center;margin-top:12px}
@@ -75,10 +76,14 @@ table{border-collapse:collapse;width:100%;font-size:.88rem}
 th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
 th{background:var(--subtle);color:var(--navy)}
 code{font-family:"Cascadia Code",Consolas,monospace}
-.tok-comment{color:#7dd3fc}
+.tok-comment{color:#7dd3fc;font-style:italic}
 .tok-string{color:#fbbf24}
-.tok-keyword{color:#c084fc}
+.tok-keyword{color:#c084fc;font-weight:600}
 .tok-number{color:#86efac}
+.tok-function{color:#93c5fd}
+.tok-builtin{color:#f472b6}
+.tok-variable{color:#e2e8f0}
+.tok-operator{color:#94a3b8}
 .code-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
 .code-prereq{font-size:.74rem;font-weight:600;color:#cfe0f7}
 .copy-cell-only{background:#334155;color:#fff;border:1px solid #64748b;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem}
@@ -88,11 +93,29 @@ code{font-family:"Cascadia Code",Consolas,monospace}
 .theme-switch button.active{background:#fff;color:var(--navy)}
 body[data-companion-theme="dark"] .theme-switch button{background:#ffffff14;color:#eaf1f9;border-color:#ffffff44}
 body[data-companion-theme="dark"] .theme-switch button.active{background:#eaf1f9;color:#0b1220}
-@media(prefers-contrast:more){.card-section,.question-card,.panel,aside{border-width:2px}.muted{color:var(--ink)}.tok-comment,.tok-string,.tok-keyword,.tok-number{color:#fff}}
+@media(prefers-contrast:more){
+  .card-section,.question-card,.panel,aside{border-width:2px}
+  .muted{color:var(--ink)}
+  .tok-comment{color:#bae6fd}
+  .tok-string{color:#fde68a}
+  .tok-keyword{color:#f5d0fe;font-weight:700}
+  .tok-number{color:#bbf7d0}
+  .tok-function{color:#bfdbfe}
+  .tok-builtin{color:#fbcfe8}
+  .tok-variable{color:#fff}
+  .tok-operator{color:#e2e8f0}
+}
 @media(forced-colors:active){
   .code-wrap,.verified-output,.warning,.worked-report,.question-card,.panel,aside{border:1px solid CanvasText!important}
   .copy-code,.copy-cell-only,.chip,.mark-complete,.theme-switch button{border:1px solid ButtonText!important}
-  pre code,.tok-comment,.tok-string,.tok-keyword,.tok-number{color:CanvasText!important;forced-color-adjust:auto}
+  pre code{color:CanvasText!important;forced-color-adjust:auto}
+  .tok-comment{color:GrayText!important;forced-color-adjust:auto}
+  .tok-string{color:LinkText!important;forced-color-adjust:auto}
+  .tok-keyword{color:Highlight!important;forced-color-adjust:auto}
+  .tok-number{color:ButtonText!important;forced-color-adjust:auto}
+  .tok-function{color:HighlightText!important;forced-color-adjust:auto}
+  .tok-builtin{color:LinkText!important;forced-color-adjust:auto}
+  .tok-variable,.tok-operator{color:CanvasText!important;forced-color-adjust:auto}
   .done-state{color:CanvasText!important}
 }
 footer{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);font-size:.86rem}
@@ -136,7 +159,7 @@ footer{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);
 
     <section class="panel">
       <h2>Data audit completed before implementation</h2>
-      <table><tr><th>All three CSVs load successfully.</th><td>anc_cohort.csv is 400×14, bp_paired.csv is 60×3 and postpartum_survival.csv is 500×6.</td></tr><tr><th>Required columns are present.</th><td>No expected analysis variable is absent. bp_paired.csv also contains an id column, which is useful for confirming the pairing.</td></tr><tr><th>Missingness is variable-specific.</th><td>ANC: education 55, bmi 10, hb 18, anaemia 18; all other ANC variables complete. BP and survival datasets have no missing values.</td></tr><tr><th>Education uses a literal category name.</th><td>The 55 &#x27;None&#x27; values are a real education level, not missing data. The loader uses keep_default_na=False so pandas does not silently convert them to NaN.</td></tr><tr><th>Binary coding is consistent.</th><td>iptp3 uses Yes/No; preterm, low_bw and readmitted use 1/0 with the meanings stated in the practical.</td></tr><tr><th>Anaemia and low birth weight are internally consistent.</th><td>(hb &lt; 11) matches anaemia for all 382 evaluable records; (birthweight &lt; 2500) matches low_bw for all 400 records.</td></tr><tr><th>Preterm has a documented definition discrepancy.</th><td>Nine records have gest_age between 36.1 and 36.8 weeks but preterm = 0. The supplied preterm flag is used as the primary outcome; interpret it as the recorded clinical flag, not an exact recoding of decimal gest_age.</td></tr><tr><th>No duplicate identifiers or duplicate rows were found.</th><td>ANC ids W001–W400, BP ids B01–B60 and survival ids P001–P500 are unique.</td></tr><tr><th>Outliers are plausible and retained.</th><td>Gestational age has a left tail, birthweight has a few low/high IQR outliers and BP has a few extreme measurements. They are inspected, not deleted.</td></tr><tr><th>These are simulated teaching data.</th><td>They are not real patient records and must not be used for clinical or public-health decisions.</td></tr></table>
+      <table><tr><th>All three CSVs load successfully.</th><td>anc_cohort.csv is 400×14, bp_paired.csv is 60×3 and postpartum_survival.csv is 500×6.</td></tr><tr><th>Required columns are present.</th><td>No expected analysis variable is absent. bp_paired.csv also contains an id column, which is useful for confirming the pairing.</td></tr><tr><th>Missingness is variable-specific.</th><td>ANC: bmi 10, hb 18, anaemia 18; all other ANC variables have zero missing values. BP and survival datasets have no missing values.</td></tr><tr><th>Education uses a literal category name.</th><td>The 55 &#x27;None&#x27; values are a real education level, not missing data. The loader uses keep_default_na=False so pandas does not silently convert them to NaN.</td></tr><tr><th>Binary coding is consistent.</th><td>iptp3 uses Yes/No; preterm, low_bw and readmitted use 1/0 with the meanings stated in the practical.</td></tr><tr><th>Anaemia and low birth weight are internally consistent.</th><td>(hb &lt; 11) matches anaemia for all 382 evaluable records; (birthweight &lt; 2500) matches low_bw for all 400 records.</td></tr><tr><th>Preterm has a documented definition discrepancy.</th><td>Nine records have gest_age between 36.1 and 36.8 weeks but preterm = 0. The supplied preterm flag is used as the primary outcome; interpret it as the recorded clinical flag, not an exact recoding of decimal gest_age.</td></tr><tr><th>No duplicate identifiers or duplicate rows were found.</th><td>ANC ids W001–W400, BP ids B01–B60 and survival ids P001–P500 are unique.</td></tr><tr><th>Outliers are plausible and retained.</th><td>Gestational age has a left tail, birthweight has a few low/high IQR outliers and BP has a few extreme measurements. They are inspected, not deleted.</td></tr><tr><th>These are simulated teaching data.</th><td>They are not real patient records and must not be used for clinical or public-health decisions.</td></tr></table>
       <h3>Source fingerprints</h3>
       <table><tr><th>anc_cohort.csv</th><td><code>EE9D58D5E484D62244B62E17910AEDE241B074B4E7F70D22C783F50DD6E9E1DA</code></td></tr><tr><th>bp_paired.csv</th><td><code>677B7643994C0C57CE9FA2C052EEB22086D5B20537E5D8FE1290A98B3AFEF786</code></td></tr><tr><th>postpartum_survival.csv</th><td><code>0099FFCFCC226141DD762E6ABD338343325DC360A8011FFC571CAB06AC332EF2</code></td></tr></table>
       <p class="muted">The supplied Drive files and bundled sample files have identical LF-normalised content. These are simulated teaching datasets, not real patient records.</p>
@@ -147,7 +170,7 @@ footer{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted);
       <div style="overflow:auto">
       <table>
         <thead><tr><th>Question/Subquestion</th><th>Practical requirement</th><th>Task classification</th><th>Jupyter action</th><th>Code</th><th>Output to inspect</th><th>Interpretation guidance</th><th>Reporting guidance</th></tr></thead>
-        <tbody><tr><td>Q1a</td><td>Estimate P(preterm) and P(low birth weight) from anc_cohort.csv.</td><td>Calculation</td><td>Run the Q1(a) cell and read the counts, denominators and sample proportions.</td><td>See q1a</td><td>Event counts, denominator 400 and the two sample proportions.</td><td>Treat each proportion as an estimate with sampling variability; only a confidence interval quantifies that variability.</td><td>Report &#x27;In the simulated ANC cohort, 47/400 (0.1175) were preterm and 43/400 (0.1075) had low birth weight.&#x27;</td></tr><tr><td>Q1b</td><td>Estimate P(low birth weight | preterm) and P(low birth weight | term), then assess independence.</td><td>Mixed</td><td>Run Q1(b), inspect the conditional proportions and compare them with the marginal probability.</td><td>See q1b</td><td>Conditional proportions across the two preterm strata and the risk difference/ratio.</td><td>If the conditional probabilities differ materially from each other and from the marginal probability, the events are not independent in this sample.</td><td>Report each conditional probability and say whether they are close, with the observed risk difference.</td></tr><tr><td>Q2a</td><td>Classify facility_type, education, anc_visits, bmi and birthweight by measurement scale.</td><td>Conceptual</td><td>Study the table; no analysis cell is required.</td><td>Not required</td><td>The classification table only.</td><td>Measurement scale guides the choice of summaries, plots and statistical models.</td><td>Use the table language, but write the justification yourself.</td></tr><tr><td>Q2b</td><td>Summarise age, bmi, hb, gest_age and birthweight with n, missing, mean, SD, median and IQR.</td><td>Calculation</td><td>Run Q2(b) and compare the non-missing counts across variables.</td><td>See q2b</td><td>The six-column summary table, especially the differing n values.</td><td>Where missingness differs, comparisons across summaries must acknowledge the different denominators.</td><td>Report a compact table and explicitly state where the sample size differs.</td></tr><tr><td>Q2c</td><td>Plot and describe the distributions of birthweight and gest_age.</td><td>Mixed</td><td>Run Q2(c), inspect both histograms/KDE curves and the summary table.</td><td>See q2c</td><td>Both plots and the distribution summary table.</td><td>A pronounced tail or marked mean-median gap weakens a normal approximation; robust methods may help.</td><td>Write a short paragraph for each variable describing shape, outliers and mean versus median.</td></tr><tr><td>Q2d</td><td>Examine the relationship between gest_age and birthweight with a scatterplot and two correlations.</td><td>Mixed</td><td>Run Q2(d), inspect the scatterplot and compare Pearson and Spearman estimates.</td><td>See q2d</td><td>Scatterplot and both correlation coefficients.</td><td>A strong positive association means longer gestation tends to accompany higher birthweight in these data; it is not causal proof.</td><td>Report the coefficient(s), p-values if required, and a contextual sentence.</td></tr><tr><td>Q3a</td><td>Calculate and verify the 95% CI for mean birthweight using the t distribution.</td><td>Calculation</td><td>Run Q3(a) and confirm the manual and SciPy endpoints match.</td><td>See q3a</td><td>All intermediate quantities and matching endpoints.</td><td>A 95% confidence procedure captures the true mean in 95% of repeated samples under its assumptions.</td><td>Report the interval with the sample mean and state the confidence level correctly.</td></tr><tr><td>Q3b</td><td>Estimate anaemia prevalence and a 95% binomial confidence interval.</td><td>Calculation</td><td>Run Q3(b) and note the eligible denominator and excluded records.</td><td>See q3b</td><td>Numerator, denominator, prevalence and Wilson CI.</td><td>The interval reflects binomial sampling variability among evaluable records.</td><td>State the prevalence with numerator, denominator and interval method.</td></tr><tr><td>Q3c</td><td>Explain confidence intervals, precision and the effect of a fourfold sample size.</td><td>Interpretation</td><td>Read the guidance and write your answer; no new code is required.</td><td>Not required</td><td>No new output; interpret earlier intervals.</td><td>Confidence describes procedure reliability across repeated samples, not posterior probability for one fixed interval.</td><td>Use the template but write the interpretation in your own words.</td></tr><tr><td>Q3d</td><td>Estimate mean birthweight and 95% CIs by facility type and compare them visually.</td><td>Mixed</td><td>Run Q3(d), inspect the table and the point estimate/CI plot.</td><td>See q3d</td><td>Three subgroup estimates with CIs and the comparison plot.</td><td>Subgroup CIs show precision; a formal comparison requires an appropriate model or test.</td><td>Report the three estimates and avoid a definitive equality/difference claim from overlap alone.</td></tr><tr><td>Q4</td><td>Compare birthweight between IPTp3 Yes and No groups using Welch&#x27;s t-test and a rank-sum analysis.</td><td>Mixed</td><td>Run Q4, inspect group summaries, plots, Levene, Welch and Wilcoxon outputs.</td><td>See q4</td><td>All group, assumption-check and test outputs.</td><td>Focus on the size and precision of the mean difference, not only the p-value.</td><td>Use the independent-groups template and add the observational limitation.</td></tr><tr><td>Q5</td><td>Compare booking and 36-week systolic BP using a paired analysis.</td><td>Mixed</td><td>Run Q5, inspect the paired difference plot, normality check and paired t result.</td><td>See q5</td><td>Paired difference output and the contrast with the incorrect independent test.</td><td>The paired test asks whether the mean within-person difference differs from zero.</td><td>Report booking mean, 36-week mean, mean change, CI and p-value.</td></tr><tr><td>Q6</td><td>Compare haemoglobin across facility types with ANOVA, Tukey HSD and Kruskal-Wallis.</td><td>Mixed</td><td>Run Q6, inspect assumptions, overall tests and adjusted pairwise comparisons.</td><td>See q6</td><td>All ANOVA, diagnostic and post-hoc outputs.</td><td>Use the overall test to justify post-hoc comparisons and report adjusted p-values.</td><td>Report F, df, p, then Tukey differences with CIs and adjusted p-values where relevant.</td></tr><tr><td>Q7a</td><td>Examine the association between education and anaemia with a contingency table and chi-square test.</td><td>Mixed</td><td>Run Q7(a), inspect counts, percentages, expected counts and the chi-square result.</td><td>See q7a</td><td>Observed/expected tables and chi-square output.</td><td>Large deviations from expected counts indicate association; the p-value quantifies evidence against independence.</td><td>Report counts, percentages and the chi-square result with assumptions.</td></tr><tr><td>Q7b</td><td>Test whether observed anaemia prevalence differs from a hypothesised 30%.</td><td>Mixed</td><td>Run Q7(b) and read the exact binomial test and Wilson interval.</td><td>See q7b</td><td>Exact binomial p-value and Wilson CI.</td><td>If the null value lies outside the interval, the two-sided test will typically be significant.</td><td>Report the test and interval together with the direction of the difference.</td></tr><tr><td>Q7c</td><td>Compare preterm delivery proportions between anaemic and non-anaemic women.</td><td>Mixed</td><td>Run Q7(c), inspect group counts, difference CI and test p-values.</td><td>See q7c</td><td>Group table, difference, CI and p-values.</td><td>A positive difference means preterm was more common in the anaemia group in this sample.</td><td>Use the proportion-test template and add a non-causal interpretation.</td></tr><tr><td>Q8a</td><td>Fit birthweight ~ gest_age and interpret slope, intercept and R-squared.</td><td>Mixed</td><td>Run Q8(a), inspect the coefficient table and regression plot.</td><td>See q8a</td><td>Coefficient table, R-squared and plot.</td><td>A one-week increase in gestational age is associated with about the fitted slope increase in mean birthweight.</td><td>Report the slope in grams per week with CI and p-value.</td></tr><tr><td>Q8b</td><td>Fit birthweight ~ gest_age + bmi + iptp3 + anc_visits with categorical handling.</td><td>Mixed</td><td>Run Q8(b), inspect complete-case size and adjusted coefficients.</td><td>See q8b</td><td>Adjusted coefficient table and model fit statistics.</td><td>Conditional on the other predictors, each coefficient describes the associated change in mean birthweight.</td><td>Use the regression template with explicit reference levels.</td></tr><tr><td>Q8c</td><td>Assess linearity, residual normality, homoscedasticity, independence and influence.</td><td>Mixed</td><td>Run Q8(c) and interpret each of the four diagnostic panels.</td><td>See q8c</td><td>Four plots plus numeric influence summary.</td><td>Diagnostics guide model trustworthiness and possible refinement; they are not mechanical pass/fail tests.</td><td>Describe each plot briefly and state any limitation.</td></tr><tr><td>Q8d</td><td>Extend the regression with facility_type and compare nested models.</td><td>Mixed</td><td>Run Q8(d) and compare the F test, AIC and adjusted R-squared on the same complete cases.</td><td>See q8d</td><td>Nested F test, AIC and adjusted R-squared.</td><td>A small p-value suggests the added facility terms explain extra variation in this sample.</td><td>Report F, df, p, AIC difference and adjusted R-squared difference.</td></tr><tr><td>Q8e</td><td>Predict birthweight for BMI=22, ANC=5, IPTp3=Yes, gest_age=39 and explain interval types.</td><td>Calculation</td><td>Run Q8(e) and compare the mean-response CI with the individual prediction interval.</td><td>See q8e</td><td>Prediction table for both models.</td><td>The prediction interval is wider because it adds uncertainty for a new individual observation.</td><td>Report the point prediction, mean CI and individual PI with the model used.</td></tr><tr><td>Q9</td><td>Fit preterm ~ age + anaemia + anc_visits, report odds ratios and model-based predictions.</td><td>Mixed</td><td>Run Q9, inspect coefficients/odds ratios, scenario probabilities and the prediction plot.</td><td>See q9</td><td>Coefficient/OR table, scenario probabilities and plot.</td><td>An OR above 1 means higher odds of preterm for the exposed group at fixed age and ANC visits.</td><td>Use the logistic template and explicitly compare odds with probability.</td></tr><tr><td>Q10a</td><td>Describe participants, events, censoring and distinguish follow-up time from survival time.</td><td>Mixed</td><td>Run Q10(a) and state the event/censoring counts clearly.</td><td>See q10a</td><td>Counts, censoring proportion and median observed follow-up.</td><td>Censored records contribute person-time up to their last known time but no event.</td><td>Report the descriptive survival-data summary with careful terminology.</td></tr><tr><td>Q10b</td><td>Estimate the survival curve, CIs, S(90), S(180) and median survival where estimable.</td><td>Mixed</td><td>Run Q10(b), inspect the step curve, confidence band, risk table and numeric estimates.</td><td>See q10b</td><td>KM plot, CIs, risk table and numeric survival estimates.</td><td>A higher curve means a higher estimated probability of remaining readmission-free to that time.</td><td>Use the Kaplan-Meier template with time-specific estimates.</td></tr><tr><td>Q10c</td><td>Compare Kaplan-Meier curves by anaemia status and perform a log-rank test.</td><td>Mixed</td><td>Run Q10(c), inspect both curves and the log-rank result.</td><td>See q10c</td><td>Stratified KM plot and log-rank output.</td><td>A small p-value suggests different readmission-free survival distributions between groups.</td><td>Use the log-rank template and avoid causal wording.</td></tr><tr><td>Q10d</td><td>Estimate the constant-hazard rate from events and person-time.</td><td>Mixed</td><td>Run Q10(d) and compare exponential survival with the KM estimates.</td><td>See q10d</td><td>Person-time, rate, CI and exponential-versus-KM comparison.</td><td>A close numerical match at selected times supports descriptive agreement, not proof of constant hazard.</td><td>Use the exponential-rate template with the assumption stated.</td></tr><tr><td>Q10e</td><td>Fit readmitted ~ anaemia + delivery_mode + age and interpret adjusted hazard ratios.</td><td>Mixed</td><td>Run Q10(e), inspect HRs, CIs and p-values with the stated reference levels.</td><td>See q10e</td><td>Cox coefficient/HR table.</td><td>An HR above 1 means a higher instantaneous readmission hazard at fixed covariates.</td><td>Use the Cox template with explicit reference levels and non-causal wording.</td></tr><tr><td>Q10f</td><td>Assess proportional hazards using Schoenfeld residual diagnostics.</td><td>Mixed</td><td>Run Q10(f), inspect residual plots and the screening tests.</td><td>See q10f</td><td>Residual plots and screening-test table.</td><td>A time trend suggests the hazard ratio may change over follow-up.</td><td>Report the screen, its limitation and possible remedies such as time-varying effects or stratification.</td></tr></tbody>
+        <tbody><tr><td>Q1a</td><td>Estimate P(preterm) and P(low birth weight) from anc_cohort.csv.</td><td>Calculation</td><td>Run the Q1(a) cell and read the counts, denominators and sample proportions.</td><td>See q1a</td><td>Event counts, denominator 400 and the two sample proportions.</td><td>Treat each proportion as an estimate with sampling variability; only a confidence interval quantifies that variability.</td><td>Report &#x27;In the simulated ANC cohort, 47/400 (0.1175) were preterm and 43/400 (0.1075) had low birth weight.&#x27;</td></tr><tr><td>Q1b</td><td>Estimate P(low birth weight | preterm) and P(low birth weight | term), then assess independence.</td><td>Mixed</td><td>Run Q1(b), inspect the conditional proportions and compare them with the marginal probability.</td><td>See q1b</td><td>Conditional proportions across the two preterm strata and the risk difference/ratio.</td><td>If the conditional probabilities differ materially from each other and from the marginal probability, the events are not independent in this sample.</td><td>Report each conditional probability and say whether they are close, with the observed risk difference.</td></tr><tr><td>Q2a</td><td>Classify facility_type, education, anc_visits, bmi and birthweight by measurement scale.</td><td>Conceptual</td><td>Study the table; no analysis cell is required.</td><td>Not required</td><td>The classification table only.</td><td>Measurement scale guides the choice of summaries, plots and statistical models.</td><td>Use the table language, but write the justification yourself.</td></tr><tr><td>Q2b</td><td>Summarise age, bmi, hb, gest_age and birthweight with n, missing, mean, SD, median and IQR.</td><td>Calculation</td><td>Run Q2(b) and compare the non-missing counts across variables.</td><td>See q2b</td><td>The seven-column summary table (variable plus six summaries), especially the differing n values.</td><td>Where missingness differs, comparisons across summaries must acknowledge the different denominators.</td><td>Report a compact table and explicitly state where the sample size differs.</td></tr><tr><td>Q2c</td><td>Plot and describe the distributions of birthweight and gest_age.</td><td>Mixed</td><td>Run Q2(c), inspect both histograms/KDE curves and the summary table.</td><td>See q2c</td><td>Both plots and the distribution summary table.</td><td>A pronounced tail or marked mean-median gap weakens a normal approximation; robust methods may help.</td><td>Write a short paragraph for each variable describing shape, outliers and mean versus median.</td></tr><tr><td>Q2d</td><td>Examine the relationship between gest_age and birthweight with a scatterplot and two correlations.</td><td>Mixed</td><td>Run Q2(d), inspect the scatterplot and compare Pearson and Spearman estimates.</td><td>See q2d</td><td>Scatterplot and both correlation coefficients.</td><td>A strong positive association means longer gestation tends to accompany higher birthweight in these data; it is not causal proof.</td><td>Report the coefficient(s), p-values if required, and a contextual sentence.</td></tr><tr><td>Q3a</td><td>Calculate and verify the 95% CI for mean birthweight using the t distribution.</td><td>Calculation</td><td>Run Q3(a) and confirm the manual and SciPy endpoints match.</td><td>See q3a</td><td>All intermediate quantities and matching endpoints.</td><td>A 95% confidence procedure captures the true mean in 95% of repeated samples under its assumptions.</td><td>Report the interval with the sample mean and state the confidence level correctly.</td></tr><tr><td>Q3b</td><td>Estimate anaemia prevalence and a 95% binomial confidence interval.</td><td>Calculation</td><td>Run Q3(b) and note the eligible denominator and excluded records.</td><td>See q3b</td><td>Numerator, denominator, prevalence and Wilson CI.</td><td>The interval reflects binomial sampling variability among evaluable records.</td><td>State the prevalence with numerator, denominator and interval method.</td></tr><tr><td>Q3c</td><td>Explain confidence intervals, precision and the effect of a fourfold sample size.</td><td>Interpretation</td><td>Read the guidance and write your answer; no new code is required.</td><td>Not required</td><td>No new output; interpret earlier intervals.</td><td>Confidence describes procedure reliability across repeated samples, not posterior probability for one fixed interval.</td><td>Use the template but write the interpretation in your own words.</td></tr><tr><td>Q3d</td><td>Estimate mean birthweight and 95% CIs by facility type and compare them visually.</td><td>Mixed</td><td>Run Q3(d), inspect the table and the point estimate/CI plot.</td><td>See q3d</td><td>Three subgroup estimates with CIs and the comparison plot.</td><td>Subgroup CIs show precision; a formal comparison requires an appropriate model or test.</td><td>Report the three estimates and avoid a definitive equality/difference claim from overlap alone.</td></tr><tr><td>Q4</td><td>Compare birthweight between IPTp3 Yes and No groups using Welch&#x27;s t-test and a rank-sum analysis.</td><td>Mixed</td><td>Run Q4, inspect group summaries, plots, Levene, Welch and Wilcoxon outputs.</td><td>See q4</td><td>All group, assumption-check and test outputs.</td><td>Focus on the size and precision of the mean difference, not only the p-value.</td><td>Use the independent-groups template and add the observational limitation.</td></tr><tr><td>Q5</td><td>Compare booking and 36-week systolic BP using a paired analysis.</td><td>Mixed</td><td>Run Q5, inspect the paired difference plot, normality check and paired t result.</td><td>See q5</td><td>Paired difference output and the contrast with the incorrect independent test.</td><td>The paired test asks whether the mean within-person difference differs from zero.</td><td>Report booking mean, 36-week mean, mean change, CI and p-value.</td></tr><tr><td>Q6</td><td>Compare haemoglobin across facility types with ANOVA, Tukey HSD and Kruskal-Wallis.</td><td>Mixed</td><td>Run Q6, inspect assumptions, overall tests and adjusted pairwise comparisons.</td><td>See q6</td><td>All ANOVA, diagnostic and post-hoc outputs.</td><td>Use the overall test to justify post-hoc comparisons and report adjusted p-values.</td><td>Report F, df, p, then Tukey differences with CIs and adjusted p-values where relevant.</td></tr><tr><td>Q7a</td><td>Examine the association between education and anaemia with a contingency table and chi-square test.</td><td>Mixed</td><td>Run Q7(a), inspect counts, percentages, expected counts and the chi-square result.</td><td>See q7a</td><td>Observed/expected tables and chi-square output.</td><td>Large deviations from expected counts indicate association; the p-value quantifies evidence against independence.</td><td>Report counts, percentages and the chi-square result with assumptions.</td></tr><tr><td>Q7b</td><td>Test whether observed anaemia prevalence differs from a hypothesised 30%.</td><td>Mixed</td><td>Run Q7(b) and read the exact binomial test and Wilson interval.</td><td>See q7b</td><td>Exact binomial p-value and Wilson CI.</td><td>If the null value lies outside the interval, the two-sided test will typically be significant.</td><td>Report the test and interval together with the direction of the difference.</td></tr><tr><td>Q7c</td><td>Compare preterm delivery proportions between anaemic and non-anaemic women.</td><td>Mixed</td><td>Run Q7(c), inspect group counts, difference CI and test p-values.</td><td>See q7c</td><td>Group table, difference, CI and p-values.</td><td>A positive difference means preterm was more common in the anaemia group in this sample.</td><td>Use the proportion-test template and add a non-causal interpretation.</td></tr><tr><td>Q8a</td><td>Fit birthweight ~ gest_age and interpret slope, intercept and R-squared.</td><td>Mixed</td><td>Run Q8(a), inspect the coefficient table and regression plot.</td><td>See q8a</td><td>Coefficient table, R-squared and plot.</td><td>A one-week increase in gestational age is associated with about the fitted slope increase in mean birthweight.</td><td>Report the slope in grams per week with CI and p-value.</td></tr><tr><td>Q8b</td><td>Fit birthweight ~ gest_age + bmi + iptp3 + anc_visits with categorical handling.</td><td>Mixed</td><td>Run Q8(b), inspect complete-case size and adjusted coefficients.</td><td>See q8b</td><td>Adjusted coefficient table and model fit statistics.</td><td>Conditional on the other predictors, each coefficient describes the associated change in mean birthweight.</td><td>Use the regression template with explicit reference levels.</td></tr><tr><td>Q8c</td><td>Assess linearity, residual normality, homoscedasticity, independence and influence.</td><td>Mixed</td><td>Run Q8(b), then Q8(c), and interpret each of the four diagnostic panels.</td><td>See q8c</td><td>Four plots plus numeric influence summary.</td><td>Diagnostics guide model trustworthiness and possible refinement; they are not mechanical pass/fail tests.</td><td>Describe each plot briefly and state any limitation.</td></tr><tr><td>Q8d</td><td>Extend the regression with facility_type and compare nested models.</td><td>Mixed</td><td>Run Q8(b), then Q8(d), and compare the F test, AIC and adjusted R-squared on the same complete cases.</td><td>See q8d</td><td>Nested F test, AIC and adjusted R-squared.</td><td>A small p-value suggests the added facility terms explain extra variation in this sample.</td><td>Report F, df, p, AIC difference and adjusted R-squared difference.</td></tr><tr><td>Q8e</td><td>Predict birthweight for BMI=22, ANC=5, IPTp3=Yes, gest_age=39 and explain interval types.</td><td>Calculation</td><td>Run Q8(b) and Q8(d), then Q8(e), and compare the mean-response CI with the individual prediction interval.</td><td>See q8e</td><td>Prediction table for both models.</td><td>The prediction interval is wider because it adds uncertainty for a new individual observation.</td><td>Report the point prediction, mean CI and individual PI with the model used.</td></tr><tr><td>Q9</td><td>Fit preterm ~ age + anaemia + anc_visits, report odds ratios and model-based predictions.</td><td>Mixed</td><td>Run Q9, inspect coefficients/odds ratios, scenario probabilities and the prediction plot.</td><td>See q9</td><td>Coefficient/OR table, scenario probabilities and plot.</td><td>An OR above 1 means higher odds of preterm for the exposed group at fixed age and ANC visits.</td><td>Use the logistic template and explicitly compare odds with probability.</td></tr><tr><td>Q10a</td><td>Describe participants, events, censoring and distinguish follow-up time from survival time.</td><td>Mixed</td><td>Run Q10(a) and state the event/censoring counts clearly.</td><td>See q10a</td><td>Counts, censoring proportion and median observed follow-up.</td><td>Censored records contribute person-time up to their last known time but no event.</td><td>Report the descriptive survival-data summary with careful terminology.</td></tr><tr><td>Q10b</td><td>Estimate the survival curve, CIs, S(90), S(180) and median survival where estimable.</td><td>Mixed</td><td>Run Q10(b), inspect the step curve, confidence band, risk table and numeric estimates.</td><td>See q10b</td><td>KM plot, CIs, risk table and numeric survival estimates.</td><td>A higher curve means a higher estimated probability of remaining readmission-free to that time.</td><td>Use the Kaplan-Meier template with time-specific estimates.</td></tr><tr><td>Q10c</td><td>Compare Kaplan-Meier curves by anaemia status and perform a log-rank test.</td><td>Mixed</td><td>Run Q10(c), inspect both curves and the log-rank result.</td><td>See q10c</td><td>Stratified KM plot and log-rank output.</td><td>A small p-value suggests different readmission-free survival distributions between groups.</td><td>Use the log-rank template and avoid causal wording.</td></tr><tr><td>Q10d</td><td>Estimate the constant-hazard rate from events and person-time.</td><td>Mixed</td><td>Run Q10(a), then Q10(d), and compare exponential survival with the KM estimates.</td><td>See q10d</td><td>Person-time, rate, CI and exponential-versus-KM comparison.</td><td>A close numerical match at selected times supports descriptive agreement, not proof of constant hazard.</td><td>Use the exponential-rate template with the assumption stated.</td></tr><tr><td>Q10e</td><td>Fit readmitted ~ anaemia + delivery_mode + age and interpret adjusted hazard ratios.</td><td>Mixed</td><td>Run Q10(e), inspect HRs, CIs and p-values with the stated reference levels.</td><td>See q10e</td><td>Cox coefficient/HR table.</td><td>An HR above 1 means a higher instantaneous readmission hazard at fixed covariates.</td><td>Use the Cox template with explicit reference levels and non-causal wording.</td></tr><tr><td>Q10f</td><td>Assess proportional hazards using Schoenfeld residual diagnostics.</td><td>Mixed</td><td>Run Q10(e), then Q10(f), and inspect residual plots and the screening tests.</td><td>See q10f</td><td>Residual plots and screening-test table.</td><td>A time trend suggests the hazard ratio may change over follow-up.</td><td>Report the screen, its limitation and possible remedies such as time-varying effects or stratification.</td></tr></tbody>
       </table>
       </div>
     </section>
@@ -179,7 +202,8 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.duration.survfunc import SurvfuncRight
 from statsmodels.duration.hazard_regression import PHReg
 
-%matplotlib inline
+# Matplotlib&#x27;s inline backend is the Jupyter default; no IPython-only magic
+# is needed, so this cell also parses and runs under plain Python.
 sns.set_theme(style=&quot;whitegrid&quot;, context=&quot;notebook&quot;)
 plt.rcParams[&quot;figure.dpi&quot;] = 110
 pd.set_option(&quot;display.max_columns&quot;, 50)
@@ -257,9 +281,13 @@ def _clean_nan(value):
 
 def jsonable(obj):
     &quot;&quot;&quot;Convert pandas/numpy results into JSON-safe plain Python values.&quot;&quot;&quot;
+    if obj is pd.NA or obj is pd.NaT:
+        return None
     if isinstance(obj, dict):
         return {str(k): jsonable(_clean_nan(v)) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple, set)):
+    if isinstance(obj, (set, frozenset)):
+        return [jsonable(_clean_nan(v)) for v in sorted(obj, key=repr)]
+    if isinstance(obj, (list, tuple)):
         return [jsonable(_clean_nan(v)) for v in obj]
     if isinstance(obj, pd.DataFrame):
         return jsonable(obj.to_dict(orient=&quot;records&quot;))
@@ -269,6 +297,8 @@ def jsonable(obj):
         return jsonable(obj.tolist())
     if isinstance(obj, np.generic):
         return jsonable(obj.item())
+    if isinstance(obj, complex):
+        raise ValueError(&quot;Complex results are not JSON-serialisable.&quot;)
     return _clean_nan(obj)
 
 
@@ -292,7 +322,8 @@ def mark_done(question_id):
 print(&quot;DATA_DIR:&quot;, DATA_DIR)
 print(&quot;Simulated teaching datasets loaded:&quot;,
       f&quot;anc={anc.shape}, bp={bp.shape}, survival={surv.shape}&quot;)
-show_progress()</code></pre></div>
+show_progress()
+</code></pre></div>
     </section>
 
     <h2 class="question-heading" id="section-Q1">Q1. Probability and probability distributions</h2>
@@ -317,7 +348,7 @@ show_progress()</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q1a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q1a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q1a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q1a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -327,19 +358,21 @@ except NameError as exc:
         &quot;anc, bp, surv, RESULTS and record(); this question cell reuses them.&quot;
     ) from exc
 
-n_anc = int(anc[&quot;preterm&quot;].notna().sum())
+n_preterm = int(anc[&quot;preterm&quot;].notna().sum())
+n_lowbw = int(anc[&quot;low_bw&quot;].notna().sum())
 p_preterm = float(anc[&quot;preterm&quot;].mean())
 p_lowbw = float(anc[&quot;low_bw&quot;].mean())
 q1a_table = pd.DataFrame({
     &quot;event&quot;: [&quot;Preterm delivery&quot;, &quot;Low birth weight&quot;],
     &quot;count&quot;: [int(anc[&quot;preterm&quot;].sum()), int(anc[&quot;low_bw&quot;].sum())],
-    &quot;denominator&quot;: [n_anc, n_anc],
+    &quot;denominator&quot;: [n_preterm, n_lowbw],
     &quot;sample_proportion&quot;: [p_preterm, p_lowbw],
 })
 print(q1a_table.to_string(index=False, formatters={
     &quot;sample_proportion&quot;: lambda v: f&quot;{v:.4f}&quot;
 }))
-record(&quot;Q1a&quot;, q1a_table.to_dict(orient=&quot;records&quot;))</code></pre></div>
+record(&quot;Q1a&quot;, q1a_table.to_dict(orient=&quot;records&quot;))
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -406,7 +439,7 @@ record(&quot;Q1a&quot;, q1a_table.to_dict(orient=&quot;records&quot;))</code></p
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q1b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q1b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q1b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q1b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -439,7 +472,8 @@ record(&quot;Q1b&quot;, {
     &quot;contingency&quot;: contingency_q1.to_dict(),
     &quot;risk_difference&quot;: p_lb_given_preterm - p_lb_given_term,
     &quot;risk_ratio&quot;: p_lb_given_preterm / p_lb_given_term,
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -582,7 +616,7 @@ record(&quot;Q1b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q2b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q2b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -608,7 +642,8 @@ for column in desc_columns:
     })
 q2b_summary = pd.DataFrame(rows)
 print(q2b_summary.to_string(index=False, float_format=lambda v: f&quot;{v:.3f}&quot;))
-record(&quot;Q2b&quot;, q2b_summary.to_dict(orient=&quot;records&quot;))</code></pre></div>
+record(&quot;Q2b&quot;, q2b_summary.to_dict(orient=&quot;records&quot;))
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -708,7 +743,7 @@ record(&quot;Q2b&quot;, q2b_summary.to_dict(orient=&quot;records&quot;))</code><
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q2c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q2c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -746,7 +781,8 @@ plt.show()
 plt.close(&quot;all&quot;)
 q2c_summary = pd.DataFrame(dist_rows)
 print(q2c_summary.to_string(index=False, float_format=lambda v: f&quot;{v:.3f}&quot;))
-record(&quot;Q2c&quot;, q2c_summary.to_dict(orient=&quot;records&quot;))</code></pre></div>
+record(&quot;Q2c&quot;, q2c_summary.to_dict(orient=&quot;records&quot;))
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -758,7 +794,7 @@ record(&quot;Q2c&quot;, q2c_summary.to_dict(orient=&quot;records&quot;))</code><
     &quot;median&quot;: 3040.5,
     &quot;n&quot;: 400,
     &quot;sd&quot;: 442.43707162671626,
-    &quot;skewness&quot;: -0.30775860211429906,
+    &quot;skewness&quot;: -0.30775860211429856,
     &quot;variable&quot;: &quot;birthweight&quot;
   },
   {
@@ -821,7 +857,7 @@ record(&quot;Q2c&quot;, q2c_summary.to_dict(orient=&quot;records&quot;))</code><
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q2d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q2d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q2d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -854,7 +890,8 @@ record(&quot;Q2d&quot;, {
     &quot;pearson_ci&quot;: [float(pearson_ci.low), float(pearson_ci.high)],
     &quot;spearman_rho&quot;: float(spearman.statistic),
     &quot;spearman_p&quot;: float(spearman.pvalue),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -882,7 +919,7 @@ record(&quot;Q2d&quot;, {
         </section>
         <section class="card-section worked-report">
           <h4>Worked report — verified from the executed notebook</h4>
-          <p>Gestational age and birthweight showed a positive association (Pearson r=0.365, 95% CI 0.277 to 0.447, p&lt;0.0001; Spearman rho=0.331, p&lt;0.0001; n=400). The rank-based estimate is close to the Pearson estimate, so a few extreme points are unlikely to explain the association.</p>
+          <p>Gestational age and birthweight showed a positive association (Pearson r=0.365, 95% CI 0.277 to 0.447, p&lt;0.0001; Spearman rho=0.331, p&lt;0.0001; n=400). The rank-based estimate is close to the Pearson estimate, which is reassuring, but the scatterplot and influence diagnostics are still needed before ruling out influential points.</p>
           <p class="muted"><strong>Verified source:</strong> Q2c and Q2d outputs · anc_cohort.csv</p>
           <p class="muted"><strong>Teaching note:</strong> Report both coefficients and inspect the scatterplot first. An observational association is not evidence that gestational age causes birthweight.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
@@ -918,7 +955,7 @@ record(&quot;Q2d&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q3a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q3a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -951,7 +988,8 @@ record(&quot;Q3a&quot;, {
     &quot;n&quot;: n, &quot;mean&quot;: mean_bw, &quot;sd&quot;: sd_bw, &quot;se&quot;: se_bw, &quot;df&quot;: df_bw,
     &quot;t_critical&quot;: t_crit, &quot;ci&quot;: [float(manual_ci[0]), float(manual_ci[1])],
     &quot;scipy_ci&quot;: [float(scipy_ci[0]), float(scipy_ci[1])],
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1020,7 +1058,7 @@ record(&quot;Q3a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q3b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q3b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1045,7 +1083,8 @@ record(&quot;Q3b&quot;, {
     &quot;prevalence&quot;: float(prevalence),
     &quot;ci&quot;: [float(wilson_ci[0]), float(wilson_ci[1])],
     &quot;missing_excluded&quot;: int(anc[&quot;anaemia&quot;].isna().sum()),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1162,7 +1201,7 @@ record(&quot;Q3b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q3d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q3d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q3d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1188,17 +1227,26 @@ for facility in facility_order:
 facility_summary = pd.DataFrame(facility_rows)
 print(facility_summary.to_string(index=False, float_format=lambda v: f&quot;{v:.2f}&quot;))
 
-sns.pointplot(
-    data=anc, x=&quot;facility_type&quot;, y=&quot;birthweight&quot;, order=facility_order,
-    errorbar=(&quot;ci&quot;, 95), capsize=0.12, linestyles=&quot;&quot;, color=&quot;#0b4f8a&quot;,
-)
-plt.title(&quot;Mean birthweight by facility type with 95% CIs&quot;)
-plt.xlabel(&quot;Facility type&quot;)
-plt.ylabel(&quot;Birthweight (g)&quot;)
+# Plot the same deterministic t intervals shown in the table. Seaborn&#x27;s
+# errorbar=(&quot;ci&quot;, 95) is a bootstrap interval and would not match them.
+x_positions = np.arange(len(facility_order))
+yerr = np.array([
+    facility_summary[&quot;mean&quot;] - facility_summary[&quot;ci_low&quot;],
+    facility_summary[&quot;ci_high&quot;] - facility_summary[&quot;mean&quot;],
+])
+fig, ax = plt.subplots(figsize=(7, 4.4))
+ax.errorbar(x_positions, facility_summary[&quot;mean&quot;], yerr=yerr,
+            fmt=&quot;o&quot;, capsize=5, color=&quot;#0b4f8a&quot;)
+ax.set_xticks(x_positions, facility_order)
+ax.set_title(&quot;Mean birthweight by facility type with 95% t CIs&quot;)
+ax.set_xlabel(&quot;Facility type&quot;)
+ax.set_ylabel(&quot;Birthweight (g)&quot;)
+ax.grid(axis=&quot;y&quot;, alpha=0.3)
 plt.tight_layout()
 plt.show()
 plt.close(&quot;all&quot;)
-record(&quot;Q3d&quot;, facility_summary.to_dict(orient=&quot;records&quot;))</code></pre></div>
+record(&quot;Q3d&quot;, facility_summary.to_dict(orient=&quot;records&quot;))
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1243,7 +1291,7 @@ record(&quot;Q3d&quot;, facility_summary.to_dict(orient=&quot;records&quot;))</c
           <h4>Worked report — verified from the executed notebook</h4>
           <p>Mean birthweight was Urban 3,110.44 g (n=154, 95% CI 3,038.47 to 3,182.41); Peri-urban 2,989.60 g (n=133, 95% CI 2,915.44 to 3,063.77); Rural 3,027.72 g (n=113, 95% CI 2,946.90 to 3,108.53). These separate intervals show precision within each facility group; overlap alone is not a formal test of equal means.</p>
           <p class="muted"><strong>Verified source:</strong> Q3d output · anc_cohort.csv</p>
-          <p class="muted"><strong>Teaching note:</strong> A formal comparison requires the model-based approach in Q6. Unequal subgroup sample sizes make interval widths hard to compare informally.</p>
+          <p class="muted"><strong>Teaching note:</strong> A formal comparison requires a model-based approach such as the birthweight model in Q8d. Unequal subgroup sample sizes make interval widths hard to compare informally.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
         </section>
         <section class="card-section">
@@ -1273,11 +1321,11 @@ record(&quot;Q3d&quot;, facility_summary.to_dict(orient=&quot;records&quot;))</c
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Analyse an independent two-group observational comparison.</li><li>Statistical concept: Welch&#x27;s t-test compares means without assuming equal variances; Wilcoxon rank-sum compares distributions/ranks.</li><li>Do you need to write code? Yes — one comprehensive analysis cell.</li><li>What to do in Jupyter: Run Q4 and read each output block in order.</li><li>Code to use: Use the verified Q4 code cell.</li><li>Output to inspect: Group summaries, boxplot/histograms, Levene p, Welch t/df/p/CI and rank-sum result.</li><li>Important values or observations: Mean difference, its CI and whether the p-value is small; Levene result informs the t-test choice.</li><li>How to interpret it: Statistical significance does not imply clinical importance, and an observational comparison is not causal.</li><li>What to report: Report group n/mean/SD, the Welch difference with CI and p, and the sensitivity analysis.</li><li>Common mistakes to avoid: Calling rank-sum automatically a median test, or claiming IPTp3 caused a birthweight change.</li></ol>
+          <ol class="learning"><li>What is being asked? Analyse an independent two-group observational comparison.</li><li>Statistical concept: Welch&#x27;s t-test compares means without assuming equal variances; Wilcoxon rank-sum compares distributions/ranks.</li><li>Do you need to write code? Yes — one comprehensive analysis cell.</li><li>What to do in Jupyter: Run Q4 and read each output block in order.</li><li>Code to use: Use the verified Q4 code cell.</li><li>Output to inspect: Group summaries, boxplot/histograms, Levene p, Welch t/df/p/CI and rank-sum result.</li><li>Important values or observations: Mean difference, its CI and whether the p-value is small; Levene is an assumption check, while Welch is used throughout.</li><li>How to interpret it: Statistical significance does not imply clinical importance, and an observational comparison is not causal.</li><li>What to report: Report group n/mean/SD, the Welch difference with CI and p, and the sensitivity analysis.</li><li>Common mistakes to avoid: Calling rank-sum automatically a median test, or claiming IPTp3 caused a birthweight change.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q4" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q4</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q4" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q4</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1331,7 +1379,8 @@ record(&quot;Q4&quot;, {
     &quot;mann_whitney_u&quot;: float(mann.statistic),
     &quot;mann_whitney_p&quot;: float(mann.pvalue),
     &quot;rank_biserial&quot;: float(rank_biserial),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1414,7 +1463,7 @@ record(&quot;Q4&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q5" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q5</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q5" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q5</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1471,7 +1520,8 @@ record(&quot;Q5&quot;, {
     &quot;ci&quot;: [float(paired_ci.low), float(paired_ci.high)],
     &quot;incorrect_independent_t&quot;: float(wrong_independent.statistic),
     &quot;incorrect_independent_p&quot;: float(wrong_independent.pvalue),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1553,11 +1603,11 @@ record(&quot;Q5&quot;, {
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Compare three independent groups and handle multiplicity.</li><li>Statistical concept: One-way ANOVA compares means; Kruskal-Wallis compares distributions/ranks; Tukey HSD adjusts pairwise comparisons.</li><li>Do you need to write code? Yes — one comparison cell.</li><li>What to do in Jupyter: Run Q6 and read the boxplot, residual plot, Levene, ANOVA, Tukey table and Kruskal result.</li><li>Code to use: Use the verified Q6 code cell.</li><li>Output to inspect: Group summaries, diagnostic plots, Levene p, ANOVA F/df/p, Tukey adjusted comparisons and Kruskal H/p.</li><li>Important values or observations: The overall p-value, which Tukey pairs differ and whether variance/normality checks raise concerns.</li><li>How to interpret it: A significant overall test does not say which groups differ; post-hoc tests must account for multiplicity.</li><li>What to report: Report the overall test first, then adjusted pairwise differences only if warranted.</li><li>Common mistakes to avoid: Running unadjusted pairwise t-tests and calling them pre-planned, or ignoring assumption checks.</li></ol>
+          <ol class="learning"><li>What is being asked? Compare three independent groups and handle multiplicity.</li><li>Statistical concept: One-way ANOVA compares means; Alexander-Govern provides a heteroscedastic alternative; Kruskal-Wallis compares distributions/ranks; Tukey HSD adjusts pairwise comparisons under equal variances.</li><li>Do you need to write code? Yes — one comparison cell.</li><li>What to do in Jupyter: Run Q6 and read the boxplot, residual plot, Levene, ANOVA, Tukey table, Alexander-Govern and Kruskal results.</li><li>Code to use: Use the verified Q6 code cell.</li><li>Output to inspect: Group summaries, diagnostic plots, Levene p, ANOVA F/df/p, Tukey adjusted comparisons, Alexander-Govern A/p and Kruskal H/p.</li><li>Important values or observations: The overall p-value, which Tukey pairs differ and whether Levene&#x27;s significant result shifts emphasis to Alexander-Govern/Kruskal.</li><li>How to interpret it: A significant overall test does not say which groups differ; post-hoc tests must account for multiplicity.</li><li>What to report: Report the overall test first, then adjusted pairwise differences only if warranted.</li><li>Common mistakes to avoid: Running unadjusted pairwise t-tests and calling them pre-planned, or ignoring assumption checks.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q6" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q6</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q6" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q6</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1588,6 +1638,9 @@ tukey = pairwise_tukeyhsd(
 )
 tukey_data = tukey.summary().data
 tukey_df = pd.DataFrame(tukey_data[1:], columns=tukey_data[0])
+# Levene is significant on these data, so report a heteroscedastic
+# alternative and treat classical ANOVA/Tukey as assumption-dependent.
+alex_govern = st.alexandergovern(*hb_groups)
 kruskal = st.kruskal(*hb_groups)
 
 temp = anc.loc[anc[&quot;hb&quot;].notna(), [&quot;facility_type&quot;, &quot;hb&quot;]].copy()
@@ -1611,9 +1664,11 @@ print(hb_summary.to_string(index=False, float_format=lambda v: f&quot;{v:.3f}&qu
 print(f&quot;Levene p = {levene_hb.pvalue:.4f}&quot;)
 print(f&quot;One-way ANOVA: F({anova_df_between},{anova_df_within}) = &quot;
       f&quot;{anova.statistic:.3f}, p = {anova.pvalue:.4g}&quot;)
-print(&quot;\nTukey HSD (multiplicity-adjusted):&quot;)
+print(&quot;\nTukey HSD (equal-variance assumption; multiplicity-adjusted):&quot;)
 print(tukey_df.to_string(index=False))
-print(f&quot;\nKruskal-Wallis H = {kruskal.statistic:.4f}, p = {kruskal.pvalue:.4g}&quot;)
+print(f&quot;\nAlexander-Govern test for unequal variances: A = &quot;
+      f&quot;{alex_govern.statistic:.4f}, p = {alex_govern.pvalue:.4g}&quot;)
+print(f&quot;Kruskal-Wallis H = {kruskal.statistic:.4f}, p = {kruskal.pvalue:.4g}&quot;)
 record(&quot;Q6&quot;, {
     &quot;groups&quot;: hb_summary.to_dict(orient=&quot;records&quot;),
     &quot;levene_p&quot;: float(levene_hb.pvalue),
@@ -1621,12 +1676,17 @@ record(&quot;Q6&quot;, {
     &quot;anova_df_between&quot;: int(anova_df_between),
     &quot;anova_df_within&quot;: int(anova_df_within),
     &quot;tukey&quot;: tukey_df.to_dict(orient=&quot;records&quot;),
+    &quot;alexander_govern_a&quot;: float(alex_govern.statistic),
+    &quot;alexander_govern_p&quot;: float(alex_govern.pvalue),
     &quot;kruskal_h&quot;: float(kruskal.statistic), &quot;kruskal_p&quot;: float(kruskal.pvalue),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
           <pre class="verified-output">{
+  &quot;alexander_govern_a&quot;: 20.569731524539566,
+  &quot;alexander_govern_p&quot;: 3.414597769739199e-05,
   &quot;anova_df_between&quot;: 2,
   &quot;anova_df_within&quot;: 379,
   &quot;anova_f&quot;: 11.364796463021328,
@@ -1700,9 +1760,9 @@ record(&quot;Q6&quot;, {
         </section>
         <section class="card-section worked-report">
           <h4>Worked report — verified from the executed notebook</h4>
-          <p>One-way ANOVA comparing haemoglobin across facility type gave F(2,379)=11.36, p&lt;0.0001; Levene p=0.0433 and Kruskal-Wallis H=18.54, p&lt;0.0001. Tukey-adjusted pairwise differences were: Peri-urban minus Rural = -0.11 g/dL (95% CI -0.53 to 0.32, adjusted p=0.8222); Peri-urban minus Urban = 0.64 g/dL (95% CI 0.24 to 1.03, adjusted p=0.0005); Rural minus Urban = 0.75 g/dL (95% CI 0.33 to 1.16, adjusted p=0.0001).</p>
+          <p>One-way ANOVA comparing haemoglobin across facility type gave F(2,379)=11.36, p&lt;0.0001; Levene p=0.0433, Alexander-Govern A=20.57 (p&lt;0.0001) and Kruskal-Wallis H=18.54, p&lt;0.0001. Because Levene is significant, the equal-variance ANOVA/Tukey results are assumption-dependent; the Alexander-Govern and rank-based tests are the preferred sensitivity checks here. Tukey-adjusted pairwise differences were: Rural minus Peri-urban = -0.11 g/dL (95% CI -0.53 to 0.32, adjusted p=0.8222); Urban minus Peri-urban = 0.64 g/dL (95% CI 0.24 to 1.03, adjusted p=0.0005); Urban minus Rural = 0.75 g/dL (95% CI 0.33 to 1.16, adjusted p=0.0001).</p>
           <p class="muted"><strong>Verified source:</strong> Q6 output · anc_cohort.csv</p>
-          <p class="muted"><strong>Teaching note:</strong> Report the overall test before the adjusted contrasts. The rank-based test is an important sensitivity check because the variance test is borderline.</p>
+          <p class="muted"><strong>Teaching note:</strong> Report the heteroscedastic and rank-based results before relying on classical ANOVA/Tukey when Levene is significant. Tukey differences are written in the same direction statsmodels computes them: group2 minus group1.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
         </section>
         <section class="card-section">
@@ -1736,7 +1796,7 @@ record(&quot;Q6&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q7a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q7a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1801,7 +1861,8 @@ record(&quot;Q7a&quot;, {
     &quot;chi2&quot;: float(chi2), &quot;df&quot;: int(chi_df), &quot;p&quot;: float(chi_p),
     &quot;min_expected&quot;: min_expected,
     &quot;monte_carlo_p&quot;: mc_p,
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1911,7 +1972,7 @@ record(&quot;Q7a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q7b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q7b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -1935,7 +1996,8 @@ record(&quot;Q7b&quot;, {
     &quot;x&quot;: x, &quot;n&quot;: n, &quot;p_hat&quot;: float(p_hat), &quot;null_p&quot;: 0.30,
     &quot;exact_p&quot;: float(exact.pvalue),
     &quot;ci&quot;: [float(wilson[0]), float(wilson[1])],
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -1999,7 +2061,7 @@ record(&quot;Q7b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q7c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q7c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q7c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2037,7 +2099,8 @@ record(&quot;Q7c&quot;, {
     &quot;difference&quot;: float(p1 - p0),
     &quot;ci&quot;: [float(diff_ci[0]), float(diff_ci[1])],
     &quot;z&quot;: float(z_stat), &quot;z_p&quot;: float(z_p), &quot;fisher_p&quot;: float(fisher.pvalue),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -2114,7 +2177,7 @@ record(&quot;Q7c&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q8a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2147,7 +2210,8 @@ print(f&quot;R-squared = {model_simple.rsquared:.4f}; n = {int(model_simple.nobs
 record(&quot;Q8a&quot;, {
     &quot;terms&quot;: simple_terms.to_dict(orient=&quot;records&quot;),
     &quot;r_squared&quot;: float(model_simple.rsquared), &quot;n&quot;: int(model_simple.nobs),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -2222,7 +2286,7 @@ record(&quot;Q8a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q8b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2258,7 +2322,8 @@ record(&quot;Q8b&quot;, {
     &quot;adj_r_squared&quot;: float(model_multi.rsquared_adj),
     &quot;n&quot;: int(model_multi.nobs),
     &quot;missing_bmi_excluded&quot;: int(anc[&quot;bmi&quot;].isna().sum()),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -2350,16 +2415,25 @@ record(&quot;Q8b&quot;, {
         <section class="card-section">
           <h4>Practical requirement</h4>
           <p>Assess linearity, residual normality, homoscedasticity, independence and influence.</p>
-          <p class="muted"><strong>Jupyter action:</strong> Run Q8(c) and interpret each of the four diagnostic panels.</p>
+          <p class="muted"><strong>Jupyter action:</strong> Run Q8(b), then Q8(c), and interpret each of the four diagnostic panels.</p>
           <p class="muted"><strong>Code required:</strong> Yes</p>
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Check whether the regression model&#x27;s assumptions are plausible.</li><li>Statistical concept: Residual plots reveal non-linearity and unequal spread; Q-Q plots assess normality; influence measures find influential records.</li><li>Do you need to write code? Yes — one diagnostic plotting cell.</li><li>What to do in Jupyter: Run Q8(c) and examine each panel rather than only the Durbin-Watson number.</li><li>Code to use: Use the verified Q8(c) code cell.</li><li>Output to inspect: Four diagnostic plots, Durbin-Watson, Cook&#x27;s D threshold and top influential rows.</li><li>Important values or observations: Pattern in residuals vs fitted, Q-Q departures, funnel shapes and large Cook&#x27;s D values.</li><li>How to interpret it: Independence is mainly justified by the study design here because each id is one woman.</li><li>What to report: Report what each plot assesses and whether any concern is visible.</li><li>Common mistakes to avoid: Declaring assumptions &#x27;passed&#x27; from one plot, or deleting influential points solely because they are influential.</li></ol>
+          <ol class="learning"><li>What is being asked? Check whether the regression model&#x27;s assumptions are plausible.</li><li>Statistical concept: Residual plots reveal non-linearity and unequal spread; Q-Q plots assess normality; influence measures find influential records.</li><li>Do you need to write code? Yes — one diagnostic plotting cell.</li><li>What to do in Jupyter: Run Q8(b), then Q8(c), and examine each panel rather than only the Durbin-Watson number.</li><li>Code to use: Use the verified Q8(c) code cell.</li><li>Output to inspect: Four diagnostic plots, Durbin-Watson, Cook&#x27;s D threshold and top influential rows.</li><li>Important values or observations: Pattern in residuals vs fitted, Q-Q departures, funnel shapes and large Cook&#x27;s D values.</li><li>How to interpret it: Independence is mainly justified by the study design here because each id is one woman.</li><li>What to report: Report what each plot assesses and whether any concern is visible.</li><li>Common mistakes to avoid: Declaring assumptions &#x27;passed&#x27; from one plot, or deleting influential points solely because they are influential.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q8c" data-requires-setup="true" data-prereqs="q8b"><div class="code-head"><span>Code cell <code>q8c</code> <span class="code-prereq">· requires Reusable setup</span> <span class="code-prereq">· also needs q8b</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python">_required_cells = (&#x27;q8b&#x27;,)
+_required_names = (&#x27;model_multi&#x27;, &#x27;anc_model&#x27;)
+_missing = [name for name in _required_names if name not in globals()]
+if _missing:
+    raise RuntimeError(
+        &quot;Run prerequisite code cell(s) &quot; + &quot;, &quot;.join(_required_cells)
+        + &quot; before this cell. Missing objects: &quot; + &quot;, &quot;.join(_missing)
+    )
+
+# Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2374,7 +2448,9 @@ fitted = model_multi.fittedvalues
 residuals = model_multi.resid
 student_resid = influence.resid_studentized_internal
 leverage = influence.hat_matrix_diag
-cooks = pd.Series(influence.cooks_distance[0], index=anc_model.index)
+# Cook&#x27;s distance is positional in the fitted model; use the model&#x27;s own
+# row labels so any rows dropped by the formula are handled correctly.
+cooks = pd.Series(influence.cooks_distance[0], index=fitted.index)
 top_influential = cooks.sort_values(ascending=False).head(5)
 threshold = 4 / int(model_multi.nobs)
 
@@ -2397,27 +2473,47 @@ plt.tight_layout()
 plt.show()
 plt.close(&quot;all&quot;)
 
-print(f&quot;Durbin-Watson statistic = {durbin_watson(residuals):.4f}&quot;)
+print(f&quot;Durbin-Watson statistic = {durbin_watson(residuals):.4f} &quot;
+      &quot;(descriptive only: ANC rows have no meaningful time order)&quot;)
 print(f&quot;Cook&#x27;s D warning threshold 4/n = {threshold:.5f}&quot;)
 print(&quot;Largest Cook&#x27;s D values (row index, value):&quot;)
 print(top_influential.round(5).to_string())
 record(&quot;Q8c&quot;, {
     &quot;durbin_watson&quot;: float(durbin_watson(residuals)),
     &quot;cooks_threshold&quot;: float(threshold),
-    &quot;top_cooks&quot;: [float(v) for v in top_influential.values],
-})</code></pre></div>
+    &quot;top_cooks&quot;: [
+        {&quot;row_index&quot;: str(index), &quot;cooks_d&quot;: float(value)}
+        for index, value in top_influential.items()
+    ],
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
           <pre class="verified-output">{
   &quot;cooks_threshold&quot;: 0.010256410256410256,
-  &quot;durbin_watson&quot;: 1.9872089311707544,
+  &quot;durbin_watson&quot;: 1.9872089311707541,
   &quot;top_cooks&quot;: [
-    0.049014111917957105,
-    0.04523631658678923,
-    0.042943720420679954,
-    0.037755383131797715,
-    0.037373246208354964
+    {
+      &quot;cooks_d&quot;: 0.049014111917957105,
+      &quot;row_index&quot;: &quot;243&quot;
+    },
+    {
+      &quot;cooks_d&quot;: 0.04523631658678923,
+      &quot;row_index&quot;: &quot;365&quot;
+    },
+    {
+      &quot;cooks_d&quot;: 0.042943720420679954,
+      &quot;row_index&quot;: &quot;399&quot;
+    },
+    {
+      &quot;cooks_d&quot;: 0.037755383131797715,
+      &quot;row_index&quot;: &quot;158&quot;
+    },
+    {
+      &quot;cooks_d&quot;: 0.037373246208354964,
+      &quot;row_index&quot;: &quot;100&quot;
+    }
   ]
 }</pre>
         </section>
@@ -2433,7 +2529,7 @@ record(&quot;Q8c&quot;, {
         </section>
         <section class="card-section worked-report">
           <h4>Worked report — verified from the executed notebook</h4>
-          <p>For the Q8b model, Durbin-Watson=1.99, suggesting no obvious serial correlation. The largest Cook&#x27;s distance was 0.049 against a 4/n screening threshold of 0.0103. The residual-versus-fitted, scale-location, Q-Q and influence plots must also be described in words because the numbers alone do not check linearity or normality.</p>
+          <p>For the Q8b model, Durbin-Watson=1.99 is descriptive only because ANC rows have no meaningful time order; independence rests on one row per woman and the study design. The largest Cook&#x27;s distance was 0.049 at row index 243 against a 4/n screening threshold of 0.0103. The residual-versus-fitted, scale-location, Q-Q and influence plots must also be described in words because the numbers alone do not check linearity or normality.</p>
           <p class="muted"><strong>Verified source:</strong> Q8c output · anc_cohort.csv</p>
           <p class="muted"><strong>Teaching note:</strong> Cook&#x27;s distance is a screen, not an automatic deletion rule. State what each plot shows and justify any decision about influential records.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
@@ -2460,16 +2556,25 @@ record(&quot;Q8c&quot;, {
         <section class="card-section">
           <h4>Practical requirement</h4>
           <p>Extend the regression with facility_type and compare nested models.</p>
-          <p class="muted"><strong>Jupyter action:</strong> Run Q8(d) and compare the F test, AIC and adjusted R-squared on the same complete cases.</p>
+          <p class="muted"><strong>Jupyter action:</strong> Run Q8(b), then Q8(d), and compare the F test, AIC and adjusted R-squared on the same complete cases.</p>
           <p class="muted"><strong>Code required:</strong> Yes</p>
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Assess whether facility type improves the model after the existing predictors.</li><li>Statistical concept: Nested-model comparison tests whether the added block explains additional variation beyond the base model.</li><li>Do you need to write code? Yes — one model-comparison cell.</li><li>What to do in Jupyter: Run Q8(d) and confirm both models used the same complete-case sample.</li><li>Code to use: Use the verified Q8(d) code cell.</li><li>Output to inspect: Nested F test, AIC, adjusted R-squared and complete-case n.</li><li>Important values or observations: The block p-value, AIC change and whether adjusted R-squared improves.</li><li>How to interpret it: A better fit does not establish a causal facility effect.</li><li>What to report: Report the comparison statistics and state whether facility type adds explanatory value.</li><li>Common mistakes to avoid: Comparing AIC across different samples or ignoring model complexity.</li></ol>
+          <ol class="learning"><li>What is being asked? Assess whether facility type improves the model after the existing predictors.</li><li>Statistical concept: Nested-model comparison tests whether the added block explains additional variation beyond the base model.</li><li>Do you need to write code? Yes — one model-comparison cell.</li><li>What to do in Jupyter: Run Q8(b), then Q8(d), and confirm both models used the same complete-case sample.</li><li>Code to use: Use the verified Q8(d) code cell.</li><li>Output to inspect: Nested F test, AIC, adjusted R-squared and complete-case n.</li><li>Important values or observations: The block p-value, AIC change and whether adjusted R-squared improves.</li><li>How to interpret it: A better fit does not establish a causal facility effect.</li><li>What to report: Report the comparison statistics and state whether facility type adds explanatory value.</li><li>Common mistakes to avoid: Comparing AIC across different samples or ignoring model complexity.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q8d" data-requires-setup="true" data-prereqs="q8b"><div class="code-head"><span>Code cell <code>q8d</code> <span class="code-prereq">· requires Reusable setup</span> <span class="code-prereq">· also needs q8b</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python">_required_cells = (&#x27;q8b&#x27;,)
+_required_names = (&#x27;model_multi&#x27;, &#x27;anc_model&#x27;, &#x27;formula_base&#x27;)
+_missing = [name for name in _required_names if name not in globals()]
+if _missing:
+    raise RuntimeError(
+        &quot;Run prerequisite code cell(s) &quot; + &quot;, &quot;.join(_required_cells)
+        + &quot; before this cell. Missing objects: &quot; + &quot;, &quot;.join(_missing)
+    )
+
+# Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2500,19 +2605,20 @@ record(&quot;Q8d&quot;, {
     &quot;adj_r2_base&quot;: float(model_multi.rsquared_adj),
     &quot;adj_r2_extended&quot;: float(model_extended.rsquared_adj),
     &quot;n&quot;: int(model_multi.nobs),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
           <pre class="verified-output">{
   &quot;adj_r2_base&quot;: 0.17431518509382127,
-  &quot;adj_r2_extended&quot;: 0.17792318336691137,
+  &quot;adj_r2_extended&quot;: 0.17792318336691115,
   &quot;aic_base&quot;: 5786.759247579495,
   &quot;aic_extended&quot;: 5787.02007413781,
   &quot;df_diff&quot;: 2,
-  &quot;f_statistic&quot;: 1.8448598154299463,
+  &quot;f_statistic&quot;: 1.8448598154298994,
   &quot;n&quot;: 390,
-  &quot;p_value&quot;: 0.15944917874151754
+  &quot;p_value&quot;: 0.15944917874152495
 }</pre>
         </section>
         <section class="card-section two-col">
@@ -2527,7 +2633,7 @@ record(&quot;Q8d&quot;, {
         </section>
         <section class="card-section worked-report">
           <h4>Worked report — verified from the executed notebook</h4>
-          <p>Adding facility type to the Q8b model does not improve fit on the same complete cases (n=390): nested F with 2 numerator degrees of freedom=1.84, p=0.1594; AIC 5,787.02 versus 5,786.76 (change 0.26); adjusted R-squared 0.178 versus 0.174 (change 0.004).</p>
+          <p>Adding facility type to the Q8b model gives mixed, weak evidence of improvement on the same complete cases (n=390): nested F with 2 numerator degrees of freedom=1.84, p=0.1594; AIC 5,787.02 versus 5,786.76 (change 0.26); adjusted R-squared 0.178 versus 0.174 (change 0.004).</p>
           <p class="muted"><strong>Verified source:</strong> Q8d output · anc_cohort.csv</p>
           <p class="muted"><strong>Teaching note:</strong> Compare nested models only on the same sample, and weigh the block test, AIC and complexity together. A better fit is not a causal facility effect.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
@@ -2554,16 +2660,25 @@ record(&quot;Q8d&quot;, {
         <section class="card-section">
           <h4>Practical requirement</h4>
           <p>Predict birthweight for BMI=22, ANC=5, IPTp3=Yes, gest_age=39 and explain interval types.</p>
-          <p class="muted"><strong>Jupyter action:</strong> Run Q8(e) and compare the mean-response CI with the individual prediction interval.</p>
+          <p class="muted"><strong>Jupyter action:</strong> Run Q8(b) and Q8(d), then Q8(e), and compare the mean-response CI with the individual prediction interval.</p>
           <p class="muted"><strong>Code required:</strong> Yes</p>
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Use a fitted model to predict and distinguish two interval types.</li><li>Statistical concept: A confidence interval targets the mean response; a prediction interval includes individual residual variability.</li><li>Do you need to write code? Yes — one prediction cell.</li><li>What to do in Jupyter: Run Q8(e) and note which model and facility assumption each prediction uses.</li><li>Code to use: Use the verified Q8(e) code cell.</li><li>Output to inspect: Predicted mean with 95% CI and 95% prediction interval for an individual.</li><li>Important values or observations: The prediction interval must be wider than the mean-response CI.</li><li>How to interpret it: Predictions are model-based estimates for a hypothetical profile, not observed data.</li><li>What to report: Report the fitted model, covariates, prediction and both intervals.</li><li>Common mistakes to avoid: Confusing the two interval types or omitting the facility assumption when using the extended model.</li></ol>
+          <ol class="learning"><li>What is being asked? Use a fitted model to predict and distinguish two interval types.</li><li>Statistical concept: A confidence interval targets the mean response; a prediction interval includes individual residual variability.</li><li>Do you need to write code? Yes — one prediction cell.</li><li>What to do in Jupyter: Run Q8(b) and Q8(d), then Q8(e), and note which model and facility assumption each prediction uses.</li><li>Code to use: Use the verified Q8(e) code cell.</li><li>Output to inspect: Predicted mean with 95% CI and 95% prediction interval for an individual.</li><li>Important values or observations: The prediction interval must be wider than the mean-response CI.</li><li>How to interpret it: Predictions are model-based estimates for a hypothetical profile, not observed data.</li><li>What to report: Report the fitted model, covariates, prediction and both intervals.</li><li>Common mistakes to avoid: Confusing the two interval types or omitting the facility assumption when using the extended model.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q8e" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q8e</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q8e" data-requires-setup="true" data-prereqs="q8b q8d"><div class="code-head"><span>Code cell <code>q8e</code> <span class="code-prereq">· requires Reusable setup</span> <span class="code-prereq">· also needs q8b, q8d</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python">_required_cells = (&#x27;q8b&#x27;, &#x27;q8d&#x27;)
+_required_names = (&#x27;model_multi&#x27;, &#x27;model_extended&#x27;)
+_missing = [name for name in _required_names if name not in globals()]
+if _missing:
+    raise RuntimeError(
+        &quot;Run prerequisite code cell(s) &quot; + &quot;, &quot;.join(_required_cells)
+        + &quot; before this cell. Missing objects: &quot; + &quot;, &quot;.join(_missing)
+    )
+
+# Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2589,16 +2704,17 @@ print(prediction_urban.to_string(index=False, float_format=lambda v: f&quot;{v:.
 record(&quot;Q8e&quot;, {
     &quot;model_without_facility&quot;: prediction.iloc[0].to_dict(),
     &quot;model_with_facility_urban&quot;: prediction_urban.iloc[0].to_dict(),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
           <pre class="verified-output">{
   &quot;model_with_facility_urban&quot;: {
     &quot;mean&quot;: 3175.033131939952,
-    &quot;mean_ci_lower&quot;: 3102.6903561212853,
-    &quot;mean_ci_upper&quot;: 3247.3759077586187,
-    &quot;mean_se&quot;: 36.79361969227172,
+    &quot;mean_ci_lower&quot;: 3102.6903561212857,
+    &quot;mean_ci_upper&quot;: 3247.3759077586183,
+    &quot;mean_se&quot;: 36.79361969227149,
     &quot;obs_ci_lower&quot;: 2385.2729431910484,
     &quot;obs_ci_upper&quot;: 3964.7933206888556
   },
@@ -2660,7 +2776,7 @@ record(&quot;Q8e&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q9" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q9</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q9" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q9</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2717,7 +2833,8 @@ record(&quot;Q9&quot;, {
         &quot;no_anaemia&quot;: float(scenario_probabilities.iloc[0]),
         &quot;anaemia&quot;: float(scenario_probabilities.iloc[1]),
     },
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -2730,21 +2847,21 @@ record(&quot;Q9&quot;, {
   },
   &quot;terms&quot;: [
     {
-      &quot;coefficient&quot;: -1.3254501515250423,
-      &quot;odds_ratio&quot;: 0.2656833344081682,
-      &quot;or_ci_high&quot;: 1.49416254790415,
-      &quot;or_ci_low&quot;: 0.04724227245640392,
-      &quot;p_value&quot;: 0.13252137579011158,
-      &quot;std_error&quot;: 0.8811468202533959,
+      &quot;coefficient&quot;: -1.325450151525042,
+      &quot;odds_ratio&quot;: 0.26568333440816827,
+      &quot;or_ci_high&quot;: 1.4941625479041571,
+      &quot;or_ci_low&quot;: 0.047242272456403715,
+      &quot;p_value&quot;: 0.1325213757901126,
+      &quot;std_error&quot;: 0.8811468202533982,
       &quot;term&quot;: &quot;Intercept&quot;
     },
     {
-      &quot;coefficient&quot;: -0.0024444422509004153,
+      &quot;coefficient&quot;: -0.0024444422509004226,
       &quot;odds_ratio&quot;: 0.9975585429651671,
       &quot;or_ci_high&quot;: 1.0514039946306561,
       &quot;or_ci_low&quot;: 0.9464706732376077,
-      &quot;p_value&quot;: 0.927385711280262,
-      &quot;std_error&quot;: 0.02682235561771637,
+      &quot;p_value&quot;: 0.9273857112802618,
+      &quot;std_error&quot;: 0.02682235561771638,
       &quot;term&quot;: &quot;age&quot;
     },
     {
@@ -2752,17 +2869,17 @@ record(&quot;Q9&quot;, {
       &quot;odds_ratio&quot;: 2.200477909528209,
       &quot;or_ci_high&quot;: 4.092640054568089,
       &quot;or_ci_low&quot;: 1.1831245762541511,
-      &quot;p_value&quot;: 0.012734415270477438,
-      &quot;std_error&quot;: 0.316595451981738,
+      &quot;p_value&quot;: 0.012734415270477422,
+      &quot;std_error&quot;: 0.31659545198173794,
       &quot;term&quot;: &quot;anaemia&quot;
     },
     {
       &quot;coefficient&quot;: -0.18324236394819335,
       &quot;odds_ratio&quot;: 0.8325663472154797,
-      &quot;or_ci_high&quot;: 0.9903893105496615,
-      &quot;or_ci_low&quot;: 0.6998931785027267,
-      &quot;p_value&quot;: 0.03854572565879196,
-      &quot;std_error&quot;: 0.08856550178656843,
+      &quot;or_ci_high&quot;: 0.9903893105496618,
+      &quot;or_ci_low&quot;: 0.6998931785027265,
+      &quot;p_value&quot;: 0.03854572565879232,
+      &quot;std_error&quot;: 0.0885655017865686,
       &quot;term&quot;: &quot;anc_visits&quot;
     }
   ]
@@ -2816,7 +2933,7 @@ record(&quot;Q9&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q10a" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10a</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2840,7 +2957,8 @@ record(&quot;Q10a&quot;, {
     &quot;participants&quot;: n_surv, &quot;events&quot;: events, &quot;censored&quot;: censored,
     &quot;censoring_proportion&quot;: float(censoring_proportion),
     &quot;median_observed_follow_up&quot;: median_follow_up,
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -2900,7 +3018,7 @@ record(&quot;Q10a&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q10b" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10b</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -2985,7 +3103,8 @@ record(&quot;Q10b&quot;, {
     &quot;survival_180&quot;: s180, &quot;ci_180&quot;: list(ci180),
     &quot;median_survival&quot;: median_survival, &quot;median_ci&quot;: median_ci,
     &quot;number_at_risk&quot;: dict(zip([str(t) for t in risk_times], at_risk)),
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -3062,7 +3181,7 @@ record(&quot;Q10b&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q10c" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10c</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -3120,8 +3239,11 @@ print(f&quot;Log-rank chi-square(1) = {logrank_chi2:.4f}, p = {logrank_p:.4g}&qu
 for group in strata:
     km = km_by_group[group]
     idx90 = int(np.searchsorted(km.surv_times, 90, side=&quot;right&quot;)) - 1
-    print(f&quot;{group}: n = {int((surv[&#x27;anaemia&#x27;] == group).sum())}, &quot;
-          f&quot;S(90) = {km.surv_prob[idx90]:.4f}&quot; if idx90 &gt;= 0 else group)
+    n_group = int((surv[&quot;anaemia&quot;] == group).sum())
+    if idx90 &gt;= 0:
+        print(f&quot;{group}: n = {n_group}, S(90) = {km.surv_prob[idx90]:.4f}&quot;)
+    else:
+        print(f&quot;{group}: n = {n_group}, S(90) = not estimable before first event&quot;)
 record(&quot;Q10c&quot;, {
     &quot;logrank_chi2&quot;: float(logrank_chi2), &quot;logrank_p&quot;: logrank_p,
     &quot;groups&quot;: strata,
@@ -3130,7 +3252,8 @@ record(&quot;Q10c&quot;, {
                 if np.isfinite(km_by_group[group].quantile(0.5)) else None)
         for group in strata
     },
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -3186,16 +3309,25 @@ record(&quot;Q10c&quot;, {
         <section class="card-section">
           <h4>Practical requirement</h4>
           <p>Estimate the constant-hazard rate from events and person-time.</p>
-          <p class="muted"><strong>Jupyter action:</strong> Run Q10(d) and compare exponential survival with the KM estimates.</p>
+          <p class="muted"><strong>Jupyter action:</strong> Run Q10(a), then Q10(d), and compare exponential survival with the KM estimates.</p>
           <p class="muted"><strong>Code required:</strong> Yes</p>
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Estimate a readmission rate under an exponential survival model.</li><li>Statistical concept: The exponential model assumes a constant hazard; the rate is events divided by total person-time.</li><li>Do you need to write code? Yes — one rate calculation cell.</li><li>What to do in Jupyter: Run Q10(d) and compare S(90)/S(180) with the earlier KM values.</li><li>Code to use: Use the verified Q10(d) code cell.</li><li>Output to inspect: Events, person-time, rate, per-1,000 rate, exact CI and exponential S(90)/S(180).</li><li>Important values or observations: Whether the exponential probabilities are close to the KM probabilities.</li><li>How to interpret it: The constant-hazard assumption is strong and should be checked against the KM curve.</li><li>What to report: Report the rate with person-time and CI, then compare with KM.</li><li>Common mistakes to avoid: Using events/population instead of events/person-time, or ignoring the constant-hazard assumption.</li></ol>
+          <ol class="learning"><li>What is being asked? Estimate a readmission rate under an exponential survival model.</li><li>Statistical concept: The exponential model assumes a constant hazard; the rate is events divided by total person-time.</li><li>Do you need to write code? Yes — one rate calculation cell.</li><li>What to do in Jupyter: Run Q10(a), then Q10(d), and compare S(90)/S(180) with the earlier KM values.</li><li>Code to use: Use the verified Q10(d) code cell.</li><li>Output to inspect: Events, person-time, rate, per-1,000 rate, exact CI and exponential S(90)/S(180).</li><li>Important values or observations: Whether the exponential probabilities are close to the KM probabilities.</li><li>How to interpret it: The constant-hazard assumption is strong and should be checked against the KM curve.</li><li>What to report: Report the rate with person-time and CI, then compare with KM.</li><li>Common mistakes to avoid: Using events/population instead of events/person-time, or ignoring the constant-hazard assumption.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10d" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10d</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q10d" data-requires-setup="true" data-prereqs="q10a"><div class="code-head"><span>Code cell <code>q10d</code> <span class="code-prereq">· requires Reusable setup</span> <span class="code-prereq">· also needs q10a</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python">_required_cells = (&#x27;q10a&#x27;,)
+_required_names = (&#x27;events&#x27;,)
+_missing = [name for name in _required_names if name not in globals()]
+if _missing:
+    raise RuntimeError(
+        &quot;Run prerequisite code cell(s) &quot; + &quot;, &quot;.join(_required_cells)
+        + &quot; before this cell. Missing objects: &quot; + &quot;, &quot;.join(_missing)
+    )
+
+# Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -3227,7 +3359,8 @@ record(&quot;Q10d&quot;, {
     &quot;ci_per_1000_person_days&quot;: [rate_ci[0] * 1000, rate_ci[1] * 1000],
     &quot;exponential_s90&quot;: exponential_s90,
     &quot;exponential_s180&quot;: exponential_s180,
-})</code></pre></div>
+})
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -3292,7 +3425,7 @@ record(&quot;Q10d&quot;, {
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10e" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10e</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q10e" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10e</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -3324,7 +3457,8 @@ cox_terms = pd.DataFrame({
 print(cox_terms.to_string(index=False, float_format=lambda v: f&quot;{v:.5g}&quot;))
 print(&quot;\nReference levels: anaemia = No anaemia; delivery_mode = Vaginal; &quot;
       &quot;age = per one-year increase.&quot;)
-record(&quot;Q10e&quot;, cox_terms.to_dict(orient=&quot;records&quot;))</code></pre></div>
+record(&quot;Q10e&quot;, cox_terms.to_dict(orient=&quot;records&quot;))
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -3367,9 +3501,9 @@ record(&quot;Q10e&quot;, cox_terms.to_dict(orient=&quot;records&quot;))</code></
         </section>
         <section class="card-section worked-report">
           <h4>Worked report — verified from the executed notebook</h4>
-          <p>In the Cox model, adjusted hazard ratios were anaemia HR 1.89 (95% CI 1.44 to 2.49, p&lt;0.0001) — higher hazard at fixed covariates; caesarean HR 1.57 (95% CI 1.18 to 2.10, p=0.0022) — higher hazard at fixed covariates; age HR 1.02 (95% CI 1.00 to 1.04, p=0.0816) — higher hazard at fixed covariates (analysis of 500 women and 209 events). Binary terms use the recorded reference categories printed in the notebook output.</p>
-          <p class="muted"><strong>Verified source:</strong> Q10a and Q10e outputs · postpartum_survival.csv</p>
-          <p class="muted"><strong>Teaching note:</strong> A hazard ratio is a relative instantaneous event rate, not a risk ratio. Report reference levels and the PH diagnostic before interpreting it.</p>
+          <p>In the Cox model, adjusted hazard ratios were anaemia HR 1.894 (95% CI 1.443 to 2.486, p&lt;0.0001) — higher hazard at fixed covariates; caesarean HR 1.572 (95% CI 1.176 to 2.101, p=0.0022) — higher hazard at fixed covariates; age HR 1.020 (95% CI 0.998 to 1.042, p=0.0816) — no clear change in hazard at fixed covariates (analysis of 500 women and 209 events). Reference levels are anaemia = No anaemia, delivery_mode = Vaginal and age = per one-year increase. Q10f&#x27;s Schoenfeld screen flags a time trend for anaemia and caesarean, so constant hazard ratios for those terms should be treated cautiously.</p>
+          <p class="muted"><strong>Verified source:</strong> Q10a, Q10e and Q10f outputs · postpartum_survival.csv</p>
+          <p class="muted"><strong>Teaching note:</strong> A hazard ratio is a relative instantaneous event rate, not a risk ratio. The age point estimate is above 1 but its interval includes 1 and p&gt;0.05, so it is not clear evidence at the 5% level.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
         </section>
         <section class="card-section">
@@ -3394,16 +3528,25 @@ record(&quot;Q10e&quot;, cox_terms.to_dict(orient=&quot;records&quot;))</code></
         <section class="card-section">
           <h4>Practical requirement</h4>
           <p>Assess proportional hazards using Schoenfeld residual diagnostics.</p>
-          <p class="muted"><strong>Jupyter action:</strong> Run Q10(f), inspect residual plots and the screening tests.</p>
+          <p class="muted"><strong>Jupyter action:</strong> Run Q10(e), then Q10(f), and inspect residual plots and the screening tests.</p>
           <p class="muted"><strong>Code required:</strong> Yes</p>
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Check whether the Cox proportional hazards assumption is plausible.</li><li>Statistical concept: Proportional hazards means covariate hazard ratios are constant over follow-up; Schoenfeld residuals should show no time trend.</li><li>Do you need to write code? Yes — one diagnostic cell.</li><li>What to do in Jupyter: Run Q10(f) and look for trends in each residual plot.</li><li>Code to use: Use the verified Q10(f) code cell.</li><li>Output to inspect: Schoenfeld residual plots, correlations with log(time), p-values and Holm-adjusted p-values.</li><li>Important values or observations: Any significant time trend after multiplicity adjustment.</li><li>How to interpret it: This statsmodels-based screen is an approximation, not an exact R cox.zph replacement.</li><li>What to report: Report the diagnostic method, p-values and what a violation would imply.</li><li>Common mistakes to avoid: Declaring PH validated solely because one plot looks flat, or ignoring a clear time trend.</li></ol>
+          <ol class="learning"><li>What is being asked? Check whether the Cox proportional hazards assumption is plausible.</li><li>Statistical concept: Proportional hazards means covariate hazard ratios are constant over follow-up; Schoenfeld residuals should show no time trend.</li><li>Do you need to write code? Yes — one diagnostic cell.</li><li>What to do in Jupyter: Run Q10(e), then Q10(f), and look for trends in each residual plot.</li><li>Code to use: Use the verified Q10(f) code cell.</li><li>Output to inspect: Schoenfeld residual plots, correlations with log(time), p-values and Holm-adjusted p-values.</li><li>Important values or observations: Any significant time trend after multiplicity adjustment.</li><li>How to interpret it: This statsmodels-based screen is an approximation, not an exact R cox.zph replacement.</li><li>What to report: Report the diagnostic method, p-values and what a violation would imply.</li><li>Common mistakes to avoid: Declaring PH validated solely because one plot looks flat, or ignoring a clear time trend.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
-          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code> and <code>record()</code>. “Copy setup + cell” includes it automatically.</p><div class="code-wrap" data-cell="q10f" data-requires-setup="true"><div class="code-head"><span>Code cell <code>q10f</code> <span class="code-prereq">· requires Reusable setup</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python"># Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
+          <p class="setup-note"><strong>Run setup first:</strong> the reusable setup cell creates <code>anc</code>, <code>record()</code> and the objects shared by the question cells. “Copy setup + cell” includes the setup and any earlier question cell this cell reuses.</p><div class="code-wrap" data-cell="q10f" data-requires-setup="true" data-prereqs="q10e"><div class="code-head"><span>Code cell <code>q10f</code> <span class="code-prereq">· requires Reusable setup</span> <span class="code-prereq">· also needs q10e</span></span><span class="code-actions"><button class="copy-code" type="button" data-copy-mode="with-setup">Copy setup + cell</button><button class="copy-cell-only" type="button">Copy cell only</button></span></div><pre><code class="language-python">_required_cells = (&#x27;q10e&#x27;,)
+_required_names = (&#x27;cox_model&#x27;, &#x27;cox_design&#x27;)
+_missing = [name for name in _required_names if name not in globals()]
+if _missing:
+    raise RuntimeError(
+        &quot;Run prerequisite code cell(s) &quot; + &quot;, &quot;.join(_required_cells)
+        + &quot; before this cell. Missing objects: &quot; + &quot;, &quot;.join(_missing)
+    )
+
+# Prerequisite: run the &quot;Reusable setup&quot; cell once in this kernel.
 try:
     anc
     record
@@ -3448,7 +3591,8 @@ plt.close(&quot;all&quot;)
 print(ph_tests.to_string(index=False, float_format=lambda v: f&quot;{v:.5g}&quot;))
 print(&quot;This is a Schoenfeld-residual screening test using statsmodels 0.15; &quot;
       &quot;it is not an exact R cox.zph replacement.&quot;)
-record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></pre></div>
+record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))
+</code></pre></div>
         </section>
         <section class="card-section">
           <h4>Verified output from the executed notebook</h4>
@@ -3507,7 +3651,7 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></p
     <section class="panel" id="reporting-templates">
       <h2>Reporting templates with worked verified examples</h2>
       <p class="muted">Each generic pattern keeps placeholders as a reusable sentence frame. Directly underneath, a worked example fills every placeholder with values from the executed notebook; the same examples also appear in the individual question cards.</p>
-      <details class="template-example"><summary>Descriptive statistics</summary><h5>Reusable pattern</h5><pre>In the simulated teaching cohort, {variable} had n={n} non-missing observations (mean={mean}, SD={sd}, median={median}, IQR={iqr}). {n_missing} records were missing.</pre><h5>Worked example from <a href="#Q2b">Q2b</a></h5><p class="worked-report">Haemoglobin used 382 non-missing values (mean 11.49 g/dL, SD 1.42, median 11.50, IQR 1.97); 18 records were missing. BMI had 10 missing values, whereas birthweight used all 400 records (mean 3,046.89 g, SD 442.44).</p><p class="muted"><strong>Verified source:</strong> Q2b output · anc_cohort.csv · <strong>Teaching note:</strong> Report n beside each summary. The differing denominators explain why later anaemia analyses use fewer than the full cohort.</p></details><details class="template-example"><summary>Probability</summary><h5>Reusable pattern</h5><pre>The sample proportion of {event} was {x}/{n} = {p:.4f}. This estimates the underlying probability but is not itself a theoretical probability.</pre><h5>Worked example from <a href="#Q1a">Q1a</a></h5><p class="worked-report">In the simulated ANC cohort (n=400), 47/400 (0.1175) preterm delivery and 43/400 (0.1075) low birth weight. These are observed sample proportions from the recorded outcome flags, not known population probabilities.</p><p class="muted"><strong>Verified source:</strong> Q1a output · anc_cohort.csv · <strong>Teaching note:</strong> Both outcome flags are complete for every record here. Do not switch to the smaller anaemia denominator used later.</p></details><details class="template-example"><summary>Correlation</summary><h5>Reusable pattern</h5><pre>{x} and {y} showed {strength} {direction} association (Pearson r={r}, p={p}; Spearman rho={rho}). Because the data are observational, this is not causal.</pre><h5>Worked example from <a href="#Q2d">Q2d</a></h5><p class="worked-report">Gestational age and birthweight showed a positive association (Pearson r=0.365, 95% CI 0.277 to 0.447, p&lt;0.0001; Spearman rho=0.331, p&lt;0.0001; n=400). The rank-based estimate is close to the Pearson estimate, so a few extreme points are unlikely to explain the association.</p><p class="muted"><strong>Verified source:</strong> Q2c and Q2d outputs · anc_cohort.csv · <strong>Teaching note:</strong> Report both coefficients and inspect the scatterplot first. An observational association is not evidence that gestational age causes birthweight.</p></details><details class="template-example"><summary>Confidence interval</summary><h5>Reusable pattern</h5><pre>The estimated {parameter} was {estimate} with a 95% confidence interval of ({low}, {high}), computed using {method}.</pre><h5>Worked example from <a href="#Q3a">Q3a</a></h5><p class="worked-report">Mean birthweight was 3,046.89 g (SD 442.44, n=400, df=399); SE = SD/sqrt(n) = 22.12 g and the critical t value is 1.966. The 95% t interval was 3,003.40 to 3,090.38 g, matching the SciPy endpoints 3,003.40 to 3,090.38 g.</p><p class="muted"><strong>Verified source:</strong> Q3a output · anc_cohort.csv · <strong>Teaching note:</strong> The interval targets the population mean, not the range of individual births. A 95% procedure has long-run coverage under its assumptions.</p></details><details class="template-example"><summary>Independent t-test</summary><h5>Reusable pattern</h5><pre>Mean {outcome} was {mean1} in {group1} (n={n1}) and {mean2} in {group2} (n={n2}). Welch&#x27;s t-test gave a mean difference of {diff} (95% CI {low} to {high}), t={t}, df={df}, p={p}.</pre><h5>Worked example from <a href="#Q4">Q4</a></h5><p class="worked-report">Mean birthweight was 3,125.79 g with IPTp3 Yes (n=243) and 2,924.78 g with No (n=157), a difference of 201.00 g (Yes minus No; Welch 95% CI 112.76 to 289.24; t=4.48, df=317.4, p&lt;0.0001). Levene p=0.8128 and rank-sum p&lt;0.0001 give context for the assumption check and sensitivity analysis.</p><p class="muted"><strong>Verified source:</strong> Q4 output · anc_cohort.csv · <strong>Teaching note:</strong> Welch&#x27;s test does not assume equal variances. Report the size and precision of the difference and keep the wording observational, not causal.</p></details><details class="template-example"><summary>Paired t-test</summary><h5>Reusable pattern</h5><pre>Among {n} paired women, mean {outcome} changed by {change} (95% CI {low} to {high}); paired t={t}, p={p}.</pre><h5>Worked example from <a href="#Q5">Q5</a></h5><p class="worked-report">Among 60 paired women, mean systolic blood pressure was 112.20 mmHg at booking and 115.87 mmHg at 36 weeks. The mean within-woman change was 3.67 mmHg (95% CI 1.36 to 5.98; paired t=3.17, p=0.0024), whereas the incorrect independent test gives p=0.0848 because it ignores the id linkage.</p><p class="muted"><strong>Verified source:</strong> Q5 output · bp_paired.csv · <strong>Teaching note:</strong> Analyse the 60 paired differences, not 120 independent observations. Shapiro-Wilk and the paired-difference plot support checking the t assumption.</p></details><details class="template-example"><summary>ANOVA</summary><h5>Reusable pattern</h5><pre>One-way ANOVA comparing {outcome} across {groups} gave F({df_between},{df_within})={F}, p={p}. Tukey-adjusted pairwise comparisons are reported with 95% CIs and adjusted p-values.</pre><h5>Worked example from <a href="#Q6">Q6</a></h5><p class="worked-report">One-way ANOVA comparing haemoglobin across facility type gave F(2,379)=11.36, p&lt;0.0001; Levene p=0.0433 and Kruskal-Wallis H=18.54, p&lt;0.0001. Tukey-adjusted pairwise differences were: Peri-urban minus Rural = -0.11 g/dL (95% CI -0.53 to 0.32, adjusted p=0.8222); Peri-urban minus Urban = 0.64 g/dL (95% CI 0.24 to 1.03, adjusted p=0.0005); Rural minus Urban = 0.75 g/dL (95% CI 0.33 to 1.16, adjusted p=0.0001).</p><p class="muted"><strong>Verified source:</strong> Q6 output · anc_cohort.csv · <strong>Teaching note:</strong> Report the overall test before the adjusted contrasts. The rank-based test is an important sensitivity check because the variance test is borderline.</p></details><details class="template-example"><summary>Chi-square test</summary><h5>Reusable pattern</h5><pre>The association between {variable1} and {variable2} was examined in a {r}x{c} table (minimum expected count={min_expected}). Chi-square={chi2}, df={df}, p={p}.</pre><h5>Worked example from <a href="#Q7a">Q7a</a></h5><p class="worked-report">Among women with both variables recorded, anaemia proportions were None: 24/53 (45.28% anaemia); Primary: 67/201 (33.33% anaemia); Secondary+: 48/128 (37.50% anaemia). The chi-square test gave chi2(2)=2.69, p=0.2605, with minimum expected count 19.29; there is no clear evidence of an association in these simulated data.</p><p class="muted"><strong>Verified source:</strong> Q7a output · anc_cohort.csv · <strong>Teaching note:</strong> All expected counts exceed the usual rule-of-thumb threshold of 5. A chi-square test assesses association; it does not show that education caused anaemia.</p></details><details class="template-example"><summary>Proportion test</summary><h5>Reusable pattern</h5><pre>The observed proportion was {x}/{n}={p_hat:.4f}. Against the null value {p0}, {test} gave p={p_value}; the 95% {ci_method} interval was ({low}, {high}).</pre><h5>Worked example from <a href="#Q7b">Q7b</a></h5><p class="worked-report">Against the null prevalence 0.30, the observed 139/382 = 0.3639 gave an exact binomial p=0.0073; the 95% Wilson interval was 31.72% to 41.33%, which excludes the null. 18 records with missing anaemia were excluded.</p><p class="muted"><strong>Verified source:</strong> Q7b output and dataset audit · anc_cohort.csv · <strong>Teaching note:</strong> State H0, the evaluable denominator, the exact test and the interval together. The null value is a teaching hypothesis, not a clinical guideline.</p></details><details class="template-example"><summary>Linear regression</summary><h5>Reusable pattern</h5><pre>In the model {formula}, the adjusted coefficient for {term} was {coef} (95% CI {low} to {high}, p={p}). R-squared={r2} and adjusted R-squared={adj_r2}; n={n}.</pre><h5>Worked example from <a href="#Q8b">Q8b</a></h5><p class="worked-report">In the adjusted model (n=390 after excluding 10 records with missing BMI), estimated mean birthweight differences were IPTp3 Yes versus No: 177.16 g (95% CI 94.46 to 259.86, p&lt;0.0001); per additional week of gestational age: 57.40 g (95% CI 40.77 to 74.03, p&lt;0.0001); per unit of BMI: 12.16 g (95% CI 1.76 to 22.55, p=0.0220); per additional ANC visit: 23.62 g (95% CI 2.46 to 44.77, p=0.0287). R-squared=0.183 and adjusted R-squared=0.174.</p><p class="muted"><strong>Verified source:</strong> Q8b output · anc_cohort.csv · <strong>Teaching note:</strong> Name the reference level &#x27;IPTp3 No&#x27; and the complete-case denominator. Coefficients are conditional associations from observational data.</p></details><details class="template-example"><summary>Logistic regression</summary><h5>Reusable pattern</h5><pre>In the logistic model {formula}, {term} had an adjusted odds ratio of {or} (95% CI {low} to {high}, p={p}). Odds ratios are not risk ratios; the data are observational.</pre><h5>Worked example from <a href="#Q9">Q9</a></h5><p class="worked-report">In the logistic model for the recorded preterm flag (n=382), adjusted odds ratios were anaemia OR 2.200 (95% CI 1.183 to 4.093, p=0.0127); each additional ANC visit OR 0.833 (95% CI 0.700 to 0.990, p=0.0385); each additional year of age OR 0.998 (95% CI 0.946 to 1.051, p=0.9274). Pseudo R-squared=0.038. At age 25 with 4 ANC visits, predicted preterm probability was 20.90% with anaemia versus 10.72% without.</p><p class="muted"><strong>Verified source:</strong> Q9 output · anc_cohort.csv · <strong>Teaching note:</strong> An odds ratio is not a risk ratio. The scenario probabilities translate the log-odds model back to the probability scale for teaching; they are not causal contrasts.</p></details><details class="template-example"><summary>Kaplan-Meier analysis</summary><h5>Reusable pattern</h5><pre>Kaplan-Meier estimated event-free survival of {s1:.4f} at {t1} days (95% CI {l1} to {u1}) and {s2:.4f} at {t2} days (95% CI {l2} to {u2}). Median survival was {median}.</pre><h5>Worked example from <a href="#Q10b">Q10b</a></h5><p class="worked-report">Kaplan-Meier estimated readmission-free survival as 0.7637 at 90 days (95% CI 0.7225 to 0.7996) and 0.5894 at 180 days (95% CI 0.5377 to 0.6374). Median survival was 233 days (95% CI 202 to 260); 313 women remained at risk at day 90 and 152 at day 180.</p><p class="muted"><strong>Verified source:</strong> Q10b output · postpartum_survival.csv · <strong>Teaching note:</strong> Median observed follow-up and median survival are different quantities. Numbers at risk show where the tail of the curve is least precise.</p></details><details class="template-example"><summary>Log-rank test</summary><h5>Reusable pattern</h5><pre>Survival curves differed by {grouping} (log-rank chi-square={chi2}, df={df}, p={p}). This unadjusted test does not establish causation.</pre><h5>Worked example from <a href="#Q10c">Q10c</a></h5><p class="worked-report">Kaplan-Meier curves differed by anaemia status (log-rank chi-square=22.57, df=1, p&lt;0.0001); median readmission-free survival was Anaemia 169 days; No anaemia 311 days. The test compares the entire observed curve history, not only the medians.</p><p class="muted"><strong>Verified source:</strong> Q10c output · postpartum_survival.csv · <strong>Teaching note:</strong> The log-rank test is unadjusted and observational. Q10e adds covariates and Q10f checks the proportional-hazards assumption.</p></details><details class="template-example"><summary>Exponential survival rate</summary><h5>Reusable pattern</h5><pre>There were {events} events over {person_time} person-days, giving a rate of {rate:.6f} per person-day ({rate1000:.2f} per 1,000 person-days; 95% CI {low} to {high}). This assumes a constant hazard.</pre><h5>Worked example from <a href="#Q10d">Q10d</a></h5><p class="worked-report">There were 209 readmissions over 68,841 person-days, giving a rate of 3.036 per 1,000 person-days (95% CI 2.638 to 3.477). Under the constant-hazard exponential model, S(90)=0.7609 and S(180)=0.5790; compare these with the non-parametric Kaplan-Meier estimates before relying on the model.</p><p class="muted"><strong>Verified source:</strong> Q10b and Q10d outputs · postpartum_survival.csv · <strong>Teaching note:</strong> The rate is events per person-time, not events per person. A close match at two times supports descriptive agreement but does not prove a constant hazard.</p></details><details class="template-example"><summary>Cox regression</summary><h5>Reusable pattern</h5><pre>In the Cox model {formula}, {term} had an adjusted hazard ratio of {hr} (95% CI {low} to {high}, p={p}). A hazard ratio is not a risk ratio.</pre><h5>Worked example from <a href="#Q10e">Q10e</a></h5><p class="worked-report">In the Cox model, adjusted hazard ratios were anaemia HR 1.89 (95% CI 1.44 to 2.49, p&lt;0.0001) — higher hazard at fixed covariates; caesarean HR 1.57 (95% CI 1.18 to 2.10, p=0.0022) — higher hazard at fixed covariates; age HR 1.02 (95% CI 1.00 to 1.04, p=0.0816) — higher hazard at fixed covariates (analysis of 500 women and 209 events). Binary terms use the recorded reference categories printed in the notebook output.</p><p class="muted"><strong>Verified source:</strong> Q10a and Q10e outputs · postpartum_survival.csv · <strong>Teaching note:</strong> A hazard ratio is a relative instantaneous event rate, not a risk ratio. Report reference levels and the PH diagnostic before interpreting it.</p></details>
+      <details class="template-example"><summary>Descriptive statistics</summary><h5>Reusable pattern</h5><pre>In the simulated teaching cohort, {variable} had n={n} non-missing observations (mean={mean}, SD={sd}, median={median}, IQR={iqr}). {n_missing} records were missing.</pre><h5>Worked example from <a href="#Q2b">Q2b</a></h5><p class="worked-report">Haemoglobin used 382 non-missing values (mean 11.49 g/dL, SD 1.42, median 11.50, IQR 1.97); 18 records were missing. BMI had 10 missing values, whereas birthweight used all 400 records (mean 3,046.89 g, SD 442.44).</p><p class="muted"><strong>Verified source:</strong> Q2b output · anc_cohort.csv · <strong>Teaching note:</strong> Report n beside each summary. The differing denominators explain why later anaemia analyses use fewer than the full cohort.</p></details><details class="template-example"><summary>Probability</summary><h5>Reusable pattern</h5><pre>The sample proportion of {event} was {x}/{n} = {p:.4f}. This estimates the underlying probability but is not itself a theoretical probability.</pre><h5>Worked example from <a href="#Q1a">Q1a</a></h5><p class="worked-report">In the simulated ANC cohort (n=400), 47/400 (0.1175) preterm delivery and 43/400 (0.1075) low birth weight. These are observed sample proportions from the recorded outcome flags, not known population probabilities.</p><p class="muted"><strong>Verified source:</strong> Q1a output · anc_cohort.csv · <strong>Teaching note:</strong> Both outcome flags are complete for every record here. Do not switch to the smaller anaemia denominator used later.</p></details><details class="template-example"><summary>Correlation</summary><h5>Reusable pattern</h5><pre>{x} and {y} showed {strength} {direction} association (Pearson r={r}, p={p}; Spearman rho={rho}). Because the data are observational, this is not causal.</pre><h5>Worked example from <a href="#Q2d">Q2d</a></h5><p class="worked-report">Gestational age and birthweight showed a positive association (Pearson r=0.365, 95% CI 0.277 to 0.447, p&lt;0.0001; Spearman rho=0.331, p&lt;0.0001; n=400). The rank-based estimate is close to the Pearson estimate, which is reassuring, but the scatterplot and influence diagnostics are still needed before ruling out influential points.</p><p class="muted"><strong>Verified source:</strong> Q2c and Q2d outputs · anc_cohort.csv · <strong>Teaching note:</strong> Report both coefficients and inspect the scatterplot first. An observational association is not evidence that gestational age causes birthweight.</p></details><details class="template-example"><summary>Confidence interval</summary><h5>Reusable pattern</h5><pre>The estimated {parameter} was {estimate} with a 95% confidence interval of ({low}, {high}), computed using {method}.</pre><h5>Worked example from <a href="#Q3a">Q3a</a></h5><p class="worked-report">Mean birthweight was 3,046.89 g (SD 442.44, n=400, df=399); SE = SD/sqrt(n) = 22.12 g and the critical t value is 1.966. The 95% t interval was 3,003.40 to 3,090.38 g, matching the SciPy endpoints 3,003.40 to 3,090.38 g.</p><p class="muted"><strong>Verified source:</strong> Q3a output · anc_cohort.csv · <strong>Teaching note:</strong> The interval targets the population mean, not the range of individual births. A 95% procedure has long-run coverage under its assumptions.</p></details><details class="template-example"><summary>Independent t-test</summary><h5>Reusable pattern</h5><pre>Mean {outcome} was {mean1} in {group1} (n={n1}) and {mean2} in {group2} (n={n2}). Welch&#x27;s t-test gave a mean difference of {diff} (95% CI {low} to {high}), t={t}, df={df}, p={p}.</pre><h5>Worked example from <a href="#Q4">Q4</a></h5><p class="worked-report">Mean birthweight was 3,125.79 g with IPTp3 Yes (n=243) and 2,924.78 g with No (n=157), a difference of 201.00 g (Yes minus No; Welch 95% CI 112.76 to 289.24; t=4.48, df=317.4, p&lt;0.0001). Levene p=0.8128 and rank-sum p&lt;0.0001 give context for the assumption check and sensitivity analysis.</p><p class="muted"><strong>Verified source:</strong> Q4 output · anc_cohort.csv · <strong>Teaching note:</strong> Welch&#x27;s test does not assume equal variances. Report the size and precision of the difference and keep the wording observational, not causal.</p></details><details class="template-example"><summary>Paired t-test</summary><h5>Reusable pattern</h5><pre>Among {n} paired women, mean {outcome} changed by {change} (95% CI {low} to {high}); paired t={t}, p={p}.</pre><h5>Worked example from <a href="#Q5">Q5</a></h5><p class="worked-report">Among 60 paired women, mean systolic blood pressure was 112.20 mmHg at booking and 115.87 mmHg at 36 weeks. The mean within-woman change was 3.67 mmHg (95% CI 1.36 to 5.98; paired t=3.17, p=0.0024), whereas the incorrect independent test gives p=0.0848 because it ignores the id linkage.</p><p class="muted"><strong>Verified source:</strong> Q5 output · bp_paired.csv · <strong>Teaching note:</strong> Analyse the 60 paired differences, not 120 independent observations. Shapiro-Wilk and the paired-difference plot support checking the t assumption.</p></details><details class="template-example"><summary>ANOVA</summary><h5>Reusable pattern</h5><pre>One-way ANOVA comparing {outcome} across {groups} gave F({df_between},{df_within})={F}, p={p}. Tukey-adjusted pairwise comparisons are reported with 95% CIs and adjusted p-values.</pre><h5>Worked example from <a href="#Q6">Q6</a></h5><p class="worked-report">One-way ANOVA comparing haemoglobin across facility type gave F(2,379)=11.36, p&lt;0.0001; Levene p=0.0433, Alexander-Govern A=20.57 (p&lt;0.0001) and Kruskal-Wallis H=18.54, p&lt;0.0001. Because Levene is significant, the equal-variance ANOVA/Tukey results are assumption-dependent; the Alexander-Govern and rank-based tests are the preferred sensitivity checks here. Tukey-adjusted pairwise differences were: Rural minus Peri-urban = -0.11 g/dL (95% CI -0.53 to 0.32, adjusted p=0.8222); Urban minus Peri-urban = 0.64 g/dL (95% CI 0.24 to 1.03, adjusted p=0.0005); Urban minus Rural = 0.75 g/dL (95% CI 0.33 to 1.16, adjusted p=0.0001).</p><p class="muted"><strong>Verified source:</strong> Q6 output · anc_cohort.csv · <strong>Teaching note:</strong> Report the heteroscedastic and rank-based results before relying on classical ANOVA/Tukey when Levene is significant. Tukey differences are written in the same direction statsmodels computes them: group2 minus group1.</p></details><details class="template-example"><summary>Chi-square test</summary><h5>Reusable pattern</h5><pre>The association between {variable1} and {variable2} was examined in a {r}x{c} table (minimum expected count={min_expected}). Chi-square={chi2}, df={df}, p={p}.</pre><h5>Worked example from <a href="#Q7a">Q7a</a></h5><p class="worked-report">Among women with both variables recorded, anaemia proportions were None: 24/53 (45.28% anaemia); Primary: 67/201 (33.33% anaemia); Secondary+: 48/128 (37.50% anaemia). The chi-square test gave chi2(2)=2.69, p=0.2605, with minimum expected count 19.29; there is no clear evidence of an association in these simulated data.</p><p class="muted"><strong>Verified source:</strong> Q7a output · anc_cohort.csv · <strong>Teaching note:</strong> All expected counts exceed the usual rule-of-thumb threshold of 5. A chi-square test assesses association; it does not show that education caused anaemia.</p></details><details class="template-example"><summary>Proportion test</summary><h5>Reusable pattern</h5><pre>The observed proportion was {x}/{n}={p_hat:.4f}. Against the null value {p0}, {test} gave p={p_value}; the 95% {ci_method} interval was ({low}, {high}).</pre><h5>Worked example from <a href="#Q7b">Q7b</a></h5><p class="worked-report">Against the null prevalence 0.30, the observed 139/382 = 0.3639 gave an exact binomial p=0.0073; the 95% Wilson interval was 31.72% to 41.33%, which excludes the null. 18 records with missing anaemia were excluded.</p><p class="muted"><strong>Verified source:</strong> Q7b output and dataset audit · anc_cohort.csv · <strong>Teaching note:</strong> State H0, the evaluable denominator, the exact test and the interval together. The null value is a teaching hypothesis, not a clinical guideline.</p></details><details class="template-example"><summary>Linear regression</summary><h5>Reusable pattern</h5><pre>In the model {formula}, the adjusted coefficient for {term} was {coef} (95% CI {low} to {high}, p={p}). R-squared={r2} and adjusted R-squared={adj_r2}; n={n}.</pre><h5>Worked example from <a href="#Q8b">Q8b</a></h5><p class="worked-report">In the adjusted model (n=390 after excluding 10 records with missing BMI), estimated mean birthweight differences were IPTp3 Yes versus No: 177.16 g (95% CI 94.46 to 259.86, p&lt;0.0001); per additional week of gestational age: 57.40 g (95% CI 40.77 to 74.03, p&lt;0.0001); per unit of BMI: 12.16 g (95% CI 1.76 to 22.55, p=0.0220); per additional ANC visit: 23.62 g (95% CI 2.46 to 44.77, p=0.0287). R-squared=0.183 and adjusted R-squared=0.174.</p><p class="muted"><strong>Verified source:</strong> Q8b output · anc_cohort.csv · <strong>Teaching note:</strong> Name the reference level &#x27;IPTp3 No&#x27; and the complete-case denominator. Coefficients are conditional associations from observational data.</p></details><details class="template-example"><summary>Logistic regression</summary><h5>Reusable pattern</h5><pre>In the logistic model {formula}, {term} had an adjusted odds ratio of {or} (95% CI {low} to {high}, p={p}). Odds ratios are not risk ratios; the data are observational.</pre><h5>Worked example from <a href="#Q9">Q9</a></h5><p class="worked-report">In the logistic model for the recorded preterm flag (n=382), adjusted odds ratios were anaemia OR 2.200 (95% CI 1.183 to 4.093, p=0.0127); each additional ANC visit OR 0.833 (95% CI 0.700 to 0.990, p=0.0385); each additional year of age OR 0.998 (95% CI 0.946 to 1.051, p=0.9274). Pseudo R-squared=0.038. At age 25 with 4 ANC visits, predicted preterm probability was 20.90% with anaemia versus 10.72% without.</p><p class="muted"><strong>Verified source:</strong> Q9 output · anc_cohort.csv · <strong>Teaching note:</strong> An odds ratio is not a risk ratio. The scenario probabilities translate the log-odds model back to the probability scale for teaching; they are not causal contrasts.</p></details><details class="template-example"><summary>Kaplan-Meier analysis</summary><h5>Reusable pattern</h5><pre>Kaplan-Meier estimated event-free survival of {s1:.4f} at {t1} days (95% CI {l1} to {u1}) and {s2:.4f} at {t2} days (95% CI {l2} to {u2}). Median survival was {median}.</pre><h5>Worked example from <a href="#Q10b">Q10b</a></h5><p class="worked-report">Kaplan-Meier estimated readmission-free survival as 0.7637 at 90 days (95% CI 0.7225 to 0.7996) and 0.5894 at 180 days (95% CI 0.5377 to 0.6374). Median survival was 233 days (95% CI 202 to 260); 313 women remained at risk at day 90 and 152 at day 180.</p><p class="muted"><strong>Verified source:</strong> Q10b output · postpartum_survival.csv · <strong>Teaching note:</strong> Median observed follow-up and median survival are different quantities. Numbers at risk show where the tail of the curve is least precise.</p></details><details class="template-example"><summary>Log-rank test</summary><h5>Reusable pattern</h5><pre>Survival curves differed by {grouping} (log-rank chi-square={chi2}, df={df}, p={p}). This unadjusted test does not establish causation.</pre><h5>Worked example from <a href="#Q10c">Q10c</a></h5><p class="worked-report">Kaplan-Meier curves differed by anaemia status (log-rank chi-square=22.57, df=1, p&lt;0.0001); median readmission-free survival was Anaemia 169 days; No anaemia 311 days. The test compares the entire observed curve history, not only the medians.</p><p class="muted"><strong>Verified source:</strong> Q10c output · postpartum_survival.csv · <strong>Teaching note:</strong> The log-rank test is unadjusted and observational. Q10e adds covariates and Q10f checks the proportional-hazards assumption.</p></details><details class="template-example"><summary>Exponential survival rate</summary><h5>Reusable pattern</h5><pre>There were {events} events over {person_time} person-days, giving a rate of {rate:.6f} per person-day ({rate1000:.2f} per 1,000 person-days; 95% CI {low} to {high}). This assumes a constant hazard.</pre><h5>Worked example from <a href="#Q10d">Q10d</a></h5><p class="worked-report">There were 209 readmissions over 68,841 person-days, giving a rate of 3.036 per 1,000 person-days (95% CI 2.638 to 3.477). Under the constant-hazard exponential model, S(90)=0.7609 and S(180)=0.5790; compare these with the non-parametric Kaplan-Meier estimates before relying on the model.</p><p class="muted"><strong>Verified source:</strong> Q10b and Q10d outputs · postpartum_survival.csv · <strong>Teaching note:</strong> The rate is events per person-time, not events per person. A close match at two times supports descriptive agreement but does not prove a constant hazard.</p></details><details class="template-example"><summary>Cox regression</summary><h5>Reusable pattern</h5><pre>In the Cox model {formula}, {term} had an adjusted hazard ratio of {hr} (95% CI {low} to {high}, p={p}). A hazard ratio is not a risk ratio.</pre><h5>Worked example from <a href="#Q10e">Q10e</a></h5><p class="worked-report">In the Cox model, adjusted hazard ratios were anaemia HR 1.894 (95% CI 1.443 to 2.486, p&lt;0.0001) — higher hazard at fixed covariates; caesarean HR 1.572 (95% CI 1.176 to 2.101, p=0.0022) — higher hazard at fixed covariates; age HR 1.020 (95% CI 0.998 to 1.042, p=0.0816) — no clear change in hazard at fixed covariates (analysis of 500 women and 209 events). Reference levels are anaemia = No anaemia, delivery_mode = Vaginal and age = per one-year increase. Q10f&#x27;s Schoenfeld screen flags a time trend for anaemia and caesarean, so constant hazard ratios for those terms should be treated cautiously.</p><p class="muted"><strong>Verified source:</strong> Q10a, Q10e and Q10f outputs · postpartum_survival.csv · <strong>Teaching note:</strong> A hazard ratio is a relative instantaneous event rate, not a risk ratio. The age point estimate is above 1 but its interval includes 1 and p&gt;0.05, so it is not clear evidence at the 5% level.</p></details>
     </section>
 
     <section class="panel">
@@ -3522,7 +3666,7 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></p
   </main>
 </div>
 <footer>STAT 8100 companion · generated from the same verified code cells as the delivered Jupyter notebook.</footer>
-<script type="application/json" id="verified-results">{"Audit": {"anaemia_mismatches": 0, "datasets": [{"columns": 14, "dataset": "anc_cohort.csv", "duplicate_rows": 0, "missing_cells": 46, "rows": 400, "sha256": "EE9D58D5E484D62244B62E17910AEDE241B074B4E7F70D22C783F50DD6E9E1DA"}, {"columns": 3, "dataset": "bp_paired.csv", "duplicate_rows": 0, "missing_cells": 0, "rows": 60, "sha256": "677B7643994C0C57CE9FA2C052EEB22086D5B20537E5D8FE1290A98B3AFEF786"}, {"columns": 6, "dataset": "postpartum_survival.csv", "duplicate_rows": 0, "missing_cells": 0, "rows": 500, "sha256": "0099FFCFCC226141DD762E6ABD338343325DC360A8011FFC571CAB06AC332EF2"}], "education_levels": {"None": 55, "Primary": 212, "Secondary+": 133}, "facility_levels": {"Peri-urban": 133, "Rural": 113, "Urban": 154}, "iptp3_levels": {"No": 157, "Yes": 243}, "lowbw_mismatches": 0, "preterm_mismatches": 9}, "Q10a": {"censored": 291, "censoring_proportion": 0.582, "events": 209, "median_observed_follow_up": 119.0, "participants": 500}, "Q10b": {"ci_180": [0.5376967802281104, 0.6374260529022242], "ci_90": [0.7225135000491342, 0.7996274218041816], "median_ci": [202.0, 260.0], "median_survival": 233.0, "number_at_risk": {"0": 500, "180": 152, "270": 55, "365": 0, "90": 313}, "survival_180": 0.589437429541154, "survival_90": 0.7636945713896193}, "Q10c": {"groups": ["Anaemia", "No anaemia"], "logrank_chi2": 22.567150027588177, "logrank_p": 2.029248805613964e-06, "median_survival": {"Anaemia": 169.0, "No anaemia": 311.0}}, "Q10d": {"ci_per_1000_person_days": [2.6383091376616434, 3.476671597703874], "events": 209, "exponential_s180": 0.5789861839469784, "exponential_s90": 0.7609114166228408, "person_time_days": 68841.0, "rate_per_1000_person_days": 3.0359814645342165, "rate_per_person_day": 0.0030359814645342163}, "Q10e": [{"coefficient": 0.6386730247741905, "hazard_ratio": 1.8939659651453198, "hr_ci_high": 2.4858388075768456, "hr_ci_low": 1.4430167660893085, "p_value": 4.160840042411009e-06, "term": "anaemia"}, {"coefficient": 0.4523878494130527, "hazard_ratio": 1.57206155350336, "hr_ci_high": 2.1013613778432245, "hr_ci_low": 1.176084015848786, "p_value": 0.0022477535129053717, "term": "caesarean"}, {"coefficient": 0.01958141348456775, "hazard_ratio": 1.0197743868674463, "hr_ci_high": 1.0424955121736947, "hr_ci_low": 0.9975484670840552, "p_value": 0.08157016853329652, "term": "age"}], "Q10f": [{"flag_ph_concern": true, "p_holm": 3.021391502156348e-10, "p_value": 1.510695751078174e-10, "spearman_rho": 0.4244187577868859, "term": "anaemia"}, {"flag_ph_concern": true, "p_holm": 3.4766126130679167e-14, "p_value": 1.1588708710226389e-14, "spearman_rho": 0.5007106992568828, "term": "caesarean"}, {"flag_ph_concern": false, "p_holm": 0.7357945020654691, "p_value": 0.7357945020654691, "spearman_rho": -0.023477950844014106, "term": "age"}], "Q1a": [{"count": 47, "denominator": 400, "event": "Preterm delivery", "sample_proportion": 0.1175}, {"count": 43, "denominator": 400, "event": "Low birth weight", "sample_proportion": 0.1075}], "Q1b": {"contingency": {"0": {"0": 324, "1": 33, "All": 357}, "1": {"0": 29, "1": 14, "All": 43}, "All": {"0": 353, "1": 47, "All": 400}}, "risk_difference": 0.2157193659212826, "risk_ratio": 3.62582538517975, "table": [{"P(low_bw | stratum)": 0.2978723404255319, "low_bw_count": 14, "stratum": "Preterm (preterm=1)", "stratum_n": 47}, {"P(low_bw | stratum)": 0.0821529745042493, "low_bw_count": 29, "stratum": "Term (preterm=0)", "stratum_n": 353}]}, "Q2b": [{"IQR": 8.0, "mean": 26.01, "median": 26.0, "n_missing": 0, "n_non_missing": 400, "sd": 5.878033531334158, "variable": "age"}, {"IQR": 5.650000000000002, "mean": 22.732564102564105, "median": 22.4, "n_missing": 10, "n_non_missing": 390, "sd": 3.857685693490599, "variable": "bmi"}, {"IQR": 1.9749999999999996, "mean": 11.486649214659687, "median": 11.5, "n_missing": 18, "n_non_missing": 382, "sd": 1.4152913605179895, "variable": "hb"}, {"IQR": 1.8999999999999986, "mean": 38.55975, "median": 39.2, "n_missing": 0, "n_non_missing": 400, "sd": 2.4581519919522568, "variable": "gest_age"}, {"IQR": 561.75, "mean": 3046.8925, "median": 3040.5, "n_missing": 0, "n_non_missing": 400, "sd": 442.43707162671626, "variable": "birthweight"}], "Q2c": [{"iqr_outliers_high": 1, "iqr_outliers_low": 5, "mean": 3046.8925, "median": 3040.5, "n": 400, "sd": 442.43707162671626, "skewness": -0.30775860211429906, "variable": "birthweight"}, {"iqr_outliers_high": 0, "iqr_outliers_low": 36, "mean": 38.55975, "median": 39.2, "n": 400, "sd": 2.4581519919522568, "skewness": -1.9393228809325516, "variable": "gest_age"}], "Q2d": {"n": 400, "pearson_ci": [0.2765496000320724, 0.4467861112286768], "pearson_p": 4.980870139146528e-14, "pearson_r": 0.36471173662946693, "spearman_p": 1.1043025045435383e-11, "spearman_rho": 0.3310247699384513}, "Q3a": {"ci": [3003.4025442080865, 3090.3824557919133], "df": 399, "mean": 3046.8925, "n": 400, "scipy_ci": [3003.4025442080865, 3090.3824557919133], "sd": 442.43707162671626, "se": 22.121853581335813, "t_critical": 1.9659272959208818}, "Q3b": {"ci": [0.3172050127096916, 0.4132542274199954], "denominator": 382, "events": 139, "missing_excluded": 18, "prevalence": 0.36387434554973824}, "Q3d": [{"ci_high": 3182.4111810483905, "ci_low": 3038.471935834726, "facility_type": "Urban", "mean": 3110.4415584415583, "n": 154, "sd": 452.0772966907057}, {"ci_high": 3063.7675490574056, "ci_low": 2915.435458461391, "facility_type": "Peri-urban", "mean": 2989.6015037593984, "n": 133, "sd": 432.39728049507863}, {"ci_high": 3108.533510617193, "ci_low": 2946.900117701391, "facility_type": "Rural", "mean": 3027.716814159292, "n": 113, "sd": 433.58508534383066}], "Q4": {"groups": [{"iptp3": "Yes", "mean": 3125.786008230453, "median": 3126.0, "n": 243, "sd": 420.646535392015}, {"iptp3": "No", "mean": 2924.7834394904457, "median": 2947.0, "n": 157, "sd": 448.86395515435635}], "levene_p": 0.8127607421602898, "mann_whitney_p": 3.693814467947495e-05, "mann_whitney_u": 23734.5, "mean_difference": 201.00256874000706, "rank_biserial": 0.24423999370920813, "welch_ci": [112.76290683794944, 289.24223064206467], "welch_df": 317.3866489321943, "welch_p": 1.0351764378014585e-05, "welch_t": 4.481724050216285}, "Q5": {"ci": [1.3553004979575256, 5.978032835375807], "incorrect_independent_p": 0.08476830371404064, "incorrect_independent_t": 1.7388548850262389, "mean_change": 3.6666666666666665, "paired_p": 0.0023870066397307338, "paired_t": 3.1743058076721327, "shapiro_p": 0.3026484033803393, "shapiro_w": 0.9766186743585408, "summary": [{"mean": 112.2, "measure": "sbp_booking", "n": 60, "sd": 10.357671356642062}, {"mean": 115.86666666666666, "measure": "sbp_36wk", "n": 60, "sd": 12.629621713763573}, {"mean": 3.6666666666666665, "measure": "paired difference", "n": 60, "sd": 8.947429640692416}]}, "Q6": {"anova_df_between": 2, "anova_df_within": 379, "anova_f": 11.364796463021328, "anova_p": 1.609424137127712e-05, "groups": [{"facility_type": "Urban", "mean": 11.913103448275862, "median": 12.0, "n": 145, "sd": 1.498946628859274}, {"facility_type": "Peri-urban", "mean": 11.275, "median": 11.2, "n": 128, "sd": 1.3251058492856422}, {"facility_type": "Rural", "mean": 11.16788990825688, "median": 11.3, "n": 109, "sd": 1.267242612769724}], "kruskal_h": 18.54280470996295, "kruskal_p": 9.407649265313935e-05, "levene_p": 0.04328237430035785, "tukey": [{"group1": "Peri-urban", "group2": "Rural", "lower": -0.5298, "meandiff": -0.1071, "p-adj": 0.8222, "reject": false, "upper": 0.3156}, {"group1": "Peri-urban", "group2": "Urban", "lower": 0.2448, "meandiff": 0.6381, "p-adj": 0.0005, "reject": true, "upper": 1.0314}, {"group1": "Rural", "group2": "Urban", "lower": 0.3341, "meandiff": 0.7452, "p-adj": 0.0001, "reject": true, "upper": 1.1563}]}, "Q7a": {"chi2": 2.6903026379269273, "column_percent": {"0.0": {"None": 11.934, "Primary": 55.144, "Secondary+": 32.922}, "1.0": {"None": 17.266, "Primary": 48.201, "Secondary+": 34.532}}, "df": 2, "expected": [[33.71465968586387, 19.285340314136125], [127.86125654450262, 73.13874345549738], [81.42408376963351, 46.575916230366495]], "min_expected": 19.285340314136125, "monte_carlo_p": null, "observed": {"0.0": {"None": 29, "Primary": 134, "Secondary+": 80}, "1.0": {"None": 24, "Primary": 67, "Secondary+": 48}}, "p": 0.26050028624413535, "row_percent": {"0.0": {"None": 54.717, "Primary": 66.667, "Secondary+": 62.5}, "1.0": {"None": 45.283, "Primary": 33.333, "Secondary+": 37.5}}}, "Q7b": {"ci": [0.3172050127096916, 0.4132542274199954], "exact_p": 0.007322830837467615, "n": 382, "null_p": 0.3, "p_hat": 0.36387434554973824, "x": 139}, "Q7c": {"ci": [0.01970387633946194, 0.16748155119074942], "difference": 0.08932113568404534, "fisher_p": 0.014594044167015211, "groups": [{"denominator": 139, "group": "Anaemia", "preterm_events": 25, "proportion": 0.17985611510791366}, {"denominator": 243, "group": "No anaemia", "preterm_events": 22, "proportion": 0.09053497942386832}], "z": 2.556966994840861, "z_p": 0.010558923544111731}, "Q8a": {"n": 400, "r_squared": 0.13301465083528163, "terms": [{"ci_high": 1153.7936793341623, "ci_low": -122.41175287303668, "coefficient": 515.6909632305628, "p_value": 0.11289920188664387, "std_error": 324.57855366427475, "term": "Intercept"}, {"ci_high": 82.15859290136163, "ci_low": 49.128645048543866, "coefficient": 65.64361897495274, "p_value": 4.9808701391472734e-14, "std_error": 8.40053837032518, "term": "gest_age"}]}, "Q8b": {"adj_r_squared": 0.17431518509382127, "missing_bmi_excluded": 10, "n": 390, "r_squared": 0.18280551738077422, "terms": [{"ci_high": 1005.5632007846117, "ci_low": -346.34993915403913, "coefficient": 329.6066308152863, "p_value": 0.338300528725051, "std_error": 343.79795672550966, "term": "Intercept"}, {"ci_high": 259.8611130474667, "ci_low": 94.45542247304486, "coefficient": 177.15826776025577, "p_value": 3.159423498616959e-05, "std_error": 42.063455683875276, "term": "C(iptp3, Treatment(reference='No'))[T.Yes]"}, {"ci_high": 74.02935111034515, "ci_low": 40.767252379782605, "coefficient": 57.398301745063876, "p_value": 4.3762912311256736e-11, "std_error": 8.458710284070843, "term": "gest_age"}, {"ci_high": 22.55185297183114, "ci_low": 1.7642412953425843, "coefficient": 12.15804713358686, "p_value": 0.02198943548829969, "std_error": 5.286388754165395, "term": "bmi"}, {"ci_high": 44.76648666453748, "ci_low": 2.463838503931594, "coefficient": 23.61516258423454, "p_value": 0.02874749660933741, "std_error": 10.75776510490491, "term": "anc_visits"}]}, "Q8c": {"cooks_threshold": 0.010256410256410256, "durbin_watson": 1.9872089311707544, "top_cooks": [0.049014111917957105, 0.04523631658678923, 0.042943720420679954, 0.037755383131797715, 0.037373246208354964]}, "Q8d": {"adj_r2_base": 0.17431518509382127, "adj_r2_extended": 0.17792318336691137, "aic_base": 5786.759247579495, "aic_extended": 5787.02007413781, "df_diff": 2, "f_statistic": 1.8448598154299463, "n": 390, "p_value": 0.15944917874151754}, "Q8e": {"model_with_facility_urban": {"mean": 3175.033131939952, "mean_ci_lower": 3102.6903561212853, "mean_ci_upper": 3247.3759077586187, "mean_se": 36.79361969227172, "obs_ci_lower": 2385.2729431910484, "obs_ci_upper": 3964.7933206888556}, "model_without_facility": {"mean": 3130.851516493117, "mean_ci_lower": 3078.5735023159496, "mean_ci_upper": 3183.129530670284, "mean_se": 26.589096480847907, "obs_ci_lower": 2340.968815843883, "obs_ci_upper": 3920.7342171423506}}, "Q9": {"n": 382, "pseudo_r_squared": 0.03797346151718073, "scenario_probabilities": {"anaemia": 0.209017792285372, "no_anaemia": 0.1072129863178099}, "terms": [{"coefficient": -1.3254501515250423, "odds_ratio": 0.2656833344081682, "or_ci_high": 1.49416254790415, "or_ci_low": 0.04724227245640392, "p_value": 0.13252137579011158, "std_error": 0.8811468202533959, "term": "Intercept"}, {"coefficient": -0.0024444422509004153, "odds_ratio": 0.9975585429651671, "or_ci_high": 1.0514039946306561, "or_ci_low": 0.9464706732376077, "p_value": 0.927385711280262, "std_error": 0.02682235561771637, "term": "age"}, {"coefficient": 0.7886745683766331, "odds_ratio": 2.200477909528209, "or_ci_high": 4.092640054568089, "or_ci_low": 1.1831245762541511, "p_value": 0.012734415270477438, "std_error": 0.316595451981738, "term": "anaemia"}, {"coefficient": -0.18324236394819335, "odds_ratio": 0.8325663472154797, "or_ci_high": 0.9903893105496615, "or_ci_low": 0.6998931785027267, "p_value": 0.03854572565879196, "std_error": 0.08856550178656843, "term": "anc_visits"}]}}</script>
+<script type="application/json" id="verified-results">{"Audit": {"anaemia_mismatches": 0, "datasets": [{"columns": 14, "dataset": "anc_cohort.csv", "duplicate_rows": 0, "missing_cells": 46, "rows": 400, "sha256": "EE9D58D5E484D62244B62E17910AEDE241B074B4E7F70D22C783F50DD6E9E1DA"}, {"columns": 3, "dataset": "bp_paired.csv", "duplicate_rows": 0, "missing_cells": 0, "rows": 60, "sha256": "677B7643994C0C57CE9FA2C052EEB22086D5B20537E5D8FE1290A98B3AFEF786"}, {"columns": 6, "dataset": "postpartum_survival.csv", "duplicate_rows": 0, "missing_cells": 0, "rows": 500, "sha256": "0099FFCFCC226141DD762E6ABD338343325DC360A8011FFC571CAB06AC332EF2"}], "education_levels": {"None": 55, "Primary": 212, "Secondary+": 133}, "facility_levels": {"Peri-urban": 133, "Rural": 113, "Urban": 154}, "iptp3_levels": {"No": 157, "Yes": 243}, "lowbw_mismatches": 0, "preterm_mismatches": 9}, "Q10a": {"censored": 291, "censoring_proportion": 0.582, "events": 209, "median_observed_follow_up": 119.0, "participants": 500}, "Q10b": {"ci_180": [0.5376967802281104, 0.6374260529022242], "ci_90": [0.7225135000491342, 0.7996274218041816], "median_ci": [202.0, 260.0], "median_survival": 233.0, "number_at_risk": {"0": 500, "180": 152, "270": 55, "365": 0, "90": 313}, "survival_180": 0.589437429541154, "survival_90": 0.7636945713896193}, "Q10c": {"groups": ["Anaemia", "No anaemia"], "logrank_chi2": 22.567150027588177, "logrank_p": 2.029248805613964e-06, "median_survival": {"Anaemia": 169.0, "No anaemia": 311.0}}, "Q10d": {"ci_per_1000_person_days": [2.6383091376616434, 3.476671597703874], "events": 209, "exponential_s180": 0.5789861839469784, "exponential_s90": 0.7609114166228408, "person_time_days": 68841.0, "rate_per_1000_person_days": 3.0359814645342165, "rate_per_person_day": 0.0030359814645342163}, "Q10e": [{"coefficient": 0.6386730247741905, "hazard_ratio": 1.8939659651453198, "hr_ci_high": 2.4858388075768456, "hr_ci_low": 1.4430167660893085, "p_value": 4.160840042411009e-06, "term": "anaemia"}, {"coefficient": 0.4523878494130527, "hazard_ratio": 1.57206155350336, "hr_ci_high": 2.1013613778432245, "hr_ci_low": 1.176084015848786, "p_value": 0.0022477535129053717, "term": "caesarean"}, {"coefficient": 0.01958141348456775, "hazard_ratio": 1.0197743868674463, "hr_ci_high": 1.0424955121736947, "hr_ci_low": 0.9975484670840552, "p_value": 0.08157016853329652, "term": "age"}], "Q10f": [{"flag_ph_concern": true, "p_holm": 3.021391502156348e-10, "p_value": 1.510695751078174e-10, "spearman_rho": 0.4244187577868859, "term": "anaemia"}, {"flag_ph_concern": true, "p_holm": 3.4766126130679167e-14, "p_value": 1.1588708710226389e-14, "spearman_rho": 0.5007106992568828, "term": "caesarean"}, {"flag_ph_concern": false, "p_holm": 0.7357945020654691, "p_value": 0.7357945020654691, "spearman_rho": -0.023477950844014106, "term": "age"}], "Q1a": [{"count": 47, "denominator": 400, "event": "Preterm delivery", "sample_proportion": 0.1175}, {"count": 43, "denominator": 400, "event": "Low birth weight", "sample_proportion": 0.1075}], "Q1b": {"contingency": {"0": {"0": 324, "1": 33, "All": 357}, "1": {"0": 29, "1": 14, "All": 43}, "All": {"0": 353, "1": 47, "All": 400}}, "risk_difference": 0.2157193659212826, "risk_ratio": 3.62582538517975, "table": [{"P(low_bw | stratum)": 0.2978723404255319, "low_bw_count": 14, "stratum": "Preterm (preterm=1)", "stratum_n": 47}, {"P(low_bw | stratum)": 0.0821529745042493, "low_bw_count": 29, "stratum": "Term (preterm=0)", "stratum_n": 353}]}, "Q2b": [{"IQR": 8.0, "mean": 26.01, "median": 26.0, "n_missing": 0, "n_non_missing": 400, "sd": 5.878033531334158, "variable": "age"}, {"IQR": 5.650000000000002, "mean": 22.732564102564105, "median": 22.4, "n_missing": 10, "n_non_missing": 390, "sd": 3.857685693490599, "variable": "bmi"}, {"IQR": 1.9749999999999996, "mean": 11.486649214659687, "median": 11.5, "n_missing": 18, "n_non_missing": 382, "sd": 1.4152913605179895, "variable": "hb"}, {"IQR": 1.8999999999999986, "mean": 38.55975, "median": 39.2, "n_missing": 0, "n_non_missing": 400, "sd": 2.4581519919522568, "variable": "gest_age"}, {"IQR": 561.75, "mean": 3046.8925, "median": 3040.5, "n_missing": 0, "n_non_missing": 400, "sd": 442.43707162671626, "variable": "birthweight"}], "Q2c": [{"iqr_outliers_high": 1, "iqr_outliers_low": 5, "mean": 3046.8925, "median": 3040.5, "n": 400, "sd": 442.43707162671626, "skewness": -0.30775860211429856, "variable": "birthweight"}, {"iqr_outliers_high": 0, "iqr_outliers_low": 36, "mean": 38.55975, "median": 39.2, "n": 400, "sd": 2.4581519919522568, "skewness": -1.9393228809325516, "variable": "gest_age"}], "Q2d": {"n": 400, "pearson_ci": [0.2765496000320724, 0.4467861112286768], "pearson_p": 4.980870139146528e-14, "pearson_r": 0.36471173662946693, "spearman_p": 1.1043025045435383e-11, "spearman_rho": 0.3310247699384513}, "Q3a": {"ci": [3003.4025442080865, 3090.3824557919133], "df": 399, "mean": 3046.8925, "n": 400, "scipy_ci": [3003.4025442080865, 3090.3824557919133], "sd": 442.43707162671626, "se": 22.121853581335813, "t_critical": 1.9659272959208818}, "Q3b": {"ci": [0.3172050127096916, 0.4132542274199954], "denominator": 382, "events": 139, "missing_excluded": 18, "prevalence": 0.36387434554973824}, "Q3d": [{"ci_high": 3182.4111810483905, "ci_low": 3038.471935834726, "facility_type": "Urban", "mean": 3110.4415584415583, "n": 154, "sd": 452.0772966907057}, {"ci_high": 3063.7675490574056, "ci_low": 2915.435458461391, "facility_type": "Peri-urban", "mean": 2989.6015037593984, "n": 133, "sd": 432.39728049507863}, {"ci_high": 3108.533510617193, "ci_low": 2946.900117701391, "facility_type": "Rural", "mean": 3027.716814159292, "n": 113, "sd": 433.58508534383066}], "Q4": {"groups": [{"iptp3": "Yes", "mean": 3125.786008230453, "median": 3126.0, "n": 243, "sd": 420.646535392015}, {"iptp3": "No", "mean": 2924.7834394904457, "median": 2947.0, "n": 157, "sd": 448.86395515435635}], "levene_p": 0.8127607421602898, "mann_whitney_p": 3.693814467947495e-05, "mann_whitney_u": 23734.5, "mean_difference": 201.00256874000706, "rank_biserial": 0.24423999370920813, "welch_ci": [112.76290683794944, 289.24223064206467], "welch_df": 317.3866489321943, "welch_p": 1.0351764378014585e-05, "welch_t": 4.481724050216285}, "Q5": {"ci": [1.3553004979575256, 5.978032835375807], "incorrect_independent_p": 0.08476830371404064, "incorrect_independent_t": 1.7388548850262389, "mean_change": 3.6666666666666665, "paired_p": 0.0023870066397307338, "paired_t": 3.1743058076721327, "shapiro_p": 0.3026484033803393, "shapiro_w": 0.9766186743585408, "summary": [{"mean": 112.2, "measure": "sbp_booking", "n": 60, "sd": 10.357671356642062}, {"mean": 115.86666666666666, "measure": "sbp_36wk", "n": 60, "sd": 12.629621713763573}, {"mean": 3.6666666666666665, "measure": "paired difference", "n": 60, "sd": 8.947429640692416}]}, "Q6": {"alexander_govern_a": 20.569731524539566, "alexander_govern_p": 3.414597769739199e-05, "anova_df_between": 2, "anova_df_within": 379, "anova_f": 11.364796463021328, "anova_p": 1.609424137127712e-05, "groups": [{"facility_type": "Urban", "mean": 11.913103448275862, "median": 12.0, "n": 145, "sd": 1.498946628859274}, {"facility_type": "Peri-urban", "mean": 11.275, "median": 11.2, "n": 128, "sd": 1.3251058492856422}, {"facility_type": "Rural", "mean": 11.16788990825688, "median": 11.3, "n": 109, "sd": 1.267242612769724}], "kruskal_h": 18.54280470996295, "kruskal_p": 9.407649265313935e-05, "levene_p": 0.04328237430035785, "tukey": [{"group1": "Peri-urban", "group2": "Rural", "lower": -0.5298, "meandiff": -0.1071, "p-adj": 0.8222, "reject": false, "upper": 0.3156}, {"group1": "Peri-urban", "group2": "Urban", "lower": 0.2448, "meandiff": 0.6381, "p-adj": 0.0005, "reject": true, "upper": 1.0314}, {"group1": "Rural", "group2": "Urban", "lower": 0.3341, "meandiff": 0.7452, "p-adj": 0.0001, "reject": true, "upper": 1.1563}]}, "Q7a": {"chi2": 2.6903026379269273, "column_percent": {"0.0": {"None": 11.934, "Primary": 55.144, "Secondary+": 32.922}, "1.0": {"None": 17.266, "Primary": 48.201, "Secondary+": 34.532}}, "df": 2, "expected": [[33.71465968586387, 19.285340314136125], [127.86125654450262, 73.13874345549738], [81.42408376963351, 46.575916230366495]], "min_expected": 19.285340314136125, "monte_carlo_p": null, "observed": {"0.0": {"None": 29, "Primary": 134, "Secondary+": 80}, "1.0": {"None": 24, "Primary": 67, "Secondary+": 48}}, "p": 0.26050028624413535, "row_percent": {"0.0": {"None": 54.717, "Primary": 66.667, "Secondary+": 62.5}, "1.0": {"None": 45.283, "Primary": 33.333, "Secondary+": 37.5}}}, "Q7b": {"ci": [0.3172050127096916, 0.4132542274199954], "exact_p": 0.007322830837467615, "n": 382, "null_p": 0.3, "p_hat": 0.36387434554973824, "x": 139}, "Q7c": {"ci": [0.01970387633946194, 0.16748155119074942], "difference": 0.08932113568404534, "fisher_p": 0.014594044167015211, "groups": [{"denominator": 139, "group": "Anaemia", "preterm_events": 25, "proportion": 0.17985611510791366}, {"denominator": 243, "group": "No anaemia", "preterm_events": 22, "proportion": 0.09053497942386832}], "z": 2.556966994840861, "z_p": 0.010558923544111731}, "Q8a": {"n": 400, "r_squared": 0.13301465083528163, "terms": [{"ci_high": 1153.7936793341623, "ci_low": -122.41175287303668, "coefficient": 515.6909632305628, "p_value": 0.11289920188664387, "std_error": 324.57855366427475, "term": "Intercept"}, {"ci_high": 82.15859290136163, "ci_low": 49.128645048543866, "coefficient": 65.64361897495274, "p_value": 4.9808701391472734e-14, "std_error": 8.40053837032518, "term": "gest_age"}]}, "Q8b": {"adj_r_squared": 0.17431518509382127, "missing_bmi_excluded": 10, "n": 390, "r_squared": 0.18280551738077422, "terms": [{"ci_high": 1005.5632007846117, "ci_low": -346.34993915403913, "coefficient": 329.6066308152863, "p_value": 0.338300528725051, "std_error": 343.79795672550966, "term": "Intercept"}, {"ci_high": 259.8611130474667, "ci_low": 94.45542247304486, "coefficient": 177.15826776025577, "p_value": 3.159423498616959e-05, "std_error": 42.063455683875276, "term": "C(iptp3, Treatment(reference='No'))[T.Yes]"}, {"ci_high": 74.02935111034515, "ci_low": 40.767252379782605, "coefficient": 57.398301745063876, "p_value": 4.3762912311256736e-11, "std_error": 8.458710284070843, "term": "gest_age"}, {"ci_high": 22.55185297183114, "ci_low": 1.7642412953425843, "coefficient": 12.15804713358686, "p_value": 0.02198943548829969, "std_error": 5.286388754165395, "term": "bmi"}, {"ci_high": 44.76648666453748, "ci_low": 2.463838503931594, "coefficient": 23.61516258423454, "p_value": 0.02874749660933741, "std_error": 10.75776510490491, "term": "anc_visits"}]}, "Q8c": {"cooks_threshold": 0.010256410256410256, "durbin_watson": 1.9872089311707541, "top_cooks": [{"cooks_d": 0.049014111917957105, "row_index": "243"}, {"cooks_d": 0.04523631658678923, "row_index": "365"}, {"cooks_d": 0.042943720420679954, "row_index": "399"}, {"cooks_d": 0.037755383131797715, "row_index": "158"}, {"cooks_d": 0.037373246208354964, "row_index": "100"}]}, "Q8d": {"adj_r2_base": 0.17431518509382127, "adj_r2_extended": 0.17792318336691115, "aic_base": 5786.759247579495, "aic_extended": 5787.02007413781, "df_diff": 2, "f_statistic": 1.8448598154298994, "n": 390, "p_value": 0.15944917874152495}, "Q8e": {"model_with_facility_urban": {"mean": 3175.033131939952, "mean_ci_lower": 3102.6903561212857, "mean_ci_upper": 3247.3759077586183, "mean_se": 36.79361969227149, "obs_ci_lower": 2385.2729431910484, "obs_ci_upper": 3964.7933206888556}, "model_without_facility": {"mean": 3130.851516493117, "mean_ci_lower": 3078.5735023159496, "mean_ci_upper": 3183.129530670284, "mean_se": 26.589096480847907, "obs_ci_lower": 2340.968815843883, "obs_ci_upper": 3920.7342171423506}}, "Q9": {"n": 382, "pseudo_r_squared": 0.03797346151718073, "scenario_probabilities": {"anaemia": 0.209017792285372, "no_anaemia": 0.1072129863178099}, "terms": [{"coefficient": -1.325450151525042, "odds_ratio": 0.26568333440816827, "or_ci_high": 1.4941625479041571, "or_ci_low": 0.047242272456403715, "p_value": 0.1325213757901126, "std_error": 0.8811468202533982, "term": "Intercept"}, {"coefficient": -0.0024444422509004226, "odds_ratio": 0.9975585429651671, "or_ci_high": 1.0514039946306561, "or_ci_low": 0.9464706732376077, "p_value": 0.9273857112802618, "std_error": 0.02682235561771638, "term": "age"}, {"coefficient": 0.7886745683766331, "odds_ratio": 2.200477909528209, "or_ci_high": 4.092640054568089, "or_ci_low": 1.1831245762541511, "p_value": 0.012734415270477422, "std_error": 0.31659545198173794, "term": "anaemia"}, {"coefficient": -0.18324236394819335, "odds_ratio": 0.8325663472154797, "or_ci_high": 0.9903893105496618, "or_ci_low": 0.6998931785027265, "p_value": 0.03854572565879232, "std_error": 0.0885655017865686, "term": "anc_visits"}]}}</script>
 <script>
 (function(){
   const cards=[...document.querySelectorAll('.question-card')];
@@ -3548,20 +3692,50 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></p
   }
   function highlight(code){
     const source=code.textContent;
-    const pattern=/(#.*$|\x22\x22\x22[\s\S]*?\x22\x22\x22|'''[\s\S]*?'''|\x22(?:\\.|[^\x22\\])*\x22|'(?:\\.|[^'\\])*'|\b(?:import|from|as|def|return|for|in|if|else|elif|while|try|except|with|class|lambda|None|True|False|and|or|not|is)\b|\b\d+(?:\.\d+)?\b)/gm;
-    let out='';let last=0;let match;
+    // Tokens deliberately stop at newlines so every source line can be wrapped
+    // in its own span. textContent remains the exact executable Python source;
+    // Pseudo-element line numbers are never copied.
+    const pattern=/(#.*$|\x22\x22\x22[^\n]*?\x22\x22\x22|'''[^'\n]*?'''|\x22(?:\\.|[^\x22\\\n])*\x22|'(?:\\.|[^'\\\n])*'|\b(?:import|from|as|def|return|for|in|if|else|elif|while|try|except|finally|with|class|lambda|None|True|False|and|or|not|is|pass|break|continue|global|nonlocal|yield|assert|del|raise|async|await)\b|\b(?:print|len|range|int|float|str|bool|list|dict|set|tuple|sum|min|max|abs|round|sorted|enumerate|zip|isinstance|type|open|super)\b|\b[A-Za-z_]\w*(?=\s*\()|[-+*/%=<>!&|^~]+|\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b[A-Za-z_]\w*\b)/gm;
+    const keyword=/^(?:import|from|as|def|return|for|in|if|else|elif|while|try|except|finally|with|class|lambda|None|True|False|and|or|not|is|pass|break|continue|global|nonlocal|yield|assert|del|raise|async|await)$/;
+    const builtin=/^(?:print|len|range|int|float|str|bool|list|dict|set|tuple|sum|min|max|abs|round|sorted|enumerate|zip|isinstance|type|open|super)$/;
+    const fragment=document.createDocumentFragment();
+    let lineNo=1;
+    let line=document.createElement('span');
+    line.className='code-line';
+    line.dataset.line=String(lineNo);
+    function appendText(value){
+      value.split('\n').forEach((part,index)=>{
+        if(index>0){
+          line.appendChild(document.createTextNode('\n'));
+          fragment.appendChild(line);
+          line=document.createElement('span');
+          line.className='code-line';
+          line.dataset.line=String(++lineNo);
+        }
+        if(part)line.appendChild(document.createTextNode(part));
+      });
+    }
+    let last=0;let match;
     while((match=pattern.exec(source))!==null){
-      out+=source.slice(last,match.index);
+      appendText(source.slice(last,match.index));
       const token=match[0];
-      let cls='tok-number';
+      let cls='tok-variable';
       if(token.startsWith('#'))cls='tok-comment';
       else if(token[0]==='\x22'||token[0]==="'"||token.startsWith('\x22\x22\x22')||token.startsWith("'''"))cls='tok-string';
-      else if(/^[A-Za-z_]/.test(token))cls='tok-keyword';
-      out+='<span class="'+cls+'">'+token.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>';
+      else if(keyword.test(token))cls='tok-keyword';
+      else if(builtin.test(token))cls='tok-builtin';
+      else if(/^[A-Za-z_]\w*$/.test(token))cls='tok-function';
+      else if(/^[-+*/%=<>!&|^~]+$/.test(token))cls='tok-operator';
+      else if(/^\d/.test(token))cls='tok-number';
+      const span=document.createElement('span');
+      span.className=cls;
+      span.textContent=token;
+      line.appendChild(span);
       last=pattern.lastIndex;
     }
-    out+=source.slice(last);
-    code.innerHTML=out;
+    appendText(source.slice(last));
+    fragment.appendChild(line);
+    code.replaceChildren(fragment);
   }
   document.querySelectorAll('pre code.language-python').forEach(highlight);
 
@@ -3584,18 +3758,43 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))</code></p
     chip.classList.add('active');active=chip.dataset.filter;filter();
   }));
   const setupCode=document.querySelector('.code-wrap[data-cell="setup"] pre code');
+  function fallbackCopy(text){
+    const area=document.createElement('textarea');
+    area.value=text;
+    area.setAttribute('readonly','');
+    area.style.position='fixed';
+    area.style.top='0';
+    area.style.left='-9999px';
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0,area.value.length);
+    let copied=false;
+    try{copied=document.execCommand('copy')}catch(e){}
+    area.remove();
+    if(!copied)throw new Error('Clipboard unavailable');
+  }
   async function copyText(text,btn,label){
-    try{await navigator.clipboard.writeText(text);btn.textContent="Copied ✓"}
-    catch(e){btn.textContent="Copy failed"}
+    let copied=false;
+    try{await navigator.clipboard.writeText(text);copied=true}catch(e){}
+    if(!copied){try{fallbackCopy(text);copied=true}catch(e){}}
+    btn.textContent=copied?"Copied ✓":"Copy failed";
     setTimeout(()=>btn.textContent=label,1400);
   }
+  const cellSeparator=String.fromCharCode(10,10);
   document.querySelectorAll('.copy-code').forEach(btn=>btn.addEventListener('click',async()=>{
     const wrap=btn.closest('.code-wrap');
     const code=wrap.querySelector('pre code');
-    let text=code.textContent;
+    let text='';
     if(wrap.dataset.requiresSetup==='true'&&setupCode){
-      text=setupCode.textContent+'\\n\\n'+text;
+      // String.fromCharCode avoids ambiguity in this raw f-string: the pasted
+      // result must contain two real newlines, never literal backslash-n text.
+      text+=setupCode.textContent+cellSeparator;
+      (wrap.dataset.prereqs||'').split(' ').filter(Boolean).forEach(key=>{
+        const earlier=document.querySelector('.code-wrap[data-cell="'+key+'"] pre code');
+        if(earlier)text+=earlier.textContent+cellSeparator;
+      });
     }
+    text+=code.textContent;
     await copyText(text,btn,btn.dataset.copyMode==='with-setup'?"Copy setup + cell":"Copy code");
   }));
   document.querySelectorAll('.copy-cell-only').forEach(btn=>btn.addEventListener('click',async()=>{

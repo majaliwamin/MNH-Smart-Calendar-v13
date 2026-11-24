@@ -559,7 +559,7 @@ def test_view_changes_dismiss_the_fixed_name_tip_and_chat_stays_clean():
     assert app.count('document.querySelector(".tip")?.classList.remove("show")') == 2
     assert "WhatsApp-style community chat" not in app
     assert 'el("p","muted","WhatsApp-style' not in app
-    assert '"public-chat":["Chat","MNH community chat."],' in app
+    assert '"public-chat":["MNH Group Chat","MNH community group chat."],' in app
     assert 'top.appendChild(el("h3",null,"Public Chat"))' not in app
 
 
