@@ -2001,7 +2001,8 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
  msgs.forEach((m,idx)=>{const prev=msgs[idx-1],next=msgs[idx+1];const day=pcDay(m.created_at);if(day!==lastDay){list.appendChild(el("div","pc-day-chip",day));lastDay=day;}
   const mine=!!m.mine;const samePrev=prev&&prev.mine===m.mine&&prev.sender_code===m.sender_code&&pcDay(prev.created_at)===day&&(m.created_at-prev.created_at)<5*60*1000&&!prev.deleted&&!m.deleted;
   const sameNext=next&&next.mine===m.mine&&next.sender_code===m.sender_code&&pcDay(next.created_at)===day&&(next.created_at-m.created_at)<5*60*1000&&!next.deleted&&!m.deleted;
-  const row=el("div","pc-msg-row "+(mine?"mine":"theirs")+(samePrev?" grouped":""));if(!mine){if(!sameNext)row.appendChild(pcAvatar({display_name:m.sender_name,code:m.sender_code,public_identity:m.sender_identity},false));else row.appendChild(el("div","pc-avatar-spacer")); }
+  const row=el("div","pc-msg-row "+(mine?"mine":"theirs")+(samePrev?" grouped":""));
+  if(!mine){if(!sameNext)row.appendChild(pcAvatar({display_name:m.sender_name,code:m.sender_code,public_identity:m.sender_identity},false));else row.appendChild(el("div","pc-avatar-spacer")); }
   const bubble=el("div","pc-bubble "+(mine?"mine":"theirs")+(m.kind==="private"?" private":"")+(m.deleted?" deleted":"")+(m.status==="failed"?" failed":"")+(samePrev?" cont-prev":"")+(sameNext?" cont-next":""));
   if(!mine&&!samePrev){bubble.appendChild(el("div","pc-msg-sender",m.sender_identity||m.sender_code||"Participant")); }
   if(m.kind==="private")bubble.appendChild(el("span","pc-chip pc-chip-private","Private"+(m.private_recipient_code&&m.private_recipient_code!==me?" to "+m.private_recipient_code:"")));
@@ -2052,7 +2053,9 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
     if(publicChatState.msgMenu===m.id)menuWrap.appendChild(pcMessageMenu(m,mine));
     bubble.appendChild(menuWrap);
   }
-  row.appendChild(bubble);list.appendChild(row);});
+  row.appendChild(bubble);
+  if(mine) row.appendChild(el("div","pc-avatar-spacer"));
+  list.appendChild(row);});
  if(nearBottom)list.scrollTop=list.scrollHeight;if(currentView==="public-chat")pcMarkRead();}
 async function renderPublicChat(){
  const token=(publicChatState._renderToken=(publicChatState._renderToken||0)+1);
