@@ -323,6 +323,7 @@ def test_cohost_grant_can_create_and_revoke_a_room_scoped_join_code(monkeypatch,
 def test_cohost_authority_is_forwarded_from_the_classroom_without_granting_board_control():
     whiteboard = (CLASSROOM_DIR / "crara-whiteboard.js").read_text(encoding="utf-8")
     parent = (ROOT / "frontend" / "js" / "class-rep.js").read_text(encoding="utf-8")
+    css = (ROOT / "frontend" / "css" / "class-rep.css").read_text(encoding="utf-8")
 
     assert "function notifyParentCohostGrant(enabled, authority)" in whiteboard
     assert 'type: "crara-classroom-cohost"' in whiteboard
@@ -333,5 +334,11 @@ def test_cohost_authority_is_forwarded_from_the_classroom_without_granting_board
     assert 'data.type !== "crara-classroom-cohost"' in parent
     assert "event.source !== frame.contentWindow" in parent
     assert "state.classroom.cohostAuthority" in parent
+    assert "state.classroom.cohostRoom" in parent
     assert "authority: state.classroom.cohostAuthority" in parent
     assert "host or an authorized co-host" in parent
+    assert 'result.role === "host"' in parent
+    assert "createClassroomCode({ auto: true" in parent
+    assert "!state.classroom.joinCode" in parent
+    assert "setClassroomCodeDisplay" in parent
+    assert ".cr-classroom-code-display" in css
