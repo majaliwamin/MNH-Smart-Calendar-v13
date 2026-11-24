@@ -2695,6 +2695,9 @@ html body .colour-dialog .dialog-card h2{
 .pc-tool-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:#8696a0;display:grid;place-items:center;cursor:pointer;font-size:20px;flex:0 0 40px}
 .pc-tool-btn:hover{color:#d1d7db;background:rgba(255,255,255,.04)}
 .pc-tool-btn.recording,.pc-send-btn.recording{color:#fff;background:#e53935}
+.pc-record-viz{display:flex;align-items:center;gap:2px;flex:1;min-width:0;height:34px;padding:0 6px;overflow:hidden}
+.pc-record-bar{width:3px;min-height:4px;border-radius:2px;background:#25d366;transition:height .08s linear,background-color .12s linear,opacity .12s linear}
+.pc-compose-main:has(.pc-record-viz) .pc-input{display:none}
 .pc-send-btn{width:46px;height:46px;border-radius:50%;border:0;background:#c9ced3;color:#1f2c34;display:grid;place-items:center;cursor:pointer;flex:0 0 46px}
 .pc-send-btn:hover{filter:brightness(1.03);background:#d7dbe0}
 .pc-send-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -2722,6 +2725,13 @@ html body .colour-dialog .dialog-card h2{
 .pc-private-person:last-child{border-bottom:0}
 .pc-private-person>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .pc-typing{font-size:12px;color:#25d366;min-height:16px}
+.pc-delete-confirm{position:absolute;left:8px;right:8px;bottom:8px;background:#233138;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:25}
+.pc-delete-confirm-text{display:block;color:#e9edef;font-size:13px;margin-bottom:8px}
+.pc-delete-confirm-actions{display:flex;justify-content:flex-end;gap:8px}
+.pc-delete-cancel,.pc-delete-ok{border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer}
+.pc-delete-cancel{background:rgba(255,255,255,.08);color:#e9edef}
+.pc-delete-ok{background:rgba(229,57,53,.18);color:#ff8a80}
+.pc-delete-ok:hover{background:rgba(229,57,53,.28)}
 .pc-empty{margin:auto;text-align:center;padding:48px 20px;color:#8696a0}
 .pc-empty-icon{width:72px;height:72px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;background:#202c33;font-size:30px}
 .pc-empty h4{margin:0 0 6px;color:#e9edef;font-size:20px;font-weight:500}
