@@ -1076,6 +1076,7 @@ function showView(name){
  document.body.classList.toggle("weekly-view",name==="weekly");
   const menuPageView=["monthly","modules","public-chat","examinations","analytics","communications","history","resources","recurring","export","silver-dashboard"].includes(name);
   document.body.classList.toggle("menu-page-view",menuPageView);
+  document.body.classList.toggle("public-chat-view",name==="public-chat");
   if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
  const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources"),library=document.getElementById("view-python-library"),simulation=document.getElementById("view-python-setup-simulation"),practical=document.getElementById("view-stat8100-practical"),hypothesis=document.getElementById("view-hypothesis-lab"),glossary=document.getElementById("view-statistical-glossary");
  weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";simulation.hidden=name!=="python-setup-simulation";practical.hidden=name!=="stat8100-practical";hypothesis.hidden=name!=="hypothesis-lab";glossary.hidden=name!=="statistical-glossary";

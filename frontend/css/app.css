@@ -2587,8 +2587,8 @@ html body .colour-dialog .dialog-card h2{
 
 
 /* ---- MNH Group Chat ---- */
-.pc-shell{display:flex;flex-direction:column;gap:12px;height:calc(100dvh - 140px);min-height:520px}
-.pc-chat-card{padding:0;overflow:hidden;border-radius:18px;border:1px solid var(--line,#24313b);background:#111b21;box-shadow:0 12px 40px rgba(0,0,0,.18);position:relative;display:flex;flex-direction:column;height:100%;min-height:0}
+.pc-shell{display:flex;flex-direction:column;gap:12px;height:calc(100dvh - 190px);min-height:560px;width:100%}
+.pc-chat-card{padding:0;overflow:hidden;border-radius:16px;border:1px solid var(--line,#24313b);background:#111b21;box-shadow:0 12px 40px rgba(0,0,0,.18);position:relative;display:flex;flex-direction:column;height:100%;min-height:0;width:100%}
 .pc-chat-headbar{padding:12px 16px;background:#202c33;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;flex:0 0 auto;z-index:5}
 .pc-chat-identity{display:flex;align-items:center;gap:12px;min-width:0}
 .pc-room-avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#25d366,#128c7e);color:#062016;font-weight:800;font-size:16px;flex:0 0 40px}
@@ -2725,7 +2725,7 @@ html body .colour-dialog .dialog-card h2{
 }
 @media (max-width:720px){
  .pc-chat-headbar{padding:10px 12px}
- .pc-shell{height:calc(100dvh - 120px);min-height:420px}
+ .pc-shell{height:calc(100dvh - 140px);min-height:420px}
  .pc-messages{padding:12px 10px}
  .pc-bubble{max-width:88%}
  .pc-composer{padding:8px}
@@ -2751,3 +2751,25 @@ body.menu-open .site-header{z-index:20002!important}
 body.menu-open .activity-marquee-shell[aria-label="Future academic events"]{z-index:20001!important}
 
 /* test-compat */ .site-header .menu-panel{}
+
+
+/* Public chat: full desktop width, fit mobile */
+body.public-chat-view main.wrap{max-width:none;width:100%;padding:12px 16px 20px}
+body.public-chat-view #view-workspace{max-width:none;width:100%}
+body.public-chat-view #workspace-title,
+body.public-chat-view #workspace-lead{max-width:1600px;margin-left:auto;margin-right:auto}
+body.public-chat-view #workspace-body{width:100%;max-width:none}
+body.public-chat-view .pc-shell{max-width:none;margin:0}
+body.public-chat-view .pc-chat-card{width:100%}
+@media (max-width:720px){
+  body.public-chat-view main.wrap{padding:8px 8px 12px}
+  body.public-chat-view #workspace-title{font-size:1.4rem}
+  body.public-chat-view #workspace-lead{font-size:.92rem;margin-bottom:8px}
+  body.public-chat-view .pc-shell{height:calc(100dvh - 132px);min-height:380px}
+  body.public-chat-view .pc-chat-headbar{padding:10px 10px}
+  body.public-chat-view .pc-room-avatar{width:36px;height:36px;flex-basis:36px;font-size:14px}
+  body.public-chat-view .pc-chat-title{font-size:15px}
+  body.public-chat-view .pc-chat-meta,.pc-typing{font-size:11px}
+  body.public-chat-view .pc-search-bar{padding:8px 10px}
+  body.public-chat-view .pc-composer{padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+}
