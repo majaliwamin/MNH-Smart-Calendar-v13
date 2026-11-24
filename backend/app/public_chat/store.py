@@ -46,6 +46,7 @@ CODE_PREFIX = "MNH-"
 CODE_RE = re.compile(r"^MNH-\d{4}$")
 MEDIA_DIR = DATA_DIR / "public_chat_media"
 MAX_AUDIO_BYTES = settings.MAX_AUDIO_BYTES
+MAX_VOICE_DURATION_MS = 40 * 60 * 1000
 MAX_ATTACHMENT_BYTES = settings.MAX_ATTACHMENT_BYTES
 ALLOWED_AUDIO = {
     "audio/webm": ".webm",
@@ -749,9 +750,12 @@ def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> d
     if not data:
         raise HTTPException(400, "The voice note is empty.")
     if len(data) > settings.MAX_AUDIO_BYTES:
-        raise HTTPException(413, "Voice notes must be 10 MB or smaller.")
+        raise HTTPException(413, "Voice notes must be 25 MB or smaller.")
 
+    duration_ms = max(0, min(int(duration_ms or 0), MAX_VOICE_DURATION_MS))
     data, ext, content_type = _compress_voice(data, ext, content_type or "audio/webm")
+    if len(data) > settings.MAX_AUDIO_BYTES:
+        raise HTTPException(413, "Compressed voice note is still too large. Please record a shorter note.")
 
     file_id = uuid.uuid4().hex
     path = MEDIA_DIR / f"{file_id}{ext}"
@@ -772,7 +776,7 @@ def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> d
         "file_name": path.name,
         "mime_type": content_type or "audio/webm",
         "size_bytes": len(data),
-        "duration_ms": max(0, min(int(duration_ms or 0), 60 * 60 * 1000)),
+        "duration_ms": duration_ms,
         "storage": "cloud",
     }
 
