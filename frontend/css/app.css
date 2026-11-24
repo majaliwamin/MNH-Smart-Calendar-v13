@@ -2722,8 +2722,9 @@ body[data-chat-bg]:not([data-chat-bg="default"]) .pc-day-chip{background:rgba(25
 .pc-composer{padding:10px 12px;background:#202c33;border-top:1px solid rgba(255,255,255,.06);flex:0 0 auto;z-index:4}
 .pc-compose-meta{margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pc-compose-row{display:flex;align-items:flex-end;gap:8px}
-.pc-compose-main{flex:1;display:flex;align-items:flex-end;gap:4px;background:#2a3942;border-radius:24px;padding:4px 8px;min-width:0}
-.pc-input{flex:1;width:100%;min-height:24px;max-height:140px;resize:none;padding:10px 8px;border:0;background:transparent;color:#aebac1;font:inherit;font-size:15px;line-height:1.4;outline:none;caret-color:#25d366}
+.pc-compose-main{flex:1;display:flex;align-items:flex-end;gap:4px;background:#2a3942;border-radius:24px;padding:4px 8px;min-width:0;overflow:hidden}
+.pc-input{flex:1;width:100%;min-height:44px;max-height:140px;resize:none;padding:10px 8px;border:0;background:transparent !important;color:#aebac1;font:inherit;font-size:15px;line-height:1.4;outline:none;caret-color:#25d366;box-shadow:none;appearance:none;-webkit-appearance:none;border-radius:0}
+.pc-input:focus{background:transparent !important;box-shadow:none;outline:none}
 .pc-input::placeholder{color:#8696a0}
 .pc-compose-actions{display:flex;gap:0;align-items:center;padding-bottom:2px}
 .pc-tool-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:#8696a0;display:grid;place-items:center;cursor:pointer;font-size:20px;flex:0 0 40px}
