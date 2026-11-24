@@ -2599,10 +2599,44 @@ html body .colour-dialog .dialog-card h2{
 .pc-icon-btn:hover{background:rgba(255,255,255,.06);color:#e9edef}
 .pc-icon-btn.active{color:#25d366;background:rgba(37,211,102,.12)}
 .pc-head-menu{position:absolute;right:12px;top:60px;z-index:20;min-width:220px;background:#233138;border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px}
+.pc-head-menu.pc-inpage-menu{width:min(360px,calc(100% - 24px));max-height:min(72vh,560px);overflow:auto;padding:10px}
+.pc-menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 4px 10px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:8px}
+.pc-menu-title{font-size:15px;font-weight:700;color:#e9edef}
+.pc-menu-section{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05)}
+.pc-menu-section:last-of-type{border-bottom:0}
+.pc-menu-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8696a0;margin-bottom:8px}
+.pc-menu-row{font-size:13px;color:#d1d7db;padding:4px 0;word-break:break-word}
 .pc-head-menu-info{padding:10px 12px;color:#8696a0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px}
 .pc-head-menu-item{display:block;width:100%;text-align:left;padding:10px 12px;border:0;background:transparent;color:#e9edef;border-radius:8px;cursor:pointer;font:inherit;font-size:14px}
 .pc-head-menu-item:hover{background:rgba(255,255,255,.06)}
 .pc-head-menu-item:disabled{opacity:.5;cursor:not-allowed}
+.pc-menu-exit{color:#ff8a80}
+.pc-theme-grid,.pc-bg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pc-theme-swatch,.pc-bg-swatch{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e9edef;border-radius:10px;padding:10px;font:inherit;font-size:12px;cursor:pointer;text-align:left;min-height:44px}
+.pc-theme-swatch.active,.pc-bg-swatch.active{outline:2px solid #25d366;border-color:#25d366}
+.pc-theme-swatch[data-theme="midnight"]{background:linear-gradient(135deg,#0f172a,#1e293b)}
+.pc-theme-swatch[data-theme="emerald"]{background:linear-gradient(135deg,#063b2d,#0b5d46)}
+.pc-theme-swatch[data-theme="violet"]{background:linear-gradient(135deg,#2b1b5a,#4c2ea8)}
+.pc-theme-swatch[data-theme="sunset"]{background:linear-gradient(135deg,#5b2333,#b45309)}
+.pc-bg-swatch[data-bg="sunny-clouds"]{background:linear-gradient(135deg,#87ceeb,#fff7c2)}
+.pc-bg-swatch[data-bg="soft-sky"]{background:linear-gradient(135deg,#dbeafe,#f8fafc);color:#1f2937}
+.pc-bg-swatch[data-bg="mountain-mist"]{background:linear-gradient(135deg,#94a3b8,#e2e8f0);color:#1f2937}
+.pc-bg-swatch[data-bg="warm-dawn"]{background:linear-gradient(135deg,#fcd34d,#fca5a5);color:#3f1d1d}
+.pc-bg-swatch[data-bg="calm-ocean"]{background:linear-gradient(135deg,#67e8f9,#2563eb)}
+body[data-chat-theme="midnight"] .pc-chat-card{background:#0b1220}
+body[data-chat-theme="midnight"] .pc-chat-headbar,body[data-chat-theme="midnight"] .pc-composer{background:#111827}
+body[data-chat-theme="emerald"] .pc-chat-card{background:#07241d}
+body[data-chat-theme="emerald"] .pc-chat-headbar,body[data-chat-theme="emerald"] .pc-composer{background:#0b3329}
+body[data-chat-theme="violet"] .pc-chat-card{background:#1a1333}
+body[data-chat-theme="violet"] .pc-chat-headbar,body[data-chat-theme="violet"] .pc-composer{background:#241a45}
+body[data-chat-theme="sunset"] .pc-chat-card{background:#24151b}
+body[data-chat-theme="sunset"] .pc-chat-headbar,body[data-chat-theme="sunset"] .pc-composer{background:#331d25}
+body[data-chat-bg="sunny-clouds"] .pc-messages{background:linear-gradient(180deg,#9fd7f5 0%,#dff3ff 45%,#fff8d6 100%)}
+body[data-chat-bg="soft-sky"] .pc-messages{background:linear-gradient(180deg,#dbeafe 0%,#eff6ff 55%,#ffffff 100%)}
+body[data-chat-bg="mountain-mist"] .pc-messages{background:linear-gradient(180deg,#cbd5e1 0%,#e2e8f0 50%,#f8fafc 100%)}
+body[data-chat-bg="warm-dawn"] .pc-messages{background:linear-gradient(180deg,#fde68a 0%,#fdba74 45%,#fecaca 100%)}
+body[data-chat-bg="calm-ocean"] .pc-messages{background:linear-gradient(180deg,#a5f3fc 0%,#60a5fa 55%,#2563eb 100%)}
+body[data-chat-bg]:not([data-chat-bg="default"]) .pc-day-chip{background:rgba(255,255,255,.75);color:#334155}
 .pc-search-bar{display:flex;gap:8px;padding:10px 16px;background:#182229;border-bottom:1px solid rgba(255,255,255,.06);align-items:center;flex-wrap:wrap;flex:0 0 auto}
 .pc-search-input{flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:0;background:#2a3942;color:#e9edef;font:inherit}
 .pc-search-input::placeholder{color:#8696a0}

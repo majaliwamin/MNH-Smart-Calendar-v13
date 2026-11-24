@@ -1938,10 +1938,49 @@ async function pcUploadVoice(tempId){const blob=publicChatState.voiceBlob;if(!bl
 async function pcUploadAttachment(tempId){const file=publicChatState.attachmentFile;if(!file)return false;const form=new FormData();form.append("file",file,file.name);if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);form.append("text",publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(publicChatState.attachmentText||"").join(","));try{const res=await pcFormApi("/api/public-chat/attachments",form);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearAttachment();publicChatState.attachmentText="";return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
 function pcRefreshComposer(){if(currentView!=="public-chat")return;const old=document.querySelector(".pc-composer");const next=pcComposerNode();if(old){old.replaceWith(next);}else{const card=document.querySelector(".pc-chat-card");if(card)card.appendChild(next);}if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();}
 
-function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=document.querySelector(".pc-chat-card");if(!card){renderPublicChat();return;}const old=card.querySelector(".pc-head-menu");if(old)old.remove();if(!publicChatState.headerMenu)return;const menu=el("div","pc-head-menu");if(publicChatState.participant){menu.appendChild(el("div","pc-head-menu-info","You: "+(publicChatState.participant.public_identity||publicChatState.participant.code)));}
- const notif=el("button","pc-head-menu-item",(publicChatState.prefs&&Object.keys(publicChatState.prefs).every(k=>!publicChatState.prefs[k])?"Enable notifications":"Mute notifications"));notif.type="button";notif.disabled=!publicChatState.joined;notif.onclick=async()=>{try{const prefsNow=publicChatState.prefs||{replies:true,mentions:true,private:true,access:true,moderation:true};const off=Object.keys(prefsNow).every(k=>!prefsNow[k]);const values={};Object.keys(prefsNow).forEach(k=>{values[k]=off;});const res=await pcApi("/api/public-chat/preferences",{method:"PUT",body:{values}});publicChatState.prefs=res.values;publicChatState.headerMenu=false;pcRefreshHeadMenu();pcToast(off?"Notifications enabled":"Notifications muted");}catch(e){pcToast(e.message||String(e));}};menu.appendChild(notif);
- if(publicChatState.searchResults){const clear=el("button","pc-head-menu-item","Clear search results");clear.type="button";clear.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.searchOpen=false;publicChatState.headerMenu=false;renderPublicChat();};menu.appendChild(clear);} 
- const head=card.querySelector('.pc-chat-headbar');if(head)head.insertAdjacentElement('afterend',menu);
+function pcApplyChatTheme(){
+ const t=publicChatState.chatTheme||"default";
+ const b=publicChatState.chatBg||"default";
+ document.body.dataset.chatTheme=t;
+ document.body.dataset.chatBg=b;
+ try{localStorage.setItem("mnh_chat_theme",t);localStorage.setItem("mnh_chat_bg",b);}catch(_e){}
+}
+function pcLoadChatTheme(){
+ try{publicChatState.chatTheme=localStorage.getItem("mnh_chat_theme")||"default";publicChatState.chatBg=localStorage.getItem("mnh_chat_bg")||"default";}catch(_e){publicChatState.chatTheme="default";publicChatState.chatBg="default";}
+ pcApplyChatTheme();
+}
+function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=document.querySelector(".pc-chat-card");if(!card){renderPublicChat();return;}const old=card.querySelector(".pc-head-menu");if(old)old.remove();if(!publicChatState.headerMenu)return;
+ const menu=el("div","pc-head-menu pc-inpage-menu");
+ const head=el("div","pc-menu-head");
+ head.appendChild(el("div","pc-menu-title","Chat Menu"));
+ const close=el("button","pc-icon-btn","×");close.type="button";close.setAttribute("aria-label","Close menu");close.onclick=()=>{publicChatState.headerMenu=false;pcRefreshHeadMenu();};head.appendChild(close);menu.appendChild(head);
+
+ const userSec=el("div","pc-menu-section");userSec.appendChild(el("div","pc-menu-label","User"));
+ const me=publicChatState.participant||{};
+ userSec.appendChild(el("div","pc-menu-row","Identity: "+(me.public_identity||me.code||"Not joined")));
+ userSec.appendChild(el("div","pc-menu-row","Name: "+(me.display_name||"Not set")));
+ userSec.appendChild(el("div","pc-menu-row","Status: "+(publicChatState.joined?"Joined":"Not joined")));
+ menu.appendChild(userSec);
+
+ const prefSec=el("div","pc-menu-section");prefSec.appendChild(el("div","pc-menu-label","Settings"));
+ const notif=el("button","pc-head-menu-item",(publicChatState.prefs&&Object.keys(publicChatState.prefs).every(k=>!publicChatState.prefs[k])?"Enable notifications":"Mute notifications"));notif.type="button";notif.disabled=!publicChatState.joined;notif.onclick=async()=>{try{const prefsNow=publicChatState.prefs||{replies:true,mentions:true,private:true,access:true,moderation:true};const off=Object.keys(prefsNow).every(k=>!prefsNow[k]);const values={};Object.keys(prefsNow).forEach(k=>{values[k]=off;});const res=await pcApi("/api/public-chat/preferences",{method:"PUT",body:{values}});publicChatState.prefs=res.values;pcRefreshHeadMenu();pcToast(off?"Notifications enabled":"Notifications muted");}catch(e){pcToast(e.message||String(e));}};prefSec.appendChild(notif);
+ if(publicChatState.searchResults){const clear=el("button","pc-head-menu-item","Clear search results");clear.type="button";clear.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.searchOpen=false;publicChatState.headerMenu=false;renderPublicChat();};prefSec.appendChild(clear);}
+ menu.appendChild(prefSec);
+
+ const themeSec=el("div","pc-menu-section");themeSec.appendChild(el("div","pc-menu-label","Themes"));
+ const themes=[["default","Default"],["midnight","Midnight"],["emerald","Emerald"],["violet","Violet"],["sunset","Sunset"]];
+ const themeGrid=el("div","pc-theme-grid");
+ themes.forEach(([id,label])=>{const b=el("button","pc-theme-swatch"+((publicChatState.chatTheme||"default")===id?" active":""),label);b.type="button";b.dataset.theme=id;b.onclick=()=>{publicChatState.chatTheme=id;pcApplyChatTheme();pcRefreshHeadMenu();};themeGrid.appendChild(b);});
+ themeSec.appendChild(themeGrid);menu.appendChild(themeSec);
+
+ const bgSec=el("div","pc-menu-section");bgSec.appendChild(el("div","pc-menu-label","Backgrounds"));
+ const bgs=[["default","Default"],["sunny-clouds","Sunny Clouds"],["soft-sky","Soft Sky"],["mountain-mist","Mountain Mist"],["warm-dawn","Warm Dawn"],["calm-ocean","Calm Ocean"]];
+ const bgGrid=el("div","pc-bg-grid");
+ bgs.forEach(([id,label])=>{const b=el("button","pc-bg-swatch"+((publicChatState.chatBg||"default")===id?" active":""),label);b.type="button";b.dataset.bg=id;b.onclick=()=>{publicChatState.chatBg=id;pcApplyChatTheme();pcRefreshHeadMenu();};bgGrid.appendChild(b);});
+ bgSec.appendChild(bgGrid);menu.appendChild(bgSec);
+
+ const exit=el("button","pc-head-menu-item pc-menu-exit","Exit chat");exit.type="button";exit.onclick=()=>{publicChatState.headerMenu=false;pcCloseWS();showView("weekly");};menu.appendChild(exit);
+ const headbar=card.querySelector('.pc-chat-headbar');if(headbar)headbar.insertAdjacentElement('afterend',menu);
 }
 function pcRenderMemberResults(){const box=document.getElementById('pc-member-results');if(!box)return;box.innerHTML='';const q=String(publicChatState.memberQuery||'').trim().toLowerCase();const me=(publicChatState.participant&&publicChatState.participant.code)||'';const people=(publicChatState.participants||[]).filter(p=>p.code&&p.code!==me).filter(p=>!q||String(p.public_identity||p.code||'').toLowerCase().includes(q)||String(p.display_name||'').toLowerCase().includes(q)).slice(0,20);
  if(!people.length){box.appendChild(el('div','pc-member-empty','No members found'));return;}
@@ -2075,6 +2114,7 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
 async function renderPublicChat(){
  const token=(publicChatState._renderToken=(publicChatState._renderToken||0)+1);
  publicChatState._rendering=true;
+ pcLoadChatTheme();
  try{
  const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");try{await pcLoadStatus(true);}catch(_e){}
  if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
@@ -2087,18 +2127,10 @@ async function renderPublicChat(){
  const typing=el("div","pc-typing","");typing.id="pc-typing";typing.hidden=true;meta.appendChild(typing);ident.appendChild(meta);head.appendChild(ident);
  const headActions=el("div","pc-head-actions");
  const searchBtn=el("button","pc-icon-btn"+(publicChatState.searchResults?" active":""));searchBtn.type="button";searchBtn.title="Search messages";searchBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';searchBtn.disabled=!publicChatState.joined;searchBtn.onclick=()=>{publicChatState.searchOpen=!publicChatState.searchOpen;publicChatState.headerMenu=false;renderPublicChat();if(publicChatState.searchOpen){setTimeout(()=>{const i=document.getElementById("pc-search-input");if(i)i.focus();},0);}};
- const menuBtn=el("button","pc-icon-btn");menuBtn.type="button";menuBtn.setAttribute("aria-label","Chat options");menuBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';menuBtn.onclick=(e)=>{e.stopPropagation();publicChatState.headerMenu=!publicChatState.headerMenu;pcRefreshHeadMenu();};
- const exitBtn=el("button","pc-icon-btn pc-exit-btn");exitBtn.type="button";exitBtn.title="Exit chat";exitBtn.setAttribute("aria-label","Exit chat");exitBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';exitBtn.onclick=()=>{pcCloseWS();showView("weekly");};
- headActions.append(searchBtn,menuBtn,exitBtn);head.appendChild(headActions);card.appendChild(head);
+ const menuBtn=el("button","pc-icon-btn");menuBtn.type="button";menuBtn.setAttribute("aria-label","Chat menu");menuBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';menuBtn.onclick=(e)=>{e.stopPropagation();publicChatState.headerMenu=!publicChatState.headerMenu;pcRefreshHeadMenu();};
+ headActions.append(searchBtn,menuBtn);head.appendChild(headActions);card.appendChild(head);
 
- if(publicChatState.headerMenu){
-  const menu=el("div","pc-head-menu");
-  if(publicChatState.participant){menu.appendChild(el("div","pc-head-menu-info","You: "+(publicChatState.participant.public_identity||publicChatState.participant.code)));}
-  const notif=el("button","pc-head-menu-item",(publicChatState.prefs&&Object.keys(publicChatState.prefs).every(k=>!publicChatState.prefs[k])?"Enable notifications":"Mute notifications"));notif.type="button";notif.disabled=!publicChatState.joined;notif.onclick=async()=>{try{const prefsNow=publicChatState.prefs||{replies:true,mentions:true,private:true,access:true,moderation:true};const off=Object.keys(prefsNow).every(k=>!prefsNow[k]);const values={};Object.keys(prefsNow).forEach(k=>{values[k]=off;});const res=await pcApi("/api/public-chat/preferences",{method:"PUT",body:{values}});publicChatState.prefs=res.values;publicChatState.headerMenu=false;pcRefreshHeadMenu();pcToast(off?"Notifications enabled":"Notifications muted");}catch(e){pcToast(e.message||String(e));}};
-  menu.appendChild(notif);
-  if(publicChatState.searchResults){const clear=el("button","pc-head-menu-item","Clear search results");clear.type="button";clear.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.searchOpen=false;publicChatState.headerMenu=false;renderPublicChat();};menu.appendChild(clear);}
-  card.appendChild(menu);
- }
+ if(publicChatState.headerMenu){pcRefreshHeadMenu();}
 
  if(publicChatState.searchOpen&&publicChatState.joined){
   const searchRow=el("div","pc-search-bar");
