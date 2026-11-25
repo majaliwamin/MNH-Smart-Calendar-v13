@@ -28,3 +28,6 @@ backups/*
 
 .crara_classroom_secret
 _tmp_restore_cells.py
+
+public_chat_media/
+

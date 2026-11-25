@@ -2005,7 +2005,7 @@ function pcRefreshSearchBar(){if(currentView!=="public-chat")return;const card=d
 }
 function pcComposerNode(){const wrap=el("div","pc-composer");const replying=publicChatState.replyTo,priv=publicChatState.privateTo,editing=publicChatState.editingId;
  if(replying||priv||editing){const meta=el("div","pc-compose-meta");if(editing)meta.appendChild(el("span","pc-chip","Editing"));if(replying)meta.appendChild(el("span","pc-chip","Replying to "+(replying.sender_identity||replying.sender_code||"message")));if(priv)meta.appendChild(el("span","pc-chip pc-chip-private","Private to "+(priv.public_identity||priv.code)));const clear=el("button","pc-action","Cancel");clear.type="button";clear.onclick=()=>{publicChatState.replyTo=null;publicChatState.privateTo=null;publicChatState.editingId=null;pcRefreshComposer();};meta.appendChild(clear);wrap.appendChild(meta);}
- if(publicChatState.voiceUrl||publicChatState.attachmentFile){const preview=el("div","pc-attachment-preview");if(publicChatState.voiceUrl){const card=el("div","pc-preview-card");card.appendChild(el("span",null,"Voice note"+(publicChatState.voiceDurationMs?" · "+Math.max(1,Math.round(publicChatState.voiceDurationMs/1000))+"s":"")));const a=document.createElement("audio");a.controls=true;a.src=publicChatState.voiceUrl;a.className="pc-audio-preview";card.appendChild(a);const rm=el("button","pc-action danger","Remove");rm.type="button";rm.onclick=()=>{pcClearVoice();pcRefreshComposer();};card.appendChild(rm);preview.appendChild(card);}if(publicChatState.attachmentFile){const card=el("div","pc-preview-card");card.appendChild(el("span",null,publicChatState.attachmentFile.name));const rm=el("button","pc-action danger","Remove");rm.type="button";rm.onclick=()=>{pcClearAttachment();pcRefreshComposer();};card.appendChild(rm);preview.appendChild(card);}wrap.appendChild(preview);}
+ if(publicChatState.attachmentFile){const preview=el("div","pc-attachment-preview");const card=el("div","pc-preview-card");card.appendChild(el("span",null,publicChatState.attachmentFile.name));const rm=el("button","pc-action danger","Remove");rm.type="button";rm.onclick=()=>{pcClearAttachment();pcRefreshComposer();};card.appendChild(rm);preview.appendChild(card);wrap.appendChild(preview);}
  const row=el("div","pc-compose-row");const main=el("div","pc-compose-main");
  const fileInput=document.createElement("input");fileInput.type="file";fileInput.className="pc-file-input";fileInput.accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,audio/*";fileInput.onchange=()=>{if(fileInput.files&&fileInput.files[0]){publicChatState.attachmentFile=fileInput.files[0];pcRefreshComposer();}};
  const emojiBtn=el("button","pc-tool-btn");emojiBtn.type="button";emojiBtn.setAttribute("aria-label","Emoji");emojiBtn.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg>';emojiBtn.disabled=!publicChatState.joined;emojiBtn.onclick=()=>{publicChatState.emojiTarget=null;publicChatState.emojiOpen=!publicChatState.emojiOpen;const oldP=document.querySelector(".pc-emoji-picker");if(oldP)oldP.remove();if(publicChatState.emojiOpen){const wrap=document.querySelector(".pc-composer");if(wrap)wrap.appendChild(pcEmojiPicker(publicChatState.emojiTarget));}};
@@ -2168,31 +2168,15 @@ async function renderPublicChat(){
  }
 
  if(!publicChatState.joined){
-  const join=el("div","pc-join");join.appendChild(el("h4",null,"Join MNH Group Chat"));join.appendChild(el("p",null,"Enter your existing MNH ID (MNH-XXXX) or request a new one. It identifies you in chat and is not a password."));
-  const name=fieldInput("Display name (optional)",80,"text");name.className="pc-join-input";
-  const code=fieldInput("Existing MNH ID (optional)",20,"text");code.className="pc-join-input";code.placeholder="MNH-1234";
-  const row=el("div","pc-join-actions");
-  const joinBtn=el("button","primary","Join with ID");joinBtn.type="button";
-  const reqBtn=el("button","soft","Request new ID");reqBtn.type="button";
-  async function doJoin(requestNew){
-    const idCode=code.value.trim().toUpperCase();
-    if(!requestNew && !/^MNH-\d{4}$/.test(idCode)){pcToast("Enter a valid MNH ID (MNH-XXXX) or request a new one."); return;}
-    joinBtn.disabled=reqBtn.disabled=true;
-    (requestNew?reqBtn:joinBtn).textContent=requestNew?"Requesting...":"Joining...";
-    try{
-      const body={display_name:name.value.trim(), request_new:!!requestNew};
-      if(!requestNew) body.code=idCode;
-      const res=await pcApi("/api/public-chat/join",{method:"POST",body});
-      publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];publicChatState.emojiOpen=false;
-      if(publicChatState.joined)pcEnsureRealtime();
-      await pcLoadMessages(true);await pcLoadPreferences(true);renderPublicChat();
-      if(!publicChatState.joined)pcToast(res.access_request&&res.access_request.status==="pending"?"Access request awaiting moderator approval.":"Chat access is not active yet.");
-    }catch(e){pcToast(e.message||String(e));}
-    finally{joinBtn.disabled=reqBtn.disabled=false;joinBtn.textContent="Join with ID";reqBtn.textContent="Request new ID";}
+  if(!publicChatState._autoJoinAttempted){
+   publicChatState._autoJoinAttempted=true;
+   const join=el("div","pc-join");join.appendChild(el("h4",null,"Connecting to MNH Group Chat..."));join.appendChild(el("p","muted","Setting up your chat identity."));card.appendChild(join);
+   (async()=>{try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:"",request_new:true}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);}catch(e){publicChatState.error=e.message||String(e);pcToast(publicChatState.error);}finally{if(currentView==="public-chat")renderPublicChat();}})();
+  } else {
+   const join=el("div","pc-join");join.appendChild(el("h4",null,"MNH Group Chat"));join.appendChild(el("p","muted",publicChatState.error||"Unable to connect to chat right now."));const retry=el("button","soft","Retry");retry.type="button";retry.onclick=()=>{publicChatState._autoJoinAttempted=false;publicChatState.error="";renderPublicChat();};join.appendChild(retry);card.appendChild(join);
   }
-  joinBtn.onclick=()=>doJoin(false); reqBtn.onclick=()=>doJoin(true);
-  row.append(joinBtn,reqBtn); join.append(name,code,row); card.appendChild(join);
  }
+
 
  if(publicChatState.searchResults)card.appendChild(el("div","pc-search-note","Showing search results for \u201c"+publicChatState.searchQuery+"\u201d"));
 
