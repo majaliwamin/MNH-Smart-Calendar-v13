@@ -901,7 +901,7 @@ function initAlarms(){
 // ---- Header (editable + navigable) and extra views ----
 const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
 const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
-const VIEWS=["weekly","silver-dashboard","monthly","modules","public-chat","examinations","recurring","communications","analytics","history","export","resources","python-library","python-setup-simulation","stat8100-practical","hypothesis-lab","statistical-glossary"];
+const VIEWS=["weekly","silver-dashboard","monthly","modules","public-chat","examinations","exams","recurring","communications","analytics","history","export","resources","python-library","python-setup-simulation","stat8100-practical","hypothesis-lab","statistical-glossary"];
 function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly",previousNonResourcesView="weekly",previousNonLibraryView="weekly",previousNonSimulationView="python-library",previousNonPracticalView="resources",previousNonHypothesisView="resources",previousNonGlossaryView="resources";
@@ -1075,12 +1075,12 @@ function showView(name){
  else if(name!=="statistical-glossary")previousNonGlossaryView=name;
  currentView=name;
  document.body.classList.toggle("weekly-view",name==="weekly");
-  const menuPageView=["monthly","modules","public-chat","examinations","analytics","communications","history","resources","recurring","export","silver-dashboard"].includes(name);
+  const menuPageView=["monthly","modules","public-chat","examinations","exams","analytics","communications","history","resources","recurring","export","silver-dashboard"].includes(name);
   document.body.classList.toggle("menu-page-view",menuPageView);
   document.body.classList.toggle("public-chat-view",name==="public-chat");
   if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
- const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources"),library=document.getElementById("view-python-library"),simulation=document.getElementById("view-python-setup-simulation"),practical=document.getElementById("view-stat8100-practical"),hypothesis=document.getElementById("view-hypothesis-lab"),glossary=document.getElementById("view-statistical-glossary");
- weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";simulation.hidden=name!=="python-setup-simulation";practical.hidden=name!=="stat8100-practical";hypothesis.hidden=name!=="hypothesis-lab";glossary.hidden=name!=="statistical-glossary";
+ const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources"),library=document.getElementById("view-python-library"),simulation=document.getElementById("view-python-setup-simulation"),practical=document.getElementById("view-stat8100-practical"),hypothesis=document.getElementById("view-hypothesis-lab"),glossary=document.getElementById("view-statistical-glossary"),exams=document.getElementById("view-exams");
+ weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";simulation.hidden=name!=="python-setup-simulation";practical.hidden=name!=="stat8100-practical";hypothesis.hidden=name!=="hypothesis-lab";glossary.hidden=name!=="statistical-glossary";if(exams)exams.hidden=name!=="exams";
  if(name==="python-setup-simulation"){
     const simFrame=simulation.querySelector("iframe"),fitSim=()=>{try{simFrame.contentWindow.fit?.()}catch(e){}};
     if(enteringSimulation){
@@ -1116,6 +1116,7 @@ function renderView(name){
  else if(name==="monthly")renderMonthly();
  else if(name==="public-chat")renderPublicChat();
  else if(name==="examinations")renderManaged("examinations");
+ else if(name==="exams"){if(window.MNHExams&&typeof window.MNHExams.render==="function")window.MNHExams.render(); else {const b=document.getElementById("exams-body"); if(b)b.textContent="EXAMS module loading...";}}
  else if(name==="recurring")renderManaged("recurring");
  else if(name==="communications")renderCommunications();
  else if(name==="history")renderHistoryPage();
@@ -1817,7 +1818,7 @@ async function renderCommunications(){
  await renderReminderCard(root);
  await renderCommHistoryCard(root);
 }
-let publicChatState={joined:false,participant:null,participants:[],messages:[],searchResults:null,searchQuery:"",searchOpen:false,headerMenu:false,msgMenu:null,deleteConfirm:null,loading:false,error:"",replyTo:null,privateTo:null,editingId:null,ws:null,wsTimer:null,pollTimer:null,unread:0,online:0,recorder:null,recordStartedAt:0,recordChunks:[],recordTimer:null,recording:false,voiceBlob:null,voiceUrl:null,voiceDurationMs:0,voiceMime:"audio/webm",attachmentFile:null,emojiOpen:false,emojiTarget:null,privatePanel:false,prefs:null,pending:{},typingTimer:null,toastTimer:null,composerInput:null,readAt:0,voiceSeq:Number(localStorage.getItem("mnh_chat_voice_seq")||"0")||0};
+let publicChatState={joined:false,participant:null,participants:[],messages:[],searchResults:null,searchQuery:"",searchOpen:false,headerMenu:false,msgMenu:null,deleteConfirm:null,loading:false,error:"",replyTo:null,privateTo:null,editingId:null,ws:null,wsTimer:null,pollTimer:null,unread:0,online:0,recorder:null,recordStartedAt:0,recordChunks:[],recordTimer:null,recording:false,voiceBlob:null,voiceUrl:null,voiceDurationMs:0,voiceMime:"audio/webm",attachmentFile:null,attachmentViewOnce:false,emojiOpen:false,emojiTarget:null,privatePanel:false,prefs:null,pending:{},typingTimer:null,toastTimer:null,composerInput:null,readAt:0,voiceSeq:Number(localStorage.getItem("mnh_chat_voice_seq")||"0")||0};
 const PC_MAX_VOICE_MS=40*60*1000;
 document.addEventListener("click",(e)=>{if(!publicChatState.headerMenu&&!publicChatState.msgMenu)return;if(e.target.closest(".pc-head-menu,.pc-msg-menu,.pc-msg-menu-btn,.pc-icon-btn"))return;publicChatState.headerMenu=false;publicChatState.msgMenu=null;if(currentView==="public-chat")pcRenderMessages();});
 function pcEsc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
@@ -1857,7 +1858,7 @@ async function pcLoadPreferences(silent){if(!publicChatState.joined)return;try{c
 function pcStopVoiceViz(){if(publicChatState.recordRaf){try{cancelAnimationFrame(publicChatState.recordRaf);}catch(_e){}}publicChatState.recordRaf=null;if(publicChatState.recordAudioCtx){try{publicChatState.recordAudioCtx.close();}catch(_e){}}publicChatState.recordAudioCtx=null;publicChatState.recordAnalyser=null;publicChatState.recordSource=null;const viz=document.getElementById("pc-record-viz");if(viz)viz.remove();}
 function pcStartVoiceViz(stream){pcStopVoiceViz();try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=new Ctx();const src=ctx.createMediaStreamSource(stream);const analyser=ctx.createAnalyser();analyser.fftSize=128;analyser.smoothingTimeConstant=.7;src.connect(analyser);publicChatState.recordAudioCtx=ctx;publicChatState.recordAnalyser=analyser;publicChatState.recordSource=src;const wrap=document.querySelector(".pc-compose-main");if(!wrap)return;let viz=document.getElementById("pc-record-viz");if(!viz){viz=el("div","pc-record-viz pc-doppler");viz.id="pc-record-viz";for(let i=0;i<28;i++){const b=el("span","pc-record-bar");b.style.height="6px";viz.appendChild(b);}wrap.appendChild(viz);}const bars=[...viz.children];const data=new Uint8Array(analyser.frequencyBinCount);let t=0;const draw=()=>{if(!publicChatState.recording||!publicChatState.recordAnalyser){pcStopVoiceViz();return;}analyser.getByteFrequencyData(data);let avg=0;for(let i=0;i<data.length;i++)avg+=data[i];avg=avg/data.length/255;t+=0.08+avg*0.12;bars.forEach((b,i)=>{const idx=Math.floor((i/bars.length)*data.length);const v=(data[idx]||0)/255;const wave=Math.sin(t+i*0.45)*0.5+0.5;const h=4+Math.round((v*0.65+avg*0.2+wave*0.15)*30);const hue=265+v*35+Math.sin(t+i*0.3)*12;const light=32+v*32;const sat=70+v*25;b.style.height=h+"px";b.style.background=`hsl(${hue.toFixed(1)} ${sat.toFixed(0)}% ${light.toFixed(0)}%)`;b.style.opacity=String(.35+v*.55+avg*.1);b.style.transform=`scaleY(${(0.85+v*0.35).toFixed(3)})`;});publicChatState.recordRaf=requestAnimationFrame(draw);};draw();}catch(_e){}}
 function pcClearVoice(){pcStopVoiceViz();if(publicChatState.voiceUrl){try{URL.revokeObjectURL(publicChatState.voiceUrl);}catch(_e){}}publicChatState.voiceBlob=null;publicChatState.voiceUrl=null;publicChatState.voiceDurationMs=0;publicChatState.recordChunks=[];publicChatState.recording=false;}
-function pcClearAttachment(){publicChatState.attachmentFile=null;}
+function pcClearAttachment(){publicChatState.attachmentFile=null;publicChatState.attachmentViewOnce=false;}
 function pcMentionCodes(text){const out=[];const re=/@(MNH-\d{4})/g;let m;while((m=re.exec(String(text||"")))!==null){if(out.indexOf(m[1])<0)out.push(m[1]);}return out.slice(0,20);}
 function pcReplySnapshot(m){return m?{id:m.id,sender_identity:m.sender_identity||m.sender_code,sender_code:m.sender_code,text:m.text||"",deleted:!!m.deleted,has_audio:!!(m.audio&&m.audio.url)}:null;}
 function pcMicBlockedMessage(){return "Microphone access is blocked. Allow microphone permission for this site, then try recording again.";}
@@ -1940,8 +1941,8 @@ function pcEmojiPicker(targetId){
  return wrap;
 }
 async function pcSendMessage(payload,tempId){try{const res=await pcApi("/api/public-chat/messages",{method:"POST",body:payload});delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}pcToast(e.message||String(e));return false;}finally{if(currentView==="public-chat")pcRenderMessages();}}
-async function pcUploadVoice(tempId){const blob=publicChatState.voiceBlob;if(!blob)return false;const mime=blob.type||publicChatState.voiceMime||"audio/webm";const ext=pcAudioExt(mime);const form=new FormData();const voiceName=pcNextVoiceName(ext);form.append("file",blob,voiceName);if(draft&&draft.audio)draft.audio.file_name=voiceName;if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);const mentionText=(publicChatState.voiceNoteText||publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(mentionText).join(","));form.append("duration_ms",String(Math.max(0,Math.round(publicChatState.voiceDurationMs||0))));const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft&&draft.audio){draft.audio.duration_ms=publicChatState.voiceDurationMs||draft.audio.duration_ms||0;draft.audio.size_bytes=blob.size||draft.audio.size_bytes||0;}try{const res=await pcFormApi("/api/public-chat/voice-notes",form,240000);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearVoice();publicChatState.voiceNoteText="";return true;}catch(e){const d=(publicChatState.messages||[]).find(m=>m.id===tempId);if(d){d.status="failed";d.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
-async function pcUploadAttachment(tempId){const file=publicChatState.attachmentFile;if(!file)return false;const form=new FormData();form.append("file",file,file.name);if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);form.append("text",publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(publicChatState.attachmentText||"").join(","));try{const res=await pcFormApi("/api/public-chat/attachments",form);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearAttachment();publicChatState.attachmentText="";return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
+async function pcUploadVoice(tempId){const blob=publicChatState.voiceBlob;if(!blob)return false;const mime=blob.type||publicChatState.voiceMime||"audio/webm";const ext=pcAudioExt(mime);const form=new FormData();const voiceName=pcNextVoiceName(ext);form.append("file",blob,voiceName);const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft&&draft.audio)draft.audio.file_name=voiceName;if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);const mentionText=(publicChatState.voiceNoteText||publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(mentionText).join(","));form.append("duration_ms",String(Math.max(0,Math.round(publicChatState.voiceDurationMs||0))));if(draft&&draft.audio){draft.audio.duration_ms=publicChatState.voiceDurationMs||draft.audio.duration_ms||0;draft.audio.size_bytes=blob.size||draft.audio.size_bytes||0;}try{const res=await pcFormApi("/api/public-chat/voice-notes",form,240000);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearVoice();publicChatState.voiceNoteText="";return true;}catch(e){const d=(publicChatState.messages||[]).find(m=>m.id===tempId);if(d){d.status="failed";d.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
+async function pcUploadAttachment(tempId){const file=publicChatState.attachmentFile;if(!file)return false;const form=new FormData();form.append("file",file,file.name);if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);form.append("text",publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(publicChatState.attachmentText||"").join(","));form.append("view_once",publicChatState.attachmentViewOnce?"1":"0");try{const res=await pcFormApi("/api/public-chat/attachments",form);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearAttachment();publicChatState.attachmentText="";return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
 function pcRefreshComposer(){if(currentView!=="public-chat")return;const old=document.querySelector(".pc-composer");const next=pcComposerNode();if(old){old.replaceWith(next);}else{const card=document.querySelector(".pc-chat-card");if(card)card.appendChild(next);}if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();}
 
 function pcApplyChatTheme(){
@@ -2101,14 +2102,15 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
     if(publicChatState.msgMenu===m.id)menuWrap.appendChild(pcMessageMenu(m,mine));
     bubble.appendChild(menuWrap);
   }
-  if(publicChatState.deleteConfirm===m.id){
-    const confirmWrap=el("div","pc-delete-confirm");
-    confirmWrap.appendChild(el("span","pc-delete-confirm-text","Delete this message?"));
-    const actions=el("div","pc-delete-confirm-actions");
-    const cancel=el("button","pc-delete-cancel","Cancel");cancel.type="button";cancel.onclick=(e)=>{e.stopPropagation();publicChatState.deleteConfirm=null;pcRenderMessages();};
-    const del=el("button","pc-delete-ok","Delete");del.type="button";del.onclick=async(e)=>{e.stopPropagation();del.disabled=true;try{const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(m.id)}`,{method:"DELETE"});publicChatState.deleteConfirm=null;pcUpsertMessage(res.message);pcRenderMessages();}catch(err){del.disabled=false;pcToast(err.message||String(err));}};
-    actions.append(cancel,del);confirmWrap.appendChild(actions);bubble.appendChild(confirmWrap);
-  }
+  if(publicChatState.deleteConfirm && publicChatState.deleteConfirm.id===m.id){
+     const mode=publicChatState.deleteConfirm.mode||"me";
+     const confirmWrap=el("div","pc-delete-confirm");
+     confirmWrap.appendChild(el("span","pc-delete-confirm-text",mode==="all"?"Delete this message for everyone?":"Delete this message for you?"));
+     const actions=el("div","pc-delete-confirm-actions");
+     const cancel=el("button","pc-delete-cancel","Cancel");cancel.type="button";cancel.onclick=(e)=>{e.stopPropagation();publicChatState.deleteConfirm=null;pcRenderMessages();};
+     const del=el("button","pc-delete-ok",mode==="all"?"Delete for everyone":"Delete for me");del.type="button";del.onclick=async(e)=>{e.stopPropagation();del.disabled=true;try{const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(m.id)}?mode=${encodeURIComponent(mode)}`,{method:"DELETE"});publicChatState.deleteConfirm=null;if(res&&res.action==="deleted_for_me"){pcForgetMessage(m.id);}else if(res&&res.message){pcUpsertMessage(res.message);}pcRenderMessages();}catch(err){del.disabled=false;pcToast(err.message||String(err));}};
+     actions.append(cancel,del);confirmWrap.appendChild(actions);bubble.appendChild(confirmWrap);
+   }
   row.appendChild(bubble);
   if(mine) row.appendChild(el("div","pc-avatar-spacer"));
   list.appendChild(row);});
@@ -2118,7 +2120,23 @@ async function renderPublicChat(){
  publicChatState._rendering=true;
  pcLoadChatTheme();
  try{
- const root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");
+ const wsRoot=document.getElementById("workspace-body");
+ let root=wsRoot;
+ const existingCard = wsRoot && wsRoot.querySelector('.pc-chat-card');
+ const hasShell = wsRoot && wsRoot.classList.contains('pc-shell') && existingCard;
+ if(hasShell){
+  root=wsRoot;
+  root.querySelectorAll('.pc-toast').forEach(n=>n.remove());
+  // Soft refresh: update status/menu/messages without rebuilding the shell to avoid nav flush.
+  pcRefreshHeadMenu();
+  pcRefreshSearchBar();
+  pcRefreshComposer();
+  pcRenderMessages();
+  const subNow=document.getElementById("pc-online");
+  if(subNow)subNow.textContent=publicChatState.joined?((publicChatState.online||0)+" online • "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting";
+  return;
+ }
+ root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");
  root.querySelectorAll('.pc-chat-card,.pc-toast').forEach(n=>n.remove());
  const card=el("div","pc-chat-card");
  const head=el("div","pc-chat-headbar");
@@ -2150,9 +2168,30 @@ async function renderPublicChat(){
  }
 
  if(!publicChatState.joined){
-  const join=el("div","pc-join");join.appendChild(el("h4",null,"Join MNH Group Chat"));join.appendChild(el("p",null,"Request a unique identification code (MNH-XXXX). It identifies you in chat and is not a password."));
+  const join=el("div","pc-join");join.appendChild(el("h4",null,"Join MNH Group Chat"));join.appendChild(el("p",null,"Enter your existing MNH ID (MNH-XXXX) or request a new one. It identifies you in chat and is not a password."));
   const name=fieldInput("Display name (optional)",80,"text");name.className="pc-join-input";
-  const btn=el("button","primary","Request chat code");btn.type="button";btn.onclick=async()=>{btn.disabled=true;btn.textContent="Requesting...";try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:name.value.trim()}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];publicChatState.emojiOpen=false;if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);renderPublicChat();if(!publicChatState.joined)pcToast(res.access_request&&res.access_request.status==="pending"?"Access request awaiting moderator approval.":"Chat access is not active yet.");}catch(e){pcToast(e.message||String(e));}finally{btn.disabled=false;btn.textContent="Request chat code";}};join.append(name,btn);card.appendChild(join);
+  const code=fieldInput("Existing MNH ID (optional)",20,"text");code.className="pc-join-input";code.placeholder="MNH-1234";
+  const row=el("div","pc-join-actions");
+  const joinBtn=el("button","primary","Join with ID");joinBtn.type="button";
+  const reqBtn=el("button","soft","Request new ID");reqBtn.type="button";
+  async function doJoin(requestNew){
+    const idCode=code.value.trim().toUpperCase();
+    if(!requestNew && !/^MNH-\d{4}$/.test(idCode)){pcToast("Enter a valid MNH ID (MNH-XXXX) or request a new one."); return;}
+    joinBtn.disabled=reqBtn.disabled=true;
+    (requestNew?reqBtn:joinBtn).textContent=requestNew?"Requesting...":"Joining...";
+    try{
+      const body={display_name:name.value.trim(), request_new:!!requestNew};
+      if(!requestNew) body.code=idCode;
+      const res=await pcApi("/api/public-chat/join",{method:"POST",body});
+      publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];publicChatState.emojiOpen=false;
+      if(publicChatState.joined)pcEnsureRealtime();
+      await pcLoadMessages(true);await pcLoadPreferences(true);renderPublicChat();
+      if(!publicChatState.joined)pcToast(res.access_request&&res.access_request.status==="pending"?"Access request awaiting moderator approval.":"Chat access is not active yet.");
+    }catch(e){pcToast(e.message||String(e));}
+    finally{joinBtn.disabled=reqBtn.disabled=false;joinBtn.textContent="Join with ID";reqBtn.textContent="Request new ID";}
+  }
+  joinBtn.onclick=()=>doJoin(false); reqBtn.onclick=()=>doJoin(true);
+  row.append(joinBtn,reqBtn); join.append(name,code,row); card.appendChild(join);
  }
 
  if(publicChatState.searchResults)card.appendChild(el("div","pc-search-note","Showing search results for \u201c"+publicChatState.searchQuery+"\u201d"));
@@ -2892,7 +2931,7 @@ function initHeader(){
  });
  // keep views and header fresh when the timetable or editing state changes
  const _build=build;build=function(){_build();refreshHeader();if(currentView==="modules")renderModules();};
- const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="public-chat"||currentView==="examinations"||currentView==="recurring")renderView(currentView);};
+ const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="public-chat"||currentView==="examinations"||currentView==="exams"||currentView==="recurring")renderView(currentView);};
  setInterval(refreshHeader,30000);
  refreshHeader();if(location.hash){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}showView("weekly");
  initWeekNav();

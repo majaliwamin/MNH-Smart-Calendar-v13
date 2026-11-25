@@ -168,12 +168,16 @@
       const isNetworkFailure = error.status == null
         ? error instanceof TypeError || !navigator.onLine
         : error.status >= 500;
-      if (isNetworkFailure && isWrite) {
+      const isExamMutation = /^\/api\/exams\/.+\/(autosave|submit|start)$/.test(path) || /^\/api\/exams\/(sessions|enrollments|questions)/.test(path);
+      if (isNetworkFailure && isWrite && !isExamMutation) {
         enqueue(verb, path, body);
         throw Object.assign(
           new Error("You are offline. This change has been saved on this device and will sync automatically."),
           { queued: true },
         );
+      }
+      if (isExamMutation) {
+        throw Object.assign(new Error(error.message || "EXAMS request failed. Check connection and retry."), { examMutation: true, status: error.status });
       }
 
       throw error;

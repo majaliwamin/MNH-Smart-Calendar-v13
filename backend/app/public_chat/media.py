@@ -16,7 +16,7 @@ _INLINE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf",
 
 
 def media_response(user: dict, file_id: str):
-    if not store.can_access_media(user, file_id):
+    if not store.can_access_media(user, file_id, consume_view_once=True):
         raise HTTPException(404, "Media not found.")
     path = store.get_media_path(file_id)
     if path:

@@ -31,7 +31,7 @@ const KATEX_FONTS = [
 ];
 const APP_FILES = [
   "/", "/index.html", "/css/app.css", "/js/week-model.js", "/js/api-client.js",
-  "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/css/class-rep.css",
+  "/js/app.js", "/js/class-rep-renderer.js", "/js/class-rep.js", "/js/exams.js", "/css/class-rep.css", "/css/exams.css",
   "/favicon.svg", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png",
   "/icons/icon-maskable-512.png", "/icons/apple-touch-icon.png",
   "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css", "/vendor/katex/auto-render.min.js",

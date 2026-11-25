@@ -78,11 +78,26 @@ def resolve_user(request, allow_create_guest: bool = False) -> dict[str, Any]:
     if cara_user:
         return {**cara_user, "auth": "cara_session"}
 
-    # Legacy CRARA guest cookies are not signed by this app and are intentionally
-    # not accepted here. The public chat issues its own HttpOnly signed cookie.
     guest_id = resolve_guest_cookie(cookies.get(PC_GUEST_COOKIE))
     if guest_id:
         return {"id": guest_id, "name": "Guest", "email": "", "guest": True, "auth": "mnh_pc_guest"}
+
+    # Bridge legacy CRARA guest cookies to a stable public-chat identity so the
+    # same browser guest can use one MNH-XXXX code across MNH chat and CRARA.
+    cara_guest = str(cookies.get("cara_guest") or "").strip()
+    if _CARA_GUEST_RE.fullmatch(cara_guest):
+        raw = cara_guest[len("guest_"):]
+        sig = hmac.new(_guest_secret(), raw.encode("ascii"), hashlib.sha256).hexdigest()[:32]
+        user = {
+            "id": "pc_guest_" + raw,
+            "name": "Guest",
+            "email": "",
+            "guest": True,
+            "auth": "cara_guest_bridge",
+        }
+        if allow_create_guest:
+            user["_new_cookie"] = f"pc_guest_{raw}.{sig}"
+        return user
 
     if allow_create_guest:
         user_id, cookie_value = make_guest_cookie()

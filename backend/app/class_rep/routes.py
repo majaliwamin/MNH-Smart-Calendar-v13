@@ -14,7 +14,8 @@ from app.class_rep.error_hygiene import is_transient_error_text
 from app.class_rep.providers import ProviderError, cloudflare_diagnostic, provider_diagnostic
 from app.class_rep.documents import ingest, list_documents, delete_document, DocumentError
 from app.class_rep.slides import MAX_UPLOAD_BYTES, SlideImportError, render_presentation
-from app.class_rep.voice import transcribe, speak, VoiceError, STT_MODEL_DEFAULT
+from app.class_rep.voice import transcribe, speak, VoiceError, STT_MODEL_DEFAULT, tts_status
+from app.class_rep.speech_style import build_speech_plan, normalize_speech_mode, normalize_speech_style
 from app.class_rep import memory
 from app.class_rep.language_intelligence import resolve_response_language
 from app.class_rep.linguistic_knowledge import lexicon_stats
@@ -254,9 +255,11 @@ def status():
             "audio_uploads": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
             "document_search": "keyword_then_semantic_fallback" if cloudflare else "keyword_only",
             "embedding_model": os.getenv("MNH_CLASSREP_CLOUDFLARE_EMBEDDING_MODEL", "@cf/google/embeddinggemma-2"),
-            "voice": "enabled" if cloudflare and stt else "disabled_missing_voice_model",
+            "voice": "enabled" if ((os.getenv("MNH_CLASSREP_TTS_PROVIDER", "cloudflare").strip().lower() not in {"cloudflare", ""}) or (cloudflare and stt)) else "disabled_missing_voice_model",
             "speech_to_text_model": stt or None,
-            "text_to_speech_model": (os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL") or "@cf/deepgram/aura-2-en").strip(),
+            "text_to_speech_provider": (os.getenv("MNH_CLASSREP_TTS_PROVIDER") or "cloudflare").strip().lower(),
+            "text_to_speech_model": (os.getenv("MNH_CLASSREP_TTS_API_MODEL") or os.getenv("MNH_CLASSREP_QWEN3_MODEL") or os.getenv("MNH_CLASSREP_CLOUDFLARE_TTS_MODEL") or "@cf/deepgram/aura-2-en").strip(),
+            "text_to_speech_fallback": os.getenv("MNH_CLASSREP_TTS_FALLBACK", "1").strip().lower() not in {"0", "false", "no", "off"},
             "management_analytics": "role_restricted",
             "management_analytics_roles": ["hod", "coordinator", "executive_dean"],
             "account_memory": "persistent_account_scoped" if _durable_storage_ready() else "disabled_missing_durable_storage", "reminder_delivery": "in_app_only"}
@@ -632,13 +635,35 @@ async def transcribe_audio(request: Request, file: UploadFile = File(...)):
         raise HTTPException(400, str(exc)) from exc
 
 
+@router.get("/voice/status")
+def voice_status(request: Request):
+    _user(request)
+    _rate("voice-status:" + _user(request)["id"], 20)
+    return tts_status(probe_remote=True)
+
+
 @router.post("/speak")
 def speak_text(payload: dict, request: Request):
-    _user(request)
-    _rate("voice:" + _user(request)["id"], 10)
+    user = _user(request)
+    _rate("voice:" + user["id"], 10)
+    mode = normalize_speech_mode(payload.get("mode"), default="chat")
+    style = normalize_speech_style(payload.get("style"), default="natural")
+    language = str(payload.get("language") or "EN").upper()
+    voice = str(payload.get("voice") or "").strip() or None
+    text = str(payload.get("text", ""))[:1800]
+    plan = build_speech_plan(text, mode=mode, style=style, language=language)
     try:
-        audio, media_type = speak(str(payload.get("text", ""))[:1800])
-        return StreamingResponse(BytesIO(audio), media_type=media_type,
-            headers={"Cache-Control": "no-store", "Content-Disposition": 'inline; filename="cara-response.mp3"'})
+        audio, media_type, meta = speak(text, mode=mode, style=style, language=language, voice=voice)
+        headers = {
+            "Cache-Control": "no-store",
+            "Content-Disposition": 'inline; filename="cara-response.mp3"',
+            "X-CRARA-Speech-Mode": plan.mode,
+            "X-CRARA-Speech-Style": plan.style,
+            "X-CRARA-Speech-Language": plan.language,
+            "X-CRARA-TTS-Provider": str(meta.get("provider") or ""),
+            "X-CRARA-TTS-Model": str(meta.get("model") or ""),
+            "X-CRARA-TTS-Fallback-From": str(meta.get("fallback_from") or ""),
+        }
+        return StreamingResponse(BytesIO(audio), media_type=media_type, headers=headers)
     except VoiceError as exc:
         raise HTTPException(503, str(exc)) from exc

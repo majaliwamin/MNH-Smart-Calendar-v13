@@ -58,14 +58,10 @@ def connect():
             "INSERT OR IGNORE INTO docs(col,id,data,updated_at) VALUES(?,?,?,?)",
             ("recurring", recurring_id, json.dumps(data, ensure_ascii=False), now),
         )
-    # Remove the known hardcoded timetable seed cells, while preserving all other
-    # user-created timetable records.
-    obsolete_seed_ids = ("1_0", "6_0", "6_1", "0_2", "3_2", "1_3", "2_3", "6_3", "0_4", "3_4")
-    placeholders = ",".join("?" for _ in obsolete_seed_ids)
-    connection.execute(
-        f"DELETE FROM docs WHERE col='cells' AND id IN ({placeholders})",
-        obsolete_seed_ids,
-    )
+    # Previously this startup deleted known legacy seed cells (1_0,6_0,...).
+    # That erased legitimate schedules during upgrades/instance moves when IDs
+    # matched. Do not auto-delete cell data on connect; preserve all user-managed
+    # timetable records. Cleanup must be explicit and backup-backed if needed.
     # The timetable spans Monday–Sunday. Cells outside that range are retained
     # and flagged for review. The recurring collection is separately restricted to the
     # two canonical weekly events above.

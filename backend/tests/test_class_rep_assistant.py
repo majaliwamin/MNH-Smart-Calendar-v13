@@ -220,9 +220,10 @@ def test_document_admin_token_is_required(monkeypatch):
     _require_document_admin("strong-secret")
 
 
-def test_voice_adapters_validate_and_return_audio(monkeypatch):
+def test_voice_adapters_validate_and_return_audio(monkeypatch, tmp_path):
     from app.class_rep import voice
     monkeypatch.setenv("MNH_CLASSREP_CLOUDFLARE_STT_MODEL", "@cf/test/speech-to-text")
+    monkeypatch.setenv("MNH_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(voice, "_run", lambda model, payload: {"text": "Hello class"})
     assert voice.transcribe(b"audio-bytes", "audio/webm") == "Hello class"
     try:
@@ -232,8 +233,36 @@ def test_voice_adapters_validate_and_return_audio(monkeypatch):
     else:
         raise AssertionError("Non-audio uploads must be rejected")
     monkeypatch.setattr(voice, "_run_audio", lambda model, payload: (b"mp3", "audio/mpeg"))
-    audio, content_type = voice.speak("Hello")
+    audio, content_type, meta = voice.speak("Hello")
     assert audio == b"mp3" and content_type == "audio/mpeg"
+    assert meta.get("provider") == "cloudflare"
+
+
+def test_qwen_remote_tts_falls_back_when_unhealthy(monkeypatch, tmp_path):
+    from app.class_rep import voice
+    monkeypatch.setenv("MNH_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MNH_CLASSREP_TTS_PROVIDER", "qwen_remote")
+    monkeypatch.setenv("QWEN_TTS_BASE_URL", "https://example.invalid")
+    monkeypatch.setenv("QWEN_TTS_API_KEY", "test-key")
+    monkeypatch.setenv("QWEN_TTS_FALLBACK_ENABLED", "1")
+    monkeypatch.setattr(voice, "_remote_health_check", lambda force=False: {"configured": True, "healthy": False, "ready": False, "detail": "down"})
+    monkeypatch.setattr(voice, "_speak_cloudflare", lambda plan, voice=None: (b"mp3", "audio/mpeg", {"provider": "cloudflare", "model": "cf", "remote": False}))
+    audio, content_type, meta = voice.speak("Hello")
+    assert content_type == "audio/mpeg"
+    assert meta.get("provider") == "cloudflare"
+    assert meta.get("fallback_from") == "qwen_remote"
+
+
+def test_qwen_remote_tts_disabled_by_flag(monkeypatch):
+    from app.class_rep import voice
+    monkeypatch.setenv("MNH_CLASSREP_TTS_PROVIDER", "qwen_remote")
+    monkeypatch.setenv("QWEN_TTS_ENABLED", "false")
+    try:
+        voice.speak("Hello")
+    except voice.VoiceError as exc:
+        assert "disabled" in str(exc).lower()
+    else:
+        raise AssertionError("Disabled remote TTS must not synthesize")
 
 
 def test_voice_accepts_binary_cloudflare_tts_response(monkeypatch):

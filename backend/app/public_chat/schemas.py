@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 class JoinRequest(BaseModel):
     display_name: str = Field(default="", max_length=80)
+    code: str = Field(default="", max_length=20)
+    request_new: bool = False
 
 
 class MessageCreateRequest(BaseModel):
@@ -14,6 +16,7 @@ class MessageCreateRequest(BaseModel):
     reply_to_id: str | None = Field(default=None, max_length=80)
     private_recipient_code: str | None = Field(default=None, max_length=20)
     mention_codes: list[str] = Field(default_factory=list, max_length=20)
+    view_once: bool = False
 
 
 class MessageEditRequest(BaseModel):

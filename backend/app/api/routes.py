@@ -53,7 +53,7 @@ def _export_rows():
         with database() as connection:
             return connection.execute(
                 "SELECT col,id,data FROM docs "
-                "WHERE substr(col,1,5) <> 'cara_' AND substr(col,1,12) <> 'public_chat_' "
+                "WHERE substr(col,1,5) <> 'cara_' AND substr(col,1,12) <> 'public_chat_' AND substr(col,1,6) <> 'exams_' "
                 "ORDER BY col,id"
             ).fetchall()
     except Exception as exc:
@@ -209,56 +209,62 @@ def sync_resources_for_crara(payload: dict = Body(...)):
     This endpoint only upserts supplied records; an empty/offline Firestore snapshot
     never deletes the existing shared inventory.
     """
-    items = payload.get("resources")
-    if not isinstance(items, list) or len(items) > 500:
-        raise HTTPException(400, "Provide a resources array containing no more than 500 records.")
-    synced = 0
-    indexed = 0
-    indexing_unavailable = 0
-    now = int(time.time() * 1000)
+    try:
+        items = payload.get("resources")
+        if not isinstance(items, list) or len(items) > 500:
+            raise HTTPException(400, "Provide a resources array containing no more than 500 records.")
+        synced = 0
+        indexed = 0
+        indexing_unavailable = 0
+        now = int(time.time() * 1000)
 
-    def safe_int(value):
-        try:
-            return int(value or 0)
-        except (TypeError, ValueError, OverflowError):
-            return 0
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        item_id = str(item.get("id") or "").strip()
-        data = item.get("data")
-        if not NAME.fullmatch(item_id) or not isinstance(data, dict):
-            continue
-        clean = {
-            "title": str(data.get("title") or "")[:180],
-            "url": str(data.get("url") or "")[:1200],
-            "note": str(data.get("note") or "")[:3000],
-            "category": str(data.get("category") or "Others")[:80],
-            "createdAt": safe_int(data.get("createdAt")),
-            "fileId": str(data.get("fileId") or "")[:64],
-            "fileName": str(data.get("fileName") or "")[:255],
-            "fileSize": max(0, safe_int(data.get("fileSize"))),
-        }
-        if not clean["title"] or not clean["url"]:
-            continue
-        with database() as connection:
-            connection.execute(
-                "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
-                "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
-                ("resources", item_id, json.dumps(clean, ensure_ascii=False), now),
-            )
-        synced += 1
-        if clean["fileId"]:
+        def safe_int(value):
             try:
-                ensure_crara_resource_indexed(clean["fileId"], clean["fileName"] or clean["title"])
-                indexed += 1
-            except CRARADocumentError as exc:
-                indexing_unavailable += 1
-                logger.warning("CRARA resource backfill unavailable resource_id=%s reason=%s", item_id, str(exc))
-            except Exception:
-                indexing_unavailable += 1
-                logger.exception("CRARA resource backfill failed resource_id=%s", item_id)
-    return {"synced": synced, "indexed": indexed, "indexing_unavailable": indexing_unavailable}
+                return int(value or 0)
+            except (TypeError, ValueError, OverflowError):
+                return 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id") or "").strip()
+            data = item.get("data")
+            if not NAME.fullmatch(item_id) or not isinstance(data, dict):
+                continue
+            clean = {
+                "title": str(data.get("title") or "")[:180],
+                "url": str(data.get("url") or "")[:1200],
+                "note": str(data.get("note") or "")[:3000],
+                "category": str(data.get("category") or "Others")[:80],
+                "createdAt": safe_int(data.get("createdAt")),
+                "fileId": str(data.get("fileId") or "")[:64],
+                "fileName": str(data.get("fileName") or "")[:255],
+                "fileSize": max(0, safe_int(data.get("fileSize"))),
+            }
+            if not clean["title"] or not clean["url"]:
+                continue
+            with database() as connection:
+                connection.execute(
+                    "INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
+                    "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
+                    ("resources", item_id, json.dumps(clean, ensure_ascii=False), now),
+                )
+            synced += 1
+            if clean["fileId"]:
+                try:
+                    ensure_crara_resource_indexed(clean["fileId"], clean["fileName"] or clean["title"])
+                    indexed += 1
+                except CRARADocumentError as exc:
+                    indexing_unavailable += 1
+                    logger.warning("CRARA resource backfill unavailable resource_id=%s reason=%s", item_id, str(exc))
+                except Exception:
+                    indexing_unavailable += 1
+                    logger.exception("CRARA resource backfill failed resource_id=%s", item_id)
+        return {"synced": synced, "indexed": indexed, "indexing_unavailable": indexing_unavailable}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("resources/sync failed")
+        raise HTTPException(503, "Resources sync temporarily unavailable.") from exc
 
 
 @router.delete("/resources/sync/{resource_id}")
@@ -754,9 +760,21 @@ def export_all():
 def get_collection(collection: str):
     if collection not in ALLOWED_COLLECTIONS:
         raise HTTPException(404, "not found")
-    with database() as c:
-        rows = c.execute("SELECT id,data FROM docs WHERE col=? ORDER BY id", (collection,)).fetchall()
-    return [{"id": r["id"], "data": json.loads(r["data"])} for r in rows]
+    try:
+        with database() as c:
+            rows = c.execute("SELECT id,data FROM docs WHERE col=? ORDER BY id", (collection,)).fetchall()
+        out = []
+        for r in rows:
+            try:
+                out.append({"id": r["id"], "data": json.loads(r["data"])})
+            except (TypeError, json.JSONDecodeError):
+                logger.warning("Skipping malformed doc col=%s id=%s", collection, r["id"])
+        return out
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Collection read failed col=%s", collection)
+        raise HTTPException(503, f"Collection temporarily unavailable: {collection}") from exc
 
 
 @router.post("/auth")
@@ -788,6 +806,9 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
         if not isinstance(item, dict):
             raise HTTPException(400, "Backup contains an invalid record.")
         col, item_id, data = item.get("col"), str(item.get("id", "")), item.get("data")
+        if isinstance(col, str) and col.startswith("exams_"):
+            # EXAMS data is sensitive and managed by /api/exams; generic timetable restore must not write it.
+            continue
         if col not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id) or not isinstance(data, dict):
             raise HTTPException(400, "Backup contains an invalid record.")
         if col == "recurring":
@@ -835,135 +856,147 @@ def restore(payload: dict = Body(...), mnh_session: str | None = Cookie(default=
 @router.put("/doc/{collection}/{item_id}")
 @serialised_shared_write
 def put_document(collection: str, item_id: str, data: dict = Body(...), mnh_session: str | None = Cookie(default=None)):
-    session = require_editor(mnh_session)
-    if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
-        raise HTTPException(404, "not found")
-    if collection == "modules" and (not str(data.get("title", "")).strip() or len(str(data.get("title", ""))) > 160):
-        raise HTTPException(400, "A valid module title is required.")
-    if collection == "modules" and len(str(data.get("facilitator", "") or "")) > 120:
-        raise HTTPException(400, "Facilitator name must be 120 characters or fewer.")
-    if collection == "recurring":
-        expected = CANONICAL_RECURRING.get(item_id)
-        actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
-                  str(data.get("time", "")).strip())
-        if expected is None or actual != expected:
-            raise HTTPException(400, "Recurring activity titles and time slots are fixed; presenter names may be edited.")
-        if len(str(data.get("presenter", ""))) > 120:
-            raise HTTPException(400, "Presenter name must be 120 characters or fewer.")
-    if collection == "cells":
-        legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
-        day_index = data.get("dayIndex")
-        if (legacy_day and int(legacy_day.group(1)) >= len(WEEKDAY_NAMES)) or ("dayIndex" in data and (type(day_index) is not int or day_index < 0 or day_index >= len(WEEKDAY_NAMES))):
-            raise HTTPException(400, "Timetable sessions must be assigned Monday to Sunday.")
-        if ("startTime" in data) != ("endTime" in data) or (("startTime" in data or "endTime" in data) and not isinstance(day_index, int)):
-            raise HTTPException(400, "Custom sessions require a weekday, start time and end time.")
-        if "startTime" in data or "endTime" in data:
-            start, end = str(data.get("startTime", "")), str(data.get("endTime", ""))
-            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", start) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", end):
-                raise HTTPException(400, "Session start and end times must use HH:MM format.")
-            if start >= end:
-                raise HTTPException(400, "Session end time must be later than its start time.")
+    try:
+        session = require_editor(mnh_session)
+        if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
+            raise HTTPException(404, "not found")
+        if collection == "modules" and (not str(data.get("title", "")).strip() or len(str(data.get("title", ""))) > 160):
+            raise HTTPException(400, "A valid module title is required.")
+        if collection == "modules" and len(str(data.get("facilitator", "") or "")) > 120:
+            raise HTTPException(400, "Facilitator name must be 120 characters or fewer.")
+        if collection == "recurring":
+            expected = CANONICAL_RECURRING.get(item_id)
+            actual = (str(data.get("title", "")).strip(), str(data.get("day", "")).strip(),
+                      str(data.get("time", "")).strip())
+            if expected is None or actual != expected:
+                raise HTTPException(400, "Recurring activity titles and time slots are fixed; presenter names may be edited.")
+            if len(str(data.get("presenter", ""))) > 120:
+                raise HTTPException(400, "Presenter name must be 120 characters or fewer.")
+        if collection == "cells":
+            legacy_day = re.fullmatch(r"\d+_(\d+)", item_id)
             day_index = data.get("dayIndex")
-            if isinstance(day_index, int):
-                default_ranges = DEFAULT_SESSION_RANGES
-                with database() as c:
-                    existing_rows = c.execute("SELECT id,data FROM docs WHERE col='cells' AND id<>?", (item_id,)).fetchall()
-                    recurring_rows = c.execute("SELECT data FROM docs WHERE col='recurring'").fetchall()
-                new_start, new_end = int(start[:2]) * 60 + int(start[3:]), int(end[:2]) * 60 + int(end[3:])
-                for existing_row in existing_rows:
-                    existing_id = existing_row["id"]
-                    existing_data = json.loads(existing_row["data"])
-                    legacy = re.fullmatch(r"(\d+)_(\d+)", existing_id)
-                    existing_day = int(legacy.group(2)) if legacy else existing_data.get("dayIndex")
-                    if existing_day != day_index:
-                        continue
-                    if str(existing_data.get("weekStart") or "2026-11-16") != str(data.get("weekStart") or "2026-11-16"):
-                        continue
-                    if legacy:
-                        slot = int(legacy.group(1))
-                        fallback = default_ranges[slot] if 0 <= slot < len(default_ranges) else ""
-                    else:
-                        fallback = ""
-                    if existing_data.get("startTime") and existing_data.get("endTime"):
-                        range_text = str(existing_data["startTime"]) + "-" + str(existing_data["endTime"])
-                    elif legacy:
-                        label = str(existing_data.get("timeLabel", ""))
-                        match = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", label)
-                        range_text = (match.group(1) + "-" + match.group(2)) if match else fallback
-                    else:
-                        range_text = ""
-                    parts = range_text.split("-")
-                    if len(parts) != 2 or not re.fullmatch(r"\d{1,2}:\d{2}", parts[0]) or not re.fullmatch(r"\d{1,2}:\d{2}", parts[1]):
-                        continue
-                    old_start = int(parts[0][:2]) * 60 + int(parts[0][3:])
-                    old_end = int(parts[1][:2]) * 60 + int(parts[1][3:])
-                    if new_start < old_end and new_end > old_start:
-                        raise HTTPException(409, f"Session overlaps existing timetable entry {existing_id}.")
-                recurring_weekday_index = {name.casefold(): index for index, name in enumerate(WEEKDAY_NAMES)}
-                for recurring_row in recurring_rows:
-                    recurring_data = json.loads(recurring_row["data"])
-                    recurring_day = str(recurring_data.get("day", "")).strip().lower()
-                    recurring_index = recurring_weekday_index.get(recurring_day)
-                    if recurring_index != day_index:
-                        continue
-                    recurring_title = str(recurring_data.get("title", "")).strip().lower()
-                    if str(data.get("code", data.get("title", ""))).strip().lower() == recurring_title:
-                        continue
-                    recurring_range = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_data.get("time", "")))
-                    if recurring_range:
-                        rs = int(recurring_range.group(1)[:2]) * 60 + int(recurring_range.group(1)[3:])
-                        re_ = int(recurring_range.group(2)[:2]) * 60 + int(recurring_range.group(2)[3:])
-                        if new_start < re_ and new_end > rs:
-                            raise HTTPException(409, f"Session overlaps the recurring {recurring_data.get('title')}.")
-    with database() as c:
-        exists = c.execute("SELECT 1 FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
-        c.execute("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
-                  "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
-                  (collection, item_id, json.dumps(data, ensure_ascii=False), int(time.time()*1000)))
-        if collection in ("cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"):
-            description = next((str(data.get(k, "")).strip() for k in
-                                ("title", "activity", "message", "text", "name", "module", "code", "label") if data.get(k)), "")
-            kind = "session" if collection == "cells" else "record"
-            action = "updated" if exists else "added"
-            verb = "Updated" if exists else "Added"
-            summary = "%s %s%s" % (verb, kind, (": " + description[:170]) if description else "")
-            write_activity(c, session["role"], action, collection, item_id, summary)
-    return {"ok": True}
+            if (legacy_day and int(legacy_day.group(1)) >= len(WEEKDAY_NAMES)) or ("dayIndex" in data and (type(day_index) is not int or day_index < 0 or day_index >= len(WEEKDAY_NAMES))):
+                raise HTTPException(400, "Timetable sessions must be assigned Monday to Sunday.")
+            if ("startTime" in data) != ("endTime" in data) or (("startTime" in data or "endTime" in data) and not isinstance(day_index, int)):
+                raise HTTPException(400, "Custom sessions require a weekday, start time and end time.")
+            if "startTime" in data or "endTime" in data:
+                start, end = str(data.get("startTime", "")), str(data.get("endTime", ""))
+                if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", start) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", end):
+                    raise HTTPException(400, "Session start and end times must use HH:MM format.")
+                if start >= end:
+                    raise HTTPException(400, "Session end time must be later than its start time.")
+                day_index = data.get("dayIndex")
+                if isinstance(day_index, int):
+                    default_ranges = DEFAULT_SESSION_RANGES
+                    with database() as c:
+                        existing_rows = c.execute("SELECT id,data FROM docs WHERE col='cells' AND id<>?", (item_id,)).fetchall()
+                        recurring_rows = c.execute("SELECT data FROM docs WHERE col='recurring'").fetchall()
+                    new_start, new_end = int(start[:2]) * 60 + int(start[3:]), int(end[:2]) * 60 + int(end[3:])
+                    for existing_row in existing_rows:
+                        existing_id = existing_row["id"]
+                        existing_data = json.loads(existing_row["data"])
+                        legacy = re.fullmatch(r"(\d+)_(\d+)", existing_id)
+                        existing_day = int(legacy.group(2)) if legacy else existing_data.get("dayIndex")
+                        if existing_day != day_index:
+                            continue
+                        if str(existing_data.get("weekStart") or "2026-11-16") != str(data.get("weekStart") or "2026-11-16"):
+                            continue
+                        if legacy:
+                            slot = int(legacy.group(1))
+                            fallback = default_ranges[slot] if 0 <= slot < len(default_ranges) else ""
+                        else:
+                            fallback = ""
+                        if existing_data.get("startTime") and existing_data.get("endTime"):
+                            range_text = str(existing_data["startTime"]) + "-" + str(existing_data["endTime"])
+                        elif legacy:
+                            label = str(existing_data.get("timeLabel", ""))
+                            match = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", label)
+                            range_text = (match.group(1) + "-" + match.group(2)) if match else fallback
+                        else:
+                            range_text = ""
+                        parts = range_text.split("-")
+                        if len(parts) != 2 or not re.fullmatch(r"\d{1,2}:\d{2}", parts[0]) or not re.fullmatch(r"\d{1,2}:\d{2}", parts[1]):
+                            continue
+                        old_start = int(parts[0][:2]) * 60 + int(parts[0][3:])
+                        old_end = int(parts[1][:2]) * 60 + int(parts[1][3:])
+                        if new_start < old_end and new_end > old_start:
+                            raise HTTPException(409, f"Session overlaps existing timetable entry {existing_id}.")
+                    recurring_weekday_index = {name.casefold(): index for index, name in enumerate(WEEKDAY_NAMES)}
+                    for recurring_row in recurring_rows:
+                        recurring_data = json.loads(recurring_row["data"])
+                        recurring_day = str(recurring_data.get("day", "")).strip().lower()
+                        recurring_index = recurring_weekday_index.get(recurring_day)
+                        if recurring_index != day_index:
+                            continue
+                        recurring_title = str(recurring_data.get("title", "")).strip().lower()
+                        if str(data.get("code", data.get("title", ""))).strip().lower() == recurring_title:
+                            continue
+                        recurring_range = re.fullmatch(r"\s*(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})\s*", str(recurring_data.get("time", "")))
+                        if recurring_range:
+                            rs = int(recurring_range.group(1)[:2]) * 60 + int(recurring_range.group(1)[3:])
+                            re_ = int(recurring_range.group(2)[:2]) * 60 + int(recurring_range.group(2)[3:])
+                            if new_start < re_ and new_end > rs:
+                                raise HTTPException(409, f"Session overlaps the recurring {recurring_data.get('title')}.")
+        with database() as c:
+            exists = c.execute("SELECT 1 FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
+            c.execute("INSERT INTO docs(col,id,data,updated_at) VALUES(?,?,?,?) "
+                      "ON CONFLICT(col,id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
+                      (collection, item_id, json.dumps(data, ensure_ascii=False), int(time.time()*1000)))
+            if collection in ("cells", "resources", "settings", "modules", "facilitators", "examinations", "recurring", "communications"):
+                description = next((str(data.get(k, "")).strip() for k in
+                                    ("title", "activity", "message", "text", "name", "module", "code", "label") if data.get(k)), "")
+                kind = "session" if collection == "cells" else "record"
+                action = "updated" if exists else "added"
+                verb = "Updated" if exists else "Added"
+                summary = "%s %s%s" % (verb, kind, (": " + description[:170]) if description else "")
+                write_activity(c, session["role"], action, collection, item_id, summary)
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("put_document failed col=%s id=%s", collection, item_id)
+        raise HTTPException(503, f"Collection temporarily unavailable: {collection}") from exc
 
 
 @router.delete("/doc/{collection}/{item_id}")
 @serialised_shared_write
 def delete_document(collection: str, item_id: str, mnh_session: str | None = Cookie(default=None)):
-    require_editor(mnh_session)
-    if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
-        raise HTTPException(404, "not found")
-    if collection == "recurring":
+    try:
+        require_editor(mnh_session)
+        if collection not in ALLOWED_COLLECTIONS or not NAME.fullmatch(item_id):
+            raise HTTPException(404, "not found")
+        if collection == "recurring":
+            with database() as c:
+                row=c.execute("SELECT data FROM docs WHERE col=? AND id=?",(collection,item_id)).fetchone()
+                if row:
+                    data=json.loads(row["data"]);data["enabled"]=False
+                    c.execute("UPDATE docs SET data=?,updated_at=? WHERE col=? AND id=?",
+                              (json.dumps(data,ensure_ascii=False),int(time.time()*1000),collection,item_id))
+                    write_activity(c, "public", "updated", collection, item_id,
+                                   "Disabled recurring activity: " + str(data.get("title") or item_id)[:170])
+            return {"ok": True}
         with database() as c:
-            row=c.execute("SELECT data FROM docs WHERE col=? AND id=?",(collection,item_id)).fetchone()
+            row = c.execute("SELECT data FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
             if row:
-                data=json.loads(row["data"]);data["enabled"]=False
-                c.execute("UPDATE docs SET data=?,updated_at=? WHERE col=? AND id=?",
-                          (json.dumps(data,ensure_ascii=False),int(time.time()*1000),collection,item_id))
-                write_activity(c, "public", "updated", collection, item_id,
-                               "Disabled recurring activity: " + str(data.get("title") or item_id)[:170])
+                # Preserve a complete recovery point before physically deleting a record.
+                # If the snapshot fails, abort the deletion and leave the live row untouched.
+                try:
+                    make_backup()
+                except Exception as exc:
+                    logger.exception("Pre-delete safety backup failed; deletion was not applied")
+                    raise HTTPException(503, "A safety backup could not be created. No data was deleted; please retry.") from exc
+                try:
+                    deleted_data = json.loads(row["data"])
+                except (TypeError, json.JSONDecodeError):
+                    deleted_data = {}
+                description = next((str(deleted_data.get(k, "")).strip() for k in
+                                    ("title", "activity", "name", "code", "label") if deleted_data.get(k)), item_id)
+                c.execute("DELETE FROM docs WHERE col=? AND id=?", (collection, item_id))
+                write_activity(c, "public", "deleted", collection, item_id,
+                               "Deleted record: " + description[:170])
         return {"ok": True}
-    with database() as c:
-        row = c.execute("SELECT data FROM docs WHERE col=? AND id=?", (collection, item_id)).fetchone()
-        if row:
-            # Preserve a complete recovery point before physically deleting a record.
-            # If the snapshot fails, abort the deletion and leave the live row untouched.
-            try:
-                make_backup()
-            except Exception as exc:
-                logger.exception("Pre-delete safety backup failed; deletion was not applied")
-                raise HTTPException(503, "A safety backup could not be created. No data was deleted; please retry.") from exc
-            try:
-                deleted_data = json.loads(row["data"])
-            except (TypeError, json.JSONDecodeError):
-                deleted_data = {}
-            description = next((str(deleted_data.get(k, "")).strip() for k in
-                                ("title", "activity", "name", "code", "label") if deleted_data.get(k)), item_id)
-            c.execute("DELETE FROM docs WHERE col=? AND id=?", (collection, item_id))
-            write_activity(c, "public", "deleted", collection, item_id,
-                           "Deleted record: " + description[:170])
-    return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("delete_document failed col=%s id=%s", collection, item_id)
+        raise HTTPException(503, f"Collection temporarily unavailable: {collection}") from exc

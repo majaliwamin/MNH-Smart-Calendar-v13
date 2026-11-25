@@ -85,9 +85,14 @@ def access_status(user: dict[str, Any]) -> dict:
     }
 
 
-def join_chat(user: dict[str, Any], display_name: str = "") -> dict[str, Any]:
+def join_chat(user: dict[str, Any], display_name: str = "", requested_code: str = "", request_new: bool = False) -> dict[str, Any]:
     check_rate(user, "access")
-    participant = store.ensure_participant(user, display_name)
+    code = str(requested_code or "").strip().upper()
+    if not code and not request_new:
+        existing = store.get_participant(user, include_pending=True)
+        if not existing:
+            raise HTTPException(400, "Enter your MNH ID or request a new one to join chat.")
+    participant = store.ensure_participant(user, display_name, requested_code=code if code else "")
     now = store._now_s()
     uid = str(user.get("id") or "")
     request = _access_request(user)

@@ -32,7 +32,11 @@ def create_session(role: str):
     token = secrets.token_urlsafe(32)
     digest = hashlib.sha256(token.encode()).hexdigest()
     with SESSION_LOCK:
-        SESSIONS[digest] = {"role": role, "expires": time.time() + SESSION_SECONDS}
+        SESSIONS[digest] = {
+            "role": role,
+            "expires": time.time() + SESSION_SECONDS,
+            "sid": secrets.token_hex(8),
+        }
     return token
 
 

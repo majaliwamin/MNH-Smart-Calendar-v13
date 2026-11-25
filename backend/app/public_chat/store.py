@@ -242,7 +242,39 @@ def _write_participant_if_code_free(user_id: str, code: str, doc: dict) -> bool:
         return True
 
 
-def ensure_participant(user: dict[str, Any], display_name: str = "", status: str | None = None) -> dict:
+def _claimable_code(user: dict[str, Any], requested_code: str) -> str:
+    code = str(requested_code or "").strip().upper()
+    if not code:
+        return ""
+    if not CODE_RE.fullmatch(code):
+        raise HTTPException(400, "Enter a valid chat ID in the format MNH-1234.")
+    uid = _participant_id(user)
+    email = str(user.get("email") or "").strip().lower()
+    # Same user already reserved/owns it.
+    if _reserved_code_for_user(uid) == code:
+        return code
+    existing_owner = participant_by_code(code, include_inactive=True)
+    if existing_owner:
+        owner_uid = str(existing_owner.get("user_id") or "")
+        owner_email = str(existing_owner.get("email") or "").strip().lower()
+        if owner_uid == uid:
+            return code
+        # Allow reclaim only when authenticated account email matches the record owner.
+        if email and owner_email and email == owner_email and owner_uid != uid:
+            # Rebind code by moving reservation to current user; keep existing participant record as-is.
+            # We only allow if the other user record is not active on a different identity? 
+            # To avoid hijack, require same verified account email.
+            _reserve_code(code, uid)
+            return code
+        raise HTTPException(409, "This ID is already assigned. Request a new ID if you do not have one.")
+    # Code is unassigned; allow claiming only if not reserved by another user.
+    reserved = _reserved_codes(exclude_user_id=uid)
+    if code in reserved:
+        raise HTTPException(409, "This ID is currently reserved. Request a new ID if you do not have one.")
+    return code
+
+
+def ensure_participant(user: dict[str, Any], display_name: str = "", status: str | None = None, requested_code: str = "") -> dict:
     uid = _participant_id(user)
     now = _now_s()
     desired_status = status or (MEMBER_STATUS_PENDING if settings.REQUIRE_ACCESS_APPROVAL else MEMBER_STATUS_ACTIVE)
@@ -252,14 +284,11 @@ def ensure_participant(user: dict[str, Any], display_name: str = "", status: str
     name = _display_name(user, display_name or (existing or {}).get("display_name", ""))
 
     if existing and CODE_RE.fullmatch(str(existing.get("code") or "")):
-        # Reserve legacy codes too, so a future join cannot be assigned one.
         _reserve_code(existing["code"], uid)
-        # Suspension is a moderator decision: rejoining must never clear it.
         current = str(existing.get("status") or MEMBER_STATUS_ACTIVE)
         if current == MEMBER_STATUS_SUSPENDED:
             existing["status"] = MEMBER_STATUS_SUSPENDED
         else:
-            # Never downgrade an already active member to pending.
             existing["status"] = MEMBER_STATUS_ACTIVE if current == MEMBER_STATUS_ACTIVE else desired_status
         existing["display_name"] = name
         existing["public_identity"] = _public_identity(existing["code"], name)
@@ -270,13 +299,34 @@ def ensure_participant(user: dict[str, Any], display_name: str = "", status: str
         _write(COL_PARTICIPANTS, uid, existing)
         return existing
 
-    preferred = _reserved_code_for_user(uid)
+    claim = _claimable_code(user, requested_code)
+    preferred = claim or _reserved_code_for_user(uid)
     for _ in range(40):
         code = preferred or generate_code(exclude_user_id=uid)
-        # A primary-key reservation claim is what makes concurrent joins safe;
-        # the participant write below only re-checks the human-readable doc.
         if not _reserve_code(code, uid) and code != preferred:
+            if claim:
+                raise HTTPException(409, "This ID could not be claimed. Request a new ID if you do not have one.")
             continue
+        # If claiming a code owned by another participant with same email, bind to that code for this user
+        # by creating a participant record; old record remains but code reservation points here. Avoid duplicate active codes.
+        owner = participant_by_code(code, include_inactive=True)
+        if owner and str(owner.get("user_id") or "") != uid:
+            owner_email = str(owner.get("email") or "").strip().lower()
+            user_email = str(user.get("email") or "").strip().lower()
+            if not (user_email and owner_email and user_email == owner_email):
+                if claim:
+                    raise HTTPException(409, "This ID is already assigned. Request a new ID if you do not have one.")
+                preferred = ""
+                continue
+            # Rebind: deactivate old participant mapping for same email, keep history by code in messages.
+            old_uid = str(owner.get("user_id") or "")
+            if old_uid:
+                old_doc = _read(COL_PARTICIPANTS, old_uid)
+                if old_doc:
+                    old_doc["status"] = "migrated"
+                    old_doc["migrated_to"] = uid
+                    old_doc["updated_at"] = now
+                    _write(COL_PARTICIPANTS, old_uid, old_doc)
         doc = {
             "user_id": uid,
             "code": code,
@@ -292,6 +342,8 @@ def ensure_participant(user: dict[str, Any], display_name: str = "", status: str
         if _write_participant_if_code_free(uid, code, doc):
             return doc
         preferred = ""
+        if claim:
+            raise HTTPException(409, "This ID could not be claimed. Request a new ID if you do not have one.")
     raise HTTPException(409, "Unable to assign a unique public chat identification code.")
 
 
@@ -341,9 +393,12 @@ def _message_visible(msg: dict, viewer: dict, blocked_codes: set[str] | None = N
     sender_code = str(msg.get("sender_code") or "")
     if blocked_codes and sender_code in blocked_codes:
         return False
+    viewer_uid = str(viewer.get("user_id") or "")
+    deleted_for = {str(x) for x in (msg.get("deleted_for") or []) if str(x)}
+    if viewer_uid and viewer_uid in deleted_for:
+        return False
     kind = str(msg.get("kind") or "public")
     if kind == "private":
-        viewer_uid = str(viewer.get("user_id") or "")
         return bool(viewer_uid) and viewer_uid in {
             str(msg.get("sender_user_id") or ""),
             str(msg.get("private_recipient_user_id") or ""),
@@ -396,6 +451,9 @@ def _serialize_message(msg: dict, viewer: dict, reaction_map: dict | None = None
     reaction_map = reaction_map if reaction_map is not None else _reaction_summaries(viewer_uid)
     attachments = []
     raw_attachments = msg.get("attachments") if isinstance(msg.get("attachments"), list) else []
+    view_once = bool(msg.get("view_once")) and bool(raw_attachments)
+    viewed_by = [str(x) for x in (msg.get("viewed_by") or []) if str(x)]
+    viewer_viewed = bool(viewer_uid) and viewer_uid in viewed_by
     if not deleted:
         for item in raw_attachments:
             if not isinstance(item, dict):
@@ -403,13 +461,16 @@ def _serialize_message(msg: dict, viewer: dict, reaction_map: dict | None = None
             fid = str(item.get("file_id") or "")
             if not fid:
                 continue
+            opened = (not view_once) or (sender_uid == viewer_uid) or (not viewer_viewed)
             attachments.append({
                 "file_id": fid,
                 "file_name": str(item.get("file_name") or fid),
                 "mime_type": str(item.get("mime_type") or "application/octet-stream"),
                 "size_bytes": int(item.get("size_bytes") or 0),
                 "kind": str(item.get("kind") or "document"),
-                "url": f"/api/public-chat/media/{fid}",
+                "url": f"/api/public-chat/media/{fid}" if opened else "",
+                "view_once": view_once,
+                "opened": opened,
             })
     out = {
         "id": str(msg.get("id") or ""),
@@ -429,6 +490,8 @@ def _serialize_message(msg: dict, viewer: dict, reaction_map: dict | None = None
         "reactions": reaction_map.get(str(msg.get("id") or ""), {}),
         "read_count": read_count,
         "attachments": attachments,
+        "view_once": view_once,
+        "viewed": viewer_viewed,
     }
     if deleted:
         out["text"] = ""
@@ -518,7 +581,8 @@ def create_message(user: dict, text: str, reply_to_id: str | None = None,
                    private_recipient_code: str | None = None,
                    mention_codes: list[str] | None = None,
                    audio: dict | None = None,
-                   attachments: list[dict] | None = None) -> dict:
+                   attachments: list[dict] | None = None,
+                   view_once: bool = False) -> dict:
     sender = require_participant(user)
     body = str(text or "").strip()
     if not body and not audio and not attachments:
@@ -579,6 +643,9 @@ def create_message(user: dict, text: str, reply_to_id: str | None = None,
         "text": body,
         "audio": audio or None,
         "attachments": attachments or [],
+        "view_once": bool(view_once) and bool(attachments) and not bool(audio),
+        "viewed_by": [],
+        "deleted_for": [],
         "sender_user_id": str(sender.get("user_id") or ""),
         "sender_code": str(sender.get("code") or ""),
         "sender_name": str(sender.get("display_name") or ""),
@@ -621,24 +688,41 @@ def edit_message(user: dict, message_id: str, text: str) -> dict:
     return _serialize_message(doc, viewer)
 
 
-def delete_message(user: dict, message_id: str) -> dict:
+def delete_message(user: dict, message_id: str, mode: str = "me") -> dict:
     viewer = _viewer_for_action(user)
     doc = _message_doc(message_id)
     if not doc or not _message_visible(doc, viewer):
         raise HTTPException(404, "Message not found.")
-    if not permissions.can_delete_message(user, doc):
-        raise HTTPException(403, "You can only delete your own messages.")
-    if doc.get("deleted"):
-        return _serialize_message(doc, viewer)
-    doc["deleted"] = True
-    doc["text"] = ""
-    # Keep media on disk until the retention sweep so open streams are not broken.
-    doc["audio"] = None
-    doc["attachments"] = []
-    doc["updated_at"] = _now()
-    doc["updated_at_s"] = _now_s()
-    _write(COL_MESSAGES, str(doc.get("id") or message_id), doc)
-    return _serialize_message(doc, viewer)
+    mode = str(mode or "me").strip().lower()
+    if mode not in {"me", "all"}:
+        raise HTTPException(400, "Delete mode must be 'me' or 'all'.")
+    if mode == "all":
+        if not permissions.can_delete_message(user, doc):
+            raise HTTPException(403, "You can only delete your own messages for everyone.")
+        if doc.get("deleted"):
+            return {"action": "deleted_for_all", "message": _serialize_message(doc, viewer)}
+        doc["deleted"] = True
+        doc["text"] = ""
+        doc["audio"] = None
+        doc["attachments"] = []
+        doc["view_once"] = False
+        doc["viewed_by"] = []
+        doc["updated_at"] = _now()
+        doc["updated_at_s"] = _now_s()
+        _write(COL_MESSAGES, str(doc.get("id") or message_id), doc)
+        return {"action": "deleted_for_all", "message": _serialize_message(doc, viewer)}
+
+    uid = str(viewer.get("user_id") or "")
+    if not uid:
+        raise HTTPException(403, "You cannot delete this message.")
+    deleted_for = [str(x) for x in (doc.get("deleted_for") or []) if str(x)]
+    if uid not in deleted_for:
+        deleted_for.append(uid)
+        doc["deleted_for"] = deleted_for
+        doc["updated_at"] = _now()
+        doc["updated_at_s"] = _now_s()
+        _write(COL_MESSAGES, str(doc.get("id") or message_id), doc)
+    return {"action": "deleted_for_me", "message_id": str(doc.get("id") or message_id)}
 
 
 def _extension_for_upload(upload: UploadFile, allowed: dict[str, str]) -> tuple[str, str]:
@@ -845,11 +929,12 @@ def get_media_blob(file_id: str) -> dict | None:
     return _media_blob_read(fid)
 
 
-def can_access_media(user: dict, file_id: str) -> bool:
+def can_access_media(user: dict, file_id: str, consume_view_once: bool = False) -> bool:
     viewer = get_participant(user)
     if not viewer:
         return False
     fid = re.sub(r"[^a-f0-9]", "", str(file_id or "").lower())
+    viewer_uid = str(viewer.get("user_id") or "")
     for msg in _list(COL_MESSAGES, 5000):
         audio = msg.get("audio") if isinstance(msg.get("audio"), dict) else None
         media = [audio] if audio and str(audio.get("file_id") or "") else []
@@ -861,6 +946,16 @@ def can_access_media(user: dict, file_id: str) -> bool:
             return False
         if msg.get("deleted"):
             return False
+        if bool(msg.get("view_once")) and str(msg.get("sender_user_id") or "") != viewer_uid:
+            viewed_by = [str(x) for x in (msg.get("viewed_by") or []) if str(x)]
+            if viewer_uid in viewed_by:
+                return False
+            if consume_view_once and viewer_uid:
+                viewed_by.append(viewer_uid)
+                msg["viewed_by"] = viewed_by
+                msg["updated_at"] = _now()
+                msg["updated_at_s"] = _now_s()
+                _write(COL_MESSAGES, str(msg.get("id") or msg.get("_id") or ""), msg)
         return True
     return False
 

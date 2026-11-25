@@ -54,7 +54,7 @@ def status(request: Request):
 @router.post("/join")
 async def join(payload: JoinRequest, request: Request):
     user = _user(request, allow_guest=True)
-    result = service.join_chat(user, payload.display_name)
+    result = service.join_chat(user, payload.display_name, payload.code, payload.request_new)
     response = _json_with_guest(request, user, result)
     if result.get("joined") and result.get("participant"):
         await chat_ws.broadcast({"type": "participant.joined", "participant": result["participant"]})
@@ -151,11 +151,14 @@ async def put_message(message_id: str, payload: MessageEditRequest, request: Req
 
 
 @router.delete("/messages/{message_id}")
-async def remove_message(message_id: str, request: Request):
+async def remove_message(message_id: str, request: Request, mode: str = "me"):
     user = _user(request)
-    message = store.delete_message(user, message_id)
-    await chat_ws.broadcast({"type": "message.deleted", "message": message})
-    return {"message": message}
+    result = store.delete_message(user, message_id, mode=mode)
+    if result.get("action") == "deleted_for_all":
+        await chat_ws.broadcast({"type": "message.deleted", "message": result["message"]})
+    else:
+        chat_ws.dispatch_to_users([{"type": "message.updated", "message": result["message"]}], {str(user.get("id") or "")})
+    return result
 
 
 @router.post("/messages/{message_id}/reactions")
@@ -260,10 +263,12 @@ async def upload_attachment(request: Request, file: UploadFile = File(...)):
     private_recipient_code = str(form.get("private_recipient_code") or "").strip() or None
     mention_codes = [c.strip() for c in str(form.get("mention_codes") or "").split(",") if c.strip()]
     text = str(form.get("text") or "").strip()
+    view_once = str(form.get("view_once") or "").strip().lower() in {"1", "true", "yes", "on"}
     attachment = store.save_attachment_upload(user, file)
     message = store.create_message(user, text=text, reply_to_id=reply_to_id,
                                    private_recipient_code=private_recipient_code,
-                                   mention_codes=mention_codes, attachments=[attachment])
+                                   mention_codes=mention_codes, attachments=[attachment],
+                                   view_once=view_once)
     await chat_ws.broadcast({"type": "message.created", "message": message})
     notifications.dispatch_for_message(message, chat_ws.dispatch_to_users)
     return {"message": message}

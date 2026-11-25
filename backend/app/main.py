@@ -22,6 +22,7 @@ from app.class_rep.whiteboard import router as class_rep_whiteboard_router
 from app.ai_intelligence.routes import router as ai_router
 from app.livekit.routes import router as livekit_router
 from app.public_chat.routes import router as public_chat_router
+from app.exams.routes import router as exams_router
 from app.ai_intelligence import evaluation as ai_evaluation
 from app.services.backup_service import backup_worker, make_backup, list_backups
 from app.services.reminders import reminder_worker
@@ -165,6 +166,12 @@ async def request_validation_error_handler(request: Request, exc: RequestValidat
     return JSONResponse(status_code=422, content={"detail": detail, "error": detail})
 
 
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception):
+    logging.getLogger(__name__).exception("Unhandled request error path=%s", request.url.path)
+    return JSONResponse(status_code=503, content={"error": "Service temporarily unavailable. Please try again."})
+
+
 app.include_router(router)
 app.include_router(comm_router)
 app.include_router(class_rep_router)
@@ -172,6 +179,7 @@ app.include_router(class_rep_whiteboard_router)
 app.include_router(livekit_router)
 app.include_router(ai_router)
 app.include_router(public_chat_router)
+app.include_router(exams_router)
 
 
 @app.get("/", include_in_schema=False)
