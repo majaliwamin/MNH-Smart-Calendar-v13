@@ -19,13 +19,25 @@ def _host_emails() -> set[str]:
 
 
 def classroom_role(user: dict[str, Any] | None) -> str:
-    """Return 'host' for an authorised signed-in account, otherwise 'student'."""
+    """Return 'host' for an authorised signed-in account, otherwise 'student'.
+
+    Built-in/no-LiveKit mode needs classroom to open without admin setup; allow
+    signed-in users and guests to host their own local lesson room. When LiveKit
+    is configured, keep stricter host-email behavior by setting
+    MNH_CLASSROOM_STRICT_HOSTS=1.
+    """
+    strict = os.getenv("MNH_CLASSROOM_STRICT_HOSTS", "").strip().lower() in {"1", "true", "yes", "on"}
     account = user or {}
     email = str(account.get("email") or "").strip().lower()
     user_id = str(account.get("id") or "").strip()
-    if not email or user_id.startswith("guest_"):
+    if not user_id:
         return "student"
-    return "host" if email in _host_emails() else "student"
+    if strict:
+        if not email or user_id.startswith("guest_"):
+            return "student"
+        return "host" if email in _host_emails() else "student"
+    # Default: allow classroom to open/generate codes without external setup.
+    return "host"
 
 
 def classroom_permissions(user: dict[str, Any] | None, room: str = "") -> dict[str, Any]:

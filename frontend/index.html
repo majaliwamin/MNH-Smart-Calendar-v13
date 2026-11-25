@@ -1,9 +1,12 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
-<title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
+<meta name="grammarly" content="false">
+<meta name="grammarly:disable" content="true">
+<script src="/js/extension-guard.js?v=2026.11.22-statistical-tests-glossary-v44"></script>
+<title>PhD Maternal and Neonatal Health â€” Weekly Schedule</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026.11.22-statistical-tests-glossary-v44">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json?v=2026.11.22-statistical-tests-glossary-v44">
@@ -148,6 +151,7 @@
 
   <link rel="stylesheet" href="/css/app.css?v=2026.11.22-statistical-tests-glossary-v44&amp;local-fonts=1&amp;resource-tabs=1&amp;book-resource=1">
 <link rel="stylesheet" href="/css/class-rep.css?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1">
+<link rel="stylesheet" href="/css/exams.css?v=2026.11.22-statistical-tests-glossary-v44">
 
 <link rel="stylesheet" href="/vendor/katex/katex.min.css?v=2026.11.22-statistical-tests-glossary-v44">
 <script src="/vendor/marked.min.js?v=2026.11.22-statistical-tests-glossary-v44" defer></script>
@@ -183,7 +187,7 @@
  </section>
 </div>
 
-<div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
+<div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared eventsâ€¦</span></div></div></div>
 <header class="site-header" id="site-header">
  <div class="hd-band">
   <div class="hd-left">
@@ -216,7 +220,7 @@
      </select>
     </div>
    </div>
-   <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
+   <button type="button" class="hd-bell" id="hd-bell" aria-label="Todayâ€™s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
     <span class="hd-badge" id="hd-badge" hidden>0</span>
    </button>
@@ -241,6 +245,7 @@
   <button type="button" class="menu-nav" data-view="modules"><span>&#9636;</span>Modules</button>
   <button type="button" class="menu-nav" data-view="public-chat"><span>&#128172;</span>MNH Group Chat</button>
   <button type="button" class="menu-nav" data-view="examinations"><span>&#9635;</span>Examinations</button>
+  <button type="button" class="menu-nav" data-view="exams"><span>&#9997;</span>EXAMS</button>
   <button type="button" class="menu-nav" data-view="analytics"><span>&#9636;</span>Analytics</button>
   <button type="button" class="menu-nav" data-view="communications"><span>&#9993;</span>WhatsApp &amp; Communications</button>
   <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
@@ -259,7 +264,7 @@
 
 
 <nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
- <button type="button" class="view-tab active weekly-date-tab" data-view="weekly" aria-current="page" aria-label="Home — Weekly timetable" title="Home — Weekly timetable"><svg class="weekly-date-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8M5.5 9.2V21h13V9.2M9.5 21v-7h5v7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="current-day-date">--</span></button>
+ <button type="button" class="view-tab active weekly-date-tab" data-view="weekly" aria-current="page" aria-label="Home â€” Weekly timetable" title="Home â€” Weekly timetable"><svg class="weekly-date-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8M5.5 9.2V21h13V9.2M9.5 21v-7h5v7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="current-day-date">--</span></button>
  <div class="week-nav-row">
   <div class="week-nav" role="group" aria-label="Academic week navigation">
    <button type="button" class="view-tab week-step" id="week-prev" aria-label="Previous academic week" title="Previous academic week">&#8249;</button>
@@ -285,11 +290,11 @@
 <div id="class-rep-assistant" class="cara-widget" aria-label="Class Rep &amp; Academic Relations Assistant"></div>
 </section>
 <section class="view vw" id="view-my-schedule" hidden>
- <h2>My Schedule</h2><p class="lead" id="schedule-lead">Everything planned for the week of 9–15 Nov 2026. Select an item for details.</p>
+ <h2>My Schedule</h2><p class="lead" id="schedule-lead">Everything planned for the week of 9â€“15 Nov 2026. Select an item for details.</p>
  <div class="cards" id="schedule-body"></div>
 </section>
 <section class="view vw" id="view-modules" hidden>
- <h2>Modules</h2><p class="lead">Your modules and other activities, with this week’s sessions.</p>
+ <h2>Modules</h2><p class="lead">Your modules and other activities, with this weekâ€™s sessions.</p>
  <div class="cards" id="modules-body"></div>
 </section>
 <section class="view vw" id="view-resources" hidden>
@@ -352,8 +357,17 @@
  <div id="analytics-body"></div>
 </section>
 <section class="view vw silver-dashboard-view" id="view-silver-dashboard" hidden>
- <div class="silver-dashboard-intro"><p class="silver-eyebrow">PROGRAMME OVERVIEW</p><h1>PhD in Maternal &amp; Neonatal Health</h1><p>Midnight Silver · Academic performance and delivery overview</p></div>
+ <div class="silver-dashboard-intro"><p class="silver-eyebrow">PROGRAMME OVERVIEW</p><h1>PhD in Maternal &amp; Neonatal Health</h1><p>Midnight Silver Â· Academic performance and delivery overview</p></div>
  <div id="silver-analytics-body"></div>
+</section>
+<section class="view vw exams-view" id="view-exams" hidden>
+  <div class="exams-shell" id="exams-root">
+    <div class="exams-header">
+      <h2>EXAMS</h2>
+      <p class="lead">Modular examination, assessment, invigilation, grading, and analytics workspace. This module is isolated from the legacy Examinations calendar.</p>
+    </div>
+    <div id="exams-body" class="exams-body"></div>
+  </div>
 </section>
 <section class="view vw" id="view-workspace" hidden>
  <h2 id="workspace-title">Workspace</h2><p class="lead" id="workspace-lead"></p>
@@ -372,10 +386,10 @@
   <div class="module-field">
    <label for="module-select">Select module</label>
    <select id="module-select">
-    <option value="">Choose a module…</option>
-    <option value="MIPN 8100">MIPN 8100 — Medical Imaging in Pregnancy and Neonates</option>
-    <option value="ARMN – 8100">ARMN – 8100 — Antimicrobial Resistance in Maternal &amp; Neonatal Health</option>
-    <option value="PNIM-8100">PNIM-8100 — Pregnancy and Neonatal Immunology</option>
+    <option value="">Choose a moduleâ€¦</option>
+    <option value="MIPN 8100">MIPN 8100 â€” Medical Imaging in Pregnancy and Neonates</option>
+    <option value="ARMN â€“ 8100">ARMN â€“ 8100 â€” Antimicrobial Resistance in Maternal &amp; Neonatal Health</option>
+    <option value="PNIM-8100">PNIM-8100 â€” Pregnancy and Neonatal Immunology</option>
    </select>
   </div>
   <div class="module-field">
@@ -384,7 +398,7 @@
   </div>
   <div class="module-field">
    <label for="session-lecturer">Lecturer</label>
-   <input id="session-lecturer" type="text" maxlength="120" autocomplete="name" placeholder="Not assigned — enter a name if needed">
+   <input id="session-lecturer" type="text" maxlength="120" autocomplete="name" placeholder="Not assigned â€” enter a name if needed">
    <div id="lecturer-assignment-status" class="lecturer-assignment-status" aria-live="polite" hidden></div>
   </div>
   <div class="module-details" id="module-details" aria-live="polite"></div>
@@ -435,7 +449,7 @@
 
 <div class="colour-dialog" id="alarm-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="alarm-title">
  <div class="dialog-card">
-  <h2 id="alarm-title">🔔 Alarms</h2>
+  <h2 id="alarm-title">ðŸ”” Alarms</h2>
   <p>Rings like an incoming call before each activity. Alarms are personal to this device and only ring while this page is open. Tap the page once after opening it so your browser allows sound.</p>
   <div class="module-field">
    <label for="alarm-lead">Ring</label>
@@ -447,7 +461,7 @@
     <option value="30">30 minutes before</option>
    </select>
   </div>
-  <div class="module-field"><label for="alarm-voice"><input id="alarm-voice" type="checkbox" checked> Speak the registered user’s name and session details</label></div>
+  <div class="module-field"><label for="alarm-voice"><input id="alarm-voice" type="checkbox" checked> Speak the registered userâ€™s name and session details</label></div>
   <div class="module-field"><label for="alarm-voice-option">Spoken voice</label><select id="alarm-voice-option"><option value="0">Gentle voice 1</option><option value="1">Gentle voice 2</option><option value="2">Gentle voice 3</option><option value="3">Gentle voice 4</option><option value="4">Gentle voice 5</option></select><small>Uses the voices available in this browser or device.</small></div>
   <div class="module-field"><label for="alarm-sound-option">Ringing sound</label><select id="alarm-sound-option"><option value="0">Soft Bell</option><option value="1">Double Chime</option><option value="2">Warm Marimba</option><option value="3">Gentle Pulse</option><option value="4">Classic Chime</option></select></div>
   <p class="module-details">The spoken reminder repeats every 5 seconds. The alarm rings for up to 5 minutes, or until you answer or decline it.</p>
@@ -467,8 +481,8 @@
   <div class="call-name" id="call-name"></div>
   <div class="call-when" id="call-when"></div>
   <div class="call-actions">
-   <div><button class="call-btn decline" id="call-decline" aria-label="Decline and stop the alarm">✕</button><span class="call-label">Decline</span></div>
-   <div><button class="call-btn answer" id="call-answer" aria-label="Answer: stop the alarm and open the activity">📞</button><span class="call-label">Answer</span></div>
+   <div><button class="call-btn decline" id="call-decline" aria-label="Decline and stop the alarm">âœ•</button><span class="call-label">Decline</span></div>
+   <div><button class="call-btn answer" id="call-answer" aria-label="Answer: stop the alarm and open the activity">ðŸ“ž</button><span class="call-label">Answer</span></div>
   </div>
   <button class="call-snooze" id="call-snooze">Snooze 5 min</button>
  </div>
@@ -484,6 +498,7 @@
 <script src="/js/app.js?v=2026.11.22-statistical-tests-glossary-v44&amp;local-resources=1" defer></script>
 <script src="/js/class-rep-renderer.js?v=2026.11.22-statistical-tests-glossary-v44" defer></script>
 <script src="/js/class-rep.js?v=2026.11.22-statistical-tests-glossary-v44&amp;crara-header=1&amp;chat-speech=1" defer></script>
+<script src="/js/exams.js?v=2026.11.22-statistical-tests-glossary-v44" defer></script>
 <script>
 (function () {
   "use strict";
@@ -639,4 +654,5 @@
 </script>
 
 </body></html>
+
 

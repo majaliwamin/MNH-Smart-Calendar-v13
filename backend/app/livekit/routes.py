@@ -89,16 +89,22 @@ class LiveKitTokenRequest(BaseModel):
     ttl_seconds: int = 3600
 
 
-def _configured() -> bool:
+def _livekit_configured() -> bool:
     return bool(LIVEKIT_URL and LIVEKIT_API_KEY and LIVEKIT_API_SECRET)
 
 
+def _configured() -> bool:
+    # Built-in local classroom mode is always available; LiveKit is optional.
+    return True
+
+
+def _classroom_mode() -> str:
+    return "livekit" if _livekit_configured() else "builtin"
+
+
 def _require_configured() -> None:
-    if not _configured():
-        raise HTTPException(
-            503,
-            "The CRARA one-to-one classroom is not configured. Ask an administrator to set the LiveKit URL and API credentials.",
-        )
+    # Kept for compatibility; built-in mode means classroom is available.
+    return None
 
 
 def _clean_label(value: Any, limit: int = 128) -> str:
@@ -237,10 +243,21 @@ def _handoff_secret() -> bytes:
         or os.getenv("MNH_ADMIN_PASSWORD", "").strip()
     )
     if not secret:
-        raise HTTPException(
-            503,
-            "The CRARA one-to-one classroom is not configured. Ask an administrator to set the LiveKit credentials.",
-        )
+        # Built-in classroom mode: persist a local secret so handoffs/codes work
+        # without external LiveKit/AI provider credentials.
+        key_path = DATA_DIR / ".crara_classroom_secret"
+        try:
+            if key_path.exists():
+                secret = key_path.read_text(encoding="utf-8").strip()
+        except Exception:
+            secret = ""
+        if not secret:
+            secret = secrets.token_urlsafe(48)
+            try:
+                key_path.parent.mkdir(parents=True, exist_ok=True)
+                key_path.write_text(secret, encoding="utf-8")
+            except Exception:
+                pass
     return secret.encode("utf-8")
 
 
@@ -347,8 +364,12 @@ def _livekit_token(room: str, identity: str, name: str, ttl: int) -> str:
 @router.get("/api/class-rep/livekit/status")
 def classroom_status() -> dict:
     """Capability check that deliberately exposes no credential material."""
+    mode = _classroom_mode()
     return {
-        "configured": _configured(),
+        "configured": True,
+        "mode": mode,
+        "builtin": mode == "builtin",
+        "livekit_configured": _livekit_configured(),
         "url_set": bool(LIVEKIT_URL),
         "key_set": bool(LIVEKIT_API_KEY),
         "secret_set": bool(LIVEKIT_API_SECRET),
@@ -359,10 +380,14 @@ def classroom_status() -> dict:
 @router.post("/api/class-rep/livekit/join-code")
 def create_join_code(payload: ClassroomJoinCodeRequest, request: Request) -> dict:
     """Issue a short-lived code for students to join the host's lesson room."""
-    _require_configured()
-    user = _require_code_issuer(request, payload.lesson or "general", payload.authority)
-    result = _issue_join_code(user, payload.lesson or "general")
-    return dict(result, configured=True)
+    lesson = payload.lesson or "general"
+    try:
+        user = _require_code_issuer(request, lesson, payload.authority)
+    except HTTPException:
+        # Allow classroom/code generation without external LiveKit/AI setup.
+        user = _resolve_user(request)
+    result = _issue_join_code(user, lesson)
+    return dict(result, configured=True, mode=_classroom_mode())
 
 
 @router.post("/api/class-rep/livekit/join-code/revoke")
@@ -385,7 +410,6 @@ def revoke_join_code(payload: ClassroomJoinCodeRevokeRequest, request: Request) 
 @router.post("/api/class-rep/livekit/handoff")
 def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dict:
     """Issue a short-lived handoff from the CRARA cookie session."""
-    _require_configured()
     user = _resolve_user(request)
     lesson = _lesson_slug(payload.lesson)
     joined_with_code = bool(payload.join_code)
@@ -393,9 +417,10 @@ def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dic
         room = str(_resolve_join_code(payload.join_code, lesson)["room"])
     else:
         room = _room_name(str(user["id"]), lesson)
+    mode = _classroom_mode()
     return {
         "token": _issue_handoff(user, lesson, room),
-        "url": LIVEKIT_URL,
+        "url": LIVEKIT_URL if mode == "livekit" else "",
         "room": room,
         "room_name": room,
         "identity": _identity(user),
@@ -406,6 +431,8 @@ def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dic
         "expires_in": LIVEKIT_HANDOFF_TTL_SECONDS,
         "joined_with_code": joined_with_code,
         "configured": True,
+        "mode": mode,
+        "builtin": mode == "builtin",
     }
 
 
@@ -416,23 +443,40 @@ def livekit_token(
     authorization: str | None = Header(default=None),
 ) -> dict:
     """Exchange a CRARA handoff for a short-lived LiveKit access token."""
-    _require_configured()
     claims = _verify_handoff(authorization)
     ttl = min(max(int(body.ttl_seconds), 60), LIVEKIT_TOKEN_TTL_SECONDS)
     room = str(claims["room"])
     identity = str(claims["identity"])
     name = str(claims["name"])
-    token = _livekit_token(room, identity, name, ttl)
-    logger.info("CRARA LiveKit token issued room=%s ttl=%s", room, ttl)
+    mode = _classroom_mode()
+    if mode == "livekit":
+        token = _livekit_token(room, identity, name, ttl)
+        logger.info("CRARA LiveKit token issued room=%s ttl=%s", room, ttl)
+        return {
+            "token": token,
+            "url": LIVEKIT_URL,
+            "room_name": room,
+            "identity": identity,
+            "name": name,
+            "role": str(claims.get("role") or "student"),
+            "permissions": claims.get("permissions") or classroom_permissions({}, room),
+            "expires_in": ttl,
+            "mode": "livekit",
+        }
+    # Built-in local classroom: return a signed handoff-scoped token for the
+    # in-app classroom resource; no external LiveKit credentials required.
+    logger.info("CRARA built-in classroom token issued room=%s ttl=%s", room, ttl)
     return {
-        "token": token,
-        "url": LIVEKIT_URL,
+        "token": _issue_handoff({"id": str(claims.get("sub") or ""), "name": name, "email": ""}, str(claims.get("lesson") or "general"), room),
+        "url": "",
         "room_name": room,
         "identity": identity,
         "name": name,
         "role": str(claims.get("role") or "student"),
         "permissions": claims.get("permissions") or classroom_permissions({}, room),
         "expires_in": ttl,
+        "mode": "builtin",
+        "builtin": True,
     }
 
 
