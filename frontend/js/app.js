@@ -2170,10 +2170,9 @@ async function renderPublicChat(){
  if(!publicChatState.joined){
   if(!publicChatState._autoJoinAttempted){
    publicChatState._autoJoinAttempted=true;
-   const join=el("div","pc-join");join.appendChild(el("h4",null,"Connecting to MNH Group Chat..."));join.appendChild(el("p","muted","Setting up your chat identity."));card.appendChild(join);
-   (async()=>{try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:"",request_new:true}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);}catch(e){publicChatState.error=e.message||String(e);pcToast(publicChatState.error);}finally{if(currentView==="public-chat")renderPublicChat();}})();
-  } else {
-   const join=el("div","pc-join");join.appendChild(el("h4",null,"MNH Group Chat"));join.appendChild(el("p","muted",publicChatState.error||"Unable to connect to chat right now."));const retry=el("button","soft","Retry");retry.type="button";retry.onclick=()=>{publicChatState._autoJoinAttempted=false;publicChatState.error="";renderPublicChat();};join.appendChild(retry);card.appendChild(join);
+   (async()=>{try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:"",request_new:true}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);}catch(e){publicChatState.error=e.message||String(e);}finally{if(currentView==="public-chat")renderPublicChat();}})();
+  } else if(publicChatState.error){
+   const join=el("div","pc-join");join.appendChild(el("p","muted",publicChatState.error||"Unable to connect to chat right now."));const retry=el("button","soft","Retry");retry.type="button";retry.onclick=()=>{publicChatState._autoJoinAttempted=false;publicChatState.error="";renderPublicChat();};join.appendChild(retry);card.appendChild(join);
   }
  }
 
