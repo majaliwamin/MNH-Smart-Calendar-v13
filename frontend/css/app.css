@@ -2841,3 +2841,16 @@ body.public-chat-view .pc-messages{flex:1 1 auto;min-height:0;overflow-y:auto;ov
 .pc-view-once-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--pc-muted,#8696a0);margin-top:6px}
 .pc-attachment.pc-view-once{cursor:pointer;text-align:left}
 .pc-attachment.pc-view-once .pc-attachment-icon{font-size:16px}
+
+/* Recurring on/off this week */
+.recurring-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.recurring-card-head h3{margin:0}
+.recurring-week-toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--field);color:var(--text);padding:6px 12px;border-radius:999px;font:inherit;font-weight:700;cursor:pointer}
+.recurring-week-toggle:hover{filter:brightness(1.04)}
+.recurring-week-toggle:disabled{opacity:.65;cursor:wait}
+.recurring-week-dot{width:12px;height:12px;border-radius:50%;flex:0 0 12px;box-shadow:0 0 0 2px rgba(255,255,255,.08) inset}
+.recurring-week-toggle.is-on .recurring-week-dot{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.22);animation:recurringWeekBlink 1.2s ease-in-out infinite}
+.recurring-week-toggle.is-off .recurring-week-dot{background:#8a94a3;box-shadow:none;animation:none}
+.recurring-week-toggle.is-off{color:var(--muted)}
+@keyframes recurringWeekBlink{0%,100%{transform:scale(1);opacity:1;box-shadow:0 0 0 3px rgba(34,197,94,.18)}50%{transform:scale(1.2);opacity:.55;box-shadow:0 0 0 7px rgba(34,197,94,.08)}}
+@media (prefers-reduced-motion: reduce){.recurring-week-toggle.is-on .recurring-week-dot{animation:none}}

@@ -1317,8 +1317,8 @@ async function renderManaged(collection){if(collection!=="examinations"&&collect
   let rows=await loadRows("recurring");
   if(!rows.length){
    const defaults=[
-    ["journal-club",{title:"Journal Club",day:"Tuesday",time:"13:00–14:00",presenter:"",enabled:true}],
-    ["seminar-mnh",{title:"MNH Seminar",day:"Thursday",time:"10:00–12:00",presenter:"",enabled:true}]
+    ["journal-club",{title:"Journal Club",day:"Tuesday",time:"13:00-14:00",presenter:"",enabled:true,onThisWeek:true}],
+    ["seminar-mnh",{title:"MNH Seminar",day:"Thursday",time:"10:00-12:00",presenter:"",enabled:true,onThisWeek:true}]
    ];
    for(const [id,data] of defaults)await saveRow("recurring",id,data);
    rows=await loadRows("recurring");
@@ -1326,15 +1326,33 @@ async function renderManaged(collection){if(collection!=="examinations"&&collect
   recurringRecords=rows;
   const list=el("div","cards");
   rows.filter(row=>row.data?.enabled!==false).forEach(row=>{
-   const data=row.data||{},card=el("div","card");
-   card.appendChild(el("h3",null,data.title||row.id));
-   card.appendChild(el("p","muted",[data.day,data.time].filter(Boolean).join(" · ")));
+   const data=row.data||{};
+   const onThisWeek=data.onThisWeek!==false;
+   const card=el("div","card");
+   const head=el("div","recurring-card-head");
+   head.appendChild(el("h3",null,data.title||row.id));
+   const toggle=el("button","recurring-week-toggle "+(onThisWeek?"is-on":"is-off"),"");
+   toggle.type="button";
+   toggle.setAttribute("aria-pressed",onThisWeek?"true":"false");
+   toggle.title=onThisWeek?"On this week - click to turn off":"Off this week - click to turn on";
+   toggle.append(el("span","recurring-week-dot",""), el("span","recurring-week-text",onThisWeek?"On this week":"Off this week"));
+   toggle.addEventListener("click",async()=>{
+    toggle.disabled=true;
+    try{
+     const current=recurringRecords.find(r=>r.id===row.id)?.data||data;
+     const nextOn=!(current.onThisWeek!==false);
+     await saveRow("recurring",row.id,{...current,presenter:presenter.value.trim(),enabled:true,onThisWeek:nextOn});
+     rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();
+    }catch(e){writeFailed(e);toggle.disabled=false;}
+   });
+   head.appendChild(toggle);card.appendChild(head);
+   card.appendChild(el("p","muted",[data.day,data.time].filter(Boolean).join(" \u2022 ")));
    const presenterLabel=el("label","field-label","Presenter");
    const presenter=fieldInput("Enter presenter name",120);presenter.value=String(data.presenter||"");
    presenterLabel.appendChild(presenter);card.appendChild(presenterLabel);
    const actions=el("div","dialog-actions");
    const save=el("button","primary","Save presenter");save.type="button";
-   save.addEventListener("click",async()=>{try{await saveRow("recurring",row.id,{...data,presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   save.addEventListener("click",async()=>{try{const current=recurringRecords.find(r=>r.id===row.id)?.data||data;await saveRow("recurring",row.id,{...current,onThisWeek:(current.onThisWeek!==false),presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
    const remove=el("button","res-del","Remove activity");remove.type="button";
    remove.addEventListener("click",async()=>{if(!confirm("Remove this recurring activity from the timetable?"))return;try{await saveRow("recurring",row.id,{...data,enabled:false});rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
    actions.append(save,remove);card.appendChild(actions);list.appendChild(card);
