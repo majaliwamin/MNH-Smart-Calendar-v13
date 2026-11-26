@@ -91,7 +91,7 @@ function getSessionEntries(offset=weekOffset){
   const start=parseClock(range.startTime),end=parseClock(range.endTime);
   if(start===null||end===null||end<=start)return;
   const title=String(data.title||row.id);
-  result.push({id:"recurring-"+row.id,dayIndex,c:dayIndex,r:-1,label:title,title,sub:"",facilitator:String(data.presenter||""),startTime:range.startTime,endTime:range.endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:range.startTime+" – "+range.endTime,data:{code:title,title,recurring:true,recurringId:row.id,presenter:String(data.presenter||"")}});
+  result.push({id:"recurring-"+row.id,dayIndex,c:dayIndex,r:-1,label:title,title,sub:"",facilitator:String(data.presenter||""),startTime:range.startTime,endTime:range.endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:range.startTime+" – "+range.endTime,data:{code:title,title,recurring:true,recurringId:row.id,presenter:String(data.presenter||""),onThisWeek:data.onThisWeek!==false}});
  });
  return result.sort((a,b)=>a.dayIndex-b.dayIndex||a.startMinutes-b.startMinutes);
 }
@@ -295,8 +295,18 @@ function build(){
   days.forEach((day,dayIndex)=>{
    const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.className=weekendClass(dayIndex);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
    const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${dayNames[dayIndex]}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${dayNames[dayIndex]} at ${start}`);
-   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}else if(weekendClass(dayIndex)){area.classList.add("day-ink");}const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" · ");area.addEventListener("click",()=>showSessionDetails(entry));}
-   else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}else if(weekendClass(dayIndex)){area.classList.add("day-ink");}
+const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);
+if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}
+if(entry.data?.recurring&&String(entry.data?.recurringId||entry.id||"").match(/journal-club|seminar-mnh/)){
+ const onThisWeek=entry.data?.onThisWeek!==false;
+ const badge=document.createElement("span");badge.className="recurring-ui-badge "+(onThisWeek?"is-on":"is-off");
+ badge.title=onThisWeek?"On this week":"Off this week";
+ badge.innerHTML='<span class="recurring-ui-dot"></span><span class="recurring-ui-text">'+(onThisWeek?'On this week':'Off this week')+'</span>';
+ area.appendChild(badge);
+}
+const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" • ");area.addEventListener("click",()=>showSessionDetails(entry));}
+else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
    box.appendChild(area);td.appendChild(box);tr.appendChild(td);
   });tbody.appendChild(tr);
  });
@@ -1217,7 +1227,7 @@ async function getFutureActivities(){
   const data=row.data||{};if(data.enabled===false)return;
   const start=nextRecurringDate(data.day,String(data.time||"").split(/[–-]/)[0]?.trim(),local);
   if(!start||start.getTime()<=now)return;
-  items.push({kind:"recurring",title:data.title||row.id,detail:[data.presenter,data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+  items.push({kind:"recurring",recurringId:row.id,onThisWeek:data.onThisWeek!==false,title:data.title||row.id,detail:[data.presenter,data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
  });
  return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
 }
@@ -1239,7 +1249,16 @@ async function renderAnimatedFutureStrip(){
    line.append(when,document.createTextNode("  "),title);
    if(item.detail)line.append(document.createTextNode(" — "),el("span","marquee-detail",item.detail));
    line.setAttribute("title",[item.when,item.title,item.detail].filter(Boolean).join(" · "));
-   return line;
+   {
+     const rid=String(item.session?.data?.recurringId||item.recurringId||"");
+     if((item.session?.data?.recurring||item.kind==="recurring") && rid.match(/journal-club|seminar-mnh/)){
+      const onThisWeek=(item.session?.data?.onThisWeek!==undefined?item.session.data.onThisWeek:item.onThisWeek)!==false;
+      const badge=el("span","recurring-ui-badge "+(onThisWeek?"is-on":"is-off"),"");
+      badge.append(el("span","recurring-ui-dot",""), el("span","recurring-ui-text",onThisWeek?"On this week":"Off this week"));
+      line.append(document.createTextNode(" "),badge);
+     }
+    }
+    return line;
   };
   items.forEach((item,index)=>{
    if(index)track.appendChild(el("span","activity-marquee-separator","  •  "));
