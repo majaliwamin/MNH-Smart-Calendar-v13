@@ -252,3 +252,32 @@ def test_submit_conflict_returns_stale_session(tmp_path, monkeypatch):
     assert r2.status_code == 200
     body = r2.json()
     assert body.get("already_submitted") is True or body.get("conflict") is True
+
+
+def test_analytics_and_grading(tmp_path, monkeypatch):
+    monkeypatch.setenv("MNH_ADMIN_PASSWORD", "admin-pass")
+    client = make_client(tmp_path, monkeypatch)
+    login_admin(client)
+    q = client.post("/api/exams/questions", json={"prompt":"2+2?","type":"mcq","options":[{"id":"a","text":"4"},{"id":"b","text":"5"}],"correct_option_ids":["a"],"points":1}).json()["item"]
+    exam = client.post("/api/exams/exams", json={"title":"Math","duration_minutes":10,"status":"published","questions":[{"question_id":q["id"],"order":0}]}).json()["item"]
+    s = client.post("/api/exams/sessions/start", json={"exam_id": exam["id"]}).json()["item"]
+    sub = client.post(f"/api/exams/sessions/{s['id']}/submit", json={"answers":{q["id"]:"a"}, "client_submit_id":"sub-grade"}).json()["submission"]
+    g = client.post(f"/api/exams/submissions/{sub['id']}/grade", json={"percent": 88.5, "feedback": "Good", "status": "graded"})
+    assert g.status_code == 200
+    assert g.json()["item"]["score"]["percent"] == 88.5
+    an = client.get("/api/exams/analytics")
+    assert an.status_code == 200
+    body = an.json()
+    assert body["analytics"]["submissions"] >= 1
+    assert any(x["exam_id"] == exam["id"] for x in body["by_exam"])
+
+
+def test_sessions_monitor_requires_privileged_role(tmp_path, monkeypatch):
+    monkeypatch.setenv("MNH_ADMIN_PASSWORD", "admin-pass")
+    client = make_client(tmp_path, monkeypatch)
+    r = client.get("/api/exams/sessions")
+    assert r.status_code in (401, 403)
+    login_admin(client)
+    r2 = client.get("/api/exams/sessions")
+    assert r2.status_code == 200
+    assert r2.json()["ok"] is True

@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Cookie, HTTPException
 
 from app.exams import audit, permissions, store
-from app.exams.schemas import EnrollmentUpsert, ExamUpsert, QuestionUpsert, SessionAutosave, SessionStart, SessionSubmit
+from app.exams.schemas import EnrollmentUpsert, ExamUpsert, QuestionUpsert, SessionAutosave, SessionStart, SessionSubmit, SubmissionGrade
 
 router = APIRouter(prefix="/api/exams", tags=["exams"])
 
@@ -107,8 +107,41 @@ def exams_capabilities(mnh_session: str | None = Cookie(default=None)):
 def exams_overview(mnh_session: str | None = Cookie(default=None)):
     identity = permissions.resolve_identity(mnh_session)
     counts = {name: store.count_docs(name) for name in sorted(store.EXAMS_COLLECTIONS)}
+    exams = store.list_docs(store.COL_EXAMS, limit=500)
+    sessions = store.list_docs(store.COL_SESSIONS, limit=1000)
+    submissions = store.list_docs(store.COL_SUBMISSIONS, limit=1000)
+    enrollments = store.list_docs(store.COL_ENROLLMENTS, limit=1000)
+    by_exam = {}
+    for ex in exams:
+        eid = str(ex.get("id") or "")
+        by_exam[eid] = {"exam_id": eid, "title": ex.get("title") or eid, "status": ex.get("status") or "draft", "sessions": 0, "submitted": 0, "enrolled": 0, "avg_percent": None}
+    for srow in sessions:
+        eid = str(srow.get("exam_id") or "")
+        if eid in by_exam:
+            by_exam[eid]["sessions"] += 1
+            if str(srow.get("state") or "") == "submitted":
+                by_exam[eid]["submitted"] += 1
+    for en in enrollments:
+        eid = str(en.get("exam_id") or "")
+        if eid in by_exam:
+            by_exam[eid]["enrolled"] += 1
+    score_sums = {}
+    score_counts = {}
+    for sub in submissions:
+        eid = str(sub.get("exam_id") or "")
+        pct = (sub.get("score") or {}).get("percent")
+        try:
+            pct = float(pct)
+        except Exception:
+            continue
+        score_sums[eid] = score_sums.get(eid, 0.0) + pct
+        score_counts[eid] = score_counts.get(eid, 0) + 1
+    for eid, row in by_exam.items():
+        if score_counts.get(eid):
+            row["avg_percent"] = round(score_sums[eid] / score_counts[eid], 2)
+    active_sessions = len([s for s in sessions if str(s.get("state") or "") == "active"])
     audit.emit_event(actor=identity, action="exams.overview.viewed", entity_type="exams_module", entity_id="overview", summary="EXAMS overview viewed", details={"counts": counts})
-    return {"ok": True, "module": "exams", "phase": "4-foundation", "counts": counts, "collections": sorted(store.EXAMS_COLLECTIONS)}
+    return {"ok": True, "module": "exams", "phase": "4-foundation", "counts": counts, "collections": sorted(store.EXAMS_COLLECTIONS), "summary": {"active_sessions": active_sessions, "submitted_sessions": len([s for s in sessions if str(s.get('state') or '') == 'submitted']), "submissions": len(submissions), "enrollments": len(enrollments)}, "by_exam": list(by_exam.values())}
 
 
 @router.get("/my")
@@ -183,6 +216,16 @@ def upsert_enrollment(payload: EnrollmentUpsert = Body(...), mnh_session: str | 
     item = store.upsert_doc(store.COL_ENROLLMENTS, key, doc)
     audit.emit_event(actor=identity, action="exams.enrollment.upserted", entity_type="enrollment", entity_id=item["id"], summary="Enrollment upserted", details={"exam_id": payload.exam_id, "actor_id": payload.actor_id, "role": payload.role})
     return {"ok": True, "item": item}
+
+
+@router.delete("/enrollments/{enrollment_id}")
+def delete_enrollment(enrollment_id: str, mnh_session: str | None = Cookie(default=None)):
+    identity = permissions.require_capability(mnh_session, "exams.manage")
+    existing = store.get_doc(store.COL_ENROLLMENTS, enrollment_id)
+    if not existing: raise HTTPException(404, "Enrollment not found")
+    store.delete_doc(store.COL_ENROLLMENTS, enrollment_id)
+    audit.emit_event(actor=identity, action="exams.enrollment.deleted", entity_type="enrollment", entity_id=enrollment_id, summary="Enrollment deleted")
+    return {"ok": True, "deleted": enrollment_id}
 
 
 # ----- Exams -----
@@ -368,11 +411,85 @@ def submit_session(session_id: str, payload: SessionSubmit = Body(...), mnh_sess
     expected = payload.expected_updated_at if payload.expected_updated_at is not None else sess.get("updated_at")
     sess_item = store.update_doc_if_updated_at(store.COL_SESSIONS, session_id, int(expected or 0), sess)
     if sess_item is None:
+        store.delete_doc(store.COL_SUBMISSIONS, submission_id)  # rollback orphan submission on CAS conflict
         latest = store.get_doc(store.COL_SESSIONS, session_id)
         if latest and str(latest.get("state") or "") == "submitted":
             sub_id = str(latest.get("submission_id") or submission_id)
-            sub = store.get_doc(store.COL_SUBMISSIONS, sub_id) if sub_id else sub_item
+            sub = store.get_doc(store.COL_SUBMISSIONS, sub_id) if sub_id else None
             return {"ok": True, "item": latest, "submission": sub, "already_submitted": True}
-        return {"ok": False, "conflict": True, "item": latest, "submission": sub_item, "reason": "concurrent_update"}
+        return {"ok": False, "conflict": True, "item": latest, "reason": "concurrent_update"}
     audit.emit_event(actor=identity, action="exams.session.submitted", entity_type="session", entity_id=session_id, summary="Exam submitted", details={"submission_id": sub_item["id"], "percent": score.get("percent")})
     return {"ok": True, "item": sess_item, "submission": sub_item}
+
+
+
+@router.get("/sessions")
+def list_sessions(limit: int = 100, exam_id: str = "", mnh_session: str | None = Cookie(default=None)):
+    identity = permissions.resolve_identity(mnh_session)
+    if not (permissions.has_capability(identity, "exams.manage") or permissions.has_capability(identity, "exams.invigilate") or permissions.has_capability(identity, "exams.grade")):
+        # candidates can see own via /my
+        raise HTTPException(403, "Not allowed")
+    items = store.list_docs(store.COL_SESSIONS, limit=limit)
+    if exam_id:
+        items = [x for x in items if str(x.get("exam_id") or "") == exam_id]
+    return {"ok": True, "items": items, "count": len(items)}
+
+# ----- Submissions / grading -----
+@router.get("/submissions")
+def list_submissions(exam_id: str = "", limit: int = 200, mnh_session: str | None = Cookie(default=None)):
+    identity = permissions.resolve_identity(mnh_session)
+    actor_id = str(identity.get("actor_id") or "")
+    items = store.list_docs(store.COL_SUBMISSIONS, limit=limit)
+    if exam_id:
+        items = [x for x in items if str(x.get("exam_id") or "") == exam_id]
+    if not (permissions.has_capability(identity, "exams.manage") or permissions.has_capability(identity, "exams.grade")):
+        items = [x for x in items if str(x.get("actor_id") or "") == actor_id]
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+@router.get("/submissions/{submission_id}")
+def get_submission(submission_id: str, mnh_session: str | None = Cookie(default=None)):
+    identity = permissions.resolve_identity(mnh_session)
+    item = store.get_doc(store.COL_SUBMISSIONS, submission_id)
+    if not item: raise HTTPException(404, "Submission not found")
+    actor_id = str(identity.get("actor_id") or "")
+    if not (permissions.has_capability(identity, "exams.manage") or permissions.has_capability(identity, "exams.grade")) and str(item.get("actor_id") or "") != actor_id:
+        raise HTTPException(403, "Not allowed")
+    exam = store.get_doc(store.COL_EXAMS, str(item.get("exam_id") or ""))
+    return {"ok": True, "item": item, "exam": exam}
+
+
+@router.post("/submissions/{submission_id}/grade")
+def grade_submission(submission_id: str, payload: SubmissionGrade = Body(...), mnh_session: str | None = Cookie(default=None)):
+    identity = permissions.require_capability(mnh_session, "exams.grade")
+    item = store.get_doc(store.COL_SUBMISSIONS, submission_id)
+    if not item: raise HTTPException(404, "Submission not found")
+    expected = int(item.get("updated_at") or 0)
+    score = item.get("score") if isinstance(item.get("score"), dict) else {}
+    if payload.earned_points is not None:
+        score["earned_points"] = float(payload.earned_points)
+        total = float(score.get("total_points") or 0)
+        if total > 0:
+            score["percent"] = round(float(payload.earned_points) / total * 100.0, 2)
+    if payload.percent is not None:
+        score["percent"] = float(payload.percent)
+    item["score"] = score
+    item["feedback"] = payload.feedback
+    item["status"] = payload.status
+    item["graded_by"] = identity.get("actor_id")
+    item["graded_at"] = store.now_ms()
+    saved = store.update_doc_if_updated_at(store.COL_SUBMISSIONS, submission_id, expected, item)
+    if saved is None:
+        latest = store.get_doc(store.COL_SUBMISSIONS, submission_id)
+        return {"ok": False, "conflict": True, "item": latest, "reason": "stale_submission"}
+    audit.emit_event(actor=identity, action="exams.submission.graded", entity_type="submission", entity_id=submission_id, summary="Submission graded", details={"status": payload.status, "percent": score.get("percent")})
+    return {"ok": True, "item": saved}
+
+
+@router.get("/analytics")
+def exams_analytics(mnh_session: str | None = Cookie(default=None)):
+    identity = permissions.resolve_identity(mnh_session)
+    if not (permissions.has_capability(identity, "exams.manage") or permissions.has_capability(identity, "exams.grade") or permissions.has_capability(identity, "exams.analytics")):
+        raise HTTPException(403, "Not allowed")
+    overview = exams_overview(mnh_session)
+    return {"ok": True, "analytics": overview.get("summary", {}), "by_exam": overview.get("by_exam", []), "counts": overview.get("counts", {})}

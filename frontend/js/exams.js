@@ -12,6 +12,21 @@
   function card(title, bodyHtml){ return `<section class="exams-card"><h3>${esc(title)}</h3>${bodyHtml}</section>`; }
   function fmt(ms){ try{ return ms?new Date(ms).toLocaleString():""; }catch(_e){ return ""; } }
   function stopTimer(){ if(state.timer){ clearInterval(state.timer); state.timer=null; } }
+  function showMsg(id, text, isErr){ const el=document.getElementById(id); if(!el) return; el.className=isErr?'exams-error':'exams-note'; el.textContent=text||''; }
+  function uiConfirm(message, okText='Confirm', danger=false){
+    return new Promise(resolve=>{
+      const wrap=document.createElement('div'); wrap.className='exams-modal-backdrop';
+      wrap.innerHTML=`<div class="exams-modal" role="dialog" aria-modal="true"><p class="exams-modal-msg"></p><div class="exams-form-actions"><button type="button" class="exams-btn exams-modal-cancel">Cancel</button><button type="button" class="exams-btn ${danger?'danger':'primary'} exams-modal-ok"></button></div></div>`;
+      wrap.querySelector('.exams-modal-msg').textContent=message;
+      wrap.querySelector('.exams-modal-ok').textContent=okText;
+      const done=(v)=>{ wrap.remove(); resolve(v); };
+      wrap.querySelector('.exams-modal-cancel').addEventListener('click',()=>done(false));
+      wrap.querySelector('.exams-modal-ok').addEventListener('click',()=>done(true));
+      wrap.addEventListener('click',(e)=>{ if(e.target===wrap) done(false); });
+      document.body.appendChild(wrap);
+      wrap.querySelector('.exams-modal-ok').focus();
+    });
+  }
 
   function questionFieldsHtml(){
     return `
@@ -55,7 +70,7 @@
       }
       return `<div class="exams-question"><div class="exams-qhead"><strong>Q${idx+1}.</strong> ${esc(q.prompt||'')} <span class="exams-note">(${Number(q.points||0)} pts, ${esc(q.type||'')})</span></div>${input}</div>`;
     }).join('');
-    return card('Active Exam Session', `
+    return card(sess.state==='active' ? 'Active Exam Session' : 'Exam Session', `
       <p><strong>${esc(exam.title||'Exam')}</strong> · Session <code>${esc(sess.id||'')}</code> · State <code>${esc(sess.state||'')}</code></p>
       <p><strong>Time remaining:</strong> <span id="exams-countdown">${mins}:${String(secs).padStart(2,'0')}</span></p>
       <div id="exams-attempt">${qHtml || '<p class="exams-note">No questions composed into this exam yet.</p>'}</div>
@@ -102,7 +117,7 @@
           </td>
         </tr>`).join('');
 
-      const qRows = qItems.map(q=>`<tr><td><div>${esc(q.prompt||'')}</div><div class="exams-note">${esc(q.type||'')} • ${Number(q.points||0)} pts • ${esc(q.id||'')}</div></td><td>${canQ?`<button class="exams-btn danger" data-q-del="${esc(q.id)}">Delete</button>`:''}</td></tr>`).join('');
+      const qRows = qItems.map(q=>`<tr><td><div>${esc(q.prompt||'')}</div><div class="exams-note">${esc(q.type||'')} • ${Number(q.points||0)} pts • ${esc(q.id||'')}</div></td><td>${canQ?`<button class="exams-btn" data-q-edit="${esc(q.id)}">Edit</button> <button class="exams-btn danger" data-q-del="${esc(q.id)}">Delete</button>`:''}</td></tr>`).join('');
       let enrollments = [];
       if (canManage) {
         enrollments = await fetchJson('/api/exams/enrollments?limit=200').then(d=>d.items||[]).catch(()=>[]);
@@ -113,17 +128,38 @@
       const myRows = (my.sessions||[]).map(s=>{
         const sub = (my.submissions||[]).find(x=>x.session_id===s.id || x.id===s.submission_id);
         const score = sub?.score?.percent;
-        const canResume = s.state === 'in_progress';
+        const canResume = s.state === 'active';
         return `<tr><td><code>${esc(s.exam_id||'')}</code><div class="exams-note">Session ${esc(s.id||'')}</div></td><td>${esc(s.state||'')}</td><td>${esc(fmt(s.updated_at))}</td><td>${score==null?'—':esc(score)+'%'}</td><td>${canResume?`<button class="exams-btn primary" data-resume-session="${esc(s.id)}" data-resume-exam="${esc(s.exam_id||'')}">Resume</button>`:''}</td></tr>`;
       }).join('');
       const myEnrollRows = (my.enrollments||[]).map(e=>`<tr><td><code>${esc(e.exam_id||'')}</code></td><td>${esc(e.role||'candidate')}</td><td>${esc(e.status||'active')}</td></tr>`).join('');
 
+            const overview = await fetchJson('/api/exams/overview').catch(()=>({summary:{},by_exam:[],counts:{}}));
+      const analytics = (canManage || canGrade || !!health.capabilities?.includes('exams.analytics')) ? await fetchJson('/api/exams/analytics').catch(()=>null) : null;
+      const canInvigilate = (canManage || !!health.capabilities?.includes('exams.invigilate'));
+      const summary = overview.summary || analytics?.analytics || {};
+      const byExamRows = (overview.by_exam||analytics?.by_exam||[]).map(r=>`<tr><td>${esc(r.title||r.exam_id)}</td><td>${esc(r.status||'')}</td><td>${Number(r.enrolled||0)}</td><td>${Number(r.sessions||0)}</td><td>${Number(r.submitted||0)}</td><td>${r.avg_percent==null?'—':esc(r.avg_percent)+'%'}</td></tr>`).join('');
       host.innerHTML = [
-        card('EXAMS Module (Phase 4 Foundation)', `
-          <p><strong>Status:</strong> ${esc(health.status)} · isolated from legacy <code>examinations</code>.</p>
-          <p><strong>Identity:</strong> <code>${esc(health.identity?.mnh_role||'public')}</code> → <code>${esc(health.identity?.exam_role||'guest')}</code></p>
-          <p class="exams-note">Foundation includes namespaced exam definitions, question bank, exam composition, backend-authoritative session start/autosave/submit, and idempotent submissions. Scoring for short/essay is an exact-match placeholder.</p>
+        `<div id="exams-global-msg" class="exams-note" role="status" aria-live="polite"></div>`,
+        card('EXAMS', `
+          <p><strong>Status:</strong> ${esc(health.status)} • isolated from legacy <code>examinations</code>.</p>
+          <p><strong>Identity:</strong> <code>${esc(health.identity?.mnh_role||'public')}</code> • <code>${esc(health.identity?.exam_role||'guest')}</code></p>
+          <p class="exams-note">Exams, question bank, enrollment, session delivery, autosave/submit, basic grading, and basic analytics are available. Invigilation is limited to session monitoring.</p>
         `),
+        card('Analytics Summary', `
+          <div class="exams-kpis">
+            <div class="exams-kpi"><span>Active sessions</span><strong>${Number(summary.active_sessions||0)}</strong></div>
+            <div class="exams-kpi"><span>Submitted sessions</span><strong>${Number(summary.submitted_sessions||0)}</strong></div>
+            <div class="exams-kpi"><span>Submissions</span><strong>${Number(summary.submissions||0)}</strong></div>
+            <div class="exams-kpi"><span>Enrollments</span><strong>${Number(summary.enrollments||0)}</strong></div>
+          </div>
+          <table class="exams-table"><thead><tr><th>Exam</th><th>Status</th><th>Enrolled</th><th>Sessions</th><th>Submitted</th><th>Avg %</th></tr></thead>
+          <tbody>${byExamRows || '<tr><td colspan="6" class="exams-note">No exam analytics yet.</td></tr>'}</tbody></table>
+        `),
+        canInvigilate ? card('Invigilation Monitor', `
+          <p class="exams-note">Live session states for monitoring. This is monitoring only, not full proctoring/lockdown.</p>
+          <table class="exams-table"><thead><tr><th>Session</th><th>Exam</th><th>Actor</th><th>State</th><th>Updated</th></tr></thead>
+          <tbody id="exams-invig-body"><tr><td colspan="5" class="exams-note">Loading...</td></tr></tbody></table>
+        `) : '',
         card('My Exam Activity', `
           <h4 style="margin:.2rem 0 .4rem">Sessions</h4>
           <table class="exams-table"><thead><tr><th>Exam/Session</th><th>State</th><th>Updated</th><th>Score</th><th>Action</th></tr></thead>
@@ -161,35 +197,70 @@
             <div id="exams-create-msg" class="exams-note"></div>
           </form>
         `) : card('Access', `<p class="exams-note">Published exams are visible. Starting a session requires authentication. Management requires mapped EXAMS role.</p>`),
+        canGrade ? card('Submission Review / Grading', `
+          <p class="exams-note">View submitted attempts and apply manual score/feedback overrides. Objective auto-scoring remains basic.</p>
+          <div class="exams-form-actions"><button id="exams-refresh-subs" class="exams-btn" type="button">Refresh submissions</button></div>
+          <table class="exams-table"><thead><tr><th>Submission</th><th>Exam</th><th>Actor</th><th>Score</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="exams-subs-body"><tr><td colspan="6" class="exams-note">Loading...</td></tr></tbody></table>
+          <div id="exams-grade-msg" class="exams-note"></div>
+        `) : '',
         card('Exam Definitions', `
           <table class="exams-table"><thead><tr><th>Title</th><th>Status</th><th>Duration</th><th>Questions</th><th>Actions</th></tr></thead>
           <tbody>${examRows || '<tr><td colspan="5" class="exams-note">No exams found.</td></tr>'}</tbody></table>
         `)
-      ].join('\n');
+      ].filter(Boolean).join('\n');
 
       const qForm = document.getElementById('exams-q-form');
       if(qForm) qForm.addEventListener('submit', async (e)=>{
         e.preventDefault(); const msg=document.getElementById('exams-q-msg'); msg.className='exams-note'; msg.textContent='Saving...';
         const fd=new FormData(qForm);
+        const editId=String(qForm.dataset.editId||'').trim();
         const type=String(fd.get('type')||'mcq');
         let options=parseOptions(fd.get('options'));
         if(type==='true_false' && options.length===0) options=[{id:'true',text:'True'},{id:'false',text:'False'}];
         const payload={prompt:String(fd.get('prompt')||'').trim(), type, options, correct_option_ids:String(fd.get('correct_option_ids')||'').split(',').map(s=>s.trim()).filter(Boolean), correct_text:String(fd.get('correct_text')||''), points:Number(fd.get('points')||1), explanation:'', tags:[], active:true};
-        try{ await fetchJson('/api/exams/questions',{method:'POST',body:JSON.stringify(payload)}); await render(); }catch(err){ msg.className='exams-error'; msg.textContent=err.message||String(err); }
+        try{
+          if(editId) await fetchJson('/api/exams/questions/'+encodeURIComponent(editId),{method:'PUT',body:JSON.stringify(payload)});
+          else await fetchJson('/api/exams/questions',{method:'POST',body:JSON.stringify(payload)});
+          qForm.reset(); delete qForm.dataset.editId; const sb=qForm.querySelector('button[type="submit"]'); if(sb) sb.textContent='Save question';
+          await render();
+        }catch(err){ msg.className='exams-error'; msg.textContent=err.message||String(err); }
       });
+      host.querySelectorAll('[data-q-edit]').forEach(btn=>btn.addEventListener('click', ()=>{
+        const id=btn.getAttribute('data-q-edit'); const q=qItems.find(x=>x.id===id); const form=document.getElementById('exams-q-form');
+        if(!q||!form) return;
+        form.dataset.editId=id;
+        form.querySelector('[name="prompt"]').value=q.prompt||'';
+        form.querySelector('[name="type"]').value=q.type||'mcq';
+        form.querySelector('[name="options"]').value=(q.options||[]).map(o=>`${o.id}|${o.text}`).join('\n');
+        form.querySelector('[name="correct_option_ids"]').value=(q.correct_option_ids||[]).join(',');
+        form.querySelector('[name="correct_text"]').value=q.correct_text||'';
+        form.querySelector('[name="points"]').value=String(q.points??1);
+        const sb=form.querySelector('button[type="submit"]'); if(sb) sb.textContent='Update question';
+        showMsg('exams-q-msg','Editing question '+id,false);
+        form.scrollIntoView({behavior:'smooth',block:'start'});
+      }));
 
-      host.querySelectorAll('[data-q-del]').forEach(btn=>btn.addEventListener('click', async ()=>{ if(!confirm('Delete question?')) return; try{ await fetchJson('/api/exams/questions/'+encodeURIComponent(btn.getAttribute('data-q-del')), {method:'DELETE'}); await render(); }catch(err){ alert(err.message||String(err)); }}));
+      host.querySelectorAll('[data-q-del]').forEach(btn=>btn.addEventListener('click', async ()=>{ if(!await uiConfirm('Delete this question? This cannot be undone.','Delete question',true)) return; try{ await fetchJson('/api/exams/questions/'+encodeURIComponent(btn.getAttribute('data-q-del')), {method:'DELETE'}); await render(); }catch(err){ showMsg('exams-q-msg', err.message||String(err), true); } }));
 
       const cForm=document.getElementById('exams-create-form');
       if(cForm) cForm.addEventListener('submit', async (e)=>{
-        e.preventDefault(); const msg=document.getElementById('exams-create-msg'); msg.className='exams-note'; msg.textContent='Creating...';
+        e.preventDefault(); const msg=document.getElementById('exams-create-msg');
         const fd=new FormData(cForm);
+        const editId=String(cForm.dataset.editId||'').trim();
+        msg.className='exams-note'; msg.textContent=editId?'Updating...':'Creating...';
         const qids=String(fd.get('questions')||'').split(',').map(s=>s.trim()).filter(Boolean).map((id,i)=>({question_id:id,order:i}));
-        const payload={title:String(fd.get('title')||'').trim(), course_code:String(fd.get('course_code')||'').trim(), duration_minutes:Number(fd.get('duration_minutes')||60), status:String(fd.get('status')||'draft'), description:String(fd.get('description')||''), instructions:String(fd.get('instructions')||''), pass_mark_percent:50, max_attempts:1, shuffle_questions:false, shuffle_options:false, questions:qids};
-        try{ await fetchJson('/api/exams/exams',{method:'POST',body:JSON.stringify(payload)}); await render(); }catch(err){ msg.className='exams-error'; msg.textContent=err.message||String(err); }
+        const existing = editId ? (items.find(x=>x.id===editId)||{}) : {};
+        const payload={...existing, title:String(fd.get('title')||'').trim(), course_code:String(fd.get('course_code')||'').trim(), duration_minutes:Number(fd.get('duration_minutes')||60), status:String(fd.get('status')||'draft'), description:String(fd.get('description')||''), instructions:String(fd.get('instructions')||''), pass_mark_percent:Number(existing.pass_mark_percent??50), max_attempts:Number(existing.max_attempts??1), shuffle_questions:!!existing.shuffle_questions, shuffle_options:!!existing.shuffle_options, questions:qids};
+        try{
+          if(editId){ await fetchJson('/api/exams/exams/'+encodeURIComponent(editId),{method:'PUT',body:JSON.stringify(payload)}); }
+          else { await fetchJson('/api/exams/exams',{method:'POST',body:JSON.stringify(payload)}); }
+          cForm.reset(); delete cForm.dataset.editId; const submit=cForm.querySelector('button[type="submit"]'); if(submit) submit.textContent='Create exam';
+          await render();
+        }catch(err){ msg.className='exams-error'; msg.textContent=err.message||String(err); }
       });
 
-      host.querySelectorAll('[data-exam-del]').forEach(btn=>btn.addEventListener('click', async ()=>{ if(!confirm('Delete exam?')) return; try{ await fetchJson('/api/exams/exams/'+encodeURIComponent(btn.getAttribute('data-exam-del')), {method:'DELETE'}); await render(); }catch(err){ alert(err.message||String(err)); }}));
+      host.querySelectorAll('[data-exam-del]').forEach(btn=>btn.addEventListener('click', async ()=>{ if(!await uiConfirm('Delete this exam definition? Existing sessions/submissions may become orphaned.','Delete exam',true)) return; try{ await fetchJson('/api/exams/exams/'+encodeURIComponent(btn.getAttribute('data-exam-del')), {method:'DELETE'}); await render(); }catch(err){ showMsg('exams-create-msg', err.message||String(err), true); } }));
       const eForm = document.getElementById('exams-enroll-form');
       if(eForm) eForm.addEventListener('submit', async (e)=>{
         e.preventDefault();
@@ -199,10 +270,19 @@
       });
       host.querySelectorAll('[data-exam-edit]').forEach(btn=>btn.addEventListener('click', async ()=>{
         const id=btn.getAttribute('data-exam-edit'); const item=items.find(x=>x.id===id); if(!item) return;
-        const title=prompt('Title', item.title||''); if(title==null) return;
-        const status=prompt('Status draft/published/archived', item.status||'draft'); if(status==null) return;
-        const qids=prompt('Question IDs comma separated', (item.questions||[]).map(q=>q.question_id).join(',')); if(qids==null) return;
-        try{ await fetchJson('/api/exams/exams/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({...item,title:title.trim(),status:status.trim(),questions:qids.split(',').map(s=>s.trim()).filter(Boolean).map((qid,i)=>({question_id:qid,order:i}))})}); await render(); }catch(err){ alert(err.message||String(err)); }
+        const form=document.getElementById('exams-create-form');
+        if(!form){ showMsg('exams-global-msg','Create form unavailable.',true); return; }
+        form.querySelector('[name="title"]').value=item.title||'';
+        form.querySelector('[name="course_code"]').value=item.course_code||'';
+        form.querySelector('[name="duration_minutes"]').value=String(item.duration_minutes||60);
+        form.querySelector('[name="status"]').value=item.status||'draft';
+        form.querySelector('[name="questions"]').value=(item.questions||[]).map(q=>q.question_id).join(',');
+        form.querySelector('[name="description"]').value=item.description||'';
+        form.querySelector('[name="instructions"]').value=item.instructions||'';
+        form.dataset.editId=id;
+        const submit=form.querySelector('button[type="submit"]'); if(submit) submit.textContent='Update exam';
+        showMsg('exams-create-msg','Editing exam '+id+'. Update fields and click "Update exam".',false);
+        form.scrollIntoView({behavior:'smooth',block:'start'});
       }));
 
       async function startOrResumeExam(id){
@@ -212,12 +292,66 @@
         state.session=sess; state.exam=full.item; await render();
       }
       host.querySelectorAll('[data-exam-start]').forEach(btn=>btn.addEventListener('click', async ()=>{
-        try{ await startOrResumeExam(btn.getAttribute('data-exam-start')); }catch(err){ alert(err.message||String(err)); }
+        try{ await startOrResumeExam(btn.getAttribute('data-exam-start')); }catch(err){ showMsg('exams-global-msg', err.message||String(err), true); }
       }));
       host.querySelectorAll('[data-resume-session]').forEach(btn=>btn.addEventListener('click', async ()=>{
-        try{ await startOrResumeExam(btn.getAttribute('data-resume-exam')); }catch(err){ alert(err.message||String(err)); }
+        try{ await startOrResumeExam(btn.getAttribute('data-resume-exam')); }catch(err){ showMsg('exams-global-msg', err.message||String(err), true); }
+      }));
+      host.querySelectorAll('[data-view-sub]').forEach(btn=>btn.addEventListener('click', async ()=>{
+        const id=btn.getAttribute('data-view-sub'); if(!id) return;
+        try{
+          const res=await fetchJson('/api/exams/submissions/'+encodeURIComponent(id));
+          const sub=res.item||{}; const exam=res.exam||{};
+          const lines=[`Submission: ${sub.id||id}`,`Exam: ${exam.title||sub.exam_id||''}`,`Actor: ${sub.actor_id||''}`,`Status: ${sub.status||''}`,`Score: ${sub.score?.percent ?? 'n/a'}% (${sub.score?.earned_points ?? 'n/a'}/${sub.score?.total_points ?? 'n/a'})`,`Feedback: ${sub.feedback||''}`,'','Answers:'];
+          const ans=sub.answers||{};
+          Object.keys(ans).forEach(k=>lines.push(`- ${k}: ${Array.isArray(ans[k])?ans[k].join(', '):String(ans[k])}`));
+          await uiConfirm(lines.join('\n'),'Close');
+        }catch(err){ showMsg('exams-global-msg', err.message||String(err), true); }
       }));
 
+
+      async function loadSubs(){
+        const body=document.getElementById('exams-subs-body'); if(!body) return;
+        try{
+          const res=await fetchJson('/api/exams/submissions?limit=100');
+          const items=res.items||[];
+          body.innerHTML = items.map(sub=>`<tr><td><code>${esc(sub.id||'')}</code><div class="exams-note">${esc(fmt(sub.submitted_at||sub.updated_at))}</div></td><td><code>${esc(sub.exam_id||'')}</code></td><td><code>${esc(sub.actor_id||'')}</code></td><td>${esc(sub.score?.percent ?? 'n/a')}%</td><td>${esc(sub.status||'')}</td><td><button class="exams-btn" data-grade-sub="${esc(sub.id||'')}">Grade</button></td></tr>`).join('') || '<tr><td colspan="6" class="exams-note">No submissions yet.</td></tr>';
+          body.querySelectorAll('[data-grade-sub]').forEach(btn=>btn.addEventListener('click', async ()=>{
+            const id=btn.getAttribute('data-grade-sub'); const sub=items.find(x=>x.id===id); if(!sub) return;
+            const wrap=document.createElement('div'); wrap.className='exams-modal-backdrop';
+            wrap.innerHTML=`<div class="exams-modal" role="dialog" aria-modal="true"><h3 style="margin-top:0">Grade submission</h3>
+              <p class="exams-note"><code>${esc(id)}</code> · ${esc(sub.actor_id||'')} · ${esc(sub.exam_id||'')}</p>
+              <label>Percent score<input id="exams-grade-pct" type="number" min="0" max="100" step="0.01" value="${esc(sub.score?.percent ?? '')}"></label>
+              <label>Status<select id="exams-grade-status"><option value="submitted">submitted</option><option value="graded">graded</option><option value="returned">returned</option></select></label>
+              <label>Feedback<textarea id="exams-grade-feedback" rows="4">${esc(sub.feedback||'')}</textarea></label>
+              <div class="exams-form-actions"><button type="button" class="exams-btn" id="exams-grade-cancel">Cancel</button><button type="button" class="exams-btn primary" id="exams-grade-save">Save grade</button></div>
+              <div id="exams-grade-modal-msg" class="exams-note"></div>
+            </div>`;
+            document.body.appendChild(wrap);
+            wrap.querySelector('#exams-grade-status').value=['submitted','graded','returned'].includes(sub.status)?sub.status:'graded';
+            const close=()=>wrap.remove();
+            wrap.querySelector('#exams-grade-cancel').addEventListener('click', close);
+            wrap.addEventListener('click',(e)=>{ if(e.target===wrap) close(); });
+            wrap.querySelector('#exams-grade-save').addEventListener('click', async ()=>{
+              const pct=wrap.querySelector('#exams-grade-pct').value;
+              const payload={feedback:String(wrap.querySelector('#exams-grade-feedback').value||''), status:String(wrap.querySelector('#exams-grade-status').value||'graded')};
+              if(String(pct).trim()!==''){ const n=Number(pct); if(!Number.isNaN(n)) payload.percent=n; }
+              try{ await fetchJson('/api/exams/submissions/'+encodeURIComponent(id)+'/grade',{method:'POST',body:JSON.stringify(payload)}); close(); showMsg('exams-grade-msg','Submission graded.',false); await loadSubs(); }catch(err){ const m=wrap.querySelector('#exams-grade-modal-msg'); m.className='exams-error'; m.textContent=err.message||String(err); }
+            });
+          }));
+        }catch(err){ body.innerHTML = `<tr><td colspan="6" class="exams-error">${esc(err.message||String(err))}</td></tr>`; }
+      }
+      const refreshSubs=document.getElementById('exams-refresh-subs'); if(refreshSubs) refreshSubs.addEventListener('click', loadSubs);
+      if(document.getElementById('exams-subs-body')) loadSubs();
+      async function loadInvig(){
+        const body=document.getElementById('exams-invig-body'); if(!body) return;
+        try{
+          const res=await fetchJson('/api/exams/sessions?limit=100');
+          const items=res.items||[];
+          body.innerHTML = items.map(sx=>`<tr><td><code>${esc(sx.id||'')}</code></td><td><code>${esc(sx.exam_id||'')}</code></td><td><code>${esc(sx.actor_id||'')}</code></td><td><span class="exams-badge ${sx.state==='active'?'warn':sx.state==='submitted'?'ok':'err'}">${esc(sx.state||'')}</span></td><td>${esc(fmt(sx.updated_at))}</td></tr>`).join('') || '<tr><td colspan="5" class="exams-note">No sessions.</td></tr>';
+        }catch(err){ body.innerHTML=`<tr><td colspan="5" class="exams-error">${esc(err.message||String(err))}</td></tr>`; }
+      }
+      if(document.getElementById('exams-invig-body')) loadInvig();
       if(state.session && state.exam){
         const saveBtn=document.getElementById('exams-save-btn');
         const submitBtn=document.getElementById('exams-submit-btn');
@@ -233,7 +367,7 @@
         }
         if(saveBtn) saveBtn.addEventListener('click', ()=>doSave(false));
         if(submitBtn) submitBtn.addEventListener('click', async ()=>{
-          if(!confirm('Submit exam? Submission is final for this foundation.')) return;
+          if(!await uiConfirm('Submit this exam? Submission is final for the current attempt.','Submit exam')) return;
           submitBtn.disabled=true;
           try{
             const res=await fetchJson('/api/exams/sessions/'+encodeURIComponent(state.session.id)+'/submit',{method:'POST',body:JSON.stringify({answers:collectAnswers(), client_submit_id:'sub_'+state.session.id})});

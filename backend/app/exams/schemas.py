@@ -70,3 +70,10 @@ class SessionSubmit(BaseModel):
     answers: dict[str, Any] = Field(default_factory=dict)
     client_submit_id: str = Field(default="", max_length=120)
     expected_updated_at: int | None = Field(default=None, ge=0)
+
+
+class SubmissionGrade(BaseModel):
+    earned_points: float | None = Field(default=None, ge=0, le=100000)
+    percent: float | None = Field(default=None, ge=0, le=100)
+    feedback: str = Field(default="", max_length=8000)
+    status: Literal["submitted", "graded", "returned"] = "graded"
