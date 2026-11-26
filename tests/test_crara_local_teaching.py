@@ -25,7 +25,7 @@ def test_generated_local_knowledge_is_source_backed():
 
     payload = local_knowledge.knowledge()
     assert payload["schema_version"] == 1
-    assert payload["build"] == "2026.11.26-exams-hardening-v1"
+    assert payload["build"] == "2026.11.26-exams-deeplink-v3"
     assert payload["generated_by"] == "scripts/build_statistical_glossary.py"
     assert len(payload["glossary"]) == 46
     assert len(payload["library_sections"]) >= 40

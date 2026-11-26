@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-BUILD = "2026.11.26-exams-hardening-v1"
+BUILD = "2026.11.26-exams-deeplink-v3"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "resources" / "python-statistical-tests-glossary.html"
 CRARA_KNOWLEDGE_OUTPUT = ROOT / "backend" / "app" / "class_rep" / "data" / "local_teaching_knowledge.json"

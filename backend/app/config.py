@@ -39,7 +39,7 @@ LIVEKIT_HANDOFF_TTL_SECONDS = min(900, max(60, _int_env("MNH_LIVEKIT_HANDOFF_TTL
 # Local development: 127.0.0.1:8000 (set MNH_LAN=1 to expose on the LAN).
 # Hosting platforms (Render etc.) provide PORT and need 0.0.0.0.
 # MNH_HOST / MNH_PORT override everything; PORT is honoured when MNH_PORT is unset.
-BUILD_ID = "2026.11.26-exams-hardening-v1"
+BUILD_ID = "2026.11.26-exams-deeplink-v3"
 APP_VERSION = "2.1.0"
 
 # ---- WhatsApp reminders ---------------------------------------------------

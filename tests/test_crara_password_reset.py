@@ -10,7 +10,7 @@ from app.main import app
 from app.services import backup_service, mail_service
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = "2026.11.26-exams-hardening-v1"
+BUILD = "2026.11.26-exams-deeplink-v3"
 
 
 def _test_storage(monkeypatch, tmp_path):

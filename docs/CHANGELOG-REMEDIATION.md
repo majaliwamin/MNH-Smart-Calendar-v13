@@ -79,7 +79,7 @@ The existing analytics implementation and dashboard calculations were retained. 
 - Added a compact Chichewa academic-expression contract so CH answers use verified glossary wording, keep untranslated technical abbreviations where no verified equivalent exists, and do not present simulated teaching results as patient or research findings.
 - Added deterministic, server-side statistical visuals from SHA-256-verified simulated data: KDE plus fitted-normal distribution curves, paired blood pressure, facility summaries, a gestational-age scatter and a Kaplan–Meier curve. Each answer includes bilingual source provenance, sample size, simulated-data wording and reproducible Python code; no submitted code runs and no web source is consulted.
 - Unclear variables, missing/changed data and real-patient-data requests fail closed with a helpful supported-options answer. Verified visual turns bypass the model provider and keep the existing fenced `chart` JSON renderer contract.
-- Build metadata moved to `2026.11.26-exams-hardening-v1` across backend config, app shell, service worker, generated glossary and the generated local-knowledge index.
+- Build metadata moved to `2026.11.26-exams-deeplink-v3` across backend config, app shell, service worker, generated glossary and the generated local-knowledge index.
 - Source fingerprints hash canonical LF bytes so Windows CRLF checkouts and Linux CI checkouts verify the same committed files. The generator, runtime dataset check and regression tests all use this normalisation, and generated HTML/JSON are now written as canonical LF bytes on every platform.
 
 ## v45 (26 Nov 2026) — EXAMS hardening and completion
@@ -93,4 +93,15 @@ The existing analytics implementation and dashboard calculations were retained. 
 - Added explicit EXAMS backup/restore with schema version, SHA-256 integrity, conflict blocking and admin-only overwrite. Generic export/restore continues to exclude EXAMS.
 - Replaced the EXAMS browser client with an accessible, capability-gated, server-synchronized UI using custom focus-trapped dialogs; no native `confirm`/`alert`/`prompt` remains.
 - Documented the module in `docs/EXAMS.md`; added maintenance and README pointers.
-- Build metadata moved to `2026.11.26-exams-hardening-v1` across backend config, app shell, service worker, generated glossary, generated local-knowledge index, tests and structural assertions.
+- Build metadata moved to `2026.11.26-exams-deeplink-v3` across backend config, app shell, service worker, generated glossary, generated local-knowledge index, tests and structural assertions.
+
+## v46 (26 Nov 2026) — browser glitch cleanup
+
+- The EXAMS client no longer requests the private question bank for guests. Previously the request returned 403 and logged a console error on every load even though the question-bank card is hidden; the request is now gated on `exams.question.manage`.
+- Repaired double-encoded text in the app shell and CRARA classroom title (`â€”`, `â€“`, `â€¦`, `â€™`), so the page title, labels and option text render as proper em dashes, en dashes, ellipses and apostrophes.
+- Build metadata moved to `2026.11.26-exams-deeplink-v3`; generated glossary and local-knowledge artifacts were regenerated.
+
+## v47 (26 Nov 2026) — direct EXAMS link
+
+- The app now honours `?view=<name>` on first load, so `http://127.0.0.1:8000/?view=exams` opens the EXAMS workspace directly. Unknown view names still fall back to the weekly timetable.
+- Build metadata moved to `2026.11.26-exams-deeplink-v3` across the app shell, service worker, backend config, generated artifacts and test assertions.

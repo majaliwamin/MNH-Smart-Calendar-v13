@@ -2977,7 +2977,9 @@ function initHeader(){
  const _build=build;build=function(){_build();refreshHeader();if(currentView==="modules")renderModules();};
  const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="public-chat"||currentView==="examinations"||currentView==="exams"||currentView==="recurring")renderView(currentView);};
  setInterval(refreshHeader,30000);
- refreshHeader();if(location.hash){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}showView("weekly");
+ refreshHeader();if(location.hash){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}
+  const requestedView=new URLSearchParams(location.search).get("view");
+  if(requestedView&&document.getElementById("view-"+requestedView))showView(requestedView);else showView("weekly");
  initWeekNav();
 }
 // ---- Hamburger menu ----

@@ -356,8 +356,8 @@ def test_crara_mobile_header_and_composer_classroom_icon():
     assert ".cr-header-menu-panel{" in css
     assert ".cr-home-back span{display:none;}" in css
     assert ".cr-classroom-launch svg{" in css
-    assert "class-rep.css?v=2026.11.26-exams-hardening-v1&amp;crara-header=1" in html
-    assert "class-rep.js?v=2026.11.26-exams-hardening-v1&amp;crara-header=1&amp;chat-speech=1" in html
+    assert "class-rep.css?v=2026.11.26-exams-deeplink-v3&amp;crara-header=1" in html
+    assert "class-rep.js?v=2026.11.26-exams-deeplink-v3&amp;crara-header=1&amp;chat-speech=1" in html
 
 
 def test_crara_math_packages_are_served_locally_for_mobile_reliability():
@@ -399,8 +399,8 @@ def test_no_third_party_browser_storage_sources_are_loaded():
         assert font in sw, font
     assert 'app.mount("/fonts"' in main
     assert 'url.pathname.startsWith("/fonts/")' in sw
-    assert "css/app.css?v=2026.11.26-exams-hardening-v1&amp;local-fonts=1&amp;resource-tabs=1&amp;book-resource=1" in html
-    assert "js/app.js?v=2026.11.26-exams-hardening-v1&amp;local-resources=1" in html
+    assert "css/app.css?v=2026.11.26-exams-deeplink-v3&amp;local-fonts=1&amp;resource-tabs=1&amp;book-resource=1" in html
+    assert "js/app.js?v=2026.11.26-exams-deeplink-v3&amp;local-resources=1" in html
 
 
 def test_first_party_scripts_do_not_register_deprecated_unload_handlers():

@@ -136,7 +136,7 @@
       "year": 2012
     }
   ],
-  "build": "2026.11.26-exams-hardening-v1",
+  "build": "2026.11.26-exams-deeplink-v3",
   "datasets": {
     "anc_cohort.csv": {
       "columns": [
@@ -2026,7 +2026,7 @@
   "sources": {
     "glossary": {
       "path": "frontend/resources/python-statistical-tests-glossary.html",
-      "sha256": "30969e29cce5ddbefbe2c449b264f1dbc24e4fd2dae46e53094b5c9bc2b01ad3"
+      "sha256": "f48ce01792995e16b4a5fa5909064ffe6b8ba4ce30e61e644dab2a2ffd243819"
     },
     "python_library": {
       "path": "frontend/resources/python-command-library.html",

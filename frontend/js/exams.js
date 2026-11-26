@@ -290,10 +290,9 @@
     host.innerHTML = '<div class="exams-loading">Loading EXAMS module...</div>';
 
     try{
-      const [health, exams, questions] = await Promise.all([
+      const [health, exams] = await Promise.all([
         fetchJson("/api/exams/health"),
-        fetchJson("/api/exams/exams?limit=100"),
-        fetchJson("/api/exams/questions?limit=100").catch(() => ({ items: [] }))
+        fetchJson("/api/exams/exams?limit=100")
       ]);
       if(signal.aborted) return;
       if(Number.isFinite(Number(health.server_now)) && health.server_now){
@@ -309,6 +308,10 @@
       const canBackup = has("exams.backup");
       const canAnalytics = canManage || canGrade || has("exams.analytics");
       const items = exams.items || [];
+      // The question bank is private. Do not request it when the caller has no
+      // question-management capability; a 403 would only pollute the console.
+      const questions = canQ ? await fetchJson("/api/exams/questions?limit=100").catch(() => ({ items: [] })) : { items: [] };
+      if(signal.aborted) return;
       const qItems = questions.items || [];
 
       const examRows = items.map(exam => "" +

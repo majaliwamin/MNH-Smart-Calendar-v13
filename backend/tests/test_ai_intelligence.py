@@ -273,7 +273,7 @@ def test_ai_health_reports_status_without_credentials(ai_db):
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
-    assert body["build"] == "2026.11.26-exams-hardening-v1"
+    assert body["build"] == "2026.11.26-exams-deeplink-v3"
     assert "provider_count" in body
     assert "api_key" not in response.text
 
