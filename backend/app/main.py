@@ -1,4 +1,5 @@
 """FastAPI application entry point for the MNH Calendar."""
+import logging
 import threading
 import json
 import time

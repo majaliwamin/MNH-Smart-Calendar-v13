@@ -1,8 +1,9 @@
 ﻿"""Role and permission mapping for EXAMS.
 
-Maps existing MNH auth identities/roles to EXAMS capabilities without creating
-a parallel auth system. Core MNH editor checks are currently open/public in
-some legacy paths; EXAMS endpoints enforce their own backend checks.
+EXAMS reuses the existing MNH session (`mnh_session` cookie) and deliberately
+maps MNH roles to EXAMS capabilities. It does not create a parallel password or
+login system. Exam-scoped enrollment records can add candidate/invigilator/grader
+capabilities to an authenticated MNH identity for a specific exam only.
 """
 from __future__ import annotations
 
@@ -12,7 +13,6 @@ from fastapi import HTTPException
 
 from app.services import authentication
 
-# Existing MNH roles -> EXAMS roles/capabilities
 ROLE_MAP = {
     "administrator": "exam_admin",
     "hod": "exam_officer",
@@ -21,15 +21,15 @@ ROLE_MAP = {
     "lecturer": "instructor",
 }
 
-# Capability grants. Keep conservative; expand by explicit design.
 CAPABILITIES = {
     "exam_admin": {
         "exams.view", "exams.manage", "exams.question.manage", "exams.session.manage",
         "exams.invigilate", "exams.grade", "exams.analytics", "exams.audit.view",
+        "exams.backup",
     },
     "exam_officer": {
         "exams.view", "exams.manage", "exams.question.manage", "exams.session.manage",
-        "exams.invigilate", "exams.analytics", "exams.audit.view",
+        "exams.invigilate", "exams.analytics", "exams.audit.view", "exams.backup",
     },
     "instructor": {
         "exams.view", "exams.manage", "exams.question.manage", "exams.grade",
@@ -37,16 +37,21 @@ CAPABILITIES = {
     },
     "exam_reviewer": {"exams.view", "exams.analytics", "exams.audit.view"},
     "invigilator": {"exams.view", "exams.invigilate", "exams.audit.view"},
+    "grader": {"exams.view", "exams.grade", "exams.analytics"},
     "candidate": {"exams.view", "exams.take"},
     "guest": {"exams.view"},
 }
 
+# Capabilities granted by an explicit exam enrollment, scoped to that exam only.
+ENROLLMENT_ROLE_CAPABILITIES = {
+    "candidate": {"exams.view", "exams.take"},
+    "invigilator": {"exams.view", "exams.invigilate", "exams.audit.view"},
+    "grader": {"exams.view", "exams.grade", "exams.analytics"},
+}
+
 
 def resolve_identity(mnh_session: str | None) -> dict[str, Any]:
-    """Resolve EXAMS identity from existing MNH session cookie.
-
-    Returns a normalized identity dict. No parallel auth is created.
-    """
+    """Resolve an EXAMS identity from an existing MNH session cookie."""
     session = authentication.get_session(mnh_session) if mnh_session else None
     if session:
         mnh_role = str(session.get("role") or "public").strip().lower()
@@ -58,8 +63,9 @@ def resolve_identity(mnh_session: str | None) -> dict[str, Any]:
             "mnh_role": mnh_role,
             "exam_role": exam_role,
             "actor_id": actor_id,
-            "actor_label": mnh_role,
+            "actor_label": mnh_role.replace("_", " ").title(),
             "session_sid": sid,
+            "identity_source": "mnh_session",
         }
     return {
         "authenticated": False,
@@ -67,6 +73,7 @@ def resolve_identity(mnh_session: str | None) -> dict[str, Any]:
         "exam_role": "guest",
         "actor_id": "public",
         "actor_label": "public",
+        "identity_source": "mnh_session",
     }
 
 
@@ -75,8 +82,28 @@ def has_capability(identity: dict[str, Any], capability: str) -> bool:
     return capability in CAPABILITIES.get(role, set())
 
 
+def enrollment_allows(enrollment: dict[str, Any] | None, capability: str) -> bool:
+    if not enrollment:
+        return False
+    role = str(enrollment.get("role") or "")
+    return capability in ENROLLMENT_ROLE_CAPABILITIES.get(role, set())
+
+
+def is_admin(identity: dict[str, Any]) -> bool:
+    return str(identity.get("exam_role") or "") == "exam_admin"
+
+
 def require_capability(mnh_session: str | None, capability: str) -> dict[str, Any]:
     identity = resolve_identity(mnh_session)
     if not has_capability(identity, capability):
         raise HTTPException(403, f"EXAMS permission required: {capability}")
     return identity
+
+
+def require_exam_capability(
+    identity: dict[str, Any], capability: str, enrollment: dict[str, Any] | None
+) -> None:
+    """Allow a global capability or an exam-scoped enrollment capability."""
+    if has_capability(identity, capability) or enrollment_allows(enrollment, capability):
+        return
+    raise HTTPException(403, f"EXAMS permission required for this exam: {capability}")

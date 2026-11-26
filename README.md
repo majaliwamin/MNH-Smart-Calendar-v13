@@ -120,6 +120,14 @@ The Communications Centre has a separate optional provider configuration: `MNH_C
 
 CARA can create persistent in-app reminders in the `Africa/Blantyre` timezone. They become due in the account reminder list and are visible when the user returns to CARA. No SMS, email or push notification channel is currently configured, so CARA does not claim to send external notifications.
 
+## EXAMS
+
+The EXAMS workspace is an isolated assessment module. It stores data only in `exams_*` collections and a dedicated append-only `exams_audit_ledger`; the legacy `examinations` timetable data is untouched. The generic calendar export/restore still excludes EXAMS — use the explicit EXAMS backup/restore tools in the module instead.
+
+The browser is an untrusted presentation client. The backend enforces the availability window, attempts, server-clock timing, autosave conflicts, duplicate submissions, scoring, grade overrides, result release and role/enrollment permissions. Invigilation logs browser activity signals and staff actions; it is not remote proctoring or device lockdown.
+
+See [docs/EXAMS.md](docs/EXAMS.md) for the permission map, release rules, backup format, integrity model and verification commands.
+
 ## 2. Access from different Wi-Fi networks / mobile data
 
 For access outside the local network, deploy the service publicly. The included `render.yaml` configures a Render web service with:

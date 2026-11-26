@@ -33,6 +33,36 @@ def connect():
         role TEXT NOT NULL, action TEXT NOT NULL, collection TEXT,
         item_id TEXT, summary TEXT NOT NULL)""")
     connection.execute("CREATE TABLE IF NOT EXISTS app_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    # EXAMS audit ledger. Events are never updated or deleted by the application;
+    # SQLite triggers make that guarantee explicit even for direct DB users.
+    connection.execute("""CREATE TABLE IF NOT EXISTS exams_audit_ledger(
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id TEXT NOT NULL UNIQUE,
+        at INTEGER NOT NULL,
+        actor_id TEXT NOT NULL,
+        actor_label TEXT NOT NULL,
+        mnh_role TEXT NOT NULL,
+        exam_role TEXT NOT NULL,
+        action TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        exam_id TEXT NOT NULL DEFAULT '',
+        session_id TEXT NOT NULL DEFAULT '',
+        submission_id TEXT NOT NULL DEFAULT '',
+        request_id TEXT NOT NULL DEFAULT '',
+        client_id TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL,
+        before_summary TEXT NOT NULL DEFAULT '',
+        after_summary TEXT NOT NULL DEFAULT '',
+        payload TEXT NOT NULL,
+        prev_hash TEXT NOT NULL DEFAULT '',
+        event_hash TEXT NOT NULL)""")
+    connection.execute("""CREATE TRIGGER IF NOT EXISTS exams_audit_no_update
+        BEFORE UPDATE ON exams_audit_ledger BEGIN
+        SELECT RAISE(ABORT, 'EXAMS audit events are append-only'); END""")
+    connection.execute("""CREATE TRIGGER IF NOT EXISTS exams_audit_no_delete
+        BEFORE DELETE ON exams_audit_ledger BEGIN
+        SELECT RAISE(ABORT, 'EXAMS audit events are append-only'); END""")
     count = connection.execute("SELECT COUNT(*) FROM docs WHERE col='modules'").fetchone()[0]
     if count == 0:
         now = int(time.time() * 1000)

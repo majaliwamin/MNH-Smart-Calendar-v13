@@ -79,5 +79,18 @@ The existing analytics implementation and dashboard calculations were retained. 
 - Added a compact Chichewa academic-expression contract so CH answers use verified glossary wording, keep untranslated technical abbreviations where no verified equivalent exists, and do not present simulated teaching results as patient or research findings.
 - Added deterministic, server-side statistical visuals from SHA-256-verified simulated data: KDE plus fitted-normal distribution curves, paired blood pressure, facility summaries, a gestational-age scatter and a Kaplan–Meier curve. Each answer includes bilingual source provenance, sample size, simulated-data wording and reproducible Python code; no submitted code runs and no web source is consulted.
 - Unclear variables, missing/changed data and real-patient-data requests fail closed with a helpful supported-options answer. Verified visual turns bypass the model provider and keep the existing fenced `chart` JSON renderer contract.
-- Build metadata moved to `2026.11.26-recurring-week-toggle-v1` across backend config, app shell, service worker, generated glossary and the generated local-knowledge index.
+- Build metadata moved to `2026.11.26-exams-hardening-v1` across backend config, app shell, service worker, generated glossary and the generated local-knowledge index.
 - Source fingerprints hash canonical LF bytes so Windows CRLF checkouts and Linux CI checkouts verify the same committed files. The generator, runtime dataset check and regression tests all use this normalisation, and generated HTML/JSON are now written as canonical LF bytes on every platform.
+
+## v45 (26 Nov 2026) — EXAMS hardening and completion
+
+- EXAMS now commits session, submission, grade and audit writes in one SQLite `BEGIN IMMEDIATE` transaction, with `updated_at` CAS for stale clients, duplicate save/submit IDs and post-submit autosave protection.
+- Added an append-only, SHA-256 hash-chained `exams_audit_ledger` with SQLite UPDATE/DELETE triggers, audit listing/verification endpoints, and transactional event emission.
+- Added per-question grading with rubrics, grade-conflict handling, status transitions, explicit result release (`immediate`, `on_return`, `scheduled`, `never`) and protected candidate views. Legacy exams without a release policy keep immediate release.
+- Added honest invigilation: browser activity signals, staff actions (time extension, pause/resume, flag, invalidate, note), CAS, reasons and before/after audit summaries. It is activity logging, not remote proctoring or lockdown.
+- Added analytics with completion/pass rates, score summaries, question difficulty/discrimination, hourly timeline and logged CSV export.
+- Added deterministic per-session question/option presentation randomization with stable-ID scoring, sanitized answer handling and size limits.
+- Added explicit EXAMS backup/restore with schema version, SHA-256 integrity, conflict blocking and admin-only overwrite. Generic export/restore continues to exclude EXAMS.
+- Replaced the EXAMS browser client with an accessible, capability-gated, server-synchronized UI using custom focus-trapped dialogs; no native `confirm`/`alert`/`prompt` remains.
+- Documented the module in `docs/EXAMS.md`; added maintenance and README pointers.
+- Build metadata moved to `2026.11.26-exams-hardening-v1` across backend config, app shell, service worker, generated glossary, generated local-knowledge index, tests and structural assertions.

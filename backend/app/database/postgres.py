@@ -175,6 +175,30 @@ def _initialise():
                 seq BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, role TEXT NOT NULL,
                 action TEXT NOT NULL, collection TEXT, item_id TEXT, summary TEXT NOT NULL)""")
             raw.execute("CREATE TABLE IF NOT EXISTS app_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+            # EXAMS tamper-evident append-only ledger. Application code never issues
+            # UPDATE/DELETE against this table; integrity is verifiable by hash chain.
+            raw.execute("""CREATE TABLE IF NOT EXISTS exams_audit_ledger(
+                seq BIGSERIAL PRIMARY KEY,
+                event_id TEXT NOT NULL UNIQUE,
+                at BIGINT NOT NULL,
+                actor_id TEXT NOT NULL,
+                actor_label TEXT NOT NULL,
+                mnh_role TEXT NOT NULL,
+                exam_role TEXT NOT NULL,
+                action TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                exam_id TEXT NOT NULL DEFAULT '',
+                session_id TEXT NOT NULL DEFAULT '',
+                submission_id TEXT NOT NULL DEFAULT '',
+                request_id TEXT NOT NULL DEFAULT '',
+                client_id TEXT NOT NULL DEFAULT '',
+                summary TEXT NOT NULL,
+                before_summary TEXT NOT NULL DEFAULT '',
+                after_summary TEXT NOT NULL DEFAULT '',
+                payload TEXT NOT NULL,
+                prev_hash TEXT NOT NULL DEFAULT '',
+                event_hash TEXT NOT NULL)""")
             raw.execute("""CREATE TABLE IF NOT EXISTS reminder_log(
                 ikey TEXT PRIMARY KEY, sent_at TEXT NOT NULL, phone TEXT, code TEXT,
                 starts TEXT, lead INTEGER, status TEXT, detail TEXT)""")
