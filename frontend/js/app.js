@@ -181,7 +181,7 @@ function updateModuleDetails(code){
  box.classList.add("module-details-with-meeting");
  box.querySelectorAll(".module-details-copy").forEach(node=>node.remove());
  let copy=document.createElement("div");copy.className="module-details-copy";
- if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Lecturer: "+(lecturer||"Not assigned")));}
+ if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Presenter: "+(lecturer||"Not assigned")));}
  else if(code==="Journal Club")copy.textContent="Journal Club · Every Tuesday, 13:00–14:00";
  else if(code)copy.textContent="This activity is not in the Modules directory yet.";
  box.prepend(copy);
@@ -2271,7 +2271,7 @@ function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const
  const selStatus=el("p","muted","Loading the module list…");selCard.appendChild(selStatus);
  const boxWrap=el("div","res-form");selCard.appendChild(boxWrap);
  const chosen=new Set(["ARMN – 8100","MIPN 8100","PNIM-8100"]);
- const addRow=(code,title,lecturer)=>{const label=el("label",null);label.style.cssText="display:flex;align-items:center;gap:8px;margin:6px 0";const box=document.createElement("input");box.type="checkbox";box.value=code;box.checked=chosen.has(code);box.addEventListener("change",()=>{box.checked?chosen.add(code):chosen.delete(code);});label.appendChild(box);label.appendChild(el("span",null,(title?`${code} — ${title}`:code)+` · Lecturer: ${lecturer||"Not assigned"}`));boxWrap.appendChild(label);};
+ const addRow=(code,title,lecturer)=>{const label=el("label",null);label.style.cssText="display:flex;align-items:center;gap:8px;margin:6px 0";const box=document.createElement("input");box.type="checkbox";box.value=code;box.checked=chosen.has(code);box.addEventListener("change",()=>{box.checked?chosen.add(code):chosen.delete(code);});label.appendChild(box);label.appendChild(el("span",null,(title?`${code} — ${title}`:code)+` · Presenter: ${lecturer||"Not assigned"}`));boxWrap.appendChild(label);};
  (async()=>{try{const data=await apiRequest("GET","/api/export/modules");boxWrap.textContent="";(data.modules||[]).forEach(m=>addRow(m.code,m.title,m.facilitator));selStatus.textContent="";;}catch(e){boxWrap.textContent="";["ARMN – 8100","MIPN 8100","PNIM-8100"].forEach(code=>addRow(code,""));selStatus.textContent="";;}})();
  root.appendChild(selCard);
  const selectedParam=()=>encodeURIComponent([...chosen].join(","));
@@ -3116,7 +3116,7 @@ load();initCloud();initAlarms();initHeader();
   const go=document.createElement("button");go.type="button";go.className="primary";go.textContent="Download";
   actions.append(cancel,go);overlay.hidden=false;
   const rows=await loadModules();body.textContent="";
-  rows.forEach(([code,title,lecturer])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=(title?code+" — "+title:code)+" · Lecturer: "+(lecturer||"Not assigned");label.append(box,copy);body.append(label);});
+  rows.forEach(([code,title,lecturer])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=(title?code+" — "+title:code)+" · Presenter: "+(lecturer||"Not assigned");label.append(box,copy);body.append(label);});
   go.disabled=!selected.size;body.onchange=()=>{go.disabled=!selected.size;};
   go.onclick=async()=>{if(!selected.size)return;overlay.hidden=true;try{await action([...selected]);}catch(error){status(error.message||"The download could not be created.","error");}};
  }
