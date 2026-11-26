@@ -22,7 +22,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 
 from app.class_rep import memory
@@ -408,9 +408,23 @@ def revoke_join_code(payload: ClassroomJoinCodeRevokeRequest, request: Request) 
 
 
 @router.post("/api/class-rep/livekit/handoff")
-def classroom_handoff(payload: ClassroomHandoffRequest, request: Request) -> dict:
-    """Issue a short-lived handoff from the CRARA cookie session."""
-    user = _resolve_user(request)
+def classroom_handoff(payload: ClassroomHandoffRequest, request: Request, response: Response) -> dict:
+    """Issue a short-lived handoff from the CRARA cookie session or a standalone guest."""
+    try:
+        user = _resolve_user(request)
+    except HTTPException as exc:
+        if exc.status_code != 401:
+            raise
+        guest_id = "guest_" + secrets.token_hex(12)
+        user = {"id": guest_id, "name": "Guest", "email": ""}
+        response.set_cookie(
+            _GUEST_COOKIE,
+            guest_id,
+            httponly=True,
+            samesite="lax",
+            path="/",
+            max_age=60 * 60 * 24 * 30,
+        )
     lesson = _lesson_slug(payload.lesson)
     joined_with_code = bool(payload.join_code)
     if joined_with_code:
