@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = "2026.11.22-statistical-tests-glossary-v44"
+BUILD = "2026.11.26-recurring-week-toggle-v1"
 
 
 def test_generated_tables_use_validated_distribution_values():
@@ -100,7 +100,7 @@ def test_lab_is_integrated_into_existing_app_shell():
 
 
 def test_build_string_is_unchanged():
-    assert '"2026.11.22-statistical-tests-glossary-v44"' in (
+    assert '"2026.11.26-recurring-week-toggle-v1"' in (
         ROOT / "backend" / "app" / "config.py"
     ).read_text(encoding="utf-8")
     assert f'window.MNH_BUILD="{BUILD}"' in (

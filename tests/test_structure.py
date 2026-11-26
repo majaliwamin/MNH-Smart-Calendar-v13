@@ -595,7 +595,7 @@ def test_crara_preserves_latex_delimiters_through_markdown_and_bumps_assets():
     assert "window.renderMathInElement(bubble" in renderer
     import re
     build = re.search(r'BUILD_ID = "([^"]+)"', backend_config).group(1)
-    assert build == "2026.11.22-statistical-tests-glossary-v44"
+    assert build == "2026.11.26-recurring-week-toggle-v1"
     assert f'window.MNH_BUILD="{build}"' in html
     assert f'const BUILD = "{build}"' in worker
     assert f'?v={build}' in html
@@ -606,7 +606,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     main = (ROOT / "backend" / "app" / "main.py").read_text(encoding="utf-8")
     resource_dir = ROOT / "frontend" / "resources"
 
-    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.22-statistical-tests-glossary-v44"' in html
+    assert 'src="/resources/python-command-library.html?runner=off&full=1&v=2026.11.26-recurring-week-toggle-v1"' in html
     assert 'id="view-python-library"' in html
     assert 'id="python-library-back"' in html
     # All four reference views are launched from Resources only; they have no
@@ -639,7 +639,7 @@ def test_python_library_resource_is_served_with_opt_in_runner():
     assert (resource_dir / "sample_data.js").is_file()
     assert (resource_dir / "samples" / "anc_cohort.csv").is_file()
 
-    build = "2026.11.22-statistical-tests-glossary-v44"
+    build = "2026.11.26-recurring-week-toggle-v1"
     simulation_path = resource_dir / "python-jupyter-windows-setup-simulation.html"
     assert simulation_path.is_file()
     simulation = simulation_path.read_text(encoding="utf-8")
@@ -879,7 +879,7 @@ def test_statistical_tests_glossary_is_additive_and_reproducible():
     app = (ROOT / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
     css = (ROOT / "frontend" / "css" / "app.css").read_text(encoding="utf-8")
 
-    build = "2026.11.22-statistical-tests-glossary-v44"
+    build = "2026.11.26-recurring-week-toggle-v1"
     assert f'BUILD_ID = "{build}"' in backend_config
     assert f'window.MNH_BUILD="{build}"' in index
     assert f'const BUILD = "{build}"' in worker
@@ -1020,7 +1020,7 @@ def test_springer_book_is_a_resources_launcher_and_crara_reference():
         (ROOT / "backend" / "app" / "class_rep" / "data" / "local_teaching_knowledge.json")
         .read_text(encoding="utf-8")
     )
-    assert payload["build"] == "2026.11.22-statistical-tests-glossary-v44"
+    assert payload["build"] == "2026.11.26-recurring-week-toggle-v1"
     book = payload["books"][0]
     assert book["doi"] == "10.1007/978-1-4614-1353-0"
     assert book["url"] == url
