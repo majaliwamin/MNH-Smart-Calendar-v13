@@ -2281,7 +2281,7 @@ async function downloadTimetableImage(mime){
   const headerSubtitle=(document.getElementById("hd-sub")?.textContent||"Academic Calendar").trim();
   const weekLine=[WK.label(weekOffset),`Monday–Sunday, ${WK.range(weekOffset)}`].filter(Boolean).join(" · ");
   const pageBg=cs.backgroundColor||"#0b1017",ink=variable("--text")||cs.color||"#ffffff";
-  const muted=variable("--muted")||ink,accent=variable("--gold")||"#f2c14e",panel=variable("--panel")||pageBg;
+  const muted=variable("--muted")||ink,accent=variable("--gold")||"#c0c8d4",panel=variable("--panel")||pageBg;
   const field=variable("--field")||panel,line=variable("--line")||muted,headBg=variable("--head-shade")||variable("--head")||panel,cellBg=variable("--cell-bg")||pageBg,onAccent=variable("--on-accent")||"#fff";
   const weekendBg=variable("--weekend-bg")||cellBg,weekendHeadBg=variable("--weekend-head-bg")||headBg,weekendInk=variable("--weekend-ink")||ink;
   const exportWidth=1200,exportPadding=24,tableWidth=exportWidth-(exportPadding*2);
