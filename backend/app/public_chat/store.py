@@ -741,7 +741,6 @@ def _ffmpeg_bin() -> str | None:
         found = shutil.which(name)
         if found:
             return found
-    # Common local WinGet install location fallback
     local = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages"
     if local.exists():
         for cand in local.rglob("ffmpeg.exe"):
@@ -750,14 +749,61 @@ def _ffmpeg_bin() -> str | None:
     return None
 
 
-def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, str, str]:
+def _ffprobe_bin() -> str | None:
+    for name in ("ffprobe", "ffprobe.exe"):
+        found = shutil.which(name)
+        if found:
+            return found
+    ffmpeg = _ffmpeg_bin()
+    if ffmpeg:
+        cand = Path(ffmpeg).with_name("ffprobe.exe" if os.name == "nt" else "ffprobe")
+        if cand.is_file():
+            return str(cand)
+    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages"
+    if local.exists():
+        for cand in local.rglob("ffprobe.exe"):
+            if cand.is_file():
+                return str(cand)
+    return None
+
+
+def _probe_duration_ms(data: bytes, ext: str) -> int:
+    """Best-effort actual media duration. Returns 0 if unavailable."""
+    ffprobe = _ffprobe_bin()
+    if not ffprobe or not data:
+        return 0
+    src_suffix = ext if ext.startswith(".") else f".{ext.lstrip('.') or 'webm'}"
+    with tempfile.TemporaryDirectory(prefix="mnh-probe-") as td:
+        src = Path(td) / f"in{src_suffix}"
+        try:
+            src.write_bytes(data)
+            cmd = [
+                ffprobe, "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(src),
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+            if proc.returncode != 0:
+                return 0
+            raw = (proc.stdout or "").strip().splitlines()[0].strip()
+            dur = float(raw)
+            if not (dur > 0):
+                return 0
+            return max(0, min(int(round(dur * 1000)), MAX_VOICE_DURATION_MS))
+        except Exception:
+            return 0
+
+
+def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, str, str, int]:
     """Compress voice note to small Opus/WebM when ffmpeg is available.
 
-    Returns (data, ext, content_type). Falls back to original bytes on any failure.
+    Returns (data, ext, content_type, duration_ms). Falls back to original bytes on any failure.
+    duration_ms is probed from the resulting file when possible.
     """
     ffmpeg = _ffmpeg_bin()
     if not ffmpeg or not data:
-        return data, ext, content_type
+        return data, ext, content_type, _probe_duration_ms(data, ext)
     src_suffix = ext if ext.startswith(".") else f".{ext.lstrip('.') or 'webm'}"
     with tempfile.TemporaryDirectory(prefix="mnh-voice-") as td:
         src = Path(td) / f"in{src_suffix}"
@@ -777,16 +823,16 @@ def _compress_voice(data: bytes, ext: str, content_type: str) -> tuple[bytes, st
             ]
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180, check=False)
             if proc.returncode != 0 or not dst.exists():
-                return data, ext, content_type
+                return data, ext, content_type, _probe_duration_ms(data, ext)
             out = dst.read_bytes()
             if not out:
-                return data, ext, content_type
-            # Prefer compressed output when it fits and is smaller, or when normalizing to target format.
+                return data, ext, content_type, _probe_duration_ms(data, ext)
+            probed = _probe_duration_ms(out, VOICE_TARGET_EXT)
             if len(out) < len(data) or content_type != VOICE_TARGET_MIME or ext != VOICE_TARGET_EXT:
-                return out, VOICE_TARGET_EXT, VOICE_TARGET_MIME
-            return data, ext, content_type
+                return out, VOICE_TARGET_EXT, VOICE_TARGET_MIME, probed
+            return data, ext, content_type, probed or _probe_duration_ms(data, ext)
         except Exception:
-            return data, ext, content_type
+            return data, ext, content_type, _probe_duration_ms(data, ext)
 
 
 def _media_blob_write(file_id: str, data: bytes, mime_type: str, file_name: str) -> None:
@@ -844,7 +890,9 @@ def save_audio_upload(user: dict, upload: UploadFile, duration_ms: int = 0) -> d
         raise HTTPException(413, "Voice note upload is too large.")
 
     duration_ms = max(0, min(int(duration_ms or 0), MAX_VOICE_DURATION_MS))
-    data, ext, content_type = _compress_voice(data, ext, content_type or "audio/webm")
+    data, ext, content_type, probed_ms = _compress_voice(data, ext, content_type or "audio/webm")
+    if probed_ms > 0:
+        duration_ms = probed_ms
     if len(data) > settings.MAX_AUDIO_BYTES:
         raise HTTPException(413, "Voice note is too large after compression. Please record a shorter note.")
 

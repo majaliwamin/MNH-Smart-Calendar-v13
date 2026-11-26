@@ -2058,6 +2058,29 @@ function pcMessageMenu(m, mine){
  return menu;
 }
 
+function pcAudioDurationLabel(a){
+ const d=Number((a&&a.duration_ms)||0);
+ if(d>0)return Math.max(1,Math.round(d/1000))+"s";
+ return "";
+}
+function pcBindAudioMeta(a, audio){
+ if(!audio||!a)return;
+ const apply=()=>{
+  const d=Number(audio.duration);
+  if(isFinite(d)&&d>0&&!Number(a.duration_ms)){
+   a.duration_ms=Math.round(d*1000);
+   const wrap=audio.closest(".pc-audio-wrap");
+   const label=wrap?wrap.querySelector(".pc-audio-label"):null;
+   if(label){
+    const secs=Math.max(1,Math.round(d))+"s";
+    if(!/\b\d+s\b/.test(label.textContent||"")) label.textContent=(label.textContent||"Voice note")+" · "+secs;
+   }
+  }
+ };
+ audio.addEventListener("loadedmetadata",apply,{once:true});
+ audio.addEventListener("durationchange",apply);
+ if(audio.readyState>=1)apply();
+}
 function pcRenderMessages(){const list=document.getElementById("pc-messages");if(!list)return;const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<140;list.innerHTML="";const msgs=pcVisibleMessages();
  if(!msgs.length){const empty=el("div","pc-empty");empty.appendChild(el("div","pc-empty-icon","💬"));empty.appendChild(el("h4",null,publicChatState.searchResults?"No results found":"Welcome to MNH Group Chat"));empty.appendChild(el("p",null,publicChatState.searchResults?"Try a different search term.":"Send a message, share a file, or record a voice note."));list.appendChild(empty);return;}
  let lastDay="";const me=publicChatState.participant?publicChatState.participant.code:"";
@@ -2075,10 +2098,11 @@ function pcRenderMessages(){const list=document.getElementById("pc-messages");if
    (m.attachments||[]).forEach(a=>{const url=a.url||(a.file_id&&a.file_id!=="local"?`/api/public-chat/media/${a.file_id}`:"");const isImage=(a.kind==="image")||String(a.mime_type||"").startsWith("image/");if(isImage&&url){const link=document.createElement("a");link.className="pc-img-attachment";link.href=url;link.target="_blank";link.rel="noopener";const img=document.createElement("img");img.src=url;img.alt=a.file_name||"Image attachment";img.loading="lazy";link.appendChild(img);bubble.appendChild(link);}else if(url){const link=el("a","pc-attachment");link.href=url;link.target="_blank";link.rel="noopener";link.appendChild(el("div","pc-attachment-icon",isImage?"🖼":"📎"));const info=el("div");info.appendChild(el("div","pc-attachment-name",a.file_name||"File"));info.appendChild(el("div","pc-attachment-meta",a.mime_type||"Attachment"));link.appendChild(info);bubble.appendChild(link);}else{bubble.appendChild(el("div","pc-attachment-meta","Attachment: "+(a.file_name||"file")));}});
    if(m.audio&&(m.audio.url||m.status==="sending")){
     const wrapA=el("div","pc-audio-wrap");
-    const dur=m.audio.duration_ms?Math.max(1,Math.round(m.audio.duration_ms/1000))+"s":"";
+    const dur=pcAudioDurationLabel(m.audio);
     const size=m.audio.size_bytes?" · "+(m.audio.size_bytes/1024/1024).toFixed(2)+" MB":"";
     wrapA.appendChild(el("div","pc-audio-label",(m.status==="sending"?"Sending voice note":"Voice note")+(dur?" · "+dur:"")+size));
     const a=document.createElement("audio");a.controls=true;a.preload="metadata";if(m.audio.url)a.src=m.audio.url;a.className="pc-audio";wrapA.appendChild(a);
+    if(m.audio.url){pcBindAudioMeta(m.audio,a);}
     if(m.audio.url){
       const actionsA=el("div","pc-audio-actions");
       const url=new URL(m.audio.url,location.origin).href;
