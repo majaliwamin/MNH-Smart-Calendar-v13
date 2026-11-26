@@ -1227,7 +1227,7 @@ async function getFutureActivities(){
   const data=row.data||{};if(data.enabled===false)return;
   const start=nextRecurringDate(data.day,String(data.time||"").split(/[–-]/)[0]?.trim(),local);
   if(!start||start.getTime()<=now)return;
-  items.push({kind:"recurring",recurringId:row.id,onThisWeek:data.onThisWeek!==false,title:data.title||row.id,detail:[data.presenter,data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+  const rid=String(row.id||""); const detailParts=(rid==="journal-club"||rid==="seminar-mnh")?[data.venue,data.notes].filter(Boolean):[data.presenter,data.venue,data.notes].filter(Boolean); items.push({kind:"recurring",recurringId:row.id,onThisWeek:data.onThisWeek!==false,title:data.title||row.id,detail:detailParts.join(" \u2022 "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
  });
  return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
 }
