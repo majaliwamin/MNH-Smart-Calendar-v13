@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CRARA Hypothesis Testing Lab</title>
+<link rel="stylesheet" href="../vendor/katex/katex.min.css?v=2026.11.26-exams-deeplink-v3">
+<style>
+:root{color-scheme:light;--navy:#082f6b;--blue:#0b4f8a;--gold:#d8a12a;--ink:#102238;--muted:#5c6b7d;--line:#d8e0ea;--bg:#f4f7fb;--card:#fff;--subtle:#f1f5f9;--code:#0b1b2e;--code-ink:#e6edf7;--reject:#f8d7da;--reject-line:#c53030;--accept:#e7f4ea;--accept-line:#2f855a;--focus:#f6c453}
+body[data-theme="dark"]{color-scheme:dark;--navy:#8ec5ff;--blue:#9ed0ff;--gold:#f2c14e;--ink:#eaf1f9;--muted:#b9c7d8;--line:#3b506a;--bg:#0b1220;--card:#111e30;--subtle:#17263a;--code:#070f1c;--code-ink:#eaf1f9;--reject:#4a2028;--reject-line:#ff9aa2;--accept:#173b2a;--accept-line:#8ce6b0;--focus:#f2c14e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%}
+a{color:var(--blue)}
+header.top{background:linear-gradient(135deg,#082f6b,#0d5b9f);color:#fff;padding:24px 26px 20px}
+header.top h1{margin:0 0 5px;font-size:1.7rem}
+header.top p{margin:4px 0;max-width:920px;color:#e7f0fb}
+.badge{display:inline-block;border:1px solid #ffffff66;border-radius:999px;padding:3px 10px;font-size:.76rem;margin-right:8px}
+.theme-btn{float:right;background:#ffffff22;color:#fff;border:1px solid #ffffff66;border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:700}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:20px;max-width:1480px;margin:0 auto;padding:20px}
+aside{position:sticky;top:12px;align-self:start;max-height:calc(100vh - 24px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
+aside h2{font-size:.92rem;margin:0 0 9px;text-transform:uppercase;letter-spacing:.08em;color:var(--navy)}
+aside nav a{display:block;padding:6px 8px;border-radius:7px;text-decoration:none;color:var(--ink);font-size:.88rem}
+aside nav a:hover{background:var(--subtle)}
+aside nav a span{display:inline-block;min-width:26px;font-weight:800;color:var(--blue)}
+main{min-width:0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
+.panel h2{margin:0 0 10px;color:var(--navy);font-size:1.28rem}
+.panel h3{margin:18px 0 7px;color:var(--navy);font-size:1rem}
+.muted{color:var(--muted)}
+.callout{border-left:4px solid var(--gold);background:var(--subtle);border-radius:7px;padding:10px 12px;margin:10px 0}
+details{border:1px solid var(--line);border-radius:9px;margin:8px 0;background:var(--card)}
+details[open]{border-color:var(--blue)}
+summary{cursor:pointer;padding:10px 12px;font-weight:700;color:var(--navy)}
+details>div{padding:0 12px 12px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0 14px}
+.controls label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:700;color:var(--muted)}
+select,input[type=number]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font-size:.92rem;min-width:100px}
+button.act{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:9px 13px;cursor:pointer;font-weight:700}
+button.act:hover{filter:brightness(1.12)}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 12px}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:700;font-size:.84rem}
+.tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.table-scroll{overflow:auto;border:1px solid var(--line);border-radius:9px}
+table{border-collapse:collapse;width:100%;font-size:.83rem}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:center;white-space:nowrap}
+th{background:var(--subtle);color:var(--navy);position:sticky;top:0}
+td.rowhead,th.rowhead{position:sticky;left:0;background:var(--subtle);color:var(--navy);font-weight:800;z-index:1}
+td.lookup{background:var(--focus)!important;color:#201400;font-weight:800;outline:2px solid var(--gold);outline-offset:-2px}
+td.critical{background:var(--accept)!important;color:var(--accept-line);font-weight:800;outline:2px solid var(--accept-line);outline-offset:-2px}
+.critical-strip{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--subtle)}
+.critical-strip strong{color:var(--navy)}
+.value-pill{display:inline-block;background:var(--accept);color:var(--accept-line);border-radius:999px;padding:4px 11px;font-weight:800}
+.walk{margin-top:8px;min-height:24px;color:var(--muted);font-size:.9rem}
+.walk b{color:var(--navy)}
+#dist-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px}
+#dist-svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:.82rem;color:var(--muted)}
+.swatch{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
+.readout div{border:1px solid var(--line);border-radius:8px;padding:9px;background:var(--subtle)}
+.readout span{display:block;font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.readout strong{font-size:1.05rem;color:var(--navy)}
+.code-wrap{border-radius:10px;overflow:hidden;background:var(--code);border:1px solid var(--code);margin:12px 0}
+.code-head{padding:7px 12px;background:#132947;color:#dbeafe;font-size:.8rem}
+pre{margin:0;overflow:auto}
+pre code{padding:13px;display:block;font:13px/1.55 "Cascadia Code",Consolas,monospace;color:var(--code-ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--subtle)}
+.card h4{margin:0 0 5px;color:var(--navy)}
+.card p{margin:4px 0;font-size:.86rem}
+.solution{display:none;margin-top:8px;padding:9px;border-left:4px solid var(--blue);background:var(--subtle);border-radius:6px}
+.solution.show{display:block}
+.locked{border:2px dashed var(--gold);border-radius:10px;padding:16px;background:var(--subtle);text-align:center}
+footer{max-width:1480px;margin:0 auto;padding:0 20px 36px;color:var(--muted);font-size:.84rem}
+@media(max-width:960px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none}header.top{padding:18px}.theme-btn{float:none;margin-top:8px}}
+@media(forced-colors:active){.lookup,.critical{outline:3px solid Highlight!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <button type="button" class="theme-btn" id="theme-btn">Dark theme</button>
+  <h1>Hypothesis Testing Lab</h1>
+  <p><span class="badge">Manual first</span><span class="badge">Tables + distributions</span><span class="badge">Python last</span></p>
+  <p>Reason like a statistician before opening JupyterLab: formulate hypotheses, calculate by hand, read a real table, locate critical values, decide, interpret — then reproduce the same calculation computationally.</p>
+</header>
+<div class="layout">
+<aside>
+  <h2>Lesson index</h2>
+  <nav>
+    <a href="#concept"><span>01</span> Concept and research problem</a>
+    <a href="#worked"><span>02</span> Manual worked example</a>
+    <a href="#tables"><span>03</span> Interactive statistical tables</a>
+    <a href="#distribution"><span>04</span> Normal distribution</a>
+    <a href="#python"><span>05</span> Python in JupyterLab</a>
+    <a href="#comparison"><span>06</span> Manual vs Python</a>
+    <a href="#practice"><span>07</span> Practice with hints</a>
+    <a href="#topics"><span>08</span> Other hypothesis tests</a>
+  </nav>
+</aside>
+<main>
+<section class="panel" id="concept">
+  <h2>01 · Concept and research problem</h2>
+  <p>A hypothesis test asks whether observed data are compatible with a claimed population value. The claim being tested is the <strong>null hypothesis</strong>, \(H_0\). The researcher's competing claim is the <strong>alternative hypothesis</strong>, \(H_1\).</p>
+  <div class="callout"><strong>Teaching order in this lab:</strong> concept → research question → hypotheses → assumptions → manual calculation → distribution → table → critical value → decision regions → decision → interpretation → Python → comparison. Python never appears before the manual stages are complete.</div>
+  <h3>The worked research example</h3>
+  <p>A researcher wants to know whether mean birth weight in a study population differs from 2,500 g. The illustrative information is \(n=36\), \(\bar{x}=2650\) g, population \(\sigma=450\) g and \(\alpha=0.05\), tested two-tailed. These are teaching numbers, not patient records.</p>
+</section>
+
+<section class="panel" id="worked">
+  <h2>02 · Manual worked example — one-sample Z-test</h2>
+  <div class="callout">Open each step in order. Try the arithmetic yourself before expanding the calculation.</div>
+
+  <details open><summary>Step 1 — Research question</summary><div>
+    <p>Is the population mean birth weight different from 2,500 g? The word <em>different</em> implies both directions, so this is a <strong>two-tailed</strong> test.</p>
+  </div></details>
+
+  <details><summary>Step 2 — Hypotheses</summary><div>
+    \[H_0:\mu=2500\text{ g}\]
+    \[H_1:\mu\ne2500\text{ g}\]
+    <p>\(\mu\) is the true population mean. We test \(H_0\); we do not "prove" \(H_1\).</p>
+  </div></details>
+
+  <details><summary>Step 3 — Test choice and assumptions</summary><div>
+    <p>Use a <strong>one-sample Z-test</strong> because the population standard deviation \(\sigma\) is treated as known. Assumptions: independent observations, a random/representative sample, and approximate normality of the sampling distribution of \(\bar{x}\). With \(n=36\), the Central Limit Theorem makes the last assumption reasonable.</p>
+  </div></details>
+
+  <details><summary>Step 4 — Standard error by hand</summary><div>
+    \[SE=\frac{\sigma}{\sqrt{n}}=\frac{450}{\sqrt{36}}=\frac{450}{6}=75\text{ g}\]
+    <p>The standard error is the SD of the sample mean under repeated sampling.</p>
+  </div></details>
+
+  <details><summary>Step 5 — Test statistic</summary><div>
+    \[z=\frac{\bar{x}-\mu_0}{SE}=\frac{2650-2500}{75}=\frac{150}{75}=2.00\]
+    <p>The observed mean lies two standard errors above the claimed mean.</p>
+  </div></details>
+
+  <details><summary>Step 6 — Read the Z-table (row 2.0, column 0.00)</summary><div>
+    <p>In the standard normal table, find row <strong>2.0</strong>, then move across to column <strong>0.00</strong>. The cell is approximately <strong>0.9772</strong>.</p>
+    \[\Phi(2.00)\approx0.9772\]
+    <p>Right tail: \(1-0.9772=0.0228\). Two-tailed p-value: \(2\times0.0228=0.0456\), which is \(0.0455\) with full precision. The small gap is table rounding only.</p>
+    <button type="button" class="act" id="show-z-lookup">Demonstrate the lookup in the table</button>
+  </div></details>
+
+  <details><summary>Step 7 — Critical values</summary><div>
+    \[\frac{\alpha}{2}=\frac{0.05}{2}=0.025\]
+    <p>The Z-value with 0.025 above it is 1.96. Critical values are \(-1.96\) and \(+1.96\).</p>
+  </div></details>
+
+  <details><summary>Step 8 — Distribution and rejection regions</summary><div>
+    <p>The central 95% is the non-rejection region. Each shaded tail holds 2.5%. Scroll to <a href="#distribution">the interactive normal curve</a> to change the inputs.</p>
+  </div></details>
+
+  <details><summary>Step 9 — Decision</summary><div>
+    <p>Since \(z=2.00>1.96\), the statistic lies in the upper rejection region. <strong>Reject \(H_0\)</strong> at the 5% level.</p>
+  </div></details>
+
+  <details><summary>Step 10 — Scientific interpretation</summary><div>
+    <p>There is statistically significant evidence at the 5% level that the population mean birth weight differs from 2,500 g; the sample mean was 150 g higher. Do not equate this with clinical importance without a pre-specified clinical threshold and supporting evidence.</p>
+  </div></details>
+</section>
+
+<section class="panel" id="tables">
+  <h2>03 · Interactive statistical reference tables</h2>
+  <p class="muted">Values are generated from SciPy's validated distributions by <code>scripts/build_statistical_tables.py</code> and stored in <code>resources/data/statistical-tables.json</code>. Highlighted cells follow your selections.</p>
+  <div class="controls">
+    <label>Significance level α
+      <select id="alpha-select"><option value="0.1">0.10</option><option value="0.05" selected>0.05</option><option value="0.025">0.025</option><option value="0.01">0.01</option><option value="0.005">0.005</option></select>
+    </label>
+    <label>Tails (Z and t)
+      <select id="tails-select"><option value="two" selected>Two-tailed</option><option value="one">One-tailed</option></select>
+    </label>
+    <label>Degrees of freedom (t / χ²)
+      <select id="df-select"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>10</option><option>15</option><option>20</option><option>24</option><option selected>25</option><option>28</option><option>30</option><option>40</option><option>60</option><option>120</option></select>
+    </label>
+    <label>F numerator df
+      <select id="df1-select"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>10</option><option>15</option><option>20</option></select>
+    </label>
+    <label>F denominator df
+      <select id="df2-select"><option>5</option><option>10</option><option>20</option><option>30</option><option selected>60</option><option>120</option></select>
+    </label>
+    <label>Observed Z
+      <input type="number" id="z-input" value="2.00" min="-4" max="4" step="0.01">
+    </label>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Statistical tables">
+    <button type="button" class="tab active" data-table="z">Z-table</button>
+    <button type="button" class="tab" data-table="t">Student's t</button>
+    <button type="button" class="tab" data-table="chi2">Chi-square</button>
+    <button type="button" class="tab" data-table="f">F-distribution</button>
+  </div>
+  <div id="table-explain" class="muted"></div>
+  <div class="table-scroll" id="table-scroll"><table id="stat-table"><tbody><tr><td>Loading validated tables…</td></tr></tbody></table></div>
+  <div class="critical-strip" id="critical-strip"></div>
+  <div class="walk" id="walkthrough" aria-live="polite"></div>
+</section>
+
+<section class="panel" id="distribution">
+  <h2>04 · Scientifically accurate normal distribution</h2>
+  <p class="muted">The curve is the standard normal density. Shaded areas are true normal-tail probabilities computed from the error function. Critical lines and the observed statistic update together.</p>
+  <div class="controls">
+    <label>Significance level α
+      <select id="dist-alpha"><option value="0.1">0.10</option><option value="0.05" selected>0.05</option><option value="0.025">0.025</option><option value="0.01">0.01</option><option value="0.005">0.005</option></select>
+    </label>
+    <label>Tail configuration
+      <select id="dist-tails"><option value="two" selected>Two-tailed</option><option value="one">One-tailed</option></select>
+    </label>
+    <label>One-tailed direction
+      <select id="dist-direction"><option value="right" selected>Right tail</option><option value="left">Left tail</option></select>
+    </label>
+    <label>Observed test statistic
+      <input type="number" id="dist-z" value="2.00" min="-4" max="4" step="0.01">
+    </label>
+  </div>
+  <div id="dist-wrap"><div id="dist-svg" role="img" aria-label="Standard normal distribution with critical values and rejection regions"></div></div>
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--reject)"></i>Rejection region</span>
+    <span><i class="swatch" style="background:var(--accept)"></i>Non-rejection region</span>
+    <span><i class="swatch" style="background:var(--gold)"></i>Critical value</span>
+    <span><i class="swatch" style="background:#e53e3e"></i>Observed statistic</span>
+  </div>
+  <div class="readout">
+    <div><span>Critical value(s)</span><strong id="read-critical">±1.96</strong></div>
+    <div><span>Observed z</span><strong id="read-z">2.00</strong></div>
+    <div><span>P-value</span><strong id="read-p">0.0455</strong></div>
+    <div><span>Decision</span><strong id="read-decision">Reject H₀</strong></div>
+  </div>
+</section>
+
+<section class="panel" id="python">
+  <h2>05 · Python in JupyterLab — only after the manual stage</h2>
+  <div class="locked" id="python-lock">
+    <p><strong>Complete the manual reasoning first.</strong> You have located the table value, chosen the critical value and made the decision by hand. Only then does computation become a check rather than a shortcut.</p>
+    <button type="button" class="act" id="unlock-python">I completed the manual stage — show Python</button>
+  </div>
+  <div id="python-content" hidden>
+    <h3>Same research example, computational reproduction</h3>
+    <div class="code-wrap"><div class="code-head">JupyterLab cell · Python 3 · NumPy + SciPy + Matplotlib</div><pre><code>import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+
+# Same values used in the manual calculation
+n = 36
+sample_mean = 2650
+mu_0 = 2500
+sigma = 450
+alpha = 0.05
+
+se = sigma / np.sqrt(n)
+z_stat = (sample_mean - mu_0) / se
+z_critical = stats.norm.ppf(1 - alpha / 2)
+p_value = 2 * stats.norm.sf(abs(z_stat))
+decision = "Reject H0" if abs(z_stat) &gt; z_critical else "Fail to reject H0"
+
+print(f"SE = {se:.0f} g")
+print(f"z = {z_stat:.2f}")
+print(f"critical values = +/-{z_critical:.2f}")
+print(f"p-value = {p_value:.4f}")
+print(decision)
+
+x = np.linspace(-4, 4, 400)
+plt.plot(x, stats.norm.pdf(x), label="Standard normal density")
+plt.axvline(-z_critical, color="orange", linestyle="--", label="Critical values")
+plt.axvline(z_critical, color="orange", linestyle="--")
+plt.axvline(z_stat, color="red", label="Observed z = 2.00")
+plt.fill_between(x, stats.norm.pdf(x), where=x &lt;= -z_critical, alpha=0.35)
+plt.fill_between(x, stats.norm.pdf(x), where=x &gt;= z_critical, alpha=0.35)
+plt.xlabel("Z-score")
+plt.ylabel("Probability density")
+plt.legend()
+plt.show()</code></pre></div>
+    <details><summary>Explain each line</summary><div>
+      <ul>
+        <li><code>import numpy as np</code> loads NumPy for <code>np.sqrt</code> and numerical arrays.</li>
+        <li><code>from scipy import stats</code> loads validated distributions: <code>norm.pdf</code>, <code>norm.ppf</code> (inverse CDF) and <code>norm.sf</code> (survival function).</li>
+        <li><code>import matplotlib.pyplot as plt</code> loads the plotting library.</li>
+        <li><code>n</code>, <code>sample_mean</code>, <code>mu_0</code>, <code>sigma</code> and <code>alpha</code> store the teaching values exactly as used by hand.</li>
+        <li><code>se</code> reproduces \(450/\sqrt{36}=75\).</li>
+        <li><code>z_stat</code> reproduces \((2650-2500)/75=2.00\).</li>
+        <li><code>z_critical</code> uses <code>ppf(0.975)</code> to obtain 1.95996, the table's 1.96.</li>
+        <li><code>p_value</code> doubles the upper-tail survival probability; it avoids table-rounding error.</li>
+        <li><code>decision</code> applies the same comparison rule used manually.</li>
+        <li>The plot draws the same curve, critical lines and rejection regions as the SVG above.</li>
+      </ul>
+    </div></details>
+    <p class="callout">A library is reusable tested code. NumPy handles numerical work; SciPy supplies statistical distributions; Matplotlib draws the graph. A statistical function converts a distribution and probability into a number — it does not decide the hypotheses or interpret the result.</p>
+  </div>
+</section>
+
+<section class="panel" id="comparison">
+  <h2>06 · Manual versus Python comparison</h2>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Statistical component</th><th>Manual method</th><th>Python method</th></tr></thead>
+    <tbody>
+      <tr><td>Test statistic</td><td>\(z=(2650-2500)/75=2.00\)</td><td><code>(sample_mean - mu_0) / se</code></td></tr>
+      <tr><td>Critical value</td><td>Z-table row 2.0/col 0.00 and \(\alpha/2\); \(\pm1.96\)</td><td><code>stats.norm.ppf(1 - alpha/2)</code></td></tr>
+      <tr><td>P-value</td><td>Table tail area ≈ 0.0455</td><td><code>2 * stats.norm.sf(abs(z_stat))</code></td></tr>
+      <tr><td>Decision</td><td>Compare 2.00 with 1.96</td><td>Compare <code>abs(z_stat)</code> with <code>z_critical</code></td></tr>
+      <tr><td>Interpretation</td><td>Research conclusion about \(\mu\)</td><td>Same research conclusion</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout">Python automates calculation and plotting. It does not replace statistical reasoning, assumption checking or scientific interpretation.</p>
+</section>
+
+<section class="panel" id="practice">
+  <h2>07 · Guided practice — solutions stay hidden</h2>
+  <div class="callout">Try each question before expanding a hint. Reveal the worked solution only after you have committed to an answer.</div>
+
+  <details><summary>Exercise 1 · Z-table interpretation</summary><div>
+    <p>A two-tailed test gives \(z=1.75\) at \(\alpha=0.05\). Locate the value in the Z-table, find the two-tailed p-value and make the decision.</p>
+    <details><summary>Hint 1 — which row and column?</summary><div>Use row 1.7 and column 0.05.</div></details>
+    <details><summary>Hint 2 — what does the cell mean?</summary><div>The cumulative probability is about 0.9599. Double the right tail.</div></details>
+    <button type="button" class="act" data-solution="sol1">Show worked solution</button>
+    <div class="solution" id="sol1">\(\Phi(1.75)\approx0.9599\). Right tail \(=0.0401\), two-tailed p \(=0.0802\). Since 0.0802 &gt; 0.05, fail to reject \(H_0\). Equivalently, 1.75 &lt; 1.96.</div>
+  </div></details>
+
+  <details><summary>Exercise 2 · t-table decision</summary><div>
+    <p>For a two-tailed one-sample t-test with \(df=15\), \(t=2.10\) and \(\alpha=0.05\), find the critical value and decide.</p>
+    <details><summary>Hint 1 — which table column?</summary><div>Use the two-tailed \(\alpha=0.05\) column, not the one-tailed column.</div></details>
+    <button type="button" class="act" data-solution="sol2">Show worked solution</button>
+    <div class="solution" id="sol2">The t-table row 15, two-tailed 0.05 column gives 2.131. Since \(|2.10|&lt;2.131\), fail to reject \(H_0\).</div>
+  </div></details>
+
+  <details><summary>Exercise 3 · chi-square critical value</summary><div>
+    <p>A chi-square goodness-of-fit statistic is 10.5 with \(df=4\) at \(\alpha=0.05\). Locate the right-tail critical value and decide.</p>
+    <details><summary>Hint 1 — tail direction</summary><div>Chi-square tables give right-tail critical values.</div></details>
+    <button type="button" class="act" data-solution="sol3">Show worked solution</button>
+    <div class="solution" id="sol3">For \(df=4\), right-tail \(\alpha=0.05\), the critical value is 9.488. Since 10.5 &gt; 9.488, reject \(H_0\).</div>
+  </div></details>
+
+  <details><summary>Exercise 4 · Python programming</summary><div>
+    <p>Change the worked example to a one-tailed right test at \(\alpha=0.01\). Which two lines change, and what is the new critical value?</p>
+    <details><summary>Hint 1 — critical line</summary><div>Use <code>stats.norm.ppf(1 - alpha)</code> instead of dividing \(\alpha\) by two.</div></details>
+    <button type="button" class="act" data-solution="sol4">Show worked solution</button>
+    <div class="solution" id="sol4">Set <code>alpha = 0.01</code> and <code>z_critical = stats.norm.ppf(1 - alpha)</code>. The critical value is 2.326; \(z=2.00\) is below it, so fail to reject \(H_0\).</div>
+  </div></details>
+</section>
+
+<section class="panel" id="topics">
+  <h2>08 · Progressive extension to other tests</h2>
+  <p class="muted">Each topic below follows the same order: research question → hypotheses → assumptions → hand calculation → table → critical value → decision → interpretation → only then Python.</p>
+  <div class="cards" id="topic-cards"></div>
+</section>
+</main>
+</div>
+<footer>
+  <p>All examples use fixed, simulated teaching values. They are not real patient records and must not be used for clinical or programme decisions. Statistical significance is not the same as clinical importance.</p>
+  <p>Statistical tables generated with SciPy. CRARA preserves the existing app build marker: 2026.11.26-exams-deeplink-v3.</p>
+</footer>
+<script src="../vendor/katex/katex.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="../vendor/katex/auto-render.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (value) { return String(value).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); };
+  var state = { active: "z", alpha: "0.05", tails: "two", df: "25", df1: "2", df2: "60", z: 2.00, direction: "right" };
+  var tables = null;
+
+  var FALLBACK = {
+    z: { critical_values: { one_tailed: {"0.05":1.644854}, two_tailed: {"0.05":1.959964} },
+         rows: ["2.0"], columns: ["0.00"], cumulative: {"2.0":[0.9772]},
+         worked_lookup: { row:"2.0", column:"0.00", cumulative:0.9772 } },
+    t: { one_tailed: {"25":[1.7081]}, two_tailed: {"25":[2.0595]},
+         one_tailed_alpha: ["0.05"], two_tailed_alpha: ["0.05"] },
+    chi2: { values: {"4":[9.4877]}, right_tail_alpha: ["0.05"] },
+    f: { values: {"2:60":[3.1504]}, right_tail_alpha: ["0.05"], numerator_df:["2"], denominator_df:["60"] }
+  };
+
+  function erf(x) {
+    var sign = x < 0 ? -1 : 1; x = Math.abs(x);
+    var t = 1 / (1 + 0.3275911 * x);
+    var y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return sign * y;
+  }
+  function normCdf(z) { return 0.5 * (1 + erf(z / Math.sqrt(2))); }
+  function pdf(z) { return Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI); }
+  function criticalZ() {
+    var section = tables && tables.z ? tables.z : FALLBACK.z;
+    var family = state.tails === "two" ? "two_tailed" : "one_tailed";
+    var values = section.critical_values[family] || {};
+    var value = Number(values[state.alpha]);
+    if (!isFinite(value)) value = state.tails === "two" ? 1.959964 : 1.644854;
+    return value;
+  }
+
+  function setActive(name) {
+    state.active = name;
+    document.querySelectorAll(".tab").forEach(function (button) {
+      button.classList.toggle("active", button.dataset.table === name);
+    });
+    renderTable();
+  }
+
+  function tableShell(head, body) {
+    $("stat-table").innerHTML = "<thead>" + head + "</thead><tbody>" + body + "</tbody>";
+  }
+
+  function highlightClass(condition, cls) { return condition ? " class='" + cls + "'" : ""; }
+
+  function renderZ() {
+    var section = (tables && tables.z) || FALLBACK.z;
+    var rows = section.rows || ["2.0"], cols = section.columns || ["0.00"];
+    var absZ = Math.min(3.49, Math.abs(state.z));
+    var rowValue = Math.floor(absZ * 10) / 10;
+    var colIndex = Math.round((absZ - rowValue) * 100);
+    if (colIndex > 9) { rowValue = Math.round((rowValue + 0.1) * 10) / 10; colIndex = 0; }
+    var rowKey = rowValue.toFixed(1), colKey = cols[colIndex] || "0.00";
+    var head = "<tr><th class='rowhead'>z</th>" + cols.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") + "</tr>";
+    var body = rows.map(function (row) {
+      var cells = (section.cumulative[row] || []).map(function (value, index) {
+        var isLookup = row === rowKey && cols[index] === colKey;
+        return "<td" + highlightClass(isLookup, "lookup") + ">" + esc(value.toFixed(4)) + "</td>";
+      }).join("");
+      return "<tr><td class='rowhead" + (row === rowKey ? " lookup" : "") + "'>" + esc(row) + "</td>" + cells + "</tr>";
+    }).join("");
+    tableShell(head, body);
+    var crit = criticalZ();
+    $("table-explain").innerHTML = "<strong>Cumulative Φ(z): P(Z ≤ z).</strong> Each cell is found by row + column. Highlighted lookup uses |z| = " + absZ.toFixed(2) + "; for negative z use symmetry Φ(−z)=1−Φ(z).";
+    $("critical-strip").innerHTML = "<strong>" + (state.tails === "two" ? "Two-tailed α=" + esc(state.alpha) + " critical values" : "One-tailed α=" + esc(state.alpha) + " critical value") + ":</strong> <span class='value-pill'>" + (state.tails === "two" ? "±" + crit.toFixed(4) : crit.toFixed(4)) + "</span> <span class='muted'>" + (state.tails === "two" ? "α/2 = " + (Number(state.alpha)/2).toFixed(4) + " in each tail." : "All α in the selected tail.") + "</span>";
+  }
+
+  function renderT() {
+    var section = (tables && tables.t) || FALLBACK.t;
+    var oneAlphas = section.one_tailed_alpha || ["0.05"], twoAlphas = section.two_tailed_alpha || ["0.05"];
+    var head = "<tr><th class='rowhead'>df</th><th colspan='" + oneAlphas.length + "'>One-tailed α</th><th colspan='" + twoAlphas.length + "'>Two-tailed α</th></tr><tr><th class='rowhead'></th>" +
+      oneAlphas.map(function (a) { return "<th>" + esc(a) + "</th>"; }).join("") +
+      twoAlphas.map(function (a) { return "<th>" + esc(a) + "</th>"; }).join("") + "</tr>";
+    var dfs = Object.keys(section.one_tailed || section.two_tailed || {"25":[]});
+    var body = dfs.map(function (df) {
+      var one = (section.one_tailed[df] || []).map(function (v, i) {
+        var on = state.tails === "one" && df === state.df && oneAlphas[i] === state.alpha;
+        return "<td" + highlightClass(on, "critical") + ">" + esc(v.toFixed(4)) + "</td>";
+      }).join("");
+      var two = (section.two_tailed[df] || []).map(function (v, i) {
+        var on = state.tails === "two" && df === state.df && twoAlphas[i] === state.alpha;
+        return "<td" + highlightClass(on, "critical") + ">" + esc(v.toFixed(4)) + "</td>";
+      }).join("");
+      return "<tr><td class='rowhead" + (df === state.df ? " lookup" : "") + "'>" + esc(df) + "</td>" + one + two + "</tr>";
+    }).join("");
+    tableShell(head, body);
+    var matrix = state.tails === "one" ? section.one_tailed : section.two_tailed;
+    var value = ((matrix[state.df] || [])[(state.tails === "one" ? oneAlphas : twoAlphas).indexOf(state.alpha)]);
+    $("table-explain").innerHTML = "<strong>Student's t:</strong> use t when σ is unknown and estimated by s. Degrees of freedom come from the design (for one sample, df = n − 1). The t distribution has heavier tails than normal; as df grows it approaches Z.";
+    $("critical-strip").innerHTML = "<strong>Selected df " + esc(state.df) + ", " + (state.tails === "two" ? "two-tailed" : "one-tailed") + " α " + esc(state.alpha) + ":</strong> <span class='value-pill'>" + (value !== undefined ? Number(value).toFixed(4) : "not in table") + "</span>";
+  }
+
+  function renderChi() {
+    var section = (tables && tables.chi2) || FALLBACK.chi2;
+    var alphas = section.right_tail_alpha || ["0.05"];
+    var head = "<tr><th class='rowhead'>df</th>" + alphas.map(function (a) { return "<th>α=" + esc(a) + "</th>"; }).join("") + "</tr>";
+    var body = Object.keys(section.values).map(function (df) {
+      var cells = (section.values[df] || []).map(function (v, i) {
+        return "<td" + highlightClass(df === state.df && alphas[i] === state.alpha, "critical") + ">" + esc(Number(v).toFixed(4)) + "</td>";
+      }).join("");
+      return "<tr><td class='rowhead" + (df === state.df ? " lookup" : "") + "'>" + esc(df) + "</td>" + cells + "</tr>";
+    }).join("");
+    tableShell(head, body);
+    var value = (section.values[state.df] || [])[alphas.indexOf(state.alpha)];
+    $("table-explain").innerHTML = "<strong>Chi-square tables give right-tail critical values.</strong> For independence in an r×c table, df=(r−1)(c−1). For goodness-of-fit, df=categories−1. Expected counts should be adequate before relying on the approximation.";
+    $("critical-strip").innerHTML = "<strong>Selected df " + esc(state.df) + ", right-tail α " + esc(state.alpha) + ":</strong> <span class='value-pill'>" + (value !== undefined ? Number(value).toFixed(4) : "not in table") + "</span>";
+  }
+
+  function renderF() {
+    var section = (tables && tables.f) || FALLBACK.f;
+    var alphas = section.right_tail_alpha || ["0.05"];
+    var cols = section.denominator_df || ["60"];
+    var head = "<tr><th class='rowhead'>df₁ \\ df₂</th>" + cols.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") + "</tr>";
+    var rows = section.numerator_df || ["2"];
+    var body = rows.map(function (r) {
+      var cells = cols.map(function (c) {
+        var values = section.values[r + ":" + c] || [];
+        var value = values[alphas.indexOf(state.alpha)];
+        var on = r === state.df1 && c === state.df2 && value !== undefined;
+        return "<td" + highlightClass(on, "critical") + ">" + (value !== undefined ? esc(Number(value).toFixed(4)) : "—") + "</td>";
+      }).join("");
+      return "<tr><td class='rowhead" + (r === state.df1 ? " lookup" : "") + "'>" + esc(r) + "</td>" + cells + "</tr>";
+    }).join("");
+    tableShell(head, body);
+    var selected = (section.values[state.df1 + ":" + state.df2] || [])[alphas.indexOf(state.alpha)];
+    $("table-explain").innerHTML = "<strong>F table, upper/right tail α = " + esc(state.alpha) + ".</strong> df₁ is the numerator degrees of freedom (between groups); df₂ is the denominator degrees of freedom (within groups).";
+    $("critical-strip").innerHTML = "<strong>Selected df₁=" + esc(state.df1) + ", df₂=" + esc(state.df2) + ", α=" + esc(state.alpha) + ":</strong> <span class='value-pill'>" + (selected !== undefined ? Number(selected).toFixed(4) : "not in table") + "</span>";
+  }
+
+  function renderTable() {
+    if (state.active === "z") renderZ();
+    else if (state.active === "t") renderT();
+    else if (state.active === "chi2") renderChi();
+    else renderF();
+  }
+
+  function renderDistribution() {
+    var alpha = Number($("dist-alpha").value), tails = $("dist-tails").value, direction = $("dist-direction").value;
+    var z = Math.max(-4, Math.min(4, Number($("dist-z").value) || 0));
+    state.alpha = $("dist-alpha").value; state.tails = tails; state.direction = direction; state.z = z;
+    var crit = criticalZ();
+    var leftCrit = tails === "two" ? -crit : (direction === "left" ? -crit : -4);
+    var rightCrit = tails === "two" ? crit : (direction === "right" ? crit : 4);
+    var width = 820, height = 330, left = 52, right = 18, top = 26, bottom = 48;
+    var xMin = -4, xMax = 4, maxY = 0.42;
+    function X(v) { return left + ((v - xMin) / (xMax - xMin)) * (width - left - right); }
+    function Y(v) { return height - bottom - (v / maxY) * (height - top - bottom); }
+    var xs = [], i;
+    for (i = 0; i <= 320; i++) xs.push(xMin + (i / 320) * (xMax - xMin));
+    var curve = xs.map(function (v, idx) { return (idx ? "L" : "M") + X(v).toFixed(2) + "," + Y(pdf(v)).toFixed(2); }).join(" ");
+    function fill(from, to) {
+      var points = xs.filter(function (v) { return v >= from && v <= to; });
+      if (points.length < 2) return "";
+      var d = "M" + X(points[0]).toFixed(2) + "," + Y(0).toFixed(2);
+      points.forEach(function (v) { d += " L" + X(v).toFixed(2) + "," + Y(pdf(v)).toFixed(2); });
+      d += " L" + X(points[points.length - 1]).toFixed(2) + "," + Y(0).toFixed(2) + " Z";
+      return "<path d='" + d + "' fill='" + (from === -4 || to === 4 ? "var(--reject)" : "var(--accept)") + "' opacity='0.85'/>";
+    }
+    var svg = "<svg viewBox='0 0 " + width + " " + height + "' xmlns='http://www.w3.org/2000/svg' aria-label='Standard normal distribution'>";
+    svg += "<line x1='" + X(-4) + "' y1='" + Y(0) + "' x2='" + X(4) + "' y2='" + Y(0) + "' stroke='var(--muted)' stroke-width='1'/>";
+    svg += "<line x1='" + X(0) + "' y1='" + Y(0) + "' x2='" + X(0) + "' y2='" + Y(maxY) + "' stroke='var(--muted)' stroke-width='1'/>";
+    if (tails === "two") { svg += fill(-4, leftCrit) + fill(leftCrit, rightCrit) + fill(rightCrit, 4); }
+    else if (direction === "right") { svg += fill(-4, 4) + fill(rightCrit, 4); }
+    else { svg += fill(-4, 4) + fill(-4, leftCrit); }
+    svg += "<path d='" + curve + "' fill='none' stroke='var(--blue)' stroke-width='2.6'/>";
+    if (tails === "two" || direction === "right") {
+      svg += "<line x1='" + X(rightCrit) + "' y1='" + Y(0) + "' x2='" + X(rightCrit) + "' y2='" + Y(pdf(rightCrit)) + "' stroke='var(--gold)' stroke-width='2.5' stroke-dasharray='5 4'/>";
+      svg += "<text x='" + (X(rightCrit) + 5) + "' y='" + (Y(pdf(rightCrit)) - 8) + "' fill='var(--gold)' font-size='12'>" + rightCrit.toFixed(2) + "</text>";
+    }
+    if (tails === "two" || direction === "left") {
+      svg += "<line x1='" + X(leftCrit) + "' y1='" + Y(0) + "' x2='" + X(leftCrit) + "' y2='" + Y(pdf(leftCrit)) + "' stroke='var(--gold)' stroke-width='2.5' stroke-dasharray='5 4'/>";
+      svg += "<text x='" + (X(leftCrit) - 52) + "' y='" + (Y(pdf(leftCrit)) - 8) + "' fill='var(--gold)' font-size='12'>" + leftCrit.toFixed(2) + "</text>";
+    }
+    svg += "<line x1='" + X(z) + "' y1='" + Y(0) + "' x2='" + X(z) + "' y2='" + Y(pdf(z)) + "' stroke='#e53e3e' stroke-width='2.5'/>";
+    svg += "<circle cx='" + X(z) + "' cy='" + Y(pdf(z)) + "' r='5' fill='#e53e3e'/>";
+    svg += "<text x='" + Math.min(X(z) + 8, width - 92) + "' y='" + Math.max(Y(pdf(z)) - 12, 18) + "' fill='#e53e3e' font-size='12'>z=" + z.toFixed(2) + "</text>";
+    for (i = -4; i <= 4; i++) {
+      svg += "<line x1='" + X(i) + "' y1='" + Y(0) + "' x2='" + X(i) + "' y2='" + (Y(0) + 5) + "' stroke='var(--muted)'/>";
+      svg += "<text x='" + (X(i) - 7) + "' y='" + (Y(0) + 20) + "' fill='var(--muted)' font-size='11'>" + i + "</text>";
+    }
+    svg += "<text x='" + (width / 2 - 42) + "' y='" + (height - 8) + "' fill='var(--muted)' font-size='12'>Z-score</text>";
+    svg += "<text x='8' y='18' fill='var(--muted)' font-size='12'>Density</text>";
+    if (tails === "two") {
+      svg += "<text x='" + (X(-3.4)) + "' y='" + (Y(0.045) ) + "' fill='var(--reject-line)' font-size='11'>α/2=" + (alpha/2).toFixed(3) + "</text>";
+      svg += "<text x='" + (X(2.55)) + "' y='" + (Y(0.045)) + "' fill='var(--reject-line)' font-size='11'>α/2=" + (alpha/2).toFixed(3) + "</text>";
+      svg += "<text x='" + (X(0) - 48) + "' y='" + (Y(0.30)) + "' fill='var(--accept-line)' font-size='12'>central = " + (1 - alpha).toFixed(2) + "</text>";
+    } else {
+      svg += "<text x='" + (direction === "right" ? X(2.2) : X(-3.6)) + "' y='" + Y(0.045) + "' fill='var(--reject-line)' font-size='11'>α=" + alpha.toFixed(3) + "</text>";
+    }
+    svg += "</svg>";
+    $("dist-svg").innerHTML = svg;
+
+    var cdfZ = normCdf(z);
+    var p = tails === "two" ? 2 * (1 - normCdf(Math.abs(z))) : (direction === "right" ? 1 - cdfZ : cdfZ);
+    var observedCritical = tails === "two" ? Math.abs(z) > crit : (direction === "right" ? z > crit : z < -crit);
+    $("read-critical").textContent = tails === "two" ? "±" + crit.toFixed(2) : (direction === "right" ? "+" : "−") + crit.toFixed(2);
+    $("read-z").textContent = z.toFixed(2);
+    $("read-p").textContent = p.toFixed(4);
+    $("read-decision").textContent = observedCritical ? "Reject H₀" : "Fail to reject H₀";
+  }
+
+  var TOPICS = [
+    { title:"One-sample t-test", q:"Mean maternal haemoglobin differs from 11 g/dL (σ unknown).", h:"H₀: μ=11; H₁: μ≠11.", manual:"Compute s/√n, then t=(x̄−μ₀)/SE; df=n−1.", table:"t-table: row df, two-tailed α column.", py:"stats.ttest_1samp", note:"Use t, not Z, when σ is estimated from the sample." },
+    { title:"Independent-samples t-test", q:"Mean birth weight differs between two delivery groups.", h:"H₀: μ₁=μ₂; H₁: μ₁≠μ₂.", manual:"Pool variances if defensible, compute SE and t; df=n₁+n₂−2.", table:"t-table with combined df.", py:"stats.ttest_ind", note:"Groups must be independent; report both group means." },
+    { title:"Paired t-test", q:"Blood pressure changes within the same mothers.", h:"H₀: μ_d=0; H₁: μ_d≠0.", manual:"Compute one difference per pair, then analyse d̄ with SE=s_d/√n.", table:"t-table with df=n−1.", py:"stats.ttest_rel", note:"Pairing removes between-subject variation." },
+    { title:"One-way ANOVA", q:"Mean birth weight differs across three facility types.", h:"H₀: μ₁=μ₂=μ₃; H₁: at least one differs.", manual:"Compute SSB, SSW, MSB, MSW, then F=MSB/MSW.", table:"F-table: df₁=k−1, df₂=N−k.", py:"stats.f_oneway", note:"A significant F needs follow-up comparisons." },
+    { title:"Chi-square independence", q:"Gravidity category associated with preterm outcome.", h:"H₀: no association; H₁: association.", manual:"Compute E=R×C/N and Σ(O−E)²/E.", table:"χ² table: df=(r−1)(c−1).", py:"stats.chi2_contingency", note:"Check adequate expected counts." },
+    { title:"Chi-square goodness-of-fit", q:"Preterm proportion compatible with a 30% benchmark.", h:"H₀: observed matches proposed distribution.", manual:"Compute expected counts and Σ(O−E)²/E.", table:"χ² table: df=categories−1.", py:"stats.chisquare", note:"Categories must be mutually exclusive." },
+    { title:"Pearson correlation", q:"Haemoglobin associated with birth weight.", h:"H₀: ρ=0; H₁: ρ≠0.", manual:"Compute r, then t=r√((n−2)/(1−r²)).", table:"t-table with df=n−2.", py:"stats.pearsonr", note:"Association is not causation." },
+    { title:"Regression slope", q:"Gestational age predicts birth weight.", h:"H₀: β₁=0; H₁: β₁≠0.", manual:"Compute b₁ and SE(b₁), then t=b₁/SE(b₁).", table:"t-table with df=n−2.", py:"statsmodels OLS", note:"Interpret slope in original units." },
+    { title:"Mann–Whitney U", q:"Skewed neonatal score differs between two groups.", h:"H₀: distributions identical in location.", manual:"Combine, rank, sum ranks, compute U and use rank-sum table.", table:"Mann–Whitney U table or tie-corrected normal approximation.", py:"stats.mannwhitneyu", note:"Report medians and ranks." },
+    { title:"Wilcoxon signed-rank", q:"Paired before/after measure changes without normality.", h:"H₀: median difference is zero.", manual:"Rank absolute differences, restore signs, compare signed-rank total.", table:"Wilcoxon signed-rank table.", py:"stats.wilcoxon", note:"Discard exact-zero differences." }
+  ];
+
+  function renderTopics() {
+    $("topic-cards").innerHTML = TOPICS.map(function (item) {
+      return "<article class='card'><h4>" + esc(item.title) + "</h4><p><strong>Question:</strong> " + esc(item.q) + "</p><p><strong>Hypotheses:</strong> " + esc(item.h) + "</p><p><strong>By hand:</strong> " + esc(item.manual) + "</p><p><strong>Table:</strong> " + esc(item.table) + "</p><p><strong>Python after manual:</strong> <code>" + esc(item.py) + "</code></p><p class='muted'>" + esc(item.note) + "</p></article>";
+    }).join("");
+  }
+
+  function bind() {
+    document.querySelectorAll(".tab").forEach(function (button) {
+      button.addEventListener("click", function () { setActive(button.dataset.table); });
+    });
+    ["alpha-select","tails-select","df-select","df1-select","df2-select","z-input"].forEach(function (id) {
+      $(id).addEventListener("change", function () {
+        state.alpha = $("alpha-select").value; state.tails = $("tails-select").value;
+        state.df = $("df-select").value; state.df1 = $("df1-select").value;
+        state.df2 = $("df2-select").value; state.z = Number($("z-input").value) || 0;
+        renderTable();
+      });
+    });
+    ["dist-alpha","dist-tails","dist-direction","dist-z"].forEach(function (id) { $(id).addEventListener("input", renderDistribution); $(id).addEventListener("change", renderDistribution); });
+    $("show-z-lookup").addEventListener("click", function () {
+      setActive("z");
+      $("z-input").value = "2.00"; state.z = 2.00; renderTable();
+      $("walkthrough").innerHTML = "<b>1.</b> Row <b>2.0</b> selected. <b>2.</b> Column <b>0.00</b> highlighted. <b>3.</b> Cell = <b>0.9772</b>. Right tail = 0.0228; two-tailed p ≈ 0.0455.";
+      $("tables").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    $("unlock-python").addEventListener("click", function () {
+      $("python-content").hidden = false; $("python-lock").hidden = true;
+      $("python-content").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    document.querySelectorAll("[data-solution]").forEach(function (button) {
+      button.addEventListener("click", function () { $(button.dataset.solution).classList.toggle("show"); });
+    });
+    $("theme-btn").addEventListener("click", function () {
+      var dark = document.body.dataset.theme === "dark";
+      document.body.dataset.theme = dark ? "light" : "dark";
+      $("theme-btn").textContent = dark ? "Dark theme" : "Light theme";
+    });
+  }
+
+  fetch("/resources/data/statistical-tables.json", { cache: "no-store" })
+    .then(function (response) { if (!response.ok) throw new Error("tables unavailable"); return response.json(); })
+    .then(function (data) { tables = data; })
+    .catch(function () { tables = FALLBACK; $("table-explain").textContent = "Live table file unavailable; showing a reduced verified fallback set."; })
+    .then(function () { bind(); renderTopics(); renderTable(); renderDistribution(); });
+
+  window.addEventListener("DOMContentLoaded", function () {
+    if (typeof window.renderMathInElement === "function") {
+      window.renderMathInElement(document.body, {
+        delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }],
+        throwOnError: false
+      });
+    }
+  });
+}());
+</script>
+</body>
+</html>

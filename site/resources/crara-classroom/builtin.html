@@ -1,0 +1,69 @@
+﻿<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="grammarly" content="false"><meta name="grammarly:disable" content="true"><script src="../../js/extension-guard.js?v=2026.11.26-exams-deeplink-v3"></script><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRARA 1:1 Classroom</title>
+<style>
+:root{--bg:#111318;--panel:#181b22;--panel2:#1f2430;--line:#2a3140;--text:#eef2f7;--muted:#98a2b3;--accent:#22c55e;--danger:#ef4444;}
+*{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto}.top{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:#141821}
+.title{font-weight:700}.sub,.small{font-size:.84rem;color:var(--muted)} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{padding:4px 10px;border-radius:999px;background:#202838;border:1px solid var(--line);font-size:.78rem;color:var(--muted)}
+.main{min-height:0;display:grid;grid-template-columns:1.35fr .65fr;gap:12px;padding:12px} @media(max-width:980px){.main{grid-template-columns:1fr;grid-template-rows:minmax(280px,45vh) minmax(0,1fr)}}
+.stage,.side{min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.stage{display:grid;grid-template-rows:auto 1fr auto}.side{display:grid;grid-template-rows:auto auto 1fr}
+.bar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel2)} .bar h2{margin:0;font-size:.95rem}
+button,input,textarea{font:inherit} button{border:1px solid #3a4558;background:#232b38;color:var(--text);padding:8px 11px;border-radius:10px;cursor:pointer} button.primary{background:#1d4d3a;border-color:#2f7a59} button.danger{background:#4a2323;border-color:#7a3a3a} button:disabled{opacity:.5}
+.video-wrap{position:relative;min-height:0;background:#0b0d12;display:grid;place-items:center} video{width:100%;height:100%;object-fit:contain;background:#000}
+.overlay{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.55);padding:8px 10px;border-radius:10px;font-size:.82rem}
+.controls{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--line);background:var(--panel2)}
+.section{padding:12px;border-bottom:1px solid var(--line)} .section:last-child{border-bottom:0;min-height:0;overflow:auto}
+.muted{color:var(--muted);font-size:.86rem} .code{font:700 1.3rem/1 ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--accent)}
+textarea{width:100%;min-height:150px;resize:vertical;background:#121722;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px}
+.board{min-height:130px;background:#fff;color:#111827;border-radius:10px;padding:12px;white-space:pre-wrap;overflow:auto}
+.status{font-size:.84rem;color:var(--muted);min-height:1.2em}.status.err{color:#fca5a5}
+.canvas-wrap{min-height:0;background:#fff} canvas{width:100%;height:100%;background:#fff;touch-action:none;display:block}
+.tool-active{outline:2px solid #3b82f6}
+</style></head><body>
+<div class="app">
+  <div class="top"><div><div class="title">CRARA 1:1 Classroom</div><div class="sub" id="sub"></div></div><div class="row"><span class="pill" id="modePill">No LiveKit credentials</span><span class="pill" id="rolePill"></span><span class="pill" id="roomPill"></span></div></div>
+  <div class="main">
+    <div class="stage">
+      <div class="bar"><h2>Live Stage</h2><div class="row"><button id="tabVideo" class="tool-active">Video</button><button id="tabBoard">Whiteboard</button></div></div>
+      <div id="videoPane" class="video-wrap"><video id="video" autoplay playsinline muted></video><div class="overlay" id="overlay">Camera/mic off. Use controls below.</div></div>
+      <div id="boardPane" class="canvas-wrap" style="display:none"><canvas id="board"></canvas></div>
+      <div class="controls"><button id="camBtn" class="primary">Start camera</button><button id="micBtn">Start mic</button><button id="screenBtn">Share screen</button><button id="stopBtn" class="danger">Stop media</button><span class="status" id="mediaStatus"></span></div>
+    </div>
+    <div class="side">
+      <div class="bar"><h2>Lesson Code</h2><span class="small" id="codeExp"></span></div>
+      <div class="section"><div class="muted">Generate a lesson code without LiveKit credentials or AI providers.</div><div style="margin:10px 0"><span class="small">Code</span><div class="code" id="codeVal">—</div></div><div class="row"><button id="genCode" class="primary">Generate lesson code</button><button id="copyCode">Copy</button></div><div class="status" id="codeStatus"></div></div>
+      <div class="section"><h2 style="margin:0 0 8px;font-size:.95rem">Lesson Notes</h2><textarea id="notes" placeholder="Lesson agenda, key points, instructions..."></textarea><div class="row" style="margin-top:8px"><button id="saveNotes">Save notes</button><span class="status" id="notesStatus"></span></div><div style="margin-top:12px" class="small">Preview</div><div class="board" id="notesPreview">No notes yet.</div></div>
+    </div>
+  </div>
+  <div class="top" style="border-top:1px solid var(--line);border-bottom:0"><div class="small">Opened without LiveKit credentials. Local classroom features available; remote LiveKit sync needs credentials.</div><div class="row"><span class="status" id="connStatus">Connected locally.</span></div></div>
+</div>
+<script>
+(() => {
+  const p=new URLSearchParams(location.search); const room=p.get('room')||'', lesson=p.get('lesson')||'general', name=p.get('name')||'Guest', role=p.get('role')||'student';
+  const $=id=>document.getElementById(id); $('sub').textContent='Lesson: '+lesson+' · '+name; $('rolePill').textContent=role; $('roomPill').textContent=room||'room'; $('connStatus').textContent='Connected locally. No LiveKit credentials required.';
+  const video=$('video'); let stream=null, screenStream=null;
+  function setMediaStatus(msg,err){const e=$('mediaStatus'); e.textContent=msg||''; e.className='status'+(err?' err':'');}
+  async function ensureStream(cam,mic){ try{ if(stream){stream.getTracks().forEach(t=>t.stop());} stream=await navigator.mediaDevices.getUserMedia({video:cam?{width:{ideal:1280},height:{ideal:720}}:false,audio:!!mic}); video.srcObject=stream; video.muted=true; $('overlay').textContent='Live: '+(cam?'camera':'')+(cam&&mic?' + ':'')+(mic?'mic':''); setMediaStatus('Media started.'); }catch(e){ setMediaStatus(e.message||'Media permission failed.',true); } }
+  $('camBtn').onclick=()=>ensureStream(true,true); $('micBtn').onclick=()=>ensureStream(false,true);
+  $('screenBtn').onclick=async()=>{ try{ screenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false}); video.srcObject=screenStream; $('overlay').textContent='Sharing screen'; screenStream.getVideoTracks()[0].addEventListener('ended',()=>{video.srcObject=stream; $('overlay').textContent='Screen share ended.';}); setMediaStatus('Screen sharing started.'); }catch(e){ setMediaStatus(e.message||'Screen share failed.',true); } };
+  $('stopBtn').onclick=()=>{ [stream,screenStream].forEach(s=>s&&s.getTracks().forEach(t=>t.stop())); stream=null; screenStream=null; video.srcObject=null; $('overlay').textContent='Camera/mic off. Use controls below.'; setMediaStatus('Media stopped.'); };
+  const tabVideo=$('tabVideo'), tabBoard=$('tabBoard'), videoPane=$('videoPane'), boardPane=$('boardPane');
+  const canvas=$('board'), ctx=canvas.getContext('2d'); let drawing=false,last=null;
+  function resizeBoard(){ const r=boardPane.getBoundingClientRect(); if(!r.width||!r.height) return; const img=canvas.toDataURL(); canvas.width=Math.floor(r.width); canvas.height=Math.floor(r.height); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); const i=new Image(); i.onload=()=>ctx.drawImage(i,0,0); i.src=img; ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#111827'; }
+  window.addEventListener('resize', resizeBoard); setTimeout(resizeBoard,50);
+  tabVideo.onclick=()=>{tabVideo.classList.add('tool-active');tabBoard.classList.remove('tool-active');videoPane.style.display='';boardPane.style.display='none';};
+  tabBoard.onclick=()=>{tabBoard.classList.add('tool-active');tabVideo.classList.remove('tool-active');boardPane.style.display='';videoPane.style.display='none'; resizeBoard();};
+  function pos(ev){ const r=canvas.getBoundingClientRect(); const t=ev.touches?ev.touches[0]:ev; return {x:(t.clientX-r.left)*(canvas.width/r.width), y:(t.clientY-r.top)*(canvas.height/r.height)}; }
+  function start(ev){ drawing=true; last=pos(ev); } function move(ev){ if(!drawing) return; const n=pos(ev); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(n.x,n.y); ctx.stroke(); last=n; ev.preventDefault(); } function end(){ drawing=false; last=null; }
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',end);
+  const notesKey='crara_classroom_notes_'+room; $('notes').value=localStorage.getItem(notesKey)||''; $('notesPreview').textContent=$('notes').value||'No notes yet.';
+  $('saveNotes').onclick=()=>{ const v=$('notes').value||''; localStorage.setItem(notesKey,v); $('notesPreview').textContent=v||'No notes yet.'; $('notesStatus').textContent='Saved locally.'; };
+  function setCodeStatus(msg,err){ const e=$('codeStatus'); e.textContent=msg||''; e.className='status'+(err?' err':''); }
+  async function postJson(url,body){ const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body||{})}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.detail||d.error||d.message||('HTTP '+r.status)); return d; }
+  $('genCode').onclick=async()=>{ const btn=$('genCode'); btn.disabled=true; setCodeStatus('Generating lesson code...'); try{ const d=await postJson('/api/class-rep/livekit/join-code',{lesson,authority:''}); $('codeVal').textContent=d.code||'—'; $('codeExp').textContent=d.expires_in?('Expires in '+Math.round(d.expires_in/60)+' min'):''; setCodeStatus('Lesson code ready.'); try{await navigator.clipboard.writeText(d.code||''); setCodeStatus('Lesson code ready and copied.');}catch(_){} }catch(e){ setCodeStatus(e.message||String(e),true); } finally{ btn.disabled=false; } };
+  $('copyCode').onclick=async()=>{ const code=$('codeVal').textContent.trim(); if(!code||code==='—'){setCodeStatus('Generate a lesson code first.',true); return;} try{await navigator.clipboard.writeText(code); setCodeStatus('Code copied.');}catch(_){setCodeStatus('Copy failed.',true);} };
+})();
+</script></body></html>

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Windows Python and JupyterLab setup simulation</title>
+<script>
+if(new URLSearchParams(location.search).get('full')==='1'){document.documentElement.classList.add('full-screen-simulation');}
+</script>
+<style>
+:root{--bg:#eef1f5;--ink:#18212b;--mute:#5b6775;--py:#306998;--yl:#ffd43b;--jp:#f37726;--ok:#1f8a4c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Segoe UI",system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:0 12px}
+h1{font-size:clamp(22px,4.5vw,32px);margin:22px 0 4px;letter-spacing:-.3px}
+.sub0{margin:0 0 16px;color:var(--mute)}
+/* laptop */
+.lid{background:#1c2128;border-radius:14px 14px 3px 3px;padding:12px 12px 14px}
+.scrw{position:relative;aspect-ratio:720/450;overflow:hidden;border-radius:4px;background:#000}
+.scr{position:absolute;left:0;top:0;width:720px;height:450px;transform-origin:0 0;overflow:hidden;font-size:12.5px;line-height:1.4;
+ background:radial-gradient(circle at 72% 28%,#7ab8ff,#2563c4 45%,#0d2a66)}
+.base{height:14px;margin:0 -2%;border-radius:0 0 16px 16px;background:linear-gradient(#dde2e8,#aab3be)}
+.hint{display:none;font-size:13px;color:var(--mute);margin:6px 0 0}
+@media(max-width:560px) and (orientation:portrait){.hint{display:block}}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+#scr{transition:opacity .15s}
+#scr.rewinding{opacity:.18}
+/* windows */
+.win{position:absolute;left:16px;top:10px;width:688px;height:392px;background:#fff;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);display:none;flex-direction:column;overflow:hidden}
+.win.on{display:flex}
+.tb{height:28px;background:#eef1f5;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:12px;color:#444;flex:none}
+.tb em{margin-left:auto;font-style:normal;letter-spacing:8px;color:#777}
+.ab{display:flex;gap:8px;align-items:center;padding:6px 10px;background:#f7f8fa;border-bottom:1px solid #dde2e8;flex:none}
+.ab span{color:#999}
+#url{flex:1;background:#fff;border:1px solid #cfd6de;border-radius:14px;padding:2px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc{flex:1;position:relative;overflow:hidden}
+.sp{height:100%;display:grid;place-content:center;gap:16px;text-align:center}
+.lg{font-size:38px;font-weight:700;color:var(--py)}
+.sb{width:380px;border:1px solid #cfd6de;border-radius:22px;padding:9px 16px;text-align:left;min-height:38px;box-shadow:0 1px 6px rgba(0,0,0,.1)}
+.cr{display:inline-block;width:1px;height:15px;background:#222;vertical-align:middle;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+.rs{padding:16px 24px}
+.r{padding:8px 8px;margin:4px 0;border-radius:6px}
+.r small{display:block;color:var(--ok)}
+.r b{color:#1a0dab;font-weight:500;font-size:15px}
+.r p{margin:2px 0 0;color:#555}
+.pyh{background:#306998;color:#fff;padding:12px 20px;display:flex;gap:20px}
+.pyh b{font-size:18px;margin-right:auto;display:flex;align-items:center;gap:7px}
+.pyb{padding:28px 30px}
+.pyb h3{margin:0 0 6px;font-size:20px}
+.yb{display:inline-block;margin-top:10px;background:var(--yl);color:#222;font-weight:700;padding:10px 18px;border-radius:6px}
+#dlp{position:absolute;right:12px;top:6px;width:240px;background:#fff;border:1px solid #cfd6de;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.25);padding:10px 12px;display:none;z-index:3}
+#dlp.on{display:block}
+.pb{height:6px;background:#e1e6ec;border-radius:3px;margin:6px 0;overflow:hidden}
+.pb i{display:block;height:100%;width:0;background:var(--py)}
+#dlo{color:#0a58ca;display:none;font-weight:600}
+.jm{padding:4px 10px;background:#f3f4f6;border-bottom:1px solid #dde2e8;color:#555;font-size:12px}
+.jb{display:flex;height:calc(100% - 25px)}
+.js{width:130px;border-right:1px solid #dde2e8;padding:10px;background:#f7f8fa;color:#555;font-size:12px}
+.jmain{flex:1;padding:14px 18px;overflow:hidden}
+.jmain h4{margin:0 0 8px}
+.tile{display:inline-flex;flex-direction:column;align-items:center;gap:4px;width:120px;border:1px solid #dde2e8;border-radius:6px;padding:10px;margin:4px 8px 8px 0;font-size:11.5px;text-align:center}
+.tile b{background:#f37726;color:#fff;border-radius:6px;padding:6px 10px}
+.nt{display:inline-block;border:1px solid #dde2e8;border-bottom:0;padding:2px 12px;border-radius:5px 5px 0 0;background:#fff;margin-bottom:8px}
+.cell{display:flex;gap:6px;margin:6px 0}
+.cell>span{width:34px;text-align:right;color:#306998;flex:none;font:12px Consolas,monospace}
+.cell pre,.cell>div{margin:0;flex:1;background:#f6f8fa;border:1px solid #dde2e8;padding:4px 8px;font:12px/1.4 Consolas,monospace;min-height:24px;white-space:pre-wrap}
+.cell.act>pre{border-color:#306998;box-shadow:0 0 0 1px #306998}
+.jmain{background:linear-gradient(180deg,#fff,#fbfcfe)}
+.jm{font-weight:500}
+.tile:hover{border-color:#f37726}
+.win{transition:box-shadow .25s}
+#cur{filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+.op{display:flex;gap:6px;margin:0 0 6px}
+.op>span{width:34px;text-align:right;color:var(--jp);flex:none;font:12px Consolas,monospace}
+table.df{border-collapse:collapse;font:11.5px Consolas,monospace}
+table.df td,table.df th{padding:1px 12px;text-align:right;border-bottom:1px solid #e3e7ec}
+.ch circle{animation:pop .5s both}
+@keyframes pop{from{opacity:0}to{opacity:.65}}
+/* terminal */
+#w-term{background:#0c0c0c}
+#w-term .tb{background:#1f1f1f;color:#ddd}
+.tbody{flex:1;overflow:hidden;padding:8px 10px}
+#tp{margin:0;color:#ccc;font:13px/1.35 Consolas,"Cascadia Mono",monospace;white-space:pre-wrap;word-break:break-all}
+.cm{color:#fff}
+/* installer */
+#w-ins{left:150px;top:46px;width:420px;height:300px;background:#fff;z-index:20}
+#w-ins .in{padding:14px 18px;flex:1;position:relative}
+#w-ins h3{margin:0 0 10px;font-size:17px;font-weight:600}
+.ib{display:block;border:1px solid #cfd6de;border-radius:4px;padding:8px 12px;margin:7px 0;background:#f7f8fa}
+.ib small{display:block;color:#666}
+.cb{display:flex;gap:8px;align-items:center;margin:7px 0}
+.bx{width:16px;height:16px;border:2px solid #666;border-radius:2px;display:grid;place-items:center;font-size:12px;color:#fff;line-height:1}
+.bx.on{background:var(--py);border-color:var(--py)}
+.btn{display:inline-block;background:var(--py);color:#fff;border-radius:4px;padding:6px 18px}
+#insp,#inso{display:none;position:absolute;inset:0;background:#fff;padding:14px 18px}
+/* taskbar etc */
+.tk{position:absolute;left:0;right:0;bottom:0;height:40px;background:rgba(236,241,248,.93);display:flex;justify-content:center;align-items:center;gap:8px}
+.tk i{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font:700 11px Consolas,monospace;color:#fff;font-style:normal;opacity:.55}
+.tk i.on{opacity:1;box-shadow:0 3px 0 -1px var(--py)}
+.ck{position:absolute;right:12px;font-size:11px;color:#333}
+#cur{position:absolute;left:0;top:0;z-index:99;pointer-events:none;transform:translate(360px,230px);transition:transform .85s cubic-bezier(.4,0,.2,1)}
+#cur svg{display:block;transition:transform .12s}
+#cur.ck svg{transform:scale(.75)}
+#key{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);background:rgba(20,28,38,.92);color:#fff;padding:5px 14px;border-radius:8px;font-size:13px;z-index:98;opacity:0;transition:opacity .2s}
+#key.on{opacity:1}
+/* panel */
+.panel{background:#fff;border-radius:10px;margin:16px 0 10px;padding:14px 16px;border-left:5px solid var(--py)}
+.panel h2{margin:0 0 4px;font-size:19px}
+.panel p{margin:0;color:var(--mute)}
+#sb{margin-top:8px;font:14px Consolas,monospace;background:#0c1620;color:#d7e3ee;padding:7px 10px;border-radius:6px;min-height:34px}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+button{font:inherit;font-size:14px;border:1px solid #c3ccd6;background:#fff;border-radius:6px;padding:6px 14px;cursor:pointer;color:var(--ink)}
+button:hover,button:focus-visible{outline:2px solid var(--py)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:30px}
+.chips button{font-size:13px;padding:4px 10px}
+.chips button.cur{background:var(--py);color:#fff;border-color:var(--py)}
+.chips button.done{border-color:var(--ok);color:var(--ok)}
+.chips button.cur.done{color:#fff}
+@media(prefers-reduced-motion:reduce){#cur{transition-duration:.01s}}
+
+.tb em{letter-spacing:0;word-spacing:4px}
+#zw{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+.z #lid{width:1000px}
+.z .base{width:1000px}
+.base{margin:0}
+.panel p{font-size:15px}
+#sb{font-size:14px}
+.wl{margin-top:6px;font-size:15px;color:#33404d}
+.tk .st{width:22px;height:22px;display:grid;grid-template:1fr 1fr/1fr 1fr;gap:2px}
+.tk .st b{background:#0b6fd6;border-radius:1px}
+.tk .sr{background:#fff;border:1px solid #cfd6de;border-radius:14px;padding:2px 14px;color:#777;font-size:11px;width:120px}
+#uac{position:absolute;inset:0;background:rgba(0,0,0,.62);z-index:50;display:none;place-items:center}
+#uac.on{display:grid}
+.uc{width:340px;background:#2b2f36;color:#fff;border-radius:6px;overflow:hidden;font-size:12px}
+.uc>div{padding:14px 18px}
+.uc .bt{display:flex;gap:6px;background:#1f2329}
+.uc .bt span{flex:1;text-align:center;padding:8px;background:#3a3f47;border-radius:3px}
+.uc .bt span.yes{background:#4a90e2}
+.card{background:#fff;border-radius:10px;padding:14px 16px;margin:0 0 16px}
+.card h3{margin:0 0 6px;font-size:18px}
+.gl dt{font-weight:600;margin-top:8px}
+.gl dd{margin:0;color:var(--mute)}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t td,table.t th{border:1px solid #d8dee6;padding:7px 9px;text-align:left;vertical-align:top}
+
+#w-br .tb{background:#27b3d5;color:#12303a;height:34px;padding:0 0 0 8px;align-items:flex-end;gap:10px}
+#w-br .tb em{margin-left:0;align-self:center;color:#12303a}
+.ctab{background:#f4f7fb;border-radius:8px 8px 0 0;padding:6px 12px;font-size:12px;display:flex;gap:26px;align-items:center;color:#222;min-width:150px}
+.ask{margin-left:auto;background:#d9f1f7;border-radius:14px;padding:3px 10px;font-size:12px;align-self:center;color:#123}
+#w-br .ab{background:#f4f7fb;border:0;padding:5px 10px}
+#w-br #url{border:2px solid #222;background:#fff;padding:3px 12px}
+#url::before{content:"🔒 ";font-size:11px}
+#url.nt::before{content:"G ";font-weight:700;color:#4285f4;font-size:13px}
+#url.nt::after{content:"AI Mode";float:right;background:#dfe6f1;border-radius:10px;padding:0 10px;font-size:11px;margin-top:1px}
+#pg{height:100%}
+.nt2{height:100%;background:#f4f7fb;display:flex;flex-direction:column;align-items:center;padding:4px 14px 0}
+.nt2 .tl{align-self:flex-end;display:flex;gap:14px;font-size:12px;color:#222}
+.gl2{font:600 46px/1 "Segoe UI",Arial,sans-serif;letter-spacing:-1px;margin:16px 0 18px}
+.sb2{width:480px;max-width:92%;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #d6dde6;border-radius:24px;padding:10px 16px;box-shadow:0 1px 5px rgba(0,0,0,.1);font-size:13.5px}
+.sb2 #q{color:#111}
+.sb2 #ph{color:#888}
+.sb2 i.r{margin-left:auto;font-style:normal;display:flex;gap:10px;align-items:center}
+.sb2 u{text-decoration:none;background:#e3eaf5;border-radius:12px;padding:2px 10px;font-size:12px}
+.cards2{display:flex;gap:14px;margin-top:14px}
+.cards2 div{background:#e9f0f7;border-radius:10px;padding:8px 14px;font-size:12px;width:210px}
+.cards2 small{display:block;color:#555}
+.sc{display:flex;gap:22px;margin-top:20px}
+.sc div{width:64px;text-align:center;font-size:10.5px;color:#333}
+.sc span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#e4eaf2;margin:0 auto 4px;font-size:16px}
+.tk i{opacity:1}
+.tk i[data-w=ins]{display:none}
+.tk i[data-w=ins].on{display:grid}
+
+#pg{height:100%;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.ph{min-height:100%;background:linear-gradient(#1b4a8c,#2c78c8);color:#fff;font-size:12px}
+.pt{display:flex;gap:30px;background:#14385f;padding:5px 24px;font-size:11px;color:#cfe0f2}
+.pt .cur2{color:#fff;border-bottom:2px solid #ffd43b}
+.pr{display:flex;align-items:center;gap:10px;padding:12px 24px}
+.pr .plg{font-size:30px;margin-right:auto;letter-spacing:-1px}
+.don{background:#f3e9b5;color:#333;padding:3px 10px;border-radius:4px;font-size:11px}
+.psr{width:150px;height:20px;background:#fff;border-radius:3px}
+.go{background:#3d94e8;padding:3px 10px;border-radius:3px}
+.pn{display:flex;gap:26px;background:#2d6cb5;margin:0 16px;padding:8px 24px;border-radius:6px}
+.phm{display:flex;gap:14px;padding:12px 40px}
+.pc{flex:1;background:#173f78;margin:0;padding:10px;font:11px/1.45 Consolas,monospace;color:#cfe6ff;white-space:pre-wrap}
+.pd{flex:1;padding:6px 12px}
+.pd h4{margin:0 0 6px;font-size:15px}
+.pl{text-align:center;padding:10px 40px 16px;font-size:14px;color:#cfe6ff}
+.lp{min-height:100%;background:#fff;color:#222}
+.lb{padding:14px 28px}
+.lb h2{margin:0 0 6px;font-size:22px}
+.fc{background:#eef3f8;border:1px solid #d4dde7;border-radius:6px;padding:12px 14px;display:inline-block;vertical-align:top;margin:6px 8px 6px 0;min-width:190px}
+.fc h5{margin:0 0 8px;font-size:15px;font-weight:500}
+.ob{display:inline-block;background:#f5c15b;border:1px solid #d9a13c;border-radius:4px;padding:6px 12px;font-size:12px}
+.ft{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+.ft th,.ft td{text-align:left;padding:5px 8px;border-bottom:1px solid #e1e6ec;vertical-align:top}
+.ft code{font-size:10px}
+.btn.alt{background:#e6eaef;color:#222}
+
+.sb2{position:relative}
+.sb2.open{border-radius:20px 20px 0 0;border-bottom-color:#eceff3}
+#ac{display:none;position:absolute;left:-1px;right:-1px;top:100%;background:#fff;border:1px solid #d6dde6;border-top:0;border-radius:0 0 20px 20px;box-shadow:0 4px 8px rgba(0,0,0,.15);padding:4px 0 10px;z-index:6;text-align:left}
+#ac div{padding:5px 18px;display:flex;gap:12px;font-size:13px;color:#111}
+#ac div.hi{background:#eef1f5}
+#ac div::before{content:"🔍";font-size:11px;opacity:.55}
+#ac b{font-weight:700}
+.gr{min-height:100%;background:#fff;color:#202124;font-family:Arial,"Segoe UI",sans-serif}
+.gh{display:flex;align-items:center;gap:22px;padding:10px 20px 4px}
+.gl3{font:600 22px/1 Arial,sans-serif;letter-spacing:-.5px}
+.gq{flex:1;max-width:430px;display:flex;justify-content:space-between;border:1px solid #dfe1e5;border-radius:22px;padding:7px 16px;box-shadow:0 1px 5px rgba(0,0,0,.12);font-size:13px}
+.gam{background:#eef1f6;border-radius:16px;padding:5px 12px;font-size:11px}
+.gt{display:flex;gap:18px;padding:6px 20px 0 86px;font-size:11.5px;color:#5f6368;border-bottom:1px solid #e3e5e8}
+.gt span{padding:6px 0}
+.gt .on2{color:#1a73e8;border-bottom:3px solid #1a73e8}
+.gb{padding:12px 20px 12px 86px;max-width:600px}
+.gs{display:flex;gap:10px;align-items:center}
+.gs div div{font-size:13px}
+.gs small{color:#4d5156;font-size:11.5px}
+.fv{width:22px;height:22px;border-radius:50%;background:#eef1f6;display:grid;place-items:center;font-size:12px}
+.gtl{color:#681da8;font-size:19px;margin:4px 0 2px}
+.sn{margin:0 0 8px;font-size:12px;color:#4d5156}
+.sl{padding:8px 0;border-top:1px solid #ecedef;display:flex;flex-direction:column}
+.sl b{font-weight:400;font-size:14px;color:#202124}
+.sl small{color:#70757a;font-size:11px}
+
+/* Visual refinement pass: clearer cinematic walkthrough, not added interactivity */
+.lid{box-shadow:0 18px 36px rgba(12,24,40,.22);position:relative}
+.scrw{box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.scr:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.06),transparent 28%,transparent 72%,rgba(0,0,0,.08));z-index:90}
+.win{box-shadow:0 12px 32px rgba(0,0,0,.32),0 0 0 1px rgba(255,255,255,.18);}
+.tb{letter-spacing:.12px}
+.panel{position:relative;overflow:hidden;border-left-width:4px;box-shadow:0 2px 10px rgba(20,40,65,.05)}
+.panel:after{content:"";position:absolute;left:0;bottom:0;height:3px;width:var(--stage-progress,10%);background:var(--py);transition:width .4s ease}
+#ct{letter-spacing:-.15px}
+#cx{line-height:1.65}
+#sb{box-shadow:inset 0 1px 4px rgba(0,0,0,.15);border:1px solid #263849}
+.tk{backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.4)}
+.tk i{transition:opacity .25s,transform .25s}
+.tk i.on{transform:translateY(-1px)}
+#cur{transition:transform .85s cubic-bezier(.22,.65,.25,1)}
+@media(max-width:560px){.panel{padding:12px}.ctl{gap:4px}.ctl button{flex:0 0 auto;padding:5px 7px;font-size:10px;min-height:26px}.ctl select{min-width:112px;max-width:135px;font-size:10px}.chips{gap:5px}.chips button{padding:5px 8px}}
+@media(prefers-reduced-motion:reduce){.ch circle,.tk i,.panel:after{animation:none!important;transition:none!important}}
+
+
+/* Visual pass 3: cleaner scene framing, simulated desktop ambience and motion polish */
+.wrap{max-width:1040px}
+h1{font-weight:750;color:#152638}
+.lid{padding:15px 15px 17px;border:1px solid #313943;background:linear-gradient(145deg,#252b33,#101419)}
+.scrw{border-radius:5px;background:#101a27}
+.scr{background:radial-gradient(circle at 72% 22%,#91c8ff 0,#3b78d2 34%,#183b78 65%,#0a1c3b 100%)}
+.win{border:1px solid rgba(255,255,255,.7);border-radius:9px;animation:sceneAppear .32s ease-out}
+.tb{background:linear-gradient(#f7f8fa,#e9edf2);border-bottom:1px solid #d4dce5}
+.tk{height:42px;background:rgba(226,234,244,.86);box-shadow:0 -1px 0 rgba(255,255,255,.5),0 0 18px rgba(7,20,40,.12)}
+.tk i{border:1px solid rgba(255,255,255,.45);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tk i.on{box-shadow:0 3px 0 -1px var(--py),0 5px 12px rgba(20,55,95,.12)}
+#cur{filter:drop-shadow(0 2px 3px rgba(0,0,0,.28))}
+#key{box-shadow:0 4px 18px rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.1)}
+.panel{background:linear-gradient(145deg,#fff,#f8fafc);border:1px solid #e1e7ef;border-left:4px solid var(--py);border-radius:12px;padding:16px 18px}
+.panel h2{font-size:clamp(17px,2.3vw,21px);color:#18344f}
+.panel .wl{color:#3c5268}
+.chips button{background:#f8fafc;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}
+.chips button:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(20,40,65,.08)}
+.chips button.cur{box-shadow:0 3px 10px rgba(48,105,152,.18)}
+.base{height:18px;background:linear-gradient(180deg,#e4e8ed 0,#aeb8c4 45%,#8793a1 100%);box-shadow:0 7px 16px rgba(16,32,48,.15)}
+@keyframes sceneAppear{from{opacity:.45;transform:translateY(3px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:560px){.lid{padding:8px 8px 10px}.panel{border-radius:9px}}
+@media(prefers-reduced-motion:reduce){.win,.chips button:hover{animation:none;transition:none;transform:none}}
+
+
+/* Visual pass 4: screen-specific UI fidelity polish */
+.tb{height:32px;background:linear-gradient(180deg,#f8fafc,#e9edf2);border-bottom:1px solid #d9e0e7;color:#273444;padding:0 12px}
+.ab{background:#f5f7fa;padding:7px 12px}
+#url{box-shadow:inset 0 1px 2px rgba(20,30,40,.04);padding:5px 13px}
+.gr,.nt2{background:#fff;color:#202124;height:100%;font-family:Arial, sans-serif}
+.gr .gh{padding:13px 22px 8px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:16px}
+.gr .gl3{font-size:21px;font-weight:600;letter-spacing:-1px}
+.gr .gq{border:1px solid #dadce0;border-radius:24px;padding:9px 15px;min-width:280px;flex:1;box-shadow:0 1px 3px #00000012}
+.gr .gt{display:flex;gap:18px;padding:10px 24px;color:#606770;border-bottom:1px solid #eee;font-size:11px}
+.gr .gb{padding:16px 32px;max-width:590px}
+.gr .gs{display:flex;gap:10px;color:#202124;font-size:11px;align-items:center}
+.gr .fv{width:28px;height:28px;background:#eef3f8;border-radius:50%;display:grid;place-items:center}
+.gr .gtl{font-size:17px;color:#1a0dab;margin:8px 0 2px}
+.gr .sn{font-size:11px;color:#4d5156;line-height:1.5}
+.gr .sl{margin:9px 0;padding:8px 12px;border:1px solid #dadce0;border-radius:7px;color:#1a0dab}
+.gr .sl small{display:block;color:#4d5156;margin-top:3px}
+.lp{height:100%;background:#fff;font-family:Arial,sans-serif;color:#24292f}
+.lp .pyh{background:#202f3c;align-items:center;box-shadow:inset 0 -3px #306998}
+.lp .pyh b{font-size:20px;letter-spacing:.3px}
+.lp .lb{padding:20px 28px;background:linear-gradient(180deg,#f7f9fb,#fff)}
+.lp .lb h2{font-size:20px;line-height:1.25;color:#253746;border-bottom:1px solid #e5e9ed;padding-bottom:10px}
+.lp .fc{border:1px solid #dfe4e8;border-radius:6px;margin:10px 0;padding:12px;background:#fff;box-shadow:0 1px 2px #00000008}
+.lp .fc h5{margin:0 0 8px;color:#34495e;font-size:13px}
+.lp .ob{background:#306998;color:white;border-radius:4px;padding:7px 12px;box-shadow:0 1px 2px #00000018}
+.jm{height:30px;background:#f4f4f4;color:#414141;border-bottom:1px solid #ddd;font-size:12px;padding:7px 12px}
+.jb{height:calc(100% - 30px);background:#fafafa}
+.js{background:#f4f4f4;color:#333;width:150px;border-right:1px solid #ddd;line-height:2}
+.jmain{background:#fff;padding:18px 22px}
+.nt{background:#fff;border-top:2px solid #f37726;box-shadow:0 1px 2px #00000008}
+.cell pre{background:#f7f7f7;border-color:#e4e4e4}
+@media(max-width:560px){.gr .gb{padding:12px 18px}.gr .gt{gap:8px;flex-wrap:wrap}.gr .gq{min-width:0}}
+
+
+/* Pass 5: polished Windows-like screen details, purely visual */
+.scr{background:radial-gradient(ellipse at 78% 20%,#83c8ff 0%,#356fc1 32%,#21477e 55%,#102746 100%)}
+.scr:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 115%,rgba(8,19,38,.42),transparent 65%),linear-gradient(135deg,rgba(255,255,255,.08),transparent 40%)}
+.win{backdrop-filter:blur(10px);box-shadow:0 16px 42px rgba(4,12,28,.38),0 1px 0 rgba(255,255,255,.35) inset}
+.tb{background:linear-gradient(180deg,#f8fafc,#e9eef5);border-bottom:1px solid #d2dae5}
+.ctab{box-shadow:0 1px 2px rgba(0,0,0,.08);border:1px solid #d9e0e8;border-bottom-color:#fff}
+.ab{background:linear-gradient(180deg,#fff,#f6f8fb);gap:10px}
+#url{border:1px solid #e1e6ed;background:linear-gradient(180deg,#f7f9fb,#eef2f7);box-shadow:inset 0 1px 2px rgba(0,0,0,.04);border-radius:24px;padding:7px 13px}
+#pg{scrollbar-width:thin;scrollbar-color:#b7c4d3 transparent}
+.lp .pyh{background:linear-gradient(110deg,#172b3d,#244760);padding:14px 20px}
+.lp .lb{padding:24px 30px}
+.lp .fc{transition:box-shadow .2s,border-color .2s;border-color:#e3e9ef}
+.lp .ob{background:linear-gradient(135deg,#3477a8,#245b83);font-weight:600}
+.jm{background:linear-gradient(180deg,#f8f9fb,#edf0f4);letter-spacing:.15px}
+.js{background:linear-gradient(180deg,#f8fafc,#f1f4f7);color:#46566a}
+.jmain{background:linear-gradient(180deg,#fff,#fbfcfe)}
+.nt{border-radius:5px;overflow:hidden}
+.cell pre{border-radius:6px;padding:12px 14px;line-height:1.6}
+.panel{box-shadow:0 7px 24px rgba(24,52,79,.07)}
+@media(prefers-reduced-motion:reduce){.fc,.win{transition:none!important}}
+
+
+/* Pass 6: cohesive application-level visual detail, still a scripted simulation */
+.win{overflow:hidden;isolation:isolate}
+.scr>*{position:relative;z-index:1}
+.tb{font-weight:500;display:flex;align-items:center;justify-content:space-between}
+.tb span{display:inline-flex;align-items:center;gap:7px}
+.ab{border-bottom:1px solid #e8edf3}
+.gr .gh{background:#fff}
+.gr .gb{padding-top:20px}
+.gr .gtl{letter-spacing:.05px}
+.gr .sl{background:linear-gradient(180deg,#fff,#fafbfd);box-shadow:0 1px 2px rgba(25,40,60,.035)}
+.lp .pyh{display:flex;gap:24px;min-height:56px}
+.lp .pyh span{font-size:12px;color:#e5edf4}
+.lp .lb h2{letter-spacing:-.25px}
+.lp .ft{border-collapse:collapse;width:100%;font-size:11px}
+.lp .ft th{background:#eef3f7;color:#31485b;text-align:left}
+.lp .ft th,.lp .ft td{border:1px solid #dfe6ec;padding:7px 8px}
+.jm{display:flex;align-items:center;white-space:nowrap}
+.jb{display:flex;min-height:0;overflow:hidden}
+.js{padding:10px 12px;box-sizing:border-box;flex-shrink:0;font-size:12px}
+.jmain{overflow:auto;min-width:0}
+.nt{border:1px solid #e3e8ee}
+.cell{margin:10px 0}
+.cell pre{overflow:auto;white-space:pre-wrap;word-break:normal}
+#sb{border-radius:5px;overflow:hidden}
+.tk{border-radius:0 0 4px 4px}
+@media(max-width:560px){.lp .lb{padding:14px 16px}.lp .pyh{gap:12px;min-height:45px}.lp .ft{font-size:9px}.js{width:112px;padding:8px}.jmain{padding:12px}}
+@media(prefers-reduced-motion:reduce){.win{animation:none!important}}
+
+
+.sim-target{outline:2px solid rgba(66,133,244,.75)!important;outline-offset:2px!important;transition:outline .12s!important}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px;margin:10px auto 8px}
+.ctl button,.ctl select{font:600 11px/1.15 inherit;padding:5px 8px;min-height:28px;border:1px solid #d6dee8;border-radius:6px;background:#fff;color:#24384b;cursor:pointer}
+.ctl button:hover,.ctl select:hover{border-color:#9aafc4;background:#f7fafc}
+.ctl #bp{background:#ffd43b;border-color:#e5bb25;color:#222}
+.ctl select{min-width:130px;max-width:160px;padding:5px 7px}
+@media(max-width:560px){.ctl{gap:4px}.ctl button{padding:5px 7px;font-size:10px;min-height:26px}.ctl select{min-width:112px;max-width:135px;font-size:10px}}
+
+/* Full-screen resource mode: the page itself covers every mobile or desktop viewport. */
+html.full-screen-simulation,
+html.full-screen-simulation body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#0b1420}
+html.full-screen-simulation body{font-size:clamp(12px,1.4vw,16px)}
+html.full-screen-simulation .wrap{width:100%;max-width:none;height:100vh;height:100dvh;margin:0;padding:0;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(circle at 50% 18%,#173252,#08111f 72%)}
+html.full-screen-simulation h1,
+html.full-screen-simulation .sub0,
+html.full-screen-simulation .hint,
+html.full-screen-simulation .panel,
+html.full-screen-simulation .chips,
+html.full-screen-simulation .card{display:none!important}
+html.full-screen-simulation .ctl{flex:0 0 auto;width:100%;margin:0;padding:max(8px,env(safe-area-inset-top)) max(104px,calc(env(safe-area-inset-right) + 96px)) 8px max(8px,env(safe-area-inset-left));border:0;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0;background:rgba(6,14,25,.92);backdrop-filter:blur(8px);justify-content:center;box-shadow:none}
+html.full-screen-simulation #zw{flex:1 1 auto;min-height:0;width:100%;overflow:hidden;background:radial-gradient(circle at 50% 40%,#173252,#07101c 78%)}
+html.full-screen-simulation .lid{width:100%;height:100%;padding:0;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+html.full-screen-simulation #zw.z #lid{width:100%;height:100%}
+html.full-screen-simulation .scrw{width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;box-shadow:none;background:transparent}
+html.full-screen-simulation #scr{left:50%;top:50%;margin-left:-360px;margin-top:-225px;transform-origin:center center}
+html.full-screen-simulation .base{display:none!important}
+@media(max-width:560px){html.full-screen-simulation .ctl{padding:max(52px,calc(env(safe-area-inset-top) + 48px)) max(6px,env(safe-area-inset-right)) 6px max(6px,env(safe-area-inset-left));gap:3px}html.full-screen-simulation .ctl button,html.full-screen-simulation .ctl select{min-height:30px;font-size:11px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Python and JupyterLab on a Windows</h1>
+<p class="sub0">A visual walkthrough of setting up Python, a project environment and JupyterLab on Windows. Follow the simulated screens from download to a plotted dataset.</p>
+<div class="ctl" aria-label="Simulation controls"><button id="bv" type="button" title="Go to previous stage">◀ Previous</button><button id="bback10" type="button" title="Replay the current stage from about 10 seconds earlier">↶ Replay 10s</button><button id="bp" type="button" aria-pressed="false">⏸ Pause</button><button id="bfwd20" type="button" title="Skip forward 20 seconds">20s ↷</button><button id="bn" type="button" title="Go to next stage">Next ▶</button><label for="stageJump" class="sr-only">Jump to stage</label><select id="stageJump" aria-label="Jump to a stage"><option value="">Jump to stage…</option></select><button id="br0" type="button">↺ Restart</button><button id="bs" type="button">Speed 1×</button><button id="bz" type="button">🔍 Zoom</button></div>
+<p class="hint">Controls stay above the walkthrough. “Replay 10s” restarts the current stage from about ten seconds earlier; tap Zoom to enlarge the screen. Rotate your phone for a wider view.</p>
+<div id="zw"><div class="lid" id="lid"><div class="scrw" id="scrw"><div class="scr" id="scr">
+
+<div class="win" id="w-br">
+ <div class="tb"><span class="ctab"><span id="tt">New Tab</span><span>✕</span></span><span style="align-self:center">＋</span><span class="ask">✦ Ask Gemini</span><em>—&nbsp; ☐ &nbsp;✕</em></div>
+ <div class="ab"><span>←</span><span>→</span><span>⟳</span><div id="url">Search or enter address</div></div>
+ <div class="bc"><div id="pg"></div>
+  <div id="dlp"><b style="font-size:12px">python-install-manager.msix</b><div class="pb"><i id="dlb"></i></div><small id="dls">Downloading…</small><a id="dlo">Open file</a></div></div>
+</div>
+
+<div class="win" id="w-term">
+ <div class="tb"><span>Command Prompt</span><em>—&nbsp; ☐ &nbsp;✕</em></div>
+ <div class="tbody"><pre id="tp"></pre></div>
+</div>
+
+<div class="win" id="w-ins">
+ <div class="tb"><span>App Installer</span></div>
+ <div class="in">
+  <div id="ins0"><h3>Install Python install manager?</h3>
+   <p style="margin:0 0 12px;color:#555">Python Software Foundation · python-install-manager.msix</p>
+   <span class="ib"><b>What this adds</b><small>The python, py and pymanager commands. Python itself is installed in the next stage.</small></span>
+   <p style="margin-top:40px;text-align:right"><span class="btn" id="instb">Install</span> &nbsp; <span class="btn alt">Cancel</span></p></div>
+  <div id="insp"><h3>Installing…</h3><p>Python install manager</p><div class="pb" style="height:14px"><i id="ipb"></i></div></div>
+  <div id="inso"><h3>Python install manager is ready</h3><p>The python, py and pymanager commands are now available. Open a new terminal to use them.</p><p style="margin-top:44px;text-align:right"><span class="btn" id="insclose">Close</span></p></div>
+ </div>
+</div>
+<div id="uac"><div class="uc"><div><b>User Account Control</b><br>Do you want to allow this app to make changes to your device?<br><br>Python 3.x (64-bit)<br>Verified publisher: Python Software Foundation</div><div class="bt"><span class="yes" id="uyes">Yes</span><span id="uno">No</span></div></div></div>
+<div id="key"></div>
+<div class="tk" id="tk"><span class="st"><b></b><b></b><b></b><b></b></span><span class="sr">🔍 Search</span><i style="background:#306998" data-w="ins">Py</i><i style="background:conic-gradient(#ea4335 0 33%,#34a853 0 66%,#fbbc05 0);border-radius:50%" data-w="br"><b style="width:10px;height:10px;border-radius:50%;background:#4285f4;border:2px solid #fff"></b></i><i style="background:#333" data-w="term">&gt;_</i><span class="ck" id="clk"></span></div>
+<div id="cur"><svg width="18" height="22" viewBox="0 0 18 22"><path d="M1 1v17l4.5-4 3 7 3-1.4-3-6.6H14z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+</div></div></div>
+<div class="base"></div></div>
+<div class="card" style="margin:14px auto;max-width:980px;text-align:center"><h3>Install Python on your actual Windows computer</h3><p>This walkthrough is simulated. To start the real download immediately, use the official Python install manager package:</p><p><a href="https://www.python.org/ftp/python/pymanager/python-manager-26.4.msix" style="display:inline-block;background:#ffd43b;color:#222;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700">Download Python install manager (MSIX) — Python.org</a></p><small>Direct download from python.org. After it finishes, open the downloaded MSIX file and choose Install. This bypasses the simulated download stages.</small></div>
+
+<div class="panel"><h2 id="ct" aria-live="polite"></h2><p id="cx"></p><p class="wl" id="cw"></p><div id="sb" aria-live="polite"></div><div class="wl" id="sw" aria-live="polite"></div></div>
+<div class="chips" id="chips"></div>
+<div class="card"><h3>Key terms</h3><dl class="gl">
+<dt>Python install manager</dt><dd>The tool from python.org that installs Python versions on Windows and provides the python, py and pymanager commands.</dd>
+<dt>MSIX</dt><dd>A Windows app package. Double-click it and choose Install.</dd>
+<dt>PATH</dt><dd>A list of folders Windows searches when you type a command. With the install manager, adding its folder to PATH is optional.</dd>
+<dt>pip</dt><dd>Python’s package installer. It downloads libraries such as pandas.</dd>
+<dt>Virtual environment (.venv)</dt><dd>A private folder that holds the packages for one project only.</dd>
+<dt>JupyterLab</dt><dd>A browser workspace for notebooks, files and terminals.</dd>
+<dt>Kernel</dt><dd>The Python process that runs your notebook cells. A [*] beside a cell means it is still running.</dd>
+<dt>localhost</dt><dd>Your own computer. JupyterLab is served from it, not from the internet.</dd></dl></div>
+<div class="card"><h3>Common fixes</h3><div style="overflow-x:auto"><table class="t">
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td>python is not found, or opens the Microsoft Store</td><td>Make sure the install manager is installed (Stage 4). Click Start, open “Manage app execution aliases”, and turn on “Python (default)”. Check that <code>py</code> works.</td></tr>
+<tr><td>py says “can't open file”</td><td>The old Python launcher has priority. Click Start, open “Installed apps”, and uninstall “Python launcher”.</td></tr>
+<tr><td>Jupyter command is not found</td><td>Activate the environment first: <code>.venv\Scripts\activate</code> (Stage 10), then use <code>python -m jupyter lab</code>.</td></tr>
+<tr><td>PowerShell blocks activation</td><td>Use Command Prompt, or run <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> once.</td></tr>
+<tr><td>Browser did not open</td><td>Copy the <code>http://localhost:8888/lab?token=…</code> link from the terminal.</td></tr>
+<tr><td>ModuleNotFoundError: pandas</td><td>Run <code>python -m pip install pandas</code> in the active environment, then restart the kernel.</td></tr>
+<tr><td>Chart does not appear</td><td>End the cell with <code>plt.show()</code> and run it again.</td></tr></table></div></div>
+</div>
+<section class="card"><h3>Additional troubleshooting</h3><div style="overflow-x:auto"><table class="t"><tr><th>Problem</th><th>Try this</th></tr><tr><td>Python command opens Store or is not found</td><td>Try <code>py --version</code>, review App Execution Aliases, and consult the official Windows troubleshooting documentation.</td></tr><tr><td>pip command is not found</td><td>Use <code>python -m pip --version</code>; ensure the correct interpreter or environment is active.</td></tr><tr><td>ModuleNotFoundError</td><td>Install the missing package in the environment used by the notebook, then restart the kernel.</td></tr><tr><td>Notebook kernel missing</td><td>Install ipykernel into the active environment using <code>python -m pip install ipykernel</code>, then refresh/reselect the kernel.</td></tr><tr><td>Port 8888 is occupied</td><td>Jupyter may choose another port. Use the URL printed by the server in the terminal.</td></tr><tr><td>PowerShell activation blocked</td><td>Prefer Command Prompt for this walkthrough or follow official PowerShell policy guidance; avoid changing system-wide policy unnecessarily.</td></tr><tr><td>Plot is blank</td><td>Run the plotting cell, ensure the data variables exist, and call <code>plt.show()</code>.</td></tr><tr><td>Notebook cells run out of order</td><td>Restart the kernel and run cells from the top in sequence to rebuild the variables.</td></tr></table></div><p style="margin-top:10px">Official reference: <a href="https://docs.python.org/3/using/windows.html" target="_blank" rel="noopener">Python documentation — Using Python on Windows</a>.</p></section>
+
+<script>
+var $=function(s){return document.querySelector(s)},$$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+var tok=0,paused=false,spd=1,idx=0,stageElapsed=0,skipBudget=0,zoom=false;
+var fullScreenSimulation=new URLSearchParams(location.search).get('full')==='1';
+/* Scale the 720x450 simulated screen to the available viewport. */
+function screenScale(){var w=$('#scrw').clientWidth||720,h=$('#scrw').clientHeight||450;if(!fullScreenSimulation)return (w/720)||1;var k=zoom?Math.max(w/720,h/450):Math.min(w/720,h/450);return k>0?k:1}
+function fit(){$('#scr').style.transform='scale('+screenScale()+')'}
+addEventListener('resize',fit);addEventListener('load',fit);requestAnimationFrame(fit);fit();
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(fit).observe($('#scrw'));
+setInterval(function(){$('#clk').textContent=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})},1000);
+/* engine */
+function sleep(ms){var my=tok;return new Promise(function(res,rej){var t=0,iv=setInterval(function(){if(my!==tok){clearInterval(iv);rej(0)}else if(!paused){if(skipBudget>0){var step=Math.min(20,skipBudget);skipBudget-=step;stageElapsed+=step;t+=step;if(skipBudget<=0)$('#scr').classList.remove('rewinding')}else{t+=20;stageElapsed+=20}if(t>=ms/spd){clearInterval(iv);res()}}},20)})}
+async function typ(el,s,d){for(var i=0;i<s.length;i++){el.textContent+=s[i];await sleep(d||40)}}
+var POOL=['python','python download','python download for windows','python online compiler','python tutorial','python interview questions','python jupyter notebook','python install windows 11','python official page','python official page download','python official page for windows','python official website','python official download','python official documentation'],NOISE=['paypal','pdf to word','premier league table'];
+function acShow(t){var q=t.toLowerCase(),L=POOL.concat(q.length<2?NOISE:[]).filter(function(x){return x.indexOf(q)===0}).slice(0,6),a=$('#ac');if(!a)return;
+ a.innerHTML=L.map(function(x,i){return '<div'+(i?'':' class="hi"')+'>'+x.slice(0,q.length)+'<b>'+x.slice(q.length)+'</b></div>'}).join('');a.style.display=L.length?'block':'none';$('#sbox').classList.toggle('open',L.length>0)}
+async function typAC(el,s,d){for(var i=0;i<s.length;i++){el.textContent+=s[i];acShow(el.textContent);await sleep(d||90)}}
+
+async function pt(e){if(typeof e==='string')e=$(e);var pg=$('#pg'),scrw=$('#scrw');if(pg.contains(e)){var q=screenScale(),a=e.getBoundingClientRect(),b=pg.getBoundingClientRect();pg.scrollTo({top:pg.scrollTop+(a.top-b.top)/q-pg.clientHeight/2+a.height/q/2,behavior:'smooth'});await sleep(700)}var s=scrw.getBoundingClientRect(),sr=$('#scr').getBoundingClientRect(),r=e.getBoundingClientRect(),k=screenScale();
+ /* Position the cursor tip (not its centre) on the actual target. */ var x=(r.left-sr.left+r.width*0.42)/k,y=(r.top-sr.top+r.height/2)/k;$('#cur').style.transform='translate('+x+'px,'+y+'px)';if(zoom){var z=$('#zw');z.scrollTo({left:r.left-s.left+r.width/2-z.clientWidth/2+12,behavior:'smooth'})}await sleep(950)}
+async function click(e){if(typeof e==='string')e=$(e);await pt(e);e.classList.add('sim-target');$('#cur').classList.add('ck');await sleep(200);$('#cur').classList.remove('ck');await sleep(100);e.classList.remove('sim-target')}
+function sub(t,w){$('#sb').textContent=t;$('#sw').textContent=w||''}
+function show(){var a=arguments;['br','term','ins'].forEach(function(id){var w=$('#w-'+id),i=[].indexOf.call(a,id);w.classList.toggle('on',i>-1);if(id!=='ins')w.style.zIndex=i+1});
+ $$('#tk i').forEach(function(i){i.classList.toggle('on',[].indexOf.call(a,i.dataset.w)>-1)})}
+async function key(t){var k=$('#key');k.textContent=t;k.classList.add('on');await sleep(900);k.classList.remove('on')}
+/* terminal */
+var TP=$('#tp'),P='C:\\Users\\you>',VP='(.venv) C:\\Users\\you\\Documents\\jupyter-demo>';
+function tclr(){TP.innerHTML=''}
+function tout(s){TP.insertAdjacentText('beforeend',s+'\n');TP.parentNode.scrollTop=1e5}
+async function tcmd(c){var a=document.createElement('span'),b=document.createElement('span');b.className='cm';a.textContent=P+' ';TP.appendChild(a);TP.appendChild(b);
+ sub(c,WHY[c]);await typ(b,c,38);await sleep(400);TP.insertAdjacentText('beforeend','\n')}
+async function pbar(l,n){n=n||28;var e=document.createElement('span');TP.appendChild(e);TP.insertAdjacentText('beforeend','\n');
+ for(var i=0;i<=n;i++){e.textContent=l+' '+'█'.repeat(i)+'░'.repeat(n-i)+' '+Math.round(i/n*100)+'%';await sleep(55)}}
+/* browser pages */
+var PG={
+search:'<div class="nt2"><div class="tl"><span>Gmail</span><span>Images</span><span>⋮⋮⋮</span></div><div class="gl2"><span style="color:#4285f4">G</span><span style="color:#ea4335">o</span><span style="color:#fbbc05">o</span><span style="color:#4285f4">g</span><span style="color:#34a853">l</span><span style="color:#ea4335">e</span></div><div class="sb2" id="sbox"><b>+</b><span id="ph">Ask Google</span><span id="q"></span><i class="cr"></i><i class="r">🎤 📷 <u>AI Mode</u></i><div id="ac"></div></div><div class="cards2"><div><b>Do more with AI Mode</b><small>Create, summarize, plan</small></div><div><b>Create images</b><small>Reimagine, illustrate, edit</small></div></div><div class="sc"><div><span>💬</span>ChatGPT</div><div><span>🌐</span>127.0.0.1</div><div><span>🤗</span>Hugging Face</div><div><span>🎥</span>Google Meet</div><div><span>📅</span>Calendar</div><div><span>📄</span>Docs</div><div><span>⤢</span>Show more</div></div></div>',
+results:'<div class="gr"><div class="gh"><span class="gl3"><span style="color:#4285f4">G</span><span style="color:#ea4335">o</span><span style="color:#fbbc05">o</span><span style="color:#4285f4">g</span><span style="color:#34a853">l</span><span style="color:#ea4335">e</span></span><div class="gq"><span>python official page</span><b>✕</b></div><span class="gam">AI Mode</span></div><div class="gt"><span>AI Mode</span><span class="on2">All</span><span>Videos</span><span>Images</span><span>Forums</span><span>Short videos</span><span>News</span><span>More ▾</span><span>Tools ▾</span></div><div class="gb"><div class="gs"><span class="fv"><svg role="img" aria-label="Python snake logo" viewBox="0 0 64 64" width="20" height="20" style="vertical-align:middle;flex:none"><path d="M31 5C19 5 18 10 18 18v7h18v4H12C5 29 4 35 4 43s5 13 13 13h8v-9c0-7 5-12 12-12h9c7 0 12-5 12-12v-6C58 9 50 5 39 5z" fill="#306998"/><path d="M33 59c12 0 13-5 13-13v-7H28v-4h24c7 0 8-6 8-14S55 8 47 8h-8v9c0 7-5 12-12 12h-9C11 29 6 34 6 41v6c0 10 8 12 19 12z" fill="#ffd43b"/><circle cx="25" cy="14" r="2.2" fill="#fff"/><circle cx="39" cy="50" r="2.2" fill="#fff"/></svg></span><div><div>Python.org</div><small id="rurl">https://www.python.org</small></div></div><div class="gtl" id="rok">Welcome to Python.org</div><p class="sn">The official home of the Python Programming Language. ... Notice: This page displays a fallback because interactive scripts did not run. Possible causes ...</p><div class="sl"><b>Downloads</b><small>The official home of the Python Programming Language. ... The ...</small></div><div class="sl"><b>Python For Beginners</b><small>The official home of the Python Programming Language ...</small></div><div class="sl"><b>About</b><small>The official home of the Python Programming Language ...</small></div><div class="sl"><b>Python Docs</b><small>The official home of the Python Programming Language ...</small></div><div class="sl"><b>The Python Tutorial</b><small>Python is an easy to learn, powerful programming language ...</small></div></div></div>',
+home:'<div class="ph"><div class="pt"><span class="cur2">Python</span><span>PSF</span><span>Docs</span><span>PyPI</span><span>Jobs</span><span>Community</span></div><div class="pr"><b class="plg"><svg role="img" aria-label="Python snake logo" viewBox="0 0 64 64" width="30" height="30" style="vertical-align:middle;flex:none"><path d="M31 5C19 5 18 10 18 18v7h18v4H12C5 29 4 35 4 43s5 13 13 13h8v-9c0-7 5-12 12-12h9c7 0 12-5 12-12v-6C58 9 50 5 39 5z" fill="#306998"/><path d="M33 59c12 0 13-5 13-13v-7H28v-4h24c7 0 8-6 8-14S55 8 47 8h-8v9c0 7-5 12-12 12h-9C11 29 6 34 6 41v6c0 10 8 12 19 12z" fill="#ffd43b"/><circle cx="25" cy="14" r="2.2" fill="#fff"/><circle cx="39" cy="50" r="2.2" fill="#fff"/></svg>python</b><span class="don">Donate</span><span class="psr"></span><span class="go">GO</span><span>Socialize</span></div><div class="pn"><span>About</span><span id="nDl">Downloads</span><span>Documentation</span><span>Community</span><span>Success Stories</span><span>News</span><span>Events</span></div><div class="phm"><pre class="pc"># List comprehensions\n&gt;&gt;&gt; fruits = [&#39;Banana&#39;, &#39;Apple&#39;, &#39;Lime&#39;]\n&gt;&gt;&gt; loud_fruits = [fruit.upper() for fruit in fruits]\n&gt;&gt;&gt; print(loud_fruits)\n[&#39;BANANA&#39;, &#39;APPLE&#39;, &#39;LIME&#39;]</pre><div class="pd"><h4>Compound Data Types</h4><p style="margin:0">Lists (known as arrays in other languages) are one of the compound data types that Python understands. Lists can be indexed, sliced and manipulated with other built-in functions. <u>More about lists</u></p></div></div><p class="pl">Python is a programming language that lets you work quickly and integrate systems more effectively. <u>&gt;&gt;&gt; Learn More</u></p></div>',
+dl:'<div class="lp"><div class="pyh"><b><svg role="img" aria-label="Python snake logo" viewBox="0 0 64 64" width="30" height="30" style="vertical-align:middle;flex:none"><path d="M31 5C19 5 18 10 18 18v7h18v4H12C5 29 4 35 4 43s5 13 13 13h8v-9c0-7 5-12 12-12h9c7 0 12-5 12-12v-6C58 9 50 5 39 5z" fill="#306998"/><path d="M33 59c12 0 13-5 13-13v-7H28v-4h24c7 0 8-6 8-14S55 8 47 8h-8v9c0 7-5 12-12 12h-9C11 29 6 34 6 41v6c0 10 8 12 19 12z" fill="#ffd43b"/><circle cx="25" cy="14" r="2.2" fill="#fff"/><circle cx="39" cy="50" r="2.2" fill="#fff"/></svg> <span>python</span></b><span>Downloads</span><span>Docs</span><span>Community</span></div><div class="lb"><h2>Download the latest version for Windows</h2><p style="margin:0 0 10px;color:#555">Looks like you are using Windows.</p><span class="yb" id="dlbtn">Download Python for Windows</span></div></div>',
+rel:'<div class="lp"><div class="pyh"><b><svg role="img" aria-label="Python snake logo" viewBox="0 0 64 64" width="30" height="30" style="vertical-align:middle;flex:none"><path d="M31 5C19 5 18 10 18 18v7h18v4H12C5 29 4 35 4 43s5 13 13 13h8v-9c0-7 5-12 12-12h9c7 0 12-5 12-12v-6C58 9 50 5 39 5z" fill="#306998"/><path d="M33 59c12 0 13-5 13-13v-7H28v-4h24c7 0 8-6 8-14S55 8 47 8h-8v9c0 7-5 12-12 12h-9C11 29 6 34 6 41v6c0 10 8 12 19 12z" fill="#ffd43b"/><circle cx="25" cy="14" r="2.2" fill="#fff"/><circle cx="39" cy="50" r="2.2" fill="#fff"/></svg> <span>python</span></b><span>Downloads</span><span>Docs</span><span>Community</span></div><div class="lb"><h2>Python 3.x</h2><p style="margin:0 0 4px;color:#555">Files</p><div class="fc"><h5>macOS</h5><span class="ob">Download macOS installer</span></div><div class="fc"><h5>Windows</h5><span class="ob" id="wbtn">Download Python install manager</span></div><div class="fc"><h5>Source release</h5><span class="ob">Download XZ compressed source tarball</span></div><table class="ft"><tr><th>Version</th><th>Operating system</th><th>Description</th><th>File size</th><th>Sigstore</th><th>SBOM</th></tr><tr><td>Gzipped source tarball</td><td>Source release</td><td></td><td>34.2 MB</td><td>sigstore</td><td>SPDX</td></tr><tr><td>XZ compressed source tarball</td><td>Source release</td><td></td><td>26.7 MB</td><td>sigstore</td><td>SPDX</td></tr><tr><td>Android embeddable package (aarch64)</td><td>Android</td><td></td><td>23.2 MB</td><td>sigstore</td><td></td></tr><tr><td>Android embeddable package (x86_64)</td><td>Android</td><td></td><td>23.6 MB</td><td>sigstore</td><td></td></tr></table></div></div>',
+pm:'<div class="lp"><div class="pyh"><b><svg role="img" aria-label="Python snake logo" viewBox="0 0 64 64" width="30" height="30" style="vertical-align:middle;flex:none"><path d="M31 5C19 5 18 10 18 18v7h18v4H12C5 29 4 35 4 43s5 13 13 13h8v-9c0-7 5-12 12-12h9c7 0 12-5 12-12v-6C58 9 50 5 39 5z" fill="#306998"/><path d="M33 59c12 0 13-5 13-13v-7H28v-4h24c7 0 8-6 8-14S55 8 47 8h-8v9c0 7-5 12-12 12h-9C11 29 6 34 6 41v6c0 10 8 12 19 12z" fill="#ffd43b"/><circle cx="25" cy="14" r="2.2" fill="#fff"/><circle cx="39" cy="50" r="2.2" fill="#fff"/></svg> <span>python</span></b><span>Downloads</span><span>Docs</span><span>Community</span></div><div class="lb"><h2>Python install manager</h2><p style="margin:0 0 8px;color:#444">The Python install manager for Windows is our tool for installing and managing runtimes. Use the options and package details currently listed on python.org; release and package details may change.</p><p style="margin:0 0 8px;color:#444">Once installed, you should not need to download the install manager from here again. Please file feedback as issues on our GitHub repository at <u>github.com/python/pymanager</u>.</p><div class="fc"><h5>Windows</h5><span class="ob" id="mbtn">Download Installer (MSIX)</span></div><table class="ft"><tr><th>Version</th><th>Operating system</th><th>Description</th><th>File size</th><th>SHA-256 checksum</th></tr><tr><td>Installer (MSIX)</td><td>Windows</td><td>Installer package details vary by release and Windows architecture.</td><td>Check current download size</td><td><code>Use the checksum shown on the official download page</code></td></tr><tr><td>MSI package</td><td>Windows</td><td>Review the current official documentation before use</td><td>Details vary</td><td><code>Check official page</code></td></tr></table></div></div>',
+
+jl:function(inner){return '<div class="jm">File &nbsp; Edit &nbsp; View &nbsp; Run &nbsp; Kernel &nbsp; Settings</div><div class="jb"><div class="js"><b>Files</b><div>📁 jupyter-demo</div><div>📁 .venv</div></div><div class="jmain">'+inner+'</div></div>'},
+launcher:'<h4>Launcher</h4><p style="margin:0;color:#666">Notebook</p><div class="tile" id="tile"><b>Py</b>Python 3 (ipykernel)</div><p style="margin:0;color:#666">Other</p><div class="tile"><b>$_</b>Terminal</div>',
+nb:'<span class="nt">Untitled.ipynb</span><div style="display:flex;gap:8px;margin:0 0 8px;font-size:11px;color:#555"><span>▶ Run</span><span>＋ Code</span><span>＋ Markdown</span><span>Kernel: Python 3</span></div><div class="cell" id="k1"><span id="p1">[ ]:</span><pre id="c1"></pre></div><div class="op"><span></span><div id="o1" style="flex:1"></div></div><div class="cell" id="k2"><span id="p2">[ ]:</span><pre id="c2"></pre></div><div class="op"><span></span><div id="o2" style="flex:1"></div></div><div class="cell" id="k3"><span>[ ]:</span><pre>df.shape\ndf.describe()</pre></div><div class="op"><span></span><div style="flex:1;color:#555;font:11px Consolas,monospace">(200, 2) &nbsp; Summary statistics for hours and score…</div></div>'
+};
+function page(h,url,title){$('#pg').innerHTML=h;$('#url').classList.toggle('nt',h===PG.search);if(url)$('#url').textContent=url;if(title)$('#tt').textContent=title}
+function dl(state){var p=$('#dlp');p.classList.toggle('on',state>0);$('#dlb').style.width=state>1?'100%':'0';$('#dls').textContent=state>1?'Done':'Downloading…';$('#dlo').style.display=state>1?'inline':'none'}
+function insReset(){$('#ins0').style.display='block';$('#insp').style.display='none';$('#inso').style.display='none';$('#ipb').style.width='0'}
+/* synthetic data (JS stand-in for NumPy) */
+function rnd(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+var R=rnd(42),D=[];for(var i=0;i<200;i++){var h=R()*10,g=Math.sqrt(-2*Math.log(R()+1e-9))*Math.cos(6.283*R());D.push([h,40+5*h+g*6])}
+function tbl(){var r='<table class="df"><tr><th></th><th>hours</th><th>score</th></tr>';for(var i=0;i<5;i++)r+='<tr><th>'+i+'</th><td>'+D[i][0].toFixed(2)+'</td><td>'+D[i][1].toFixed(2)+'</td></tr>';return r+'</table>'}
+function chart(){var c='';D.forEach(function(d,i){c+='<circle cx="'+(30+d[0]*27)+'" cy="'+(118-(d[1]-38)*1.7)+'" r="2.6" fill="#306998" style="animation-delay:'+(i*12)+'ms"/>'});
+ return '<svg class="ch" viewBox="0 0 320 135" width="300"><rect x="30" y="4" width="272" height="116" fill="#fff" stroke="#ccd3db"/>'+c+'<line x1="30" y1="116" x2="302" y2="12" stroke="#d62728" stroke-width="1.6"/><text x="166" y="132" font-size="9" text-anchor="middle" fill="#555">Hours studied</text></svg>'}
+/* stages */
+var WHY={'python --version':'Asks Python to report its version. A number means Windows can find Python, so PATH works.',
+'py install 3':'Illustrative version-specific install command; check the current install manager documentation for exact runtime-selection syntax. A fresh install manager can also provision Python when invoked, depending on configuration.',
+'python -m pip --version':'Runs pip through Python. This is the safest form, because plain pip only works inside an activated environment.',
+'cd %USERPROFILE%\\Documents':'cd means change directory. %USERPROFILE% is your user folder, so this moves into Documents.',
+'mkdir jupyter-demo':'Makes a new folder for this project.',
+'cd jupyter-demo':'Moves into the new folder.',
+'python -m venv .venv':'Builds a virtual environment: a private copy of Python and packages just for this project.',
+'.venv\\Scripts\\activate':'Switches this terminal to that environment. The (.venv) prefix confirms it.',
+'python -m pip install --upgrade pip':'Updates pip itself before installing anything else.',
+'python -m pip install jupyterlab numpy pandas matplotlib':'Downloads JupyterLab plus NumPy (numbers), pandas (tables) and Matplotlib (charts).',
+'python -m jupyter lab':'Starts the Jupyter server on your PC and opens the JupyterLab page in your browser.',
+'cd %USERPROFILE%\\Documents\\jupyter-demo':'Returns to your project folder.'};
+var SW=['Fake installers on look-alike sites are common. python.org is the official source.','The official Windows download options may change; follow the current page and documentation.','Review package information and verify checksums when the official page provides them.','This step installs the tool that manages Python versions. It does not install Python itself yet.','The install-manager commands and installation prompts can vary. Check its current official documentation for supported syntax and options.','An environment isolates project dependencies. Activation in Command Prompt is straightforward; PowerShell has a different activation script and may have policy restrictions.','JupyterLab is the notebook workspace. NumPy handles arrays, pandas data tables, and Matplotlib visualisations.','The server runs on your own PC. Nothing is uploaded, and closing the terminal stops it.','A notebook runs code in small cells, so you see each result right away.','This example demonstrates diagnosing a missing Jupyter installation or environment mismatch.'];
+var CODE1='import numpy as np\nimport pandas as pd\n\nrng = np.random.default_rng(42)\ndf = pd.DataFrame({"hours": rng.uniform(0, 10, 200)})\ndf["score"] = 40 + 5 * df["hours"] + rng.normal(0, 6, 200)\ndf.head()';
+var CODE2='import matplotlib.pyplot as plt\n\nplt.scatter(df["hours"], df["score"], alpha=0.6)\nplt.xlabel("Hours studied")\nplt.ylabel("Score")\nplt.title("Synthetic score versus study hours")\nplt.show()';
+var stages=[
+{n:'Find',t:'Stage 1: Find the official Python site',x:'The walkthrough visually demonstrates locating the official Python website and checking its domain.',
+ run:async function(){sub('Find the official Python site','Stage 1 starts here: find the official Python site before any installation steps.');await sleep(1800);show();dl(0);page(PG.search,' ','New Tab');sub('Click the Chrome icon on the taskbar','The browser shown is simulated. Any real browser can be used for this process.');await sleep(1000);await click('#tk i[data-w=br]');show('br');sub('Chrome opens on its New Tab page','The address bar and search field are simulated as part of this walkthrough.');await sleep(1600);sub('Click the search box');
+  await click('#sbox');$('#ph').style.display='none';sub('Type the search','Chrome suggests related searches as you type. You can click one instead of finishing the sentence.');await typAC($('#q'),'python official page',100);await sleep(900);sub('Press Enter');await key('Enter');
+  page(PG.results,'google.com/search?q=python+official+page&oq=python+official+page&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIICAEQABgWGB4','python official page - Google Search');await sleep(1400);
+  sub('Check the address under the name','It must read exactly https://www.python.org. Look-alike domains and ads can carry unwanted software.');await pt('#rurl');await sleep(1500);sub('Click “Welcome to Python.org”');await click('#rok');
+  page(PG.home,'https://www.python.org/','Welcome to Python.org');await sleep(1600)}},
+{n:'Release page',t:'Stage 2: Open the latest release page',x:'From the python.org home page, open Downloads and then the latest release. Its Windows box now offers the Python install manager.',
+ run:async function(){show('br');dl(0);page(PG.home,'https://www.python.org/','Welcome to Python.org');await sleep(900);
+  sub('Click Downloads in the main menu');await click('#nDl');page(PG.dl,'https://www.python.org/downloads/','Download Python | Python.org');await sleep(1000);
+  sub('Click the yellow “Download Python for Windows” button');await click('#dlbtn');page(PG.rel,'https://www.python.org/downloads/','Python Release Python 3.x | Python.org');await sleep(1400);
+  sub('Look at the Windows box in the Files section','Follow the current Windows installation options shown on python.org. Interface and package details can change between releases.');await pt('#wbtn');await sleep(1500)}},
+{n:'Get the MSIX',t:'Stage 3: Download the install manager (MSIX)',x:'Use the Windows install-manager download option presented by the official site. Verify the publisher and details before opening the installer.',
+ run:async function(){show('br');dl(0);page(PG.rel,'https://www.python.org/downloads/','Python Release Python 3.x | Python.org');await sleep(900);
+  sub('Click “Download Python install manager”');await click('#wbtn');page(PG.pm,'https://www.python.org/downloads/','Python Release Python install manager | Python.org');await sleep(1400);
+  sub('Click “Download Installer (MSIX)”','The table shows the size (Check current download size) and a SHA-256 checksum you can use to verify the file.');await click('#mbtn');dl(1);
+  for(var i=1;i<=20;i++){$('#dlb').style.width=i*5+'%';await sleep(120)}dl(2);sub('python-install-manager.msix saved to Downloads');await sleep(1300)}},
+{n:'Install manager',t:'Stage 4: Install the Python install manager',x:'Open the downloaded file. Windows shows App Installer; click Install, then approve the simulated User Account Control prompt for Python Software Foundation. Python itself comes next.',
+ run:async function(){show('br');page(PG.pm,'https://www.python.org/downloads/','Python Release Python install manager | Python.org');dl(2);insReset();await sleep(700);
+  sub('Click “Open file” in the download bubble');await click('#dlo');show('br','ins');await sleep(900);
+  sub('Click Install');await click('#instb');sub('Approve the simulated User Account Control prompt','Windows asks permission for the verified Python Software Foundation installer. Nothing is installed on this device by the walkthrough.');$('#uac').classList.add('on');await sleep(800);await click('#uyes');$('#uac').classList.remove('on');await sleep(300);$('#ins0').style.display='none';$('#insp').style.display='block';
+  for(var i=1;i<=25;i++){$('#ipb').style.width=i*4+'%';await sleep(100)}
+  $('#insp').style.display='none';$('#inso').style.display='block';sub('The python, py and pymanager commands are now available');await sleep(1300);await click('#insclose');show('br');await sleep(500)}},
+{n:'Install Python',t:'Stage 5: Install Python and verify it',x:'Open a new Command Prompt. The command py install 3 below is illustrative; install-manager syntax changes between releases, so follow the current python.org documentation on a real PC. Then confirm with python --version. All terminal output here is simulated.',
+ run:async function(){show('term');tclr();P='C:\\Users\\you>';tout('Microsoft Windows [Version 10.0.22631.4460]\n(c) Microsoft Corporation. All rights reserved.\n');await sleep(900);
+  await tcmd('py install 3');tout('Installing Python 3.x (64-bit)');await pbar('Downloading');tout('Installed Python 3.x (64-bit)');tout('Optional: add the install-manager aliases directory to PATH for version-specific aliases such as python3.x.exe. The python and py commands usually work without it.\n');sub('Python is installed','The PATH step is optional. You do not need it for this lesson.');await sleep(2200);
+  await tcmd('python --version');tout('Python 3.x\n');await sleep(400);
+  await tcmd('python -m pip --version');tout('pip version and location reported for the active Python\n');sub('Both respond: Python is ready');await sleep(1800)}},
+{n:'Project',t:'Stage 6: Create a project and virtual environment',x:'Make a folder, build a .venv inside it, and activate it so packages stay separate from the rest of your system.',
+ run:async function(){show('term');tclr();P='C:\\Users\\you>';await sleep(600);
+  await tcmd('cd %USERPROFILE%\\Documents');P='C:\\Users\\you\\Documents>';
+  await tcmd('mkdir jupyter-demo');await tcmd('cd jupyter-demo');P='C:\\Users\\you\\Documents\\jupyter-demo>';
+  await tcmd('python -m venv .venv');sub('Creating the environment…');await sleep(1800);
+  await tcmd('.venv\\Scripts\\activate');P=VP;sub('The (.venv) prefix means it is active');TP.insertAdjacentText('beforeend',P+' ');await sleep(1500)}},
+{n:'Install Jupyter',t:'Stage 7: Install JupyterLab and data libraries',x:'One pip command installs JupyterLab plus NumPy, pandas and Matplotlib. Version numbers will differ on your machine.',
+ run:async function(){show('term');tclr();P=VP;await sleep(600);
+  await tcmd('python -m pip install --upgrade pip');tout('Successfully installed a current pip release\n');
+  await tcmd('python -m pip install jupyterlab numpy pandas matplotlib');tout('Collecting jupyterlab\n  Downloading the current JupyterLab wheel');tout('Collecting numpy');
+  await pbar('Downloading');tout('Installing collected packages: numpy, pandas, matplotlib, jupyterlab ...');await pbar('Installing');
+  tout('Successfully installed current versions of jupyterlab matplotlib numpy pandas ...');sub('Install complete; exact versions depend on your Python release and platform');await sleep(1600)}},
+{n:'Launch',t:'Stage 8: Launch JupyterLab',x:'Run python -m jupyter lab from the project folder. The server starts and your browser opens JupyterLab. Keep the terminal open while you work.',
+ run:async function(){show('term');tclr();P=VP;await sleep(600);await tcmd('python -m jupyter lab');
+  var L=['[I 10:24:07 LabApp] JupyterLab extension loaded','[I 10:24:08 ServerApp] Jupyter Server is running at:','[I 10:24:08 ServerApp] http://localhost:8888/lab?token=a1b2c3d4','[I 10:24:08 ServerApp] Use Control-C to stop this server'];
+  for(var i=0;i<L.length;i++){tout(L[i]);await sleep(700)}sub('Opening http://localhost:8888/lab in your browser…');await sleep(1200);
+  show('br');dl(0);page(PG.jl(PG.launcher),'localhost:8888/lab','JupyterLab');await sleep(1800)}},
+{n:'Run data',t:'Stage 9: Explore data and make a plot',x:'Create a notebook, explore a synthetic dataset, inspect the DataFrame and plot. Run cells with Shift+Enter. These scripted screen outputs are illustrative—not actual Python execution.',
+ run:async function(){show('br');dl(0);page(PG.jl(PG.launcher),'localhost:8888/lab','JupyterLab');await sleep(900);
+  sub('Click Python 3 (ipykernel) under Notebook');await click('#tile');page(PG.jl(PG.nb),'localhost:8888/lab/tree/Untitled.ipynb','Untitled.ipynb');await sleep(800);
+  sub('Click the first cell and type the code');await click('#c1');$('#k1').classList.add('act');await typ($('#c1'),CODE1,22);
+  sub('Run the cell');await key('Shift + Enter');$('#p1').textContent='[*]:';await sleep(900);$('#p1').textContent='[1]:';$('#o1').innerHTML=tbl();sub('df.head() displays the first five rows (illustrative output)');await sleep(1800);
+  $('#k1').classList.remove('act');await click('#c2');$('#k2').classList.add('act');await typ($('#c2'),CODE2,22);
+  await key('Shift + Enter');$('#p2').textContent='[*]:';await sleep(900);$('#p2').textContent='[2]:';$('#o2').innerHTML=chart();
+  sub('Done: Python and JupyterLab are working.');await sleep(1500)}},
+{n:'Fix errors',t:'Stage 10: Fix the most common error',x:'Open a fresh Command Prompt and run python -m jupyter lab, and you may see an import or environment error. The tool lives inside .venv, so activate it first.',
+ run:async function(){show('term');tclr();P='C:\\Users\\you>';await sleep(600);
+  await tcmd('python -m jupyter lab');tout("ModuleNotFoundError: No module named jupyter\nThe current interpreter may not have Jupyter installed.\n");sub('Error: this terminal is not using the project environment','Jupyter lives inside .venv, and a new Command Prompt starts without it.');await sleep(3000);
+  await tcmd('cd %USERPROFILE%\\Documents\\jupyter-demo');P='C:\\Users\\you\\Documents\\jupyter-demo>';
+  await tcmd('.venv\\Scripts\\activate');P=VP;
+  await tcmd('python -m jupyter lab');tout('[I 10:31:02 ServerApp] Jupyter Server is running at:\n[I 10:31:02 ServerApp] http://localhost:8888/lab\n');sub('Fixed. Each new session: cd, activate, python -m jupyter lab.','Stop the server any time with Ctrl+C in this window.');await sleep(2800)}}
+];
+
+/* controls */
+var chips=$('#chips'),jump=$('#stageJump');stages.forEach(function(s,i){var b=document.createElement('button');b.textContent=(i+1)+'. '+s.n;b.onclick=function(){go(i)};chips.appendChild(b);var o=document.createElement('option');o.value=i;o.textContent=(i+1)+'. '+s.n;jump.appendChild(o)});
+function upd(){$('#ct').textContent=stages[idx].t;$('#cx').textContent=stages[idx].x;$('#cw').textContent=SW[idx];document.querySelector('.panel').style.setProperty('--stage-progress',((idx+1)/stages.length*100)+'%');sub('');jump.value=String(idx);
+ $$('#chips button').forEach(function(b,i){b.classList.toggle('cur',i===idx);b.classList.toggle('done',i<idx)});$('#bp').textContent=paused?'▶ Play':'⏸ Pause';$('#bp').setAttribute('aria-pressed',String(paused))}
+async function go(i,replay){tok++;idx=i;$('#uac').classList.remove('on');if(!replay){stageElapsed=0;skipBudget=0;$('#scr').classList.remove('rewinding')}else{stageElapsed=0}upd();$('#cur').style.transform='translate(360px,230px)';var my=tok;
+ try{await stages[i].run();if(my===tok&&i<stages.length-1){await sleep(1200);go(i+1)}else if(i===stages.length-1){$$('#chips button')[i].classList.add('done')}}catch(e){}}
+$('#bp').onclick=function(){paused=!paused;this.textContent=paused?'▶ Play':'⏸ Pause';this.setAttribute('aria-pressed',String(paused))};
+$('#bfwd20').onclick=function(){skipBudget+=20000};
+$('#bback10').onclick=function(){var target=Math.max(0,stageElapsed-10000);if(target>0)$('#scr').classList.add('rewinding');else $('#scr').classList.remove('rewinding');paused=false;skipBudget=target;go(idx,true)};
+$('#stageJump').onchange=function(){if(this.value!=='')go(Number(this.value))};
+$('#br0').onclick=function(){go(0)};
+$('#bs').onclick=function(){spd=spd===1?2:spd===2?3:1;this.textContent='Speed '+spd+'×'};
+$('#bn').onclick=function(){go(Math.min(idx+1,stages.length-1))};$('#bv').onclick=function(){go(Math.max(idx-1,0))};
+$('#bz').onclick=function(){zoom=!zoom;$('#zw').classList.toggle('z',zoom);document.documentElement.classList.toggle('simulation-zoomed',zoom);this.textContent=zoom?'🔍 Fit':'🔍 Zoom';fit()};
+addEventListener('keydown',function(e){var t=e.target,tag=t&&t.tagName;if(tag==='BUTTON'||tag==='SELECT'||tag==='INPUT'||tag==='TEXTAREA'||(t&&t.isContentEditable))return;if(e.key===' '){e.preventDefault();$('#bp').click()}else if(e.key==='ArrowRight')$('#bn').click();else if(e.key==='ArrowLeft')$('#bv').click()});
+/* Always begin at stage 1, Find; the parent reloads this iframe with start=find. */
+go(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "storage": "shared",
+  "storage_backend": "sqlite",
+  "documents": 114,
+  "last_change": 1795725565464,
+  "backup_count": 21,
+  "last_backup": 1795719653.2274487
+}

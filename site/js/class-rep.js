@@ -1,0 +1,1377 @@
+(function () {
+  "use strict";
+  const root = document.getElementById("class-rep-assistant");
+  if (!root || root.dataset.ready === "1") return;
+  root.dataset.ready = "1";
+
+  const LANGUAGE_TOGGLE_OWNER_EMAIL = "majaliwamin@gmail.com";
+  const GUEST_STORAGE_KEY = "crara_guest_id";
+  const GUEST_COOKIE_NAME = "cara_guest";
+  const state = { history: [], busy: false, ready: false, voice: false, uploads: false, audioUploads: true, recording: false, recorder: null, audioParts: [], documentToken: "", analyticsPassword: "", previousBodyOverflow: "", user: null, guest: true, conversationId: null, responseLanguage: "EN", speechMode: localStorage.getItem("crara_speech_mode") || "chat", speechStyle: localStorage.getItem("crara_speech_style") || "natural", lastLessonTopic: "", classroom: { open: false, topic: "", busy: false, generation: 0, fullscreen: false, joinCode: "", room: "", cohostAuthority: "", cohostRoom: "" } };
+  let classroomCodeRequest = null;
+  let replyAudio = null;
+  let replyAudioUrl = "";
+  let speechGeneration = 0;
+  function newGuestId() {
+    const random = window.crypto && window.crypto.randomUUID
+      ? window.crypto.randomUUID().replace(/-/g, "")
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    return "guest_" + random.slice(0, 64);
+  }
+  function ensureGuestId() {
+    let id = "";
+    try { id = localStorage.getItem(GUEST_STORAGE_KEY) || ""; } catch (_) {}
+    if (!/^guest_[A-Za-z0-9_-]{8,96}$/.test(id)) {
+      id = newGuestId();
+      try { localStorage.setItem(GUEST_STORAGE_KEY, id); } catch (_) {}
+    }
+    document.cookie = GUEST_COOKIE_NAME + "=" + encodeURIComponent(id) + "; Max-Age=2592000; Path=/; SameSite=Lax";
+    return id;
+  }
+  state.user = { id: ensureGuestId(), name: "Guest", email: "" };
+  function canUseLanguageToggle(user = state.user) {
+    return String(user && user.email || "").trim().toLowerCase() === LANGUAGE_TOGGLE_OWNER_EMAIL;
+  }
+  const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  function makePasswordField(input, label) {
+    const wrap = el("div", "cr-password-wrap");
+    const toggle = el("button", "cr-password-toggle", "Show");
+    toggle.type = "button";
+    function setVisible(visible) {
+      input.type = visible ? "text" : "password";
+      toggle.textContent = visible ? "Hide" : "Show";
+      toggle.setAttribute("aria-pressed", String(visible));
+      toggle.setAttribute("aria-label", (visible ? "Hide " : "Show ") + label);
+      toggle.title = (visible ? "Hide " : "Show ") + label;
+    }
+    toggle.addEventListener("click", () => {
+      setVisible(input.type === "password");
+      input.focus();
+    });
+    setVisible(false);
+    wrap.append(input, toggle);
+    return { wrap: wrap, toggle: toggle, setVisible: setVisible };
+  }
+  const launcher = el("button", "cara-launcher", "CRARA");
+  launcher.type = "button";
+  launcher.setAttribute("aria-label", "Open CRARA, your intelligent academic relations assistant");
+  launcher.setAttribute("aria-expanded", "false");
+  const header = el("div", "cr-head");
+  const brand = el("div", "cr-brand");
+  const brandMark = el("span", "cr-brand-mark");
+  brandMark.setAttribute("aria-hidden", "true");
+  brandMark.innerHTML = '<svg viewBox="0 0 64 64" width="54" height="54" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 23 32 10l27 13-27 13L5 23Z" fill="currentColor"/><path d="m15 29 17 8 17-8v11c-9 8-25 8-34 0V29Z" fill="currentColor" opacity=".88"/><path d="M58 24v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="58" cy="43" r="3" fill="currentColor"/></svg>';
+  const identity = el("div", "cr-identity");
+  identity.append(el("strong", "cr-title", "Class Rep & Academic Relations Assistant"));
+  identity.append(el("span", "cr-subtitle", "Your intelligent academic relations assistant"));
+  brand.append(brandMark, identity);
+  const homeBack = el("button", "cr-home-back");
+  homeBack.type = "button";
+  homeBack.setAttribute("aria-label", "Back to Home — Weekly Timetable");
+  homeBack.title = "Back to Home";
+  homeBack.innerHTML = '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7M8 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to Home</span>';
+  homeBack.addEventListener("click", () => {
+    setOpen(false);
+    const homeNav = document.querySelector('#view-tabs .weekly-date-tab, .menu-nav[data-view="weekly"], .hd-tab[data-view="weekly"]');
+    if (homeNav) homeNav.click();
+  });
+  const languageSwitch = el("div", "cr-language-switch");
+  languageSwitch.setAttribute("role", "group");
+  languageSwitch.setAttribute("aria-label", "CRARA response language");
+  const languageEN = el("button", "cr-language-option", "EN"); languageEN.type = "button"; languageEN.dataset.language = "EN";
+  const languageCH = el("button", "cr-language-option", "CH"); languageCH.type = "button"; languageCH.dataset.language = "CH";
+  languageSwitch.append(languageEN, languageCH);
+  languageSwitch.hidden = true;
+  const speechSwitch = el("div", "cr-language-switch cr-speech-switch");
+  speechSwitch.setAttribute("role", "group");
+  speechSwitch.setAttribute("aria-label", "CRARA speech mode");
+  const speechChat = el("button", "cr-language-option", "Chat"); speechChat.type = "button"; speechChat.dataset.speechMode = "chat";
+  const speechPresentation = el("button", "cr-language-option", "Present"); speechPresentation.type = "button"; speechPresentation.dataset.speechMode = "presentation";
+  speechSwitch.append(speechChat, speechPresentation);
+  function syncSpeechSwitch() {
+    [speechChat, speechPresentation].forEach(btn => {
+      const active = btn.dataset.speechMode === preferredSpeechMode();
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", String(active));
+    });
+  }
+  [speechChat, speechPresentation].forEach(btn => btn.addEventListener("click", () => {
+    state.speechMode = btn.dataset.speechMode || "chat";
+    try { localStorage.setItem("crara_speech_mode", state.speechMode); } catch (_) {}
+    syncSpeechSwitch();
+  }));
+  syncSpeechSwitch();
+  const signIn = el("button", "cr-sign-in", "Sign in");
+  signIn.type = "button";
+  signIn.setAttribute("aria-label", "Sign in to save CRARA conversations");
+  signIn.addEventListener("click", () => openAuthPanel());
+  const headerActions = el("div", "cr-header-actions");
+  const headerMenuButton = el("button", "cr-header-menu");
+  headerMenuButton.type = "button";
+  headerMenuButton.setAttribute("aria-label", "Open CRARA options");
+  headerMenuButton.setAttribute("aria-haspopup", "true");
+  headerMenuButton.setAttribute("aria-expanded", "false");
+  headerMenuButton.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  const headerMenuPanel = el("div", "cr-header-menu-panel");
+  headerMenuPanel.hidden = true;
+  headerMenuPanel.setAttribute("role", "group");
+  headerMenuPanel.setAttribute("aria-label", "CRARA options");
+  headerMenuPanel.append(el("span", "cr-header-menu-label", "Response language"), languageSwitch, el("span", "cr-header-menu-label", "Speech mode"), speechSwitch);
+  function closeHeaderMenu() {
+    headerMenuPanel.hidden = true;
+    headerMenuButton.setAttribute("aria-expanded", "false");
+    headerMenuButton.setAttribute("aria-label", "Open CRARA options");
+  }
+  headerMenuButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = headerMenuPanel.hidden;
+    headerMenuPanel.hidden = !open;
+    headerMenuButton.setAttribute("aria-expanded", String(open));
+    headerMenuButton.setAttribute("aria-label", open ? "Hide CRARA options" : "Open CRARA options");
+  });
+  document.addEventListener("click", (event) => {
+    if (!headerMenuPanel.hidden && !event.target.closest(".cr-header-actions")) closeHeaderMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !headerMenuPanel.hidden) {
+      closeHeaderMenu();
+      headerMenuButton.focus();
+    }
+  });
+  function renderLanguageChoice() {
+    [languageEN, languageCH].forEach(button => {
+      const active = button.dataset.language === state.responseLanguage;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  }
+  async function saveResponseLanguage(value) {
+    if (!canUseLanguageToggle() || !["EN", "CH"].includes(value) || value === state.responseLanguage) return;
+    const previous = state.responseLanguage;
+    state.responseLanguage = value; renderLanguageChoice();
+    try {
+      const { response, result } = await requestJson("/api/class-rep/language", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response_language: value })
+      });
+      if (!response.ok) throw new Error(readableError(result.detail) || "Could not save language preference.");
+      state.responseLanguage = result.response_language === "CH" ? "CH" : "EN"; renderLanguageChoice();
+    } catch (error) {
+      state.responseLanguage = previous; renderLanguageChoice();
+      status(error.message || "Could not save language preference.", false);
+    }
+  }
+  languageEN.addEventListener("click", () => saveResponseLanguage("EN"));
+  languageCH.addEventListener("click", () => saveResponseLanguage("CH"));
+  renderLanguageChoice();
+  headerActions.append(headerMenuButton, signIn, homeBack, headerMenuPanel);
+  header.append(brand, headerActions);
+  const body = el("div", "cr-body");
+  const transcript = el("div", "cr-transcript");
+  transcript.setAttribute("role", "log"); transcript.setAttribute("aria-live", "polite"); transcript.setAttribute("aria-label", "Assistant conversation");
+  const form = el("form", "cr-form");
+  const attachButton = el("button", "cr-icon-button cr-attach"); attachButton.type = "button"; attachButton.setAttribute("aria-label", "Attach a file"); attachButton.title = "Attach file";
+  const paperclip = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  paperclip.setAttribute("viewBox", "0 0 24 24"); paperclip.setAttribute("width", "22"); paperclip.setAttribute("height", "22"); paperclip.setAttribute("fill", "none"); paperclip.setAttribute("stroke", "currentColor"); paperclip.setAttribute("stroke-width", "2"); paperclip.setAttribute("stroke-linecap", "round"); paperclip.setAttribute("stroke-linejoin", "round"); paperclip.setAttribute("aria-hidden", "true");
+  const paperclipPath = document.createElementNS("http://www.w3.org/2000/svg", "path"); paperclipPath.setAttribute("d", "m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"); paperclip.append(paperclipPath); attachButton.append(paperclip);
+  const input = el("textarea", "cr-input"); input.rows = 1; input.maxLength = 4000; input.placeholder = "Message CRARA…"; input.setAttribute("aria-label", "Message CRARA");
+  const classroomLaunch = el("button", "cr-icon-button cr-classroom-launch");
+  classroomLaunch.type = "button";
+  classroomLaunch.setAttribute("aria-label", "Join the CRARA live classroom");
+  classroomLaunch.title = "Join the CRARA live classroom";
+  classroomLaunch.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M10 8.8l4.2 2.7L10 14.2V8.8Z"/></svg>';
+  const recordButton = el("button", "cr-icon-button cr-record"); recordButton.type = "button"; recordButton.setAttribute("aria-label", "Record a voice question"); recordButton.title = "Voice input";
+  const micIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  micIcon.setAttribute("viewBox", "0 0 24 24"); micIcon.setAttribute("width", "22"); micIcon.setAttribute("height", "22"); micIcon.setAttribute("fill", "none"); micIcon.setAttribute("stroke", "currentColor"); micIcon.setAttribute("stroke-width", "2"); micIcon.setAttribute("stroke-linecap", "round"); micIcon.setAttribute("stroke-linejoin", "round"); micIcon.setAttribute("aria-hidden", "true");
+  const micBody = document.createElementNS("http://www.w3.org/2000/svg", "rect"); micBody.setAttribute("x", "9"); micBody.setAttribute("y", "2"); micBody.setAttribute("width", "6"); micBody.setAttribute("height", "12"); micBody.setAttribute("rx", "3");
+  const micStand = document.createElementNS("http://www.w3.org/2000/svg", "path"); micStand.setAttribute("d", "M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8");
+  micIcon.append(micBody, micStand); recordButton.append(micIcon);
+  const sendButton = el("button", "cr-icon-button cr-send", "➤"); sendButton.type = "submit"; sendButton.setAttribute("aria-label", "Send message"); sendButton.title = "Send message"; sendButton.hidden = true;
+  function updateComposerAction() { const hasText = Boolean(input.value.trim()); recordButton.hidden = hasText; sendButton.hidden = !hasText; }
+  const fileInput = el("input", "cr-file-input"); fileInput.type = "file"; fileInput.hidden = false; fileInput.tabIndex = -1; fileInput.setAttribute("aria-hidden", "true"); fileInput.style.cssText = "display:block;position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;";
+  fileInput.accept = ".pdf,.docx,.pptx,.xlsx,.csv,.svg,.txt,.md,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/svg+xml,image/png,image/jpeg,image/tiff,image/bmp,image/webp,text/plain,audio/webm,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac,audio/aac"; fileInput.hidden = true;
+  const statusNode = el("span", "cr-status"); statusNode.hidden = true; statusNode.setAttribute("aria-live", "polite");
+  const uploadStatus = el("span", "cr-upload-status"); uploadStatus.hidden = true; uploadStatus.setAttribute("aria-live", "polite");
+  const classroomLaunchStatus = el("div", "cr-classroom-launch-status");
+  classroomLaunchStatus.hidden = true;
+  classroomLaunchStatus.setAttribute("role", "status");
+  classroomLaunchStatus.setAttribute("aria-live", "polite");
+  const CLASSROOM_OPENING_MESSAGES = [
+    "CRARA is opening live session…",
+    "CRARA is opening live class…",
+    "CRARA is opening the classroom…",
+    "CRARA is opening your lesson session…",
+    "CRARA is opening the live teaching board…"
+  ];
+  function classroomOpeningMessage() {
+    const index = Math.floor(Math.random() * CLASSROOM_OPENING_MESSAGES.length);
+    return CLASSROOM_OPENING_MESSAGES[index];
+  }
+  function preferredSpeechMode() {
+    if (state.classroom && state.classroom.open) return "presentation";
+    return ["chat", "presentation"].includes(state.speechMode) ? state.speechMode : "chat";
+  }
+  function preferredSpeechStyle() {
+    return ["natural", "clear", "expressive"].includes(state.speechStyle) ? state.speechStyle : "natural";
+  }
+  classroomLaunch.addEventListener("click", () => {
+    const opening = classroomOpeningMessage();
+    classroomLaunchStatus.textContent = opening;
+    classroomLaunchStatus.hidden = false;
+    void openClassroom(state.lastLessonTopic || "general", opening);
+  });
+  form.append(attachButton, input, classroomLaunch, recordButton, sendButton);
+  body.append(transcript, classroomLaunchStatus, form, fileInput, statusNode, uploadStatus);
+  const authPanel = el("section", "cr-auth-panel");
+  const authCard = el("div", "cr-auth-card");
+  const authTitle = el("strong", "cr-auth-title", "Your private CRARA account");
+  const authIntro = el("p", "cr-auth-intro", "Sign in to continue your conversations and access your saved academic work.");
+  const authName = el("input", "cr-auth-input"); authName.placeholder = "Your name"; authName.autocomplete = "name"; authName.hidden = true;
+  const authEmail = el("input", "cr-auth-input"); authEmail.type = "email"; authEmail.placeholder = "Email address"; authEmail.autocomplete = "email";
+  const authPassword = el("input", "cr-auth-input"); authPassword.type = "password"; authPassword.minLength = 4; authPassword.maxLength = 256; authPassword.placeholder = "Password (at least 4 characters)"; authPassword.autocomplete = "current-password";
+  const authPasswordView = makePasswordField(authPassword, "password");
+  const authSubmit = el("button", "cr-auth-submit", "Sign in"); authSubmit.type = "button";
+  const authForgot = el("button", "cr-auth-forgot", "Forgot password?"); authForgot.type = "button";
+  const authSwitch = el("button", "cr-auth-switch", "Create a new account"); authSwitch.type = "button";
+  const authFeedback = el("p", "cr-auth-feedback", "");
+  const authBack = el("button", "cr-auth-back", "Back to chat");
+  authBack.type = "button";
+  const resetBox = el("div", "cr-auth-reset"); resetBox.hidden = true;
+  const resetTitle = el("strong", "cr-auth-reset-title", "Reset your password");
+  const resetEmail = el("input", "cr-auth-input"); resetEmail.type = "email"; resetEmail.placeholder = "Email address"; resetEmail.autocomplete = "email";
+  const resetPassword = el("input", "cr-auth-input"); resetPassword.type = "password"; resetPassword.minLength = 4; resetPassword.maxLength = 256; resetPassword.placeholder = "New password (at least 4 characters)"; resetPassword.autocomplete = "new-password"; resetPassword.hidden = true;
+  const resetPasswordView = makePasswordField(resetPassword, "new password");
+  resetPasswordView.wrap.hidden = true;
+  const resetSubmit = el("button", "cr-auth-submit", "Send reset link"); resetSubmit.type = "button";
+  const resetCancel = el("button", "cr-auth-switch", "Back to sign in"); resetCancel.type = "button";
+  const resetFeedback = el("p", "cr-auth-feedback", "");
+  resetBox.append(resetTitle, resetEmail, resetPasswordView.wrap, resetSubmit, resetCancel, resetFeedback);
+  authCard.append(authTitle, authIntro, authName, authEmail, authPasswordView.wrap, authSubmit, authForgot, authSwitch, authFeedback, resetBox, authBack);
+  authPanel.append(authCard);
+
+  const classroomPanel = el("section", "cr-classroom-panel");
+  classroomPanel.hidden = true;
+  classroomPanel.setAttribute("aria-label", "CRARA one-to-one classroom");
+  const classroomHead = el("div", "cr-classroom-head");
+  const classroomIdentity = el("div", "cr-classroom-identity");
+  classroomIdentity.append(el("strong", "cr-classroom-title", "CRARA 1:1 Classroom"));
+  const classroomSubtitle = el("span", "cr-classroom-subtitle", "Lesson: General CRARA support");
+  classroomIdentity.append(classroomSubtitle);
+  const classroomControls = el("div", "cr-classroom-controls");
+  const classroomCodeDisplay = el("output", "cr-classroom-code-display");
+  classroomCodeDisplay.hidden = true;
+  classroomCodeDisplay.setAttribute("aria-live", "polite");
+  const classroomCodeInput = el("input", "cr-classroom-code-input");
+  classroomCodeInput.type = "text";
+  classroomCodeInput.placeholder = "Join code";
+  classroomCodeInput.maxLength = 16;
+  classroomCodeInput.autocomplete = "off";
+  classroomCodeInput.spellcheck = false;
+  classroomCodeInput.setAttribute("aria-label", "Classroom join code");
+  classroomCodeInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") useClassroomCode();
+  });
+  const classroomCodeUse = el("button", "cr-classroom-control", "Use code");
+  classroomCodeUse.type = "button";
+  classroomCodeUse.title = "Join the host's lesson room with a code";
+  classroomCodeUse.addEventListener("click", useClassroomCode);
+  const classroomCodeCreate = el("button", "cr-classroom-control", "Create code");
+  classroomCodeCreate.type = "button";
+  classroomCodeCreate.title = "Create a short-lived join code for students (host or authorized co-host)";
+  classroomCodeCreate.addEventListener("click", createClassroomCode);
+  const classroomReconnect = el("button", "cr-classroom-control", "Reconnect");
+  classroomReconnect.type = "button";
+  classroomReconnect.title = "Get a fresh classroom token and reconnect";
+  classroomReconnect.addEventListener("click", reconnectClassroom);
+  const classroomFullscreen = el("button", "cr-classroom-control", "Fullscreen");
+  classroomFullscreen.type = "button";
+  classroomFullscreen.title = "Toggle fullscreen";
+  classroomFullscreen.addEventListener("click", toggleClassroomFullscreen);
+  const classroomExit = el("button", "cr-classroom-control cr-classroom-exit", "Exit");
+  classroomExit.type = "button";
+  classroomExit.title = "Return to CRARA";
+  classroomExit.addEventListener("click", closeClassroom);
+  classroomControls.append(classroomCodeDisplay, classroomCodeInput, classroomCodeUse, classroomCodeCreate, classroomReconnect, classroomFullscreen, classroomExit);
+  classroomHead.append(classroomIdentity, classroomControls);
+  const classroomStage = el("div", "cr-classroom-stage");
+  const classroomWrapper = el("div", "cr-classroom-frame-wrap");
+  classroomWrapper.id = "crara-live-classroom-wrapper";
+  const classroomNotice = el("div", "cr-classroom-notice");
+  classroomNotice.setAttribute("role", "status");
+  classroomNotice.setAttribute("aria-live", "polite");
+  classroomStage.append(classroomWrapper, classroomNotice);
+  classroomPanel.append(classroomHead, classroomStage);
+  root.append(body, authPanel);
+  root.append(classroomPanel);
+
+  // The embedded board forwards only the host-signed, room-scoped co-host grant
+  // it has already verified. Keep it in memory for join-code calls; never write
+  // it to storage or expose it in the chat transcript.
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+    const frame = document.getElementById("crara-live-classroom-frame");
+    if (!frame || event.source !== frame.contentWindow) return;
+    const data = event.data;
+    if (!data || data.type !== "crara-classroom-cohost") return;
+    if (String(data.room || "") !== state.classroom.room) return;
+    if (data.enabled === true && typeof data.authority === "string" && data.authority) {
+      state.classroom.cohostAuthority = data.authority.slice(0, 2000);
+      state.classroom.cohostRoom = String(data.room || "");
+      // The host-signed grant arrives after the iframe connects. Generate the
+      // shareable code immediately for an authorized co-host, unless a code is
+      // already in use for this classroom session.
+      if (!state.classroom.joinCode && state.classroom.open) {
+        void createClassroomCode({ auto: true, generation: state.classroom.generation, lesson: state.classroom.topic });
+      }
+    } else {
+      state.classroom.cohostAuthority = "";
+      state.classroom.cohostRoom = "";
+    }
+  });
+
+  const landingNav = document.getElementById("view-tabs");
+  if (landingNav) landingNav.appendChild(launcher);
+  let landingVisible = true;
+  let schedulingVisible = false;
+  function updateLauncherVisibility() {
+    launcher.hidden = root.classList.contains("is-open") || !landingVisible || schedulingVisible;
+  }
+  window.setCRARALandingVisible = (visible) => {
+    landingVisible = Boolean(visible);
+    if (!landingVisible && root.classList.contains("is-open")) setOpen(false);
+    updateLauncherVisibility();
+  };
+  window.setCRARASchedulingVisible = (visible) => {
+    schedulingVisible = Boolean(visible);
+    updateLauncherVisibility();
+  };
+  updateLauncherVisibility();
+  // The chat opens immediately for guests; the header is mounted only while CRARA is open.
+  function syncHeaderMenu() {
+    const available = canUseLanguageToggle();
+    headerMenuButton.hidden = !available;
+    languageSwitch.hidden = !available;
+    if (!available) closeHeaderMenu();
+  }
+  function showHeader(visible) {
+    syncHeaderMenu();
+    if (visible) {
+      if (!header.isConnected) root.insertBefore(header, body);
+      header.hidden = false;
+    } else {
+      closeHeaderMenu();
+      header.hidden = true;
+      header.remove();
+    }
+  }
+  root.classList.remove("class-rep-assistant");
+  root.classList.add("cara-widget");
+  root.classList.remove("is-open");
+  function setAuthPresentation(active) {
+    const enabled = Boolean(active);
+    document.documentElement.classList.toggle("cara-auth-open", enabled);
+    document.body.classList.toggle("cara-auth-open", enabled);
+  }
+  function applyChatPresentation() {
+    const open = root.classList.contains("is-open");
+    setAuthPresentation(false);
+    showHeader(open);
+    body.hidden = !open || !state.user;
+    authPanel.hidden = true;
+    signIn.hidden = !state.guest;
+    updateLauncherVisibility();
+  }
+  function openAuthPanel() {
+    setAuthPresentation(true);
+    showHeader(false);
+    body.hidden = true;
+    authPanel.hidden = false;
+    updateLauncherVisibility();
+    authEmail.focus();
+  }
+  function closeAuthPanel() {
+    setAuthPresentation(false);
+    authPanel.hidden = true;
+    applyChatPresentation();
+    input.focus();
+  }
+  applyChatPresentation();
+  function status(text, ready) {
+    const node = statusNode;
+    node.textContent = text;
+    node.dataset.state = ready ? "ready" : "unavailable";
+  }
+  function uploadMessage(text, ready) {
+    uploadStatus.textContent = text;
+    uploadStatus.dataset.state = ready ? "ready" : "unavailable";
+    uploadStatus.hidden = !text;
+  }
+  async function requestJson(path, options = {}) {
+    let response;
+    try {
+      response = await fetch(path, {
+        ...options,
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json", ...(options.headers || {}) }
+      });
+    } catch (_) {
+      throw new Error("Could not connect to CRARA services. Check your internet connection and try again.");
+    }
+    const raw = await response.text();
+    let result = {};
+    if (raw) {
+      try { result = JSON.parse(raw); }
+      catch (_) {
+        if (response.ok) throw new Error("CRARA returned an unreadable response. Please refresh and try again.");
+      }
+    }
+    return { response, result };
+  }
+
+  // FastAPI/Pydantic validation errors are arrays of objects. Never let one of
+  // those reach a transcript as "[object Object]"; reduce every error shape to
+  // one short, human-readable sentence.
+  function readableError(value) {
+    if (value instanceof Error) return readableError(value.message);
+    if (Array.isArray(value)) return value.map(readableError).filter(Boolean).join("; ");
+    if (value && typeof value === "object") {
+      for (const key of ["detail", "error", "message", "msg"]) {
+        if (value[key]) return readableError(value[key]);
+      }
+      try {
+        const json = JSON.stringify(value);
+        return json && json !== "{}" ? json.slice(0, 300) : "";
+      } catch (_) { return ""; }
+    }
+    const text = String(value == null ? "" : value).trim();
+    if (!text || /^\[object\b/i.test(text) || /request could not be completed/i.test(text)) return "";
+    return text.replace(/\s+/g, " ").slice(0, 300);
+  }
+
+  function apiError(response, result, fallback) {
+    const status = Number((response && response.status) || 0);
+    if (status === 429) return "Too many CRARA requests. Please wait a minute and try again.";
+    if (status === 401) return "Your CRARA session has expired. Refresh the page to continue.";
+    if (status === 422) return "I couldn't read part of this conversation. Please refresh CRARA and try again.";
+    if (status >= 500) return "CRARA is temporarily unavailable. Please try again shortly.";
+    return readableError(result && (result.detail || result.error || result.message)) || fallback || "CRARA request failed.";
+  }
+
+  const LESSON_LABELS = {
+    z_test: "One-sample Z-test",
+    one_sample_t: "One-sample t-test",
+    independent_t: "Independent-samples t-test",
+    paired_t: "Paired t-test",
+    anova: "ANOVA / F-test",
+    chi_square_independence: "Chi-square test of independence",
+    chi_square_goodness: "Chi-square goodness-of-fit test",
+    correlation: "Correlation",
+    regression: "Regression",
+    mann_whitney: "Mann–Whitney U test",
+    wilcoxon: "Wilcoxon signed-rank test",
+    general: "General CRARA support"
+  };
+  function topicLabel(topic) {
+    return LESSON_LABELS[String(topic || "general")] || String(topic || "general").replace(/_/g, " ");
+  }
+  function topicFromText(text) {
+    const value = String(text || "");
+    const marker = /topic=([a-z_]+)/i.exec(value);
+    if (marker) return marker[1].toLowerCase();
+    const rules = [
+      [/mann[-\s]?whitney|rank[-\s]?sum/i, "mann_whitney"],
+      [/wilcoxon|signed[-\s]?rank/i, "wilcoxon"],
+      [/goodness[-\s]?of[-\s]?fit/i, "chi_square_goodness"],
+      [/chi[-\s]?(?:square|sq)/i, "chi_square_independence"],
+      [/anova|f[-\s]?test/i, "anova"],
+      [/paired[-\s]?t|before\s+and\s+after/i, "paired_t"],
+      [/independent[-\s]?t|unpaired[-\s]?t/i, "independent_t"],
+      [/one[-\s]?sample[-\s]?t|t[-\s]?test/i, "one_sample_t"],
+      [/correlation|pearson/i, "correlation"],
+      [/regression|slope/i, "regression"],
+      [/z[-\s]?test|standard\s+normal|birth\s+weight/i, "z_test"]
+    ];
+    for (const [pattern, topic] of rules) if (pattern.test(value)) return topic;
+    return "general";
+  }
+  function isLessonText(text) {
+    return /Hypothesis testing, taught manually first|Manual stage complete|Open the Hypothesis Testing Lab|Python stage .* computational check/i.test(String(text || ""));
+  }
+  function rememberLessonTopic(response) {
+    if (!isLessonText(response)) return;
+    state.lastLessonTopic = topicFromText(response);
+  }
+  function showClassroomNotice(message, busy) {
+    classroomNotice.textContent = String(message || "");
+    classroomNotice.dataset.state = busy ? "busy" : "error";
+    classroomNotice.hidden = !message;
+  }
+  function setClassroomCodeDisplay(code, prefix = "Join code") {
+    const clean = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if (!clean) {
+      classroomCodeDisplay.textContent = "";
+      classroomCodeDisplay.hidden = true;
+      return;
+    }
+    classroomCodeDisplay.textContent = prefix + ": " + clean;
+    classroomCodeDisplay.hidden = false;
+  }
+  function useClassroomCode() {
+    const code = String(classroomCodeInput.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if (code.length !== 8) {
+      showClassroomNotice("Enter the 8-character code shared by your host.", false);
+      return;
+    }
+    state.classroom.joinCode = code;
+    classroomCodeInput.value = code;
+    setClassroomCodeDisplay(code, "Using code");
+    void openClassroom(state.classroom.topic || state.lastLessonTopic || "general");
+  }
+
+  function createClassroomCode(options = {}) {
+    if (classroomCodeRequest) return classroomCodeRequest;
+    const auto = options.auto === true;
+    const generation = typeof options.generation === "number" ? options.generation : state.classroom.generation;
+    const lesson = String(options.lesson || state.classroom.topic || state.lastLessonTopic || "general").trim() || "general";
+    classroomCodeCreate.disabled = true;
+    classroomCodeRequest = (async () => {
+      try {
+        const { response, result } = await requestJson("/api/class-rep/livekit/join-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lesson, authority: state.classroom.cohostAuthority })
+        });
+        if (!response.ok) throw new Error(readableError(result && (result.detail || result.error)) || apiError(response, result, "Could not create a join code."));
+        if (!result.code) throw new Error("The classroom did not return a join code.");
+        if (generation !== state.classroom.generation || !state.classroom.open) return;
+        state.classroom.joinCode = result.code;
+        classroomCodeInput.value = result.code;
+        setClassroomCodeDisplay(result.code, "Join code");
+        showClassroomNotice("Share this join code with your students: " + result.code + " (expires in " + Math.round((result.expires_in || 1800) / 60) + " minutes).", false);
+      } catch (error) {
+        if (generation !== state.classroom.generation || !state.classroom.open) return;
+        showClassroomNotice(auto
+          ? "A join code could not be generated automatically. Use Create code to try again."
+          : readableError(error) || "Only the classroom host or an authorized co-host can create a join code.", false);
+      } finally {
+        classroomCodeCreate.disabled = false;
+        classroomCodeRequest = null;
+      }
+    })();
+    return classroomCodeRequest;
+  }
+
+  async function openClassroom(topic, openingMessage = "") {
+    const lesson = String(topic || "general").trim() || "general";
+    state.classroom.topic = lesson;
+    state.lastLessonTopic = lesson;
+    classroomSubtitle.textContent = "Lesson: " + topicLabel(lesson);
+    classroomPanel.hidden = false;
+    state.classroom.open = true;
+    document.documentElement.classList.add("crara-classroom-open");
+    document.body.classList.add("crara-classroom-open");
+    // Request fullscreen synchronously from the click gesture; awaiting the
+    // handoff first would lose the browser's user-activation window.
+    if (classroomPanel.requestFullscreen) {
+      void classroomPanel.requestFullscreen().catch(() => {});
+    }
+    await connectClassroom(openingMessage);
+  }
+  async function connectClassroom(openingMessage = "") {
+    if (state.classroom.busy) { state.classroom.busy = false; }
+    state.classroom.busy = true;
+    classroomReconnect.disabled = true;
+    const generation = ++state.classroom.generation;
+    state.classroom.room = "";
+    setClassroomCodeDisplay(state.classroom.joinCode, state.classroom.joinCode ? "Using code" : "");
+    showClassroomNotice(openingMessage || (state.classroom.joinCode ? "Joining your host's lesson room..." : "Preparing your lesson room..."), true);
+    const busySafety = setTimeout(() => {
+      if (generation !== state.classroom.generation) return;
+      state.classroom.busy = false;
+      classroomReconnect.disabled = false;
+      if (classroomNotice.textContent && /Preparing|Opening|Connecting|Reconnecting/i.test(classroomNotice.textContent)) {
+        showClassroomNotice("Classroom is taking too long. Click Reconnect.", false);
+      }
+    }, 20000);
+    try {
+      const handoffBody = { lesson: state.classroom.topic };
+      if (state.classroom.joinCode) handoffBody.join_code = state.classroom.joinCode;
+      const { response, result } = await requestJson("/api/class-rep/livekit/handoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(handoffBody)
+      });
+      if (!response.ok) throw new Error(readableError(result && (result.detail || result.error)) || apiError(response, result, "Could not open the CRARA classroom."));
+            if (!result.token || !result.room || !result.identity) {
+        throw new Error("The CRARA classroom could not be opened. Please try again.");
+      }
+      if (generation !== state.classroom.generation) return;
+      state.classroom.room = result.room;
+      const mode = result.mode || (result.builtin ? "builtin" : "livekit");
+      state.classroom.mode = mode;
+      classroomSubtitle.textContent = "Lesson: " + topicLabel(state.classroom.topic) + " - " + result.room + (result.joined_with_code ? " - joined with code" : "") + (mode === "builtin" ? " - built-in" : "");
+      const frame = document.createElement("iframe");
+      frame.id = "crara-live-classroom-frame";
+      frame.className = "cr-classroom-frame";
+      frame.style.display = "block";
+      frame.style.width = "100%";
+      frame.style.height = "100%";
+      frame.style.border = "0";
+      frame.title = "CRARA one-to-one classroom";
+      frame.setAttribute("allow", "camera; microphone; autoplay; display-capture; clipboard-write; fullscreen");
+      // Always open the Zoom-like Live Classroom UI with all controls.
+      // When LiveKit is configured, it connects to LiveKit; otherwise it opens
+      // in local no-credentials mode (patched client handles builtin token).
+      const url = new URL("./resources/crara-classroom/index.html", window.location.href);
+      url.searchParams.set("embed", "1");
+      url.searchParams.set("room", result.room);
+      url.searchParams.set("lesson", result.lesson || state.classroom.topic || "general");
+      url.searchParams.set("name", result.name || (state.user && state.user.name) || "Guest");
+      url.searchParams.set("identity", result.identity);
+      url.searchParams.set("token", result.token);
+      url.searchParams.set("role", result.role || "student");
+      url.searchParams.set("permissions", JSON.stringify(result.permissions || {}));
+      if (mode === "builtin") url.searchParams.set("builtin", "1");
+      frame.src = url.toString();
+      frame.addEventListener("load", () => {
+        clearTimeout(busySafety);
+        if (generation !== state.classroom.generation) return;
+        showClassroomNotice("", false);
+        state.classroom.busy = false;
+        classroomReconnect.disabled = false;
+        const canIssueCode = result.role === "host"
+          || Boolean(state.classroom.cohostAuthority && state.classroom.cohostRoom === result.room);
+        if (canIssueCode && !state.classroom.joinCode) {
+          void createClassroomCode({ auto: true, generation, lesson: state.classroom.topic });
+        }
+      }, { once: true });
+      frame.addEventListener("error", () => {
+        clearTimeout(busySafety);
+        if (generation !== state.classroom.generation) return;
+        state.classroom.busy = false;
+        classroomReconnect.disabled = false;
+        showClassroomNotice("Classroom failed to load. Click Reconnect.", false);
+      }, { once: true });
+      classroomWrapper.replaceChildren(frame);
+      showClassroomNotice(mode === "builtin" ? "Opening built-in classroom..." : "Connecting to the CRARA classroom...", true);
+    } catch (error) {
+      clearTimeout(busySafety);
+      if (generation === state.classroom.generation) {
+        classroomWrapper.replaceChildren();
+        showClassroomNotice(readableError(error) || "Could not open the CRARA classroom.", false);
+      }
+    } finally {
+      clearTimeout(busySafety);
+      if (generation === state.classroom.generation) {
+        state.classroom.busy = false;
+        classroomReconnect.disabled = false;
+      }
+    }
+  }
+  function reconnectClassroom() {
+    // Always recoverable: reopen panel if needed and force-clear stale busy state.
+    state.classroom.open = true;
+    classroomPanel.hidden = false;
+    document.documentElement.classList.add("crara-classroom-open");
+    document.body.classList.add("crara-classroom-open");
+    state.classroom.busy = false;
+    classroomReconnect.disabled = false;
+    classroomCodeUse.disabled = false;
+    classroomCodeCreate.disabled = false;
+    classroomWrapper.replaceChildren();
+    showClassroomNotice("Reconnecting classroom...", true);
+    void connectClassroom("Reconnecting classroom...");
+  }
+  function closeClassroom() {
+    if (!state.classroom.open) return;
+    state.classroom.generation++;
+    state.classroom.open = false;
+    state.classroom.room = "";
+    state.classroom.joinCode = "";
+    classroomCodeInput.value = "";
+    setClassroomCodeDisplay("", "");
+    if (document.fullscreenElement === classroomPanel && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    classroomWrapper.replaceChildren();
+    classroomPanel.hidden = true;
+    classroomLaunchStatus.hidden = true;
+    document.documentElement.classList.remove("crara-classroom-open");
+    document.body.classList.remove("crara-classroom-open");
+    state.classroom.fullscreen = false;
+  }
+  async function toggleClassroomFullscreen() {
+    try {
+      if (document.fullscreenElement === classroomPanel) await document.exitFullscreen();
+      else if (classroomPanel.requestFullscreen) await classroomPanel.requestFullscreen();
+      else showClassroomNotice("Fullscreen is not supported by this browser.", false);
+    } catch (_) {
+      showClassroomNotice("Fullscreen could not be started. The classroom is still open here.", false);
+    }
+  }
+  document.addEventListener("fullscreenchange", () => {
+    const active = document.fullscreenElement === classroomPanel;
+    state.classroom.fullscreen = active;
+    classroomFullscreen.textContent = active ? "Exit fullscreen" : "Fullscreen";
+  });
+
+  function cleanHistory(history, max = 10) {
+    if (!Array.isArray(history)) return [];
+    return history.filter((item) => item &&
+      (item.role === "user" || item.role === "assistant") &&
+      typeof item.content === "string" && item.content.trim() &&
+      !/\[object\b/i.test(item.content))
+      .slice(-max)
+      .map((item) => ({ role: item.role, content: item.content.slice(0, 4000) }));
+  }
+
+  function renderInline(parent, value) {
+    const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+    let cursor = 0;
+    for (const match of value.matchAll(pattern)) {
+      if (match.index > cursor) parent.append(document.createTextNode(value.slice(cursor, match.index)));
+      const token = match[0];
+      const node = document.createElement(token.startsWith("**") ? "strong" : "em");
+      node.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
+      parent.append(node);
+      cursor = match.index + token.length;
+    }
+    if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
+  }
+  function renderMarkdown(bubble, value) {
+    if (window.CRARAResponseRenderer) {
+      window.CRARAResponseRenderer.render(bubble, value, transcript);
+      return;
+    }
+    bubble.replaceChildren();
+    const lines = String(value || "").replace(/\r/g, "").replace(/\\([*_.#>-])/g, "$1").split("\n");
+    let paragraph = [];
+    let list = null;
+    let listType = "";
+    const flushParagraph = () => {
+      if (!paragraph.length) return;
+      const p = document.createElement("p");
+      renderInline(p, paragraph.join(" "));
+      bubble.append(p);
+      paragraph = [];
+    };
+    const closeList = () => { list = null; listType = ""; };
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) { flushParagraph(); closeList(); continue; }
+      const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+      const bullet = /^(?:[-•]|\*)\s+(.+)$/.exec(line);
+      const numbered = /^\d+[.)]\s+(.+)$/.exec(line);
+      if (heading) {
+        flushParagraph(); closeList();
+        const h = document.createElement(heading[1].length === 1 ? "h3" : "h4");
+        renderInline(h, heading[2]); bubble.append(h);
+      } else if (bullet || numbered) {
+        flushParagraph();
+        const type = bullet ? "ul" : "ol";
+        if (!list || listType !== type) {
+          closeList(); list = document.createElement(type); listType = type; bubble.append(list);
+        }
+        const item = document.createElement("li");
+        renderInline(item, (bullet || numbered)[1]); list.append(item);
+      } else if (/^>\s?/.test(line)) {
+        flushParagraph(); closeList();
+        const quote = document.createElement("blockquote");
+        renderInline(quote, line.replace(/^>\s?/, "")); bubble.append(quote);
+      } else {
+        closeList(); paragraph.push(line);
+      }
+    }
+    flushParagraph();
+    transcript.scrollTop = transcript.scrollHeight;
+  }
+  function addMessage(role, text) {
+    const safe = typeof text === "string" ? text : "";
+    const bubble = el("div", "cr-message " + (role === "user" ? "cr-user" : "cr-assistant"));
+    if (role === "assistant") {
+      renderMarkdown(bubble, safe);
+      if (safe.trim()) decorateAssistantResponse(bubble, safe);
+    } else bubble.textContent = safe;
+    transcript.append(bubble); transcript.scrollTop = transcript.scrollHeight; return bubble;
+  }
+  async function copyText(text) {
+    const value = String(text || "");
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(value); return true; } catch (_) {}
+    }
+    const area = document.createElement("textarea");
+    area.value = value;
+    area.setAttribute("readonly", "");
+    area.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.appendChild(area);
+    area.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch (_) {}
+    area.remove();
+    return copied;
+  }
+  function stopReplySpeech() {
+    speechGeneration += 1;
+    if (replyAudio) {
+      try { replyAudio.pause(); } catch (_) {}
+      replyAudio = null;
+    }
+    if (replyAudioUrl) {
+      try { URL.revokeObjectURL(replyAudioUrl); } catch (_) {}
+      replyAudioUrl = "";
+    }
+  }
+  function plainSpeechText(value) {
+    return String(value || "")
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+      .replace(/^\s{0,3}>\s?/gm, "")
+      .replace(/^\s*[-*+]\s+/gm, "")
+      .replace(/^\s*\d+\.\s+/gm, "")
+      .replace(/\*\*|__|~~/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 1800);
+  }
+  function speakReply(text, options) {
+    const spoken = plainSpeechText(text);
+    if (!spoken || !state.voice) return;
+    const opts = options || {};
+    const mode = opts.mode || preferredSpeechMode();
+    const style = opts.style || preferredSpeechStyle();
+    stopReplySpeech();
+    const generation = speechGeneration;
+    fetch("/api/class-rep/speak", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: spoken, mode: mode, style: style, language: state.responseLanguage })
+    }).then(async function (response) {
+      if (!response.ok || generation !== speechGeneration) return;
+      const url = URL.createObjectURL(await response.blob());
+      if (generation !== speechGeneration) {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        return;
+      }
+      const audio = new Audio(url);
+      replyAudio = audio;
+      replyAudioUrl = url;
+      audio.addEventListener("ended", function () {
+        if (replyAudio !== audio) return;
+        replyAudio = null;
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        replyAudioUrl = "";
+      });
+      return audio.play().catch(function () { stopReplySpeech(); });
+    }).catch(function () {});
+  }
+  function decorateAssistantResponse(bubble, response) {
+    if (!bubble || !response || bubble.querySelector(".cr-response-actions")) return;
+    const query = String(bubble.dataset.query || "");
+    const actions = el("div", "cr-response-actions");
+    const copy = el("button", "cr-copy-button", "Copy reply");
+    copy.type = "button";
+    copy.setAttribute("aria-label", "Copy this reply");
+    copy.addEventListener("click", async () => {
+      const copied = await copyText(response);
+      copy.textContent = copied ? "Copied" : "Copy failed";
+      copy.setAttribute("aria-live", "polite");
+      window.setTimeout(() => { copy.textContent = "Copy reply"; }, 1800);
+    });
+    actions.append(copy);
+    if (query) {
+      const button = el("button", "cr-feedback-button", "Report an incorrect answer");
+      button.type = "button";
+      button.setAttribute("aria-label", "Report a correction for this answer");
+      button.addEventListener("click", async () => {
+        const correction = window.prompt("Enter the corrected answer for this question:");
+        if (!correction || !correction.trim()) return;
+        button.disabled = true;
+        button.textContent = "Saving correction…";
+        try {
+          const responseResult = await fetch("/api/ai/feedback", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query, original_response: response,
+              correction: correction.trim(), response_language: state.responseLanguage,
+              conversation_id: state.conversationId
+            })
+          });
+          const result = await responseResult.json().catch(() => ({}));
+          if (!responseResult.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${responseResult.status}`);
+          button.textContent = result.learning_status === "accepted"
+            ? "Correction saved for learning"
+            : "Correction saved for review";
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = "Report an incorrect answer";
+          status(readableError(error) || "Could not save the correction.", false);
+        }
+      });
+      actions.append(button);
+    }
+    const disclaimer = el("p", "cr-disclaimer", "I can sometimes make mistakes — please verify important details.");
+    bubble.append(actions, disclaimer);
+    rememberLessonTopic(response);
+    transcript.scrollTop = transcript.scrollHeight;
+  }
+  async function typeReply(bubble, value) {
+    const answer = typeof value === "string" ? value : "";
+    bubble.classList.remove("cr-thinking");
+    bubble.removeAttribute("role");
+    bubble.removeAttribute("aria-label");
+    bubble.textContent = "";
+    const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion || window.matchMedia("(max-width: 760px)").matches || answer.length < 90) { renderMarkdown(bubble, answer); decorateAssistantResponse(bubble, answer); return; }
+    const step = answer.length > 1400 ? 10 : answer.length > 700 ? 7 : 4;
+    for (let index = 0; index < answer.length; index += step) {
+      bubble.textContent = answer.slice(0, index + step);
+      transcript.scrollTop = transcript.scrollHeight;
+      await new Promise(resolve => window.setTimeout(resolve, 16));
+    }
+    renderMarkdown(bubble, answer);
+    decorateAssistantResponse(bubble, answer);
+  }
+  function demoReply(message) {
+    const q = message.toLowerCase();
+    if (/hello|hi|hey/.test(q)) return "Hello! I’m here to support the MNH class representative with clear academic communication. What would you like help with?";
+    if (/exam|examination|test|assessment/.test(q)) return "I can help prepare an examination notice. Please confirm the date, time and venue in the Examinations section before sharing.";
+    if (/session|timetable|schedule|class|lecture|this week/.test(q)) return "For accurate session dates, times, modules and facilitators, please check the live weekly timetable. I won't guess or invent a session.";
+    if (/announcement|announce|remind|broadcast/.test(q)) return "Ready-to-edit announcement:\n\nGood day, everyone. Please refer to the MNH Smart Timetable for the confirmed module, date, time and delivery details. Kindly be punctual and come prepared.\n\nThank you,\nClass Representative";
+    if (/lecturer|facilitator|professor|doctor|message|email|whatsapp/.test(q)) return "Good day, [Title and Name]. I hope you are well. I am writing on behalf of the MNH class to kindly seek clarification regarding [specific issue]. Could you please advise us when convenient?\n\nThank you for your time and guidance.\nKind regards,\nClass Representative";
+    return "I can help draft class announcements, messages to lecturers, meeting agendas and other academic communications. For confirmed timetable details, please refer to the live shared calendar.";
+  }
+  async function checkStatus() {
+    try {
+      const { response, result } = await requestJson("/api/class-rep/status");
+      if (!response.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${response.status}`);
+      state.ready = Boolean(response.ok && result.ready);
+      state.voice = result.voice === "enabled";
+      state.uploads = result.document_uploads === "enabled";
+      state.audioUploads = result.audio_uploads === "enabled";
+      status(state.ready ? "AI configured · " + result.provider + (result.connection === "not_tested" ? " · connection not tested" : result.fallbacks?.length ? " · fallbacks ready" : "") : "Built-in fallback · AI not configured", state.ready);
+      recordButton.disabled = !state.voice; root.dataset.documentSearch = result.document_search || "unavailable";
+    } catch (_) {
+      state.ready = false; state.voice = false; state.uploads = false; state.audioUploads = false;
+      status("Services unavailable", false);
+      recordButton.disabled = true;
+    }
+  }
+  let authMode = "login";
+  // Guest chat is usable immediately; authentication is optional and only adds
+  // saved conversations and memory. A failed check never shows a login wall.
+  let authCheckComplete = true;
+  let authCheckRunning = false;
+  function setAuthMode(mode) {
+    authMode = mode;
+    authName.hidden = mode !== "register";
+    authPassword.autocomplete = mode === "register" ? "new-password" : "current-password";
+    authPassword.minLength = mode === "register" ? 4 : 0;
+    authPassword.placeholder = mode === "register" ? "Password (at least 4 characters)" : "Password";
+    authPasswordView.setVisible(false);
+    authSubmit.textContent = mode === "register" ? "Create account" : "Sign in";
+    authSwitch.textContent = mode === "register" ? "I already have an account" : "Create a new account";
+    authFeedback.textContent = "";
+  }
+  let resetMode = "request";
+  let resetTokenValue = "";
+  function setResetView(mode, token) {
+    resetTokenValue = String(token || "").slice(0, 256);
+    resetMode = mode;
+    resetBox.hidden = false;
+    authName.hidden = true;
+    authEmail.hidden = true;
+    authPassword.hidden = true;
+    authPasswordView.wrap.hidden = true;
+    authSubmit.hidden = true;
+    authForgot.hidden = true;
+    authSwitch.hidden = true;
+    authFeedback.hidden = true;
+    resetEmail.hidden = mode !== "request";
+    resetPassword.hidden = mode !== "complete";
+    resetPasswordView.wrap.hidden = mode !== "complete";
+    resetPasswordView.setVisible(false);
+    resetTitle.textContent = mode === "request" ? "Reset your password" : "Choose a new password";
+    resetSubmit.textContent = mode === "request" ? "Send reset link" : "Set new password";
+    resetFeedback.textContent = "";
+  }
+  function exitResetView() {
+    resetBox.hidden = true;
+    resetTokenValue = "";
+    resetEmail.value = "";
+    resetPassword.value = "";
+    resetPasswordView.wrap.hidden = true;
+    resetPasswordView.setVisible(false);
+    authEmail.hidden = false;
+    authPassword.hidden = false;
+    authPasswordView.wrap.hidden = false;
+    authSubmit.hidden = false;
+    authForgot.hidden = false;
+    authSwitch.hidden = false;
+    authFeedback.hidden = false;
+    setAuthMode(authMode);
+  }
+  async function submitReset() {
+    resetSubmit.disabled = true;
+    try {
+      if (resetMode === "request") {
+        const email = resetEmail.value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter your account email address.");
+        const { response, result } = await requestJson("/api/class-rep/auth/forgot-password", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email })
+        });
+        if (!response.ok) throw new Error(readableError(result.detail || result.error || result.message) || `Could not send reset link (HTTP ${response.status}).`);
+        resetFeedback.textContent = result.message || "If an account exists, a reset link has been sent.";
+      } else {
+        if (resetPassword.value.length < 4) throw new Error("Use a password of at least 4 characters.");
+        const { response, result } = await requestJson("/api/class-rep/auth/reset-password", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: resetTokenValue, password: resetPassword.value })
+        });
+        if (!response.ok) throw new Error(readableError(result.detail || result.error || result.message) || `Could not reset your password (HTTP ${response.status}).`);
+        state.user = result.user; state.guest = false;
+        state.history = []; state.conversationId = null;
+        transcript.replaceChildren();
+        exitResetView();
+        closeAuthPanel();
+        status("Password updated · you are signed in", true);
+        await loadPreviousConversation();
+      }
+    } catch (error) { resetFeedback.textContent = error.message || "The reset request could not be completed."; }
+    finally { resetSubmit.disabled = false; }
+  }
+  async function loadPreviousConversation() {
+    try {
+      const { response, result: data } = await requestJson("/api/class-rep/conversations");
+      if (!response.ok) return;
+      const latest = (data.conversations || [])[0];
+      if (!latest) return;
+      state.conversationId = latest.id;
+      // Old saved conversations may contain error bubbles or non-text values.
+      // Drop them before they can be replayed into a prompt or transcript.
+      state.history = cleanHistory(latest.messages, 12);
+      transcript.replaceChildren();
+      for (const message of state.history) addMessage(message.role, message.content);
+    } catch (_) {}
+  }
+  async function checkAuth() {
+    if (authCheckRunning) return;
+    authCheckRunning = true;
+    try {
+      const { response, result } = await requestJson("/api/class-rep/auth/me");
+      if (!response.ok) throw new Error(readableError(result.detail || result.error) || `HTTP ${response.status}`);
+      if (result.storage_ready === false) {
+        status("Private CRARA memory is waiting for persistent storage.", false);
+        return;
+      }
+      if (result.user && result.user.id) {
+        state.user = result.user;
+        state.guest = Boolean(result.guest);
+      }
+      if (state.user && canUseLanguageToggle()) {
+        try {
+          const languageResult = await requestJson("/api/class-rep/language");
+          if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
+        } catch (_) { /* retain English default if preference lookup is temporarily unavailable */ }
+      } else {
+        state.responseLanguage = "EN";
+      }
+      renderLanguageChoice();
+      await loadPreviousConversation();
+    } catch (error) {
+      authFeedback.textContent = error.message || "CRARA services could not be reached.";
+      status("Services unavailable · guest chat cannot start", false);
+    } finally {
+      authCheckComplete = true;
+      authCheckRunning = false;
+      applyChatPresentation();
+    }
+  }
+  async function authenticate() {
+    authSubmit.disabled = true;
+    try {
+      const payload = { email: authEmail.value.trim(), password: authPassword.value };
+      if (authMode === "register") payload.name = authName.value.trim();
+      const { response, result } = await requestJson("/api/class-rep/auth/" + authMode, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(readableError(result.detail || result.error || result.message) || `Account request failed (HTTP ${response.status}).`);
+      state.user = result.user; state.guest = false;
+      state.history = []; state.conversationId = null;
+      if (canUseLanguageToggle()) {
+        try {
+          const languageResult = await requestJson("/api/class-rep/language");
+          if (languageResult.response.ok) state.responseLanguage = languageResult.result.response_language === "CH" ? "CH" : "EN";
+        } catch (_) { state.responseLanguage = "EN"; }
+      } else {
+        state.responseLanguage = "EN";
+      }
+      renderLanguageChoice();
+      transcript.replaceChildren();
+      setAuthMode("login");
+      closeAuthPanel();
+      authPassword.value = "";
+      status("Signed in · saved conversations enabled", true);
+      await loadPreviousConversation();
+    } catch (error) { authFeedback.textContent = error.message || "Could not sign in."; }
+    finally { authSubmit.disabled = false; }
+  }
+  authBack.addEventListener("click", closeAuthPanel);
+  authSubmit.addEventListener("click", authenticate);
+  authSwitch.addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+  authPassword.addEventListener("keydown", event => { if (event.key === "Enter") authenticate(); });
+  authForgot.addEventListener("click", () => { openAuthPanel(); setResetView("request", ""); });
+  resetCancel.addEventListener("click", exitResetView);
+  resetSubmit.addEventListener("click", submitReset);
+  resetEmail.addEventListener("keydown", event => { if (event.key === "Enter") submitReset(); });
+  resetPassword.addEventListener("keydown", event => { if (event.key === "Enter") submitReset(); });
+  const waitingPhrases = [
+    "Thinking…",
+    "Looking up…",
+    "Preparing…",
+    "Checking the details…",
+    "Putting this together…",
+    "Working through your request…",
+    "Reviewing the information…",
+    "Finding the relevant details…",
+    "Drafting a helpful response…",
+    "Almost ready…"
+  ];
+  let lastWaitingPhrase = -1;
+  function nextWaitingPhrase() {
+    let index = Math.floor(Math.random() * waitingPhrases.length);
+    if (waitingPhrases.length > 1 && index === lastWaitingPhrase) {
+      index = (index + 1 + Math.floor(Math.random() * (waitingPhrases.length - 1))) % waitingPhrases.length;
+    }
+    lastWaitingPhrase = index;
+    return waitingPhrases[index];
+  }
+  async function send(value) {
+    const message = String(value || input.value).trim();
+    if (!message || state.busy) return;
+    const restrictedAnalytics = /analytics|performance|missed sessions?|attendance|delivery mode|online vs|face.to.face|teaching hours/i.test(message);
+    if (!restrictedAnalytics && state.analyticsPassword) { state.analyticsPassword = ""; state.history = []; }
+    input.value = ""; updateComposerAction(); uploadMessage("");
+    stopReplySpeech();
+    addMessage("user", message);
+    const waitingLabel = nextWaitingPhrase().replace(/[.…]+$/, "");
+    const pending = addMessage("assistant", "");
+    pending.classList.add("cr-thinking");
+    pending.setAttribute("role", "status");
+    pending.setAttribute("aria-label", waitingLabel + ", waiting for CRARA response");
+    const waitingText = document.createElement("span");
+    waitingText.className = "cr-thinking-label";
+    waitingText.textContent = waitingLabel;
+    const waitingDots = document.createElement("span");
+    waitingDots.className = "cr-thinking-dots";
+    waitingDots.setAttribute("aria-hidden", "true");
+    for (let dot = 0; dot < 3; dot++) waitingDots.append(document.createElement("i"));
+    pending.replaceChildren(waitingText, waitingDots);
+    state.busy = true; input.disabled = true;
+    try {
+      if (state.ready) {
+        const headers = { "Content-Type": "application/json" };
+        if (restrictedAnalytics) {
+          const password = state.analyticsPassword || prompt("Management analytics are restricted. Enter the HOD, coordinator or executive dean password:");
+          if (!password) { pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = "Management analytics access was cancelled. No restricted information was retrieved."; return; }
+          state.analyticsPassword = password;
+          headers["X-CARA-Analytics-Password"] = password;
+        }
+        const controller = new AbortController();
+        const requestTimer = window.setTimeout(() => controller.abort(), 55000);
+        let response, result;
+        try {
+          response = await fetch("/api/class-rep/chat", {
+            method: "POST", headers, credentials: "same-origin", signal: controller.signal,
+            cache: "no-store", body: JSON.stringify({ message, history: cleanHistory(state.history), conversation_id: state.conversationId, response_language: state.responseLanguage })
+          });
+          result = await response.json().catch(() => ({}));
+        } catch (requestError) {
+          if (requestError && requestError.name === "AbortError") {
+            throw new Error("CRARA took too long to respond. Please try again; your message has not been lost from this chat.");
+          }
+          throw new Error("The connection to CRARA was interrupted. Check your internet connection and try again.");
+        } finally {
+          window.clearTimeout(requestTimer);
+        }
+        if (!response.ok) throw new Error(apiError(response, result, "CRARA request failed."));
+        const reply = typeof result.reply === "string" ? result.reply.trim() : "";
+        if (!reply) throw new Error("CRARA returned an empty reply. Please try again.");
+        pending.dataset.query = message;
+        await typeReply(pending, reply);
+        speakReply(reply, { mode: state.classroom.open ? "presentation" : preferredSpeechMode() });
+        state.conversationId = result.conversation_id || state.conversationId;
+        if (restrictedAnalytics) { state.history = []; }
+        else { state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: reply.slice(0, 4000) }]), 12); }
+        status("AI connected · " + readableError(result.provider), true);
+      } else {
+        pending.dataset.query = message;
+        const demoAnswer = demoReply(message);
+        let finalReply = demoAnswer;
+        await typeReply(pending, finalReply);
+        const saved = await fetch("/api/class-rep/conversation/turn", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, reply: demoAnswer, conversation_id: state.conversationId })
+        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (saved) {
+          state.conversationId = saved.conversation_id;
+          const savedReply = typeof saved.reply === "string" ? saved.reply : "";
+          if (savedReply) {
+            finalReply = savedReply;
+            await typeReply(pending, finalReply);
+            state.history = cleanHistory(state.history.concat([{ role: "user", content: message }, { role: "assistant", content: savedReply.slice(0, 4000) }]), 12);
+          }
+        }
+        speakReply(finalReply, { mode: state.classroom.open ? "presentation" : preferredSpeechMode() });
+        status("Built-in fallback · AI not configured", false);
+      }
+    } catch (error) {
+      const detail = readableError(error);
+      if (/password|authorised|analytics/i.test(detail)) {
+        state.analyticsPassword = "";
+        pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = "Management analytics access could not be verified. Please check your access credentials and try again.";
+      } else {
+        pending.classList.remove("cr-thinking"); pending.removeAttribute("role"); pending.removeAttribute("aria-label"); pending.textContent = detail && !/request could not be completed/i.test(detail) ? "CRARA service error: " + detail : "I can’t complete that request right now. Please try again shortly. I can still help draft announcements, messages and other class communications.";
+      }
+      // Do not persist error bubbles as assistant turns. A transient provider
+      // outage must not become conversation history for the next request.
+      status("", false);
+    } finally {
+      state.busy = false; input.disabled = false; input.focus();
+    }
+  }
+  attachButton.addEventListener("click", () => { try { if (fileInput.showPicker) fileInput.showPicker(); else fileInput.click(); } catch (_) { fileInput.click(); } });
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files && fileInput.files[0];
+    fileInput.value = "";
+    if (!file) return;
+    const isAudio = /^audio\//i.test(file.type || "") || /\.(mp3|wav|m4a|aac|ogg|opus|flac|webm)$/i.test(file.name);
+    if (isAudio && !state.audioUploads) { uploadMessage("Audio transcription is not configured for CRARA", false); return; }
+    if (isAudio && file.size > 5 * 1024 * 1024) { uploadMessage("Audio files must be 5 MB or smaller", false); return; }
+    if (file.size > 10 * 1024 * 1024) { uploadMessage("Files must be 10 MB or smaller", false); return; }
+    attachButton.disabled = true;
+    uploadMessage((isAudio ? "Transcribing " : "Reading ") + file.name + "…", false);
+    try {
+      const data = new FormData(); data.append("file", file);
+      const response = await fetch("/api/class-rep/documents", {
+        method: "POST", credentials: "same-origin", body: data
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(readableError(result.detail) || "Upload failed");
+      uploadMessage("Indexed " + file.name + (isAudio ? " (audio transcript)" : "") + " · ask CRARA to summarise it", true);
+    } catch (error) { uploadMessage(readableError(error) || "Document indexing failed", false); }
+    finally { attachButton.disabled = false; }
+  });
+  recordButton.addEventListener("click", async () => {
+    if (state.recording && state.recorder) { state.recorder.stop(); return; }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      status("Audio recording is not supported in this browser", false); return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find(type => MediaRecorder.isTypeSupported(type));
+      state.recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      state.audioParts = [];
+      state.recorder.ondataavailable = event => { if (event.data.size) state.audioParts.push(event.data); };
+      state.recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        state.recording = false; recordButton.replaceChildren(micIcon); recordButton.setAttribute("aria-label", "Record a voice question");
+        const audio = new Blob(state.audioParts, { type: state.recorder.mimeType || "audio/webm" });
+        const data = new FormData(); data.append("file", audio, "cara-question.webm");
+        recordButton.disabled = true; status("Transcribing your question…", false);
+        try {
+          const response = await fetch("/api/class-rep/transcribe", { method: "POST", body: data });
+          const result = await response.json();
+          if (!response.ok) throw new Error(readableError(result.detail) || "Transcription failed");
+          input.value = result.text; updateComposerAction(); input.focus(); status("Question transcribed · review and press Enter", true);
+        } catch (error) { status(readableError(error) || "Transcription failed", false); }
+        finally { recordButton.disabled = false; }
+      };
+      state.recorder.start(); state.recording = true;
+      recordButton.textContent = "■"; recordButton.setAttribute("aria-label", "Stop recording"); status("Listening… select Stop to finish", true);
+    } catch (_) { status("Microphone permission was not granted", false); }
+  });
+  form.addEventListener("submit", event => { event.preventDefault(); send(); });
+  input.addEventListener("input", updateComposerAction);
+  input.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
+  });
+  function syncVisualViewport() {
+    if (!window.visualViewport) return;
+    const viewport = window.visualViewport;
+    const keyboardInset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+    root.style.setProperty("--cara-keyboard-inset", Math.round(keyboardInset) + "px");
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", syncVisualViewport, { passive: true });
+    window.visualViewport.addEventListener("scroll", syncVisualViewport, { passive: true });
+    window.addEventListener("orientationchange", syncVisualViewport, { passive: true });
+  }
+  let caraBackStateActive = false;
+  function closeCRARA() {
+    if (caraBackStateActive) window.history.back();
+    else setOpen(false);
+  }
+  window.addEventListener("popstate", () => {
+    if (state.classroom.open) {
+      closeClassroom();
+      return;
+    }
+    if (root.classList.contains("is-open")) {
+      caraBackStateActive = false;
+      setOpen(false);
+    }
+  });
+  window.closeCRARAForNavigation = () => {
+    if (root.classList.contains("is-open")) {
+      caraBackStateActive = false;
+      setOpen(false);
+    }
+  };
+  function setOpen(open) {
+    if (!open) { closeClassroom(); stopReplySpeech(); }
+    if (open && !root.classList.contains("is-open")) {
+      window.history.pushState({ ...(window.history.state || {}), caraAssistantOpen: true }, "", window.location.href);
+      caraBackStateActive = true;
+    }
+    if (open) {
+      state.previousBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      document.documentElement.classList.add("cara-open");
+      document.body.classList.add("cara-open");
+      syncVisualViewport();
+    } else {
+      document.body.style.overflow = state.previousBodyOverflow;
+      document.documentElement.classList.remove("cara-open");
+      document.body.classList.remove("cara-open");
+      root.style.setProperty("--cara-keyboard-inset", "0px");
+    }
+    root.classList.toggle("is-open", open);
+    applyChatPresentation();
+    launcher.setAttribute("aria-expanded", String(open));
+    if (open) { syncSpeechSwitch(); void checkAuth(); }
+  }
+  setAuthMode("login");
+  const resetLinkToken = new URLSearchParams(window.location.search).get("crara_reset");
+  if (resetLinkToken) {
+    openAuthPanel();
+    setResetView("complete", resetLinkToken);
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("crara_reset");
+    window.history.replaceState({}, "", cleanUrl.toString());
+  }
+  launcher.addEventListener("click", () => setOpen(true));
+  // Open straight into chat with a local guest session. The background check
+  // upgrades a saved account silently; login is only opened on request.
+  void checkAuth();
+  checkStatus();
+})();

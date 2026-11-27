@@ -1,0 +1,203 @@
+{
+  "summary": {
+    "sessions": 5,
+    "hours": 10.0,
+    "missed": 1,
+    "missedPercent": 20.0,
+    "online": 0,
+    "faceToFace": 0,
+    "unspecified": 5
+  },
+  "modules": [
+    {
+      "code": "ARMN – 8100",
+      "title": "Antimicrobial Resistance in Maternal & Neonatal Health",
+      "weeklySessions": 2,
+      "weeklyHours": 4.0,
+      "semesterSessions": 2,
+      "semesterHours": 4.0,
+      "semesterTracked": false,
+      "targetSessions": null,
+      "targetHours": null,
+      "missedSessions": 1,
+      "completedSessions": 0,
+      "onlineSessions": 0,
+      "faceToFaceSessions": 0
+    },
+    {
+      "code": "MIPN 8100",
+      "title": "Medical Imaging in Pregnancy and Neonates",
+      "weeklySessions": 2,
+      "weeklyHours": 4.0,
+      "semesterSessions": 2,
+      "semesterHours": 4.0,
+      "semesterTracked": false,
+      "targetSessions": null,
+      "targetHours": null,
+      "missedSessions": 0,
+      "completedSessions": 0,
+      "onlineSessions": 0,
+      "faceToFaceSessions": 0
+    },
+    {
+      "code": "PNIM-8100",
+      "title": "Pregnancy and Neonatal Immunology",
+      "weeklySessions": 1,
+      "weeklyHours": 2.0,
+      "semesterSessions": 1,
+      "semesterHours": 2.0,
+      "semesterTracked": false,
+      "targetSessions": null,
+      "targetHours": null,
+      "missedSessions": 0,
+      "completedSessions": 0,
+      "onlineSessions": 0,
+      "faceToFaceSessions": 0
+    },
+    {
+      "code": "STAT-8100",
+      "title": "Biostatics and Epidemiology",
+      "weeklySessions": 0,
+      "weeklyHours": 0.0,
+      "semesterSessions": 0,
+      "semesterHours": 0.0,
+      "semesterTracked": false,
+      "targetSessions": 12,
+      "targetHours": 24,
+      "missedSessions": 0,
+      "completedSessions": 0,
+      "onlineSessions": 0,
+      "faceToFaceSessions": 0
+    }
+  ],
+  "counts": {
+    "cells": 5,
+    "modules": 4,
+    "facilitators": 0
+  },
+  "delivery_modes": {
+    "online": 0,
+    "face_to_face": 0,
+    "unspecified": 5
+  },
+  "recorded_additions": 5,
+  "missed_sessions": 1,
+  "dashboard": {
+    "reportingPeriod": "Academic Year 2026",
+    "academicYears": [
+      "2026"
+    ],
+    "selectedYear": "2026",
+    "kpis": {
+      "modulesOffered": 4,
+      "onTrack": 2,
+      "atRisk": 1,
+      "noSessions": 1,
+      "missedSessions": 1,
+      "overallAttendance": null,
+      "attendanceTarget": 70
+    },
+    "attendance": {
+      "available": false,
+      "overall": null,
+      "target": 70,
+      "weeks": [],
+      "note": "Dated attendance records are required before an overall rate or weekly trend can be calculated."
+    },
+    "completion": {
+      "available": false,
+      "note": "Dated session outcomes are required before module completion can be calculated."
+    },
+    "mode": {
+      "available": false,
+      "known": 0,
+      "total": 5,
+      "faceToFace": 0,
+      "online": 0,
+      "unspecified": 5,
+      "faceToFacePercent": null,
+      "onlinePercent": null,
+      "note": "Session-mode proportions are calculated only from timetable entries with a recorded delivery mode."
+    },
+    "moduleStatus": [
+      {
+        "code": "ARMN – 8100",
+        "title": "Antimicrobial Resistance in Maternal & Neonatal Health",
+        "status": "at_risk",
+        "statusLabel": "At Risk",
+        "missedSessions": 1,
+        "weeklySessions": 2
+      },
+      {
+        "code": "MIPN 8100",
+        "title": "Medical Imaging in Pregnancy and Neonates",
+        "status": "on_track",
+        "statusLabel": "On Track",
+        "missedSessions": 0,
+        "weeklySessions": 2
+      },
+      {
+        "code": "PNIM-8100",
+        "title": "Pregnancy and Neonatal Immunology",
+        "status": "on_track",
+        "statusLabel": "On Track",
+        "missedSessions": 0,
+        "weeklySessions": 1
+      },
+      {
+        "code": "STAT-8100",
+        "title": "Biostatics and Epidemiology",
+        "status": "no_sessions",
+        "statusLabel": "No Sessions",
+        "missedSessions": 0,
+        "weeklySessions": 0
+      }
+    ],
+    "modulePerformance": [
+      {
+        "code": "ARMN – 8100",
+        "attendance": null,
+        "completion": null
+      },
+      {
+        "code": "MIPN 8100",
+        "attendance": null,
+        "completion": null
+      },
+      {
+        "code": "PNIM-8100",
+        "attendance": null,
+        "completion": null
+      },
+      {
+        "code": "STAT-8100",
+        "attendance": null,
+        "completion": null
+      }
+    ],
+    "actions": [
+      {
+        "tone": "danger",
+        "title": "1 module needs attention",
+        "detail": "ARMN – 8100 – 1 timetable session marked missed"
+      },
+      {
+        "tone": "info",
+        "title": "Record delivery modes",
+        "detail": "Delivery mode is unspecified for all 5 timetable entries."
+      },
+      {
+        "tone": "info",
+        "title": "Start attendance tracking",
+        "detail": "Dated attendance records are required for the attendance charts."
+      }
+    ],
+    "insights": [
+      "Attendance is not yet tracked. Record dated attendance to calculate the overall rate and weekly trend.",
+      "ARMN – 8100 requires attention: 1 timetable session is marked missed.",
+      "Delivery mode is unrecorded for all 5 timetable entries; set modes to unlock the session-mode distribution.",
+      "1 module has no sessions in the current timetable template."
+    ]
+  },
+  "note": "Weekly figures describe the configured Monday–Sunday timetable template, not a verified attendance register. Semester-to-date sessions and hours are intentionally not reported until dated session-occurrence and attendance records are recorded; timetable template rows must not be mistaken for sessions already delivered. Delivery-mode and missed markers currently describe the saved timetable entries. Set each module's semester targets in Modules; target progress will appear once dated semester records are available."
+}

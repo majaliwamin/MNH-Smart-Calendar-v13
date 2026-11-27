@@ -1,0 +1,3188 @@
+const times=["08:00 – 10:00","10:00 – 12:00","12:00 – 13:30","13:30 – 15:30","15:30 – 17:30","17:30 – 19:00","19:00 – 21:00"];
+// ---- Academic week state: the shared week model drives every date shown in this file ----
+const WK=window.MNHWeek;
+let weekOffset=WK.currentOffset();
+let autoWeekOffset=weekOffset;
+let dates=WK.dateLabels(weekOffset);
+const LEGACY_ROW_MAP={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:6};
+const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const dayNames=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const weekendClass=index=>index>=5?"weekend-day":"";
+let modules={
+ "MIPN 8100":{title:"Medical Imaging in Pregnancy and Neonates",facilitator:"Not specified"},
+ "ARMN – 8100":{title:"Antimicrobial Resistance in Maternal & Neonatal Health",facilitator:"G Bandawe"},
+ "PNIM-8100":{title:"Pregnancy and Neonatal Immunology",facilitator:"D Mzinza"}
+};
+const tbody=document.getElementById("calendar-body");
+const thead=document.getElementById("calendar-head");
+const statusEl=document.getElementById("status");
+const key="phd_mnh_weekly_calendar_v3";
+const legacyKey="phd_mnh_weekly_calendar_v2";
+let currentRole="public";
+let moduleUnsubscribe=null;
+let state={theme:"dark",cells:{}};
+let recurringRecords=[];
+let editingUnlocked=true;
+let analyticsUnlocked=true;
+let activeCell=null;
+let selectedTime=-1;
+
+function cellKey(r,c){return `${r}_${c}`;}
+function isJournal(r,c){return r===2&&c===1;}
+function parseClock(value){const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||""));if(!m)return null;const h=+m[1],n=+m[2];return h<24&&n<60?h*60+n:null;}
+function clockText(minutes){return `${String(Math.floor(minutes/60)).padStart(2,"0")}:${String(minutes%60).padStart(2,"0")}`;}
+function parseRange(value){const m=/^\s*(\d{1,2}:\d{2})\s*(?:–|-|to)\s*(\d{1,2}:\d{2})\s*$/.exec(String(value||""));return m?{startTime:m[1],endTime:m[2]}:null;}
+function defaultRange(row){const parts=parseRange(times[row]||"");return parts||{startTime:"08:00",endTime:"10:00"};}
+function facilitatorFor(code){
+ const configured=String(modules[code]?.facilitator||"").trim();
+ const configuredId=String(modules[code]?.facilitatorId||"").trim();
+ if((!configured||configured==="Not specified")&&!configuredId)return "";
+ const normalise=name=>String(name||"").toLowerCase().replace(/\b(professor|prof|doctor|dr|mr|mrs|ms)\.?\b/g,"").replace(/[^a-z0-9]+/g," ").trim();
+ const wanted=normalise(configured);
+ const match=facilitatorRecords.find(x=>String(x.id)===configuredId||String(x.id)===configured||normalise(x.data?.name)===wanted||(wanted&&normalise(x.data?.name).endsWith(wanted)));
+ return String(match?.data?.name||(configured==="Not specified"?"":configured));
+}
+function resolveModuleCode(data){
+ const explicit=String(data?.moduleCode||"").trim();
+ if(explicit&&modules[explicit])return explicit;
+ const candidates=[data?.code,data?.title,data?.text].map(value=>String(value||"").trim()).filter(Boolean);
+ for(const value of candidates)if(modules[value])return value;
+ const normalise=value=>String(value||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+ for(const value of candidates){
+  const match=Object.entries(modules).find(([,module])=>normalise(module.title)===normalise(value));
+  if(match)return match[0];
+ }
+ return explicit;
+}
+function getSessionEntries(offset=weekOffset){
+ const result=[];
+ const visibleWeek=WK.isoMonday(offset);
+ const recordBelongsToWeek=(id,data)=>{
+  const savedWeek=String(data?.weekStart||"").trim();
+  // Legacy sessions were explicitly assigned to the 16 November 2026 week.
+  // Never let an undated record leak into any later or earlier week.
+  const effectiveWeek=savedWeek||"2026-11-16";
+  return effectiveWeek===visibleWeek;
+ };
+ Object.entries(state.cells||{}).forEach(([id,data])=>{
+  if(!data||typeof data!=="object")return;
+  if(!recordBelongsToWeek(id,data))return;
+  let dayIndex,startTime,endTime,rowIndex=-1;
+  const legacy=/^(\d+)_(\d+)$/.exec(id);
+  if(legacy){rowIndex=+legacy[1];dayIndex=+legacy[2];if(dayIndex<0||dayIndex>=days.length||rowIndex<0||rowIndex>=times.length)return;}
+  else {dayIndex=Number(data.dayIndex);if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=days.length)return;}
+  const fromLabel=parseRange(data.timeLabel);
+  const fallback=legacy?defaultRange(rowIndex):{startTime:"08:00",endTime:"10:00"};
+  startTime=String(data.startTime||fromLabel?.startTime||fallback.startTime);
+  endTime=String(data.endTime||fromLabel?.endTime||fallback.endTime);
+  // Canonicalise the obsolete 07:30–09:30 programme slot to the current 08:00–10:00 slot.
+  // These stale saved start times were creating an extra desktop row before the intended 08:00 grid.
+  if(startTime==="07:30"&&endTime==="09:30"){startTime="08:00";endTime="10:00";}
+  const start=parseClock(startTime),end=parseClock(endTime);
+  if(start===null||end===null||end<=start)return;
+  const moduleCode=resolveModuleCode(data);
+  const label=String(moduleCode||data.code||data.text||data.title||"Scheduled session");
+  if((label==="Journal Club"&&dayIndex===1)||(label==="MNH Seminar"&&dayIndex===3))return;
+  result.push({id,dayIndex,c:dayIndex,r:rowIndex,label,title:String(data.title||label),sub:String(modules[moduleCode]?.title||""),facilitator:String(data.facilitatorOverride||"").trim()||(moduleCode?facilitatorFor(moduleCode):"")||String(data.facilitator||""),startTime,endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:`${startTime} – ${endTime}`,data});
+ });
+ recurringRecords.filter(row=>row.data?.enabled!==false).forEach(row=>{
+  const data=row.data||{},range=parseRange(data.time),dayIndex=dayNames.indexOf(String(data.day||""));
+  if(dayIndex<0||!range)return;
+  const start=parseClock(range.startTime),end=parseClock(range.endTime);
+  if(start===null||end===null||end<=start)return;
+  const title=String(data.title||row.id);
+  result.push({id:"recurring-"+row.id,dayIndex,c:dayIndex,r:-1,label:title,title,sub:"",facilitator:String(data.presenter||""),startTime:range.startTime,endTime:range.endTime,startMinutes:start,endMinutes:end,mins:end-start,timeLabel:range.startTime+" – "+range.endTime,data:{code:title,title,recurring:true,recurringId:row.id,presenter:String(data.presenter||""),onThisWeek:data.onThisWeek!==false}});
+ });
+ return result.sort((a,b)=>a.dayIndex-b.dayIndex||a.startMinutes-b.startMinutes);
+}
+function getEntry(r,c){return getSessionEntries().find(x=>x.dayIndex===c&&x.r===r)?.data||{};}
+function setEditing(_enabled){
+ const enabled=true;
+ editingUnlocked=true;
+ updateRoleNav();
+ ["save","backup","import","edit-header"].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+  statusEl.className="status ok";
+ statusEl.textContent="Open access enabled. Changes can be made and shared.";
+}
+function showDialog(id){
+ const el=document.getElementById(id),card=el.querySelector(".dialog-card")||el.querySelector(".call-card");
+ if(card&&!card.querySelector(".dialog-close")){
+  const close=document.createElement("button");close.type="button";close.className="dialog-close";close.setAttribute("aria-label","Close dialog");close.textContent="×";
+  close.addEventListener("click",()=>id==="call-dialog"?stopRing():hideDialog(id));card.prepend(close);
+ }
+ el.classList.add("open");el.setAttribute("aria-hidden","false");
+ if(id==="module-dialog"&&typeof window.setCRARASchedulingVisible==="function")window.setCRARASchedulingVisible(true);
+}
+function hideDialog(id){if(id==="details-dialog")stopMeetingCountdown();const el=document.getElementById(id);if(el){el.classList.remove("open");el.setAttribute("aria-hidden","true");}if(id==="module-dialog"&&typeof window.setCRARASchedulingVisible==="function")window.setCRARASchedulingVisible(false);}
+function contrastColour(hex){
+ const n=parseInt(hex.replace("#",""),16);
+ const lum=(0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255;
+ return lum>0.58?"#172033":"#F7F8FA";
+}
+function applyCellColour(td,area,colour){td.style.background=colour;area.style.background=colour;area.style.color=contrastColour(colour);}
+let facilitatorRecords=[];
+function refreshModuleSelect(){
+ const select=document.getElementById("module-select"),chosen=select.value;
+ select.innerHTML='<option value="">Choose a module…</option>';
+ Object.keys(modules).sort().forEach(code=>{const o=document.createElement("option");o.value=code;o.textContent=code+" — "+modules[code].title;select.appendChild(o);});
+ if(chosen&&modules[chosen])select.value=chosen;
+}
+function onModules(snap){
+ const next=Object.create(null);snap.docs.forEach(d=>{const v=d.data()||{};if(d.id&&v.title)next[d.id]={title:String(v.title),facilitator:String(v.facilitator||"Not specified"),facilitatorId:String(v.facilitatorId||""),semesterTargetSessions:v.semesterTargetSessions??null,semesterTargetHours:v.semesterTargetHours??null};});
+ if(Object.keys(next).length)modules=next;
+ refreshModuleSelect();
+ if(currentView==="modules")renderModules();
+ build();
+}
+async function addSharedModule(code,title,facilitatorValue,targets={}){
+ code=String(code||"").trim().slice(0,40);title=String(title||"").trim().slice(0,160);facilitatorValue=String(facilitatorValue||"").trim().slice(0,120);
+ if(!code||!title){statusEl.className="status error";statusEl.textContent="Enter both a module code and title.";return;}
+ if(!/^[A-Za-z0-9][A-Za-z0-9_. –-]{0,39}$/.test(code)){statusEl.className="status error";statusEl.textContent="Use letters, numbers, spaces, dots or hyphens in the module code.";return;}
+ if(Object.prototype.hasOwnProperty.call(modules,code)){statusEl.className="status error";statusEl.textContent="That module code already exists.";return;}
+ try{
+  const facilitator=facilitatorRecords.find(item=>String(item.id)===facilitatorValue||String(item.data.name||"").trim().toLowerCase()===facilitatorValue.toLowerCase());
+  const data={title,facilitator:facilitatorValue||"Not specified",facilitatorId:facilitator?String(facilitator.id):"",semesterTargetSessions:targets.semesterTargetSessions,semesterTargetHours:targets.semesterTargetHours,updatedAt:Date.now()};
+  if(cloud)await cloud.doc("modules/"+code).set(data);
+  else await window.mnhApi.request("PUT","/api/doc/modules/"+encodeURIComponent(code),data);
+  modules[code]=data;refreshModuleSelect();build();
+  statusEl.className="status ok";statusEl.textContent="Module and facilitator saved permanently to the shared database.";
+  renderModules();
+ }catch(e){writeFailed(e);}
+}
+function renderModuleDetailsMeetingIcon(){
+ const box=document.getElementById("module-details");
+ if(!box)return;
+ const old=box.querySelector(".module-details-meeting-action");
+ if(old)old.remove();
+ const input=document.getElementById("session-link");
+ const url=safeUrl(input?.value||"");
+ const mark=url?meetingProviderMark(url,true):null;
+ if(mark){
+  const action=document.createElement("a");action.className="module-details-meeting-action";action.href=url;action.target="_blank";action.rel="noopener noreferrer";
+  action.setAttribute("aria-label","Tap to join the online meeting");action.title="Tap to join meeting";
+  mark.classList.add("module-details-meeting-mark");mark.setAttribute("aria-hidden","true");
+  action.appendChild(mark);box.appendChild(action);
+ }
+}
+function updateLecturerAssignmentStatus(){
+ const field=document.getElementById("session-lecturer"),indicator=document.getElementById("lecturer-assignment-status");
+ if(!field||!indicator)return;
+ const assigned=!!field.value.trim();
+ indicator.hidden=!assigned;
+ indicator.textContent=assigned?"Lecturer assigned":"";
+}
+function updateModuleDetails(code){
+ const box=document.getElementById("module-details");
+ const labelField=document.getElementById("module-label"),lecturerField=document.getElementById("session-lecturer");
+ const lecturer=code?facilitatorFor(code):"";
+ if(labelField){labelField.value=code||"";labelField.readOnly=!!code;labelField.placeholder=code?"":"Type a custom activity name";}
+ if(lecturerField){lecturerField.value=code?lecturer:"";lecturerField.placeholder="Not assigned — enter a name if needed";}
+ updateLecturerAssignmentStatus();
+ box.classList.add("module-details-with-meeting");
+ box.querySelectorAll(".module-details-copy").forEach(node=>node.remove());
+ let copy=document.createElement("div");copy.className="module-details-copy";
+ if(modules[code]){const m=modules[code];const strong=document.createElement("strong");strong.textContent=code;copy.append(strong,document.createElement("br"),document.createTextNode(m.title),document.createElement("br"),document.createTextNode("Presenter: "+(lecturer||"Not assigned")));}
+ else if(code==="Journal Club")copy.textContent="Journal Club · Every Tuesday, 13:00–14:00";
+ else if(code)copy.textContent="This activity is not in the Modules directory yet.";
+ box.prepend(copy);
+ renderModuleDetailsMeetingIcon();
+}
+function openModuleDialog(dayIndex,startTime,entry){
+ // Open immediately from the in-memory directory. Shared facilitator updates
+ // arrive through the live subscription; a network request must never block the editor.
+ const existing=entry||null;
+ const id=existing?.id||null;
+ const start=startTime||"08:00";
+ const end=existing?.endTime||(parseClock(start)+120<=1440?clockText(parseClock(start)+120):"23:59");
+ activeCell={id,dayIndex,startTime:start,endTime:end};
+ document.getElementById("session-day").value=String(dayIndex);
+ document.getElementById("session-start").value=existing?.startTime||start;
+ document.getElementById("session-end").value=existing?.endTime||end;
+ const existingCode=resolveModuleCode(existing?.data||{});
+ document.getElementById("module-select").value=existingCode;
+ document.getElementById("module-label").value=existingCode||(existing?String(existing.title||existing.label||""):"");
+ document.getElementById("module-mode").value=existing?.data?.mode||"unspecified";
+ document.getElementById("session-link").value=existing?.data?.meetingUrl||"";
+ document.getElementById("session-link-field").hidden=document.getElementById("module-mode").value!=="online";
+ document.getElementById("session-status").value=existing?.data?.status||"scheduled";
+ document.getElementById("delete-module").style.display=id?"inline-block":"none";
+ updateModuleDetails(document.getElementById("module-select").value);
+ document.getElementById("session-lecturer").value=existingCode?(existing?.data?.facilitatorOverride||facilitatorFor(existingCode)||existing?.data?.facilitator||""):(existing?.data?.facilitatorOverride||existing?.data?.facilitator||"");
+ updateLecturerAssignmentStatus();
+ showDialog("module-dialog");
+}
+let meetingCountdownTimer=null;
+function stopMeetingCountdown(){if(meetingCountdownTimer){clearInterval(meetingCountdownTimer);meetingCountdownTimer=null;}}
+function meetingCountdownMarkup(){
+ const wrap=document.createElement("div");wrap.className="meeting-countdown";
+ wrap.innerHTML='<svg class="meeting-doppler" viewBox="0 0 48 48" role="img" aria-label="Meeting reminder signal"><circle class="doppler-ring doppler-ring-one" cx="24" cy="24" r="7"></circle><circle class="doppler-ring doppler-ring-two" cx="24" cy="24" r="7"></circle><circle class="doppler-ring doppler-ring-three" cx="24" cy="24" r="7"></circle><circle class="doppler-core" cx="24" cy="24" r="4"></circle></svg><div class="meeting-countdown-copy"><strong class="meeting-countdown-title">Meeting reminder</strong><span class="meeting-countdown-time" aria-live="off">Calculating…</span></div>';
+ return wrap;
+}
+function updateMeetingCountdown(wrap,meetingStart,meetingEnd){
+ const title=wrap.querySelector(".meeting-countdown-title"),time=wrap.querySelector(".meeting-countdown-time"),now=Date.now(),reminderAt=meetingStart.getTime()-600000;
+ let target,label;
+ if(now<reminderAt){target=reminderAt;label="Reminder in";}
+ else if(now<meetingStart.getTime()){target=meetingStart.getTime();label="Meeting starts in";}
+ else if(now<meetingEnd.getTime()){title.textContent="Meeting in progress";time.textContent="Scheduled session is underway";wrap.classList.add("is-active");return;}
+ else{title.textContent="Meeting time passed";time.textContent="This scheduled session has ended";wrap.classList.remove("is-active");return;}
+ const seconds=Math.max(0,Math.floor((target-now)/1000)),hh=String(Math.floor(seconds/3600)).padStart(2,"0"),mm=String(Math.floor(seconds%3600/60)).padStart(2,"0"),ss=String(seconds%60).padStart(2,"0");
+ title.textContent=label;time.textContent=hh+":"+mm+":"+ss;wrap.classList.toggle("is-active",label==="Meeting starts in");
+}
+function showSessionDetails(entry){
+ if(!entry)return;
+ stopMeetingCountdown();
+ const detailWeekOffset=Number.isInteger(entry.weekOffset)?entry.weekOffset:weekOffset;
+ const detailDates=WK.dateLabels(detailWeekOffset),detailDate=WK.dateList(detailWeekOffset)[entry.dayIndex];
+ const dateText=`${days[entry.dayIndex]} ${detailDates[entry.dayIndex]} ${detailDate.getUTCFullYear()}`;
+ const details=document.getElementById("details-content");details.textContent="";
+ const lines=[entry.label,entry.title!==entry.label?entry.title:"",dateText,`Time: ${entry.startTime} – ${entry.endTime}`,entry.facilitator?`Lecturer: ${entry.facilitator}`:"Lecturer: Not assigned",`Status: ${entry.data?.status||"Not recorded"}`,`Delivery: ${entry.data?.mode||"Not specified"}`].filter(Boolean);
+ lines.forEach((line,i)=>{const div=document.createElement("div");if(i===0){const strong=document.createElement("strong");strong.textContent=line;div.appendChild(strong);}else div.textContent=line;details.appendChild(div);});
+ const meetingUrl=safeUrl(entry.data?.meetingUrl||"");if(meetingUrl){
+  const linkRow=document.createElement("div");linkRow.className="session-meeting-link";
+  const provider=meetingProviderMark(meetingUrl,true);
+  const iconLink=document.createElement("a");iconLink.className="session-meeting-icon-link";iconLink.href=meetingUrl;iconLink.target="_blank";iconLink.rel="noopener noreferrer";iconLink.setAttribute("aria-label","Tap to join the online meeting");iconLink.title="Tap to join meeting";
+  if(provider){provider.setAttribute("aria-hidden","true");iconLink.appendChild(provider);}
+  const linkInfo=document.createElement("div");linkInfo.className="session-meeting-info";
+  const providerName=meetingProvider(meetingUrl)==="zoom"?"Zoom":meetingProvider(meetingUrl)==="meet"?"Google Meet":meetingProvider(meetingUrl)==="teams"?"Microsoft Teams":"Online meeting";
+  const providerLabel=el("strong","session-meeting-provider",providerName),meetingLink=document.createElement("a");
+  meetingLink.href=meetingUrl;meetingLink.target="_blank";meetingLink.rel="noopener noreferrer";meetingLink.textContent="Join meeting";
+  linkInfo.append(providerLabel,meetingLink);linkRow.append(iconLink,linkInfo);details.appendChild(linkRow);
+  const countdown=meetingCountdownMarkup(),parts=WK.startParts(detailWeekOffset),[sh,sm]=entry.startTime.split(":").map(Number),[eh,em]=entry.endTime.split(":").map(Number);
+  const meetingStart=WK.makeZonedDate(parts[0],parts[1],parts[2]+entry.dayIndex,sh,sm),meetingEnd=WK.makeZonedDate(parts[0],parts[1],parts[2]+entry.dayIndex,eh,em);
+  details.appendChild(countdown);updateMeetingCountdown(countdown,meetingStart,meetingEnd);
+  meetingCountdownTimer=setInterval(()=>updateMeetingCountdown(countdown,meetingStart,meetingEnd),1000);
+ }
+ document.getElementById("edit-details").style.display=(editingUnlocked&&!entry.data?.recurring)?"inline-block":"none";
+ document.getElementById("edit-details").onclick=()=>{hideDialog("details-dialog");openModuleDialog(entry.dayIndex,entry.startTime,entry);};
+ showDialog("details-dialog");
+}
+function showEntryDetails(r,c){const entry=getSessionEntries().find(x=>x.dayIndex===c&&(x.r===r||x.id===`${r}_${c}`));showSessionDetails(entry);}
+const LUNCH_START=12*60,LUNCH_END=13*60+30;
+function build(){
+ thead.innerHTML="";tbody.innerHTML="";
+ const entries=getSessionEntries();
+ let lunchDone=false;
+ const appendLunchRow=()=>{
+  lunchDone=true;
+  const tr=document.createElement("tr");tr.className="lunch-row";tr.dataset.startTime=clockText(LUNCH_START);tr.dataset.endTime=clockText(LUNCH_END);
+  const th=document.createElement("th");th.className="time lunch-time";th.scope="row";th.textContent=clockText(LUNCH_START)+"–"+clockText(LUNCH_END);tr.appendChild(th);
+  const td=document.createElement("td");td.colSpan=days.length;td.className="lunch-cell";
+  const clashes=entries.filter(x=>x.startMinutes<LUNCH_END&&x.endMinutes>LUNCH_START).map(x=>`${days[x.dayIndex]} ${x.label} ${x.startTime}–${x.endTime}`);
+  const label=document.createElement("span");label.className="lunch-label";label.textContent="Lunch Break";
+  td.setAttribute("role","note");td.setAttribute("aria-label","Lunch Break 12:00 to 13:30");
+  if(clashes.length)td.title="Sessions overlapping the lunch break (kept, shown in their own rows): "+clashes.join("; ");
+  td.appendChild(label);tr.appendChild(td);tbody.appendChild(tr);
+ };
+ // Left column shows complete intervals: a row with sessions uses their real interval, otherwise the default programme slot.
+ const defaultSlots=times.map(t=>parseRange(t)).filter(Boolean);
+ const intervalFor=start=>{
+  const rowEntries=entries.filter(x=>x.startTime===start);
+  if(rowEntries.length){let end=rowEntries[0].endTime;rowEntries.forEach(x=>{if(parseClock(x.endTime)>parseClock(end))end=x.endTime;});return `${start}–${end}`;}
+  const slot=defaultSlots.find(s=>s.startTime===start);
+  return slot?`${slot.startTime}–${slot.endTime}`:start;
+ };
+ // The merged lunch row already represents the 12:00–13:30 band, so that slot is not repeated as a separate row.
+ const slotStarts=defaultSlots.filter(s=>parseClock(s.startTime)!==LUNCH_START).map(s=>s.startTime);
+ const starts=[...new Set([...slotStarts,...entries.map(x=>x.startTime)])].sort((a,b)=>parseClock(a)-parseClock(b));
+ const hr=document.createElement("tr"),corner=document.createElement("th");corner.className="corner";corner.textContent="Time";hr.appendChild(corner);
+ days.forEach((day,c)=>{const th=document.createElement("th");th.className="daycell "+weekendClass(c);th.dataset.dayIndex=String(c);th.scope="col";th.innerHTML=`<span class="day"><span class="dfull">${day}</span><span class="dshort">${day.slice(0,3)}</span></span><span class="date">${dates[c]}</span>`;hr.appendChild(th);});thead.appendChild(hr);
+ starts.forEach((start,index)=>{
+  if(!lunchDone&&parseClock(start)>=LUNCH_START)appendLunchRow();
+  const tr=document.createElement("tr");tr.dataset.startTime=start;
+  const interval=intervalFor(start);const intervalParts=parseRange(interval);if(intervalParts)tr.dataset.endTime=intervalParts.endTime;
+  const th=document.createElement("th");th.className="time"+(selectedTime===index?" highlight":"");th.scope="row";th.textContent=interval;th.tabIndex=0;th.setAttribute("role","button");th.setAttribute("aria-label",`Highlight the ${interval} row`);
+  const toggle=()=>{selectedTime=selectedTime===index?-1:index;tbody.querySelectorAll("th.time:not(.lunch-time)").forEach((node,i)=>node.classList.toggle("highlight",i===selectedTime));};th.addEventListener("click",toggle);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});tr.appendChild(th);
+  days.forEach((day,dayIndex)=>{
+   const td=document.createElement("td"),entry=entries.find(x=>x.dayIndex===dayIndex&&x.startTime===start);td.className=weekendClass(dayIndex);td.dataset.cellKey=`${start}_${dayIndex}`;td.dataset.dayIndex=String(dayIndex);
+   const box=document.createElement("div");box.className="cell";const area=document.createElement("button");area.type="button";area.className="activity";area.setAttribute("aria-label",entry?`${dayNames[dayIndex]}: ${entry.label}${entry.facilitator?`, lecturer ${entry.facilitator}`:""}`:`Add session on ${dayNames[dayIndex]} at ${start}`);
+   if(entry){const chosenColour=entry.data?.colour;if(chosenColour){area.style.backgroundColor=chosenColour;area.style.borderColor=chosenColour;area.style.color=contrastColour(chosenColour);}else if(weekendClass(dayIndex)){area.classList.add("day-ink");}
+const name=document.createElement("span");name.className="activity-name";name.textContent=entry.label;area.appendChild(name);
+if(entry.facilitator){const lecturer=document.createElement("span");lecturer.className="activity-lecturer";lecturer.textContent=entry.facilitator;area.appendChild(lecturer);}
+if(entry.data?.recurring&&String(entry.data?.recurringId||entry.id||"").match(/journal-club|seminar-mnh/)){
+ const onThisWeek=entry.data?.onThisWeek!==false;
+ const badge=document.createElement("span");badge.className="recurring-ui-badge "+(onThisWeek?"is-on":"is-off");
+ badge.title=onThisWeek?"On this week":"Off this week";
+ badge.innerHTML='<span class="recurring-ui-dot"></span><span class="recurring-ui-text">'+(onThisWeek?'On this week':'Off this week')+'</span>';
+ area.appendChild(badge);
+}
+const meetingMark=meetingProviderMark(entry.data?.meetingUrl||"");if(meetingMark){meetingMark.classList.add("meeting-provider-cell");area.appendChild(meetingMark);}area.title=[entry.title,entry.facilitator].filter(Boolean).join(" • ");area.addEventListener("click",()=>showSessionDetails(entry));}
+else {area.classList.add("empty-activity");area.textContent=editingUnlocked?"+":"";area.addEventListener("click",()=>requestEditing(()=>openModuleDialog(dayIndex,start,null)));}
+   box.appendChild(area);td.appendChild(box);tr.appendChild(td);
+  });tbody.appendChild(tr);
+ });
+ if(!lunchDone)appendLunchRow();
+ refreshLiveTimetable();
+}
+function refreshLiveTimetable(){
+ const currentOffset=WK.currentOffset(),currentDay=WK.currentDayIndex(weekOffset);
+ const now=WK.localNow(),minute=now.hour*60+now.minute;
+ thead.querySelectorAll("th.daycell").forEach(th=>th.classList.toggle("today-day",weekOffset===currentOffset&&Number(th.dataset.dayIndex)===currentDay&&currentDay>=0));
+ tbody.querySelectorAll("tr[data-start-time]").forEach(tr=>{
+  const start=parseClock(tr.dataset.startTime),end=parseClock(tr.dataset.endTime);
+  const active=weekOffset===currentOffset&&currentDay>=0&&start!==null&&end!==null&&minute>=start&&minute<end;
+  tr.classList.toggle("current-time-row",active);
+  const label=tr.querySelector("th.time");if(label)label.classList.toggle("current-time-label",active);
+  tr.querySelectorAll("td[data-day-index]").forEach(td=>{
+   const today=weekOffset===currentOffset&&Number(td.dataset.dayIndex)===currentDay&&currentDay>=0;
+   td.classList.toggle("today-column",today);
+   td.classList.toggle("current-slot",active&&today);
+  });
+  const lunch=tr.querySelector("td.lunch-cell");if(lunch)lunch.classList.toggle("current-slot",active);
+ });
+}
+function remapLegacyCells(cells){
+ const out={};
+ Object.entries(cells).forEach(([k,v])=>{
+  const [r,c]=k.split("_").map(Number);
+  if(!(r in LEGACY_ROW_MAP))return;
+  const nr=LEGACY_ROW_MAP[r],nk=cellKey(nr,c);
+  if(nk==="2_1"&&r!==3)return;           // Keep the legacy Tuesday lunch slot clear; Journal Club is rendered separately at 13:00.
+  if(r===3&&nk in out&&nk!=="2_1")return; // old 12:00–13:00 entry wins over old 13:00–14:00
+  out[nk]=v;
+ });
+ return out;
+}
+function load(){
+ try{
+  let raw=localStorage.getItem(key);let legacy=false;
+  if(!raw){raw=localStorage.getItem(legacyKey);legacy=!!raw;}
+  if(raw){
+   const parsed=JSON.parse(raw);
+   if(legacy)parsed.cells=remapLegacyCells(parsed.cells||{});
+   state={...state,...parsed,cells:{...(parsed.cells||{})}};
+   // Discard only the exact legacy hardcoded programme slots; keep genuine user-created sessions.
+   ["1_0","6_0","6_1","0_2","3_2","1_3","2_3","6_3","0_4","3_4"].forEach(id=>delete state.cells[id]);
+   Object.entries(state.cells).forEach(([id,v])=>{if((/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=days.length)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=days.length))delete state.cells[id];});
+   // Migrate known legacy free-text module labels into structured entries.
+   Object.entries(state.cells).forEach(([id,v])=>{if(v&&typeof v==="object"&&!v.weekStart)v.weekStart="2026-11-16";});
+   Object.entries(state.cells).forEach(([k,v])=>{
+    if(!v||v.code||!v.text)return;
+    const text=v.text.trim();
+    if(modules[text])state.cells[k]={...v,code:text};
+   });
+  }
+ }catch(e){statusEl.textContent="Saved browser data could not be read. Existing browser data has not been overwritten.";statusEl.className="status error";}
+ try{const tp=localStorage.getItem(themeKey);if(tp)state.theme=tp;}catch(e){}
+ state.theme=normaliseTheme(state.theme);
+ document.body.dataset.theme=state.theme;
+ document.getElementById("theme").value=state.theme;
+ build();setEditing(true);
+}
+function saveState(){
+ state.theme=document.getElementById("theme").value;state.version=3;state.stamp=Date.now();
+ localStorage.setItem(key,JSON.stringify(state));
+}
+// Five themes; older saved values remain supported.
+const THEMES=["dark","white","violet","green","silver","red"];
+function normaliseTheme(t){if(THEMES.includes(t))return t;return t==="light"?"white":"dark";}
+const themeSelect=document.getElementById("theme");
+const themePicker=document.getElementById("theme-picker");
+const themePickerButton=document.getElementById("theme-picker-btn");
+themePickerButton.addEventListener("click",()=>{
+ const opening=themePicker.hidden;
+ themePicker.hidden=!opening;
+ themePickerButton.setAttribute("aria-expanded",String(opening));
+ if(opening){const active=themePicker.querySelector(".theme-choice[aria-pressed=\"true\"]")||themePicker.querySelector(".theme-choice");if(active)active.focus();}
+});
+document.addEventListener("click",e=>{
+ if(!e.target.closest("#hd-theme")){
+  themePicker.hidden=true;
+  themePickerButton.setAttribute("aria-expanded","false");
+ }
+});
+document.addEventListener("keydown",e=>{
+ if(e.key==="Escape"&&!themePicker.hidden){
+  themePicker.hidden=true;
+  themePickerButton.setAttribute("aria-expanded","false");
+  themePickerButton.focus();
+ }
+});
+function syncThemeChoices(){
+ themePicker.querySelectorAll("[data-theme-choice]").forEach(button=>{
+  button.setAttribute("aria-pressed",String(button.dataset.themeChoice===themeSelect.value));
+ });
+}
+themePicker.querySelectorAll("[data-theme-choice]").forEach(button=>{
+ button.addEventListener("click",()=>{
+  themeSelect.value=normaliseTheme(button.dataset.themeChoice);
+  themeSelect.dispatchEvent(new Event("change",{bubbles:true}));
+ });
+});
+themeSelect.addEventListener("change",e=>{
+ state.theme=normaliseTheme(e.target.value);e.target.value=state.theme;document.body.dataset.theme=state.theme;
+ try{localStorage.setItem(themeKey,state.theme);}catch(err){}
+ syncThemeChoices();
+ themePicker.hidden=true;
+ themePickerButton.setAttribute("aria-expanded","false");
+ themePickerButton.focus();
+});
+syncThemeChoices();
+function requestEditing(action){
+ if(typeof action==="function")action();
+}
+function requestAnalytics(){
+ analyticsUnlocked=true;
+ updateRoleNav();
+ showView("analytics");
+}
+document.getElementById("module-select").addEventListener("change",e=>updateModuleDetails(e.target.value));
+document.getElementById("session-lecturer").addEventListener("input",updateLecturerAssignmentStatus);
+ document.getElementById("session-link").addEventListener("input",renderModuleDetailsMeetingIcon);
+document.getElementById("session-link").addEventListener("change",renderModuleDetailsMeetingIcon);
+document.getElementById("module-mode").addEventListener("change",e=>{document.getElementById("session-link-field").hidden=e.target.value!=="online";});
+document.getElementById("cancel-module").addEventListener("click",()=>hideDialog("module-dialog"));
+document.getElementById("close-details").addEventListener("click",()=>hideDialog("details-dialog"));
+document.getElementById("apply-module").addEventListener("click",async()=>{
+ if(!editingUnlocked||!activeCell)return;
+ const dayIndex=Number(document.getElementById("session-day").value),startTime=document.getElementById("session-start").value,endTime=document.getElementById("session-end").value;
+ const start=parseClock(startTime),end=parseClock(endTime);
+ if(!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>=days.length||start===null||end===null||end<=start){statusEl.className="status error";statusEl.textContent="Choose a valid timetable day and an end time later than the start time.";return;}
+ const code=document.getElementById("module-select").value,label=document.getElementById("module-label").value.trim().slice(0,80);
+ const deliveryMode=document.getElementById("module-mode").value;
+ const meetingInput=document.getElementById("session-link").value.trim(),meetingUrl=meetingInput?safeUrl(meetingInput):"";
+ if(meetingInput&&!meetingUrl){statusEl.className="status error";statusEl.textContent="Enter a valid Google Meet, Zoom, Microsoft Teams or other HTTPS meeting link.";return;}
+ const activityLabel=code||label;
+ if(!code&&!label){statusEl.className="status error";statusEl.textContent="Select a module or enter an activity label.";return;}
+ const oldId=activeCell.id;
+ const previous=state.cells[oldId]||{};
+ // Keep the existing week/date when only the session outcome is updated.
+ const weekStart=String(previous.weekStart||"").trim()||WK.isoMonday(weekOffset);
+ let id=oldId||`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+ if(oldId&&/^\d+_\d+$/.test(oldId)&&dayIndex!==activeCell.dayIndex)id=`session-${weekStart}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+ const conflict=getSessionEntries().find(x=>x.id!==oldId&&x.id!==id&&x.dayIndex===dayIndex&&start<x.endMinutes&&end>x.startMinutes);
+ if(conflict){statusEl.className="status error";statusEl.textContent=`This overlaps ${conflict.label} (${conflict.startTime}–${conflict.endTime}). Choose another time.`;return;}
+ const module=modules[code]||{};
+ const moduleFacilitator=code?(facilitatorFor(code)||module.facilitator||""):"";
+ const enteredFacilitator=document.getElementById("session-lecturer").value.trim();
+ const record={...previous,weekStart,dayIndex,startTime,endTime,code:activityLabel,title:code?module.title:(label),facilitator:enteredFacilitator||moduleFacilitator,facilitatorOverride:enteredFacilitator&&enteredFacilitator!==moduleFacilitator?enteredFacilitator:"",moduleCode:code,mode:deliveryMode,status:document.getElementById("session-status").value,meetingUrl};
+ state.cells[id]=record;if(oldId&&oldId!==id)delete state.cells[oldId];activeCell={id,dayIndex,startTime,endTime};hideDialog("module-dialog");build();const saved=await pushCell(id);let oldSaved=true;if(saved&&oldId&&oldId!==id)oldSaved=await pushCell(oldId);if(saved&&oldSaved){showView("weekly");statusEl.className="status ok";statusEl.textContent="Changes saved. Returned to the dashboard."; }
+});
+document.getElementById("delete-module").addEventListener("click",async()=>{
+ if(!editingUnlocked||!activeCell?.id)return;
+ const id=activeCell.id;delete state.cells[id];hideDialog("module-dialog");build();await pushCell(id);
+});
+document.getElementById("save").addEventListener("click",()=>{if(editingUnlocked)syncAll("Saved for everyone.");});
+document.getElementById("backup").addEventListener("click",async()=>{
+ try{const response=await fetch("/api/backup",{cache:"no-store"});if(!response.ok)throw new Error("Backup request failed");const payload=await response.json();
+  await downloadFile("MNH-Calendar-shared-backup.json",JSON.stringify(payload,null,2));
+ }catch(e){statusEl.className="status error";statusEl.textContent="Shared backup could not be downloaded.";}
+});
+document.getElementById("import").addEventListener("click",()=>{if(editingUnlocked)document.getElementById("import-file").click();});
+document.getElementById("import-file").addEventListener("change",async e=>{
+ const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!editingUnlocked)return;
+ try{
+  const obj=JSON.parse(await f.text());
+  if(obj&&obj.format==="mnh-calendar-backup"&&Array.isArray(obj.documents)){
+   const response=await fetch("/api/restore",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(obj)});
+   const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"Restore failed");
+   statusEl.className="status ok";statusEl.textContent=`Shared backup restored (${result.restored} records). Reloading shared data…`;
+   location.reload();return;
+  }
+  if(!obj||typeof obj.cells!=="object")throw new Error("bad");
+  let cells=obj.cells;if(obj.version!==3)cells=remapLegacyCells(cells);
+  const clean={};Object.entries(cells).forEach(([k,v])=>{if(!validKey(k)||k==="2_1"||(/^\d+_\d+$/.test(k)&&+k.split("_")[1]>=days.length)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=days.length))return;const c=cleanCell(v);if(c.code||c.text||c.title)clean[k]=c;});
+  state.cells=clean;build();await syncAll("Backup restored and saved.");
+ }catch(err){statusEl.className="status error";statusEl.textContent=err.message||"That file isn’t a valid timetable backup.";}
+});
+document.getElementById("print").addEventListener("click",downloadPdf);
+async function downloadPdf(){
+ const J=window.jspdf&&window.jspdf.jsPDF;
+ if(!J){statusEl.className="status error";statusEl.textContent="The PDF tools could not load. Check your connection and try again.";return;}
+ statusEl.className="status";statusEl.textContent="Preparing PDF…";
+ try{
+  const portrait=innerWidth<innerHeight;
+  const pdf=new J({orientation:portrait?"p":"l",unit:"mm",format:"a4",compress:true});
+  const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight(),M=8;
+  const rgb=v=>{const m=/rgba?\(([^)]+)\)/.exec(v||"");if(!m)return null;const a=m[1].split(",").map(x=>parseFloat(x));return(a.length>3&&a[3]<.5)?null:a.slice(0,3).map(Math.round);};
+  const acroColor=c=>({ch1:c[0],ch2:c[1],ch3:c[2]});
+  const cs=(el,p)=>getComputedStyle(el)[p];
+  const page=rgb(cs(document.body,"backgroundColor"))||[6,19,38];
+  const cssVar=(n,el=document.documentElement)=>getComputedStyle(el).getPropertyValue(n).trim();
+  const parse=c=>{const r=rgb(c);if(r)return r;const h=String(c||"").replace("#","").trim();if(h.length>=6){const n=parseInt(h.slice(0,6),16);return[(n>>16)&255,(n>>8)&255,n&255];}return null;};
+  // Read from body so light-theme overrides are honoured in the exported PDF.
+  const weekendInk=parse(cssVar("--weekend-ink",document.body))||[107,114,128];
+  const weekendBg=parse(cssVar("--weekend-bg",document.body))||[229,231,235];
+  const line=parse(cssVar("--gridline"))||[120,135,150];
+  const ink=rgb(cs(document.body,"color"))||[255,255,255];
+  const cyan=ink,white=ink;
+  // Pick black or white ink from the background actually being drawn, so text never fades.
+  const inkOn=bgc=>((0.299*bgc[0]+0.587*bgc[1]+0.114*bgc[2])>150?[17,24,39]:[255,255,255]);
+  const clean=t=>String(t).replace(/[–—]/g,"-");
+  const bg=()=>{pdf.setFillColor(...page);pdf.rect(0,0,PW,PH,"F");};
+  const txt=(t,x,y,o)=>pdf.text(clean(t),x,y,o);
+  bg();
+  // title
+  pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?13:16);pdf.setTextColor(...white);
+  txt(document.getElementById("hd-title").textContent,M,M+5);
+  pdf.setFontSize(portrait?9.5:11.5);pdf.setTextColor(...cyan);txt("Dashboard · "+WK.label(weekOffset)+" · Monday–Sunday, "+WK.range(weekOffset),M,M+10.5);
+  const top=M+14,foot=9,cw0=portrait?22:30,hh=portrait?13:12;
+  const rows=[...tbody.querySelectorAll("tr")],nr=rows.length,nc=days.length;
+  const cw=(PW-2*M-cw0)/nc,rh=(PH-top-M-foot-hh)/nr;
+  const head=[...thead.querySelectorAll("th")];
+  const hBg=rgb(cs(head[1],"backgroundColor"))||[14,37,71];
+  pdf.setDrawColor(...line);pdf.setLineWidth(.4);
+  head.forEach((th,i)=>{
+   const x=i===0?M:M+cw0+(i-1)*cw,w=i===0?cw0:cw;
+   const weekend=i>5;
+   const headerBg=weekend?weekendBg:hBg;
+    pdf.setFillColor(...headerBg);pdf.rect(x,top,w,hh,"FD");
+   if(i===0){
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...inkOn(hBg));
+    txt("Time / Day",x+w/2,top+hh/2+1,{align:"center"});
+   }else{
+    const c=i-1;
+    const headerInk=weekend?weekendInk:(rgb(cs(th,"color"))||inkOn(headerBg));
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?11:14);pdf.setTextColor(...headerInk);
+    txt(days[c],x+w/2,top+hh/2-.5,{align:"center"});
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?9:11);pdf.setTextColor(...headerInk);
+    txt(dates[c],x+w/2,top+hh/2+4,{align:"center"});
+   }
+  });
+  // Keep Monday–Sunday together in one timetable header row on the first page.
+  // The weekday columns are already drawn above; do not split them into separate pages.
+  // Rows are allocated the full printable page height for taller, more readable export cells.
+  let editable=true;
+  // Cells are <button class="activity"> in this build; keep the legacy textarea path for safety.
+  const cellLabel=area=>{
+   if(!area)return "";
+   // Empty cells carry an "empty-activity" class and show a "+" placeholder
+   // (or nothing when editing is locked). Treat them as blank so they export
+   // as fillable 18pt fields instead of literal "+" text.
+   if(area.classList&&area.classList.contains("empty-activity"))return "";
+   const name=area.querySelector&&area.querySelector(".activity-name");
+   if(name)return clean(name.textContent||"");
+   if(typeof area.value==="string"&&area.value)return clean(area.value);
+   return clean(area.textContent||"");
+  };
+  rows.forEach((tr,r)=>{
+   const y=top+hh+r*rh,cells=[...tr.children];
+   const th=cells[0],hl=th.classList.contains("highlight");
+   pdf.setFillColor(...(hl?(rgb(cs(th,"backgroundColor"))||[201,166,90]):hBg));pdf.rect(M,y,cw0,rh,"FD");
+   pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?7:9);pdf.setTextColor(...(hl?[6,19,38]:white));
+   const timeText=clean(th.textContent||tr.dataset.startTime||"");
+   pdf.setFontSize(portrait?8:9.5);
+   const timeLines=pdf.splitTextToSize(timeText,cw0-1.6);
+   timeLines.forEach((ln,i)=>txt(ln,M+cw0/2,y+rh/2+1-(timeLines.length-1)*1.6+i*3.2,{align:"center"}));
+   if(tr.classList.contains("lunch-row")){
+    const base=rgb(cs(cells[1],"backgroundColor"))||hBg,fg=rgb(cs(cells[1],"color"))||white;
+    pdf.setFillColor(...base);pdf.setDrawColor(...line);pdf.rect(M+cw0,y,nc*cw,rh,"FD");
+    pdf.setFont("helvetica","bold");pdf.setFontSize(portrait?10:12);pdf.setTextColor(...fg);
+    txt("Lunch Break",M+cw0+nc*cw/2,y+rh/2+1,{align:"center"});
+    return;
+   }
+   cells.slice(1).forEach((td,c)=>{
+    const x=M+cw0+c*cw,area=td.querySelector("textarea")||td.querySelector(".activity")||td.firstElementChild;
+    const base=rgb(cs(td,"backgroundColor"))||[10,29,56];
+    pdf.setFillColor(...base);pdf.rect(x,y,cw,rh,"FD");
+    const fill=area?(rgb(cs(area,"backgroundColor"))||base):base,fg=area?(rgb(cs(area,"color"))||white):white;
+    const ix=x+.9,iy=y+.9,iw=cw-1.8,ih=rh-1.8;
+    pdf.setFillColor(...fill);pdf.setDrawColor(...line);pdf.setLineWidth(.4);pdf.roundedRect(ix,iy,iw,ih,1.6,1.6,"FD");
+    const value=cellLabel(area);
+    const size=value.length>(portrait?30:44)?(portrait?8:9.5):(portrait?9.5:11);
+    const cellInk=inkOn(fill);
+    if(value){
+     pdf.setFont("helvetica","bold");pdf.setFontSize(size);pdf.setTextColor(...(fg&&((0.299*fg[0]+0.587*fg[1]+0.114*fg[2])>40||fill[0]+fill[1]+fill[2]>430)?fg:cellInk));
+     const ls=pdf.splitTextToSize(value,iw-1.6);txt(ls,x+cw/2,y+rh/2-(ls.length-1)*1.6,{align:"center",baseline:"middle"});
+    }
+    if(editable&&!value){
+     try{
+      const f=new J.AcroForm.TextField();
+      f.fieldName="cell_"+r+"_"+c;f.Rect=[ix+.4,iy+.4,iw-.8,ih-.8];f.multiline=true;f.value="";f.defaultValue="";
+      // Default edit font size: 18pt, so typed entries stay legible in desktop
+      // viewers and in Google Drive's PDF editor.
+      f.fontSize=18;f.fontName="Helvetica";
+      // jsPDF AcroForm encodes colours from ch1/ch2/ch3 objects; plain arrays
+      // throw inside encodeColorString and leave field text without an appearance.
+      f.color=acroColor(cellInk);f.backgroundColor=acroColor(fill);f.borderColor=acroColor(line);
+      f.borderWidth=.25;f.required=false;
+      try{f.quadding=1;}catch(e){}
+      try{f.textAlign="center";}catch(e){}
+      pdf.addField(f);
+     }catch(e){editable=false;}
+    }
+   });
+  });
+  pdf.setFont("helvetica","normal");pdf.setFontSize(9);pdf.setTextColor(...cyan);
+  txt("CRARA · Your academic partner for excellence",M,PH-M+1);
+  txt("Monday–Sunday timetable · Fill empty cells to complete the schedule",PW-M,PH-M+1,{align:"right"});
+  pdf.setProperties({title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block - "+WK.label(weekOffset)+" - "+WK.range(weekOffset)});
+  const blob=pdf.output("blob"),name="MNH-PhD-Timetable-"+WK.isoMonday(weekOffset)+"-"+(weekOffset===0?"this-week":"week-"+weekOffset)+".pdf";
+  const url=URL.createObjectURL(blob),l=document.createElement("a");l.href=url;l.download=name;l.click();setTimeout(()=>URL.revokeObjectURL(url),4000);statusEl.className="status ok";statusEl.textContent="PDF ready.";
+ }catch(e){console.error(e);statusEl.className="status error";statusEl.textContent="The PDF could not be created.";}
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){hideDialog("module-dialog");hideDialog("details-dialog");}});
+// ---- Shared cloud storage (published link) with local copy as fallback ----
+const themeKey="phd_mnh_theme";
+const syncEl=document.getElementById("sync");
+let cloud=null,syncing=false;
+function setSync(t){if(syncEl)syncEl.textContent=t;}
+function cleanCell(v){const o={};["code","title","facilitator","facilitatorOverride","colour","text","timeLabel","mode","moduleCode","startTime","endTime","status","meetingUrl","weekStart"].forEach(k=>{if(v&&typeof v[k]==="string")o[k]=v[k];});if(Number.isInteger(v?.dayIndex))o.dayIndex=v.dayIndex;return o;}
+function validKey(k){const m=/^(\d+)_(\d+)$/.exec(k);return (!!m&&+m[1]<times.length&&+m[2]<days.length)||/^session-[A-Za-z0-9-]+$/.test(k);}
+function writeFailed(e){
+ try{saveState();}catch(x){}
+ if(e&&e.queued){
+  setSync("Offline · changes saved locally and waiting to sync");
+  statusEl.className="status ok";
+  statusEl.textContent="Saved on this device. This change will sync automatically when the connection returns.";
+  return;
+ }
+ statusEl.className="status error";
+ if(e&&e.code==="invalid_argument"){setSync("Shared timetable · read-only for this account");statusEl.textContent="Your account can’t change the shared timetable, so this edit is kept on this device only. Ask the owner for Contributor access.";}
+ else if(e&&(e.status===400||e.status===409)){setSync("Schedule change rejected");statusEl.textContent=e.message||"The session could not be saved. Check its day and time.";}
+ else{setSync("Shared timetable unreachable · local copy retained");statusEl.textContent="The shared timetable could not be reached. Your local copy is retained; reconnect and try again.";}
+}
+async function pushCell(idOrRow,c){
+ const id=c===undefined?String(idOrRow):cellKey(idOrRow,c),v=state.cells[id];
+ try{saveState();}catch(e){}
+ const path="/api/doc/cells/"+encodeURIComponent(id);
+ try{
+  if(v){const data={...cleanCell(v),updatedAt:Date.now()};if(cloud)await cloud.doc("cells/"+id).set(data);else await window.mnhApi.request("PUT",path,data);}
+  else if(cloud)await cloud.doc("cells/"+id).delete();else await window.mnhApi.request("DELETE",path);
+  setSync("Shared timetable · saved");statusEl.className="status ok";statusEl.textContent="Saved for everyone.";return true;
+ }catch(e){writeFailed(e);return Boolean(e&&e.queued);}
+}
+async function syncAll(okMsg){
+ try{saveState();}catch(e){statusEl.className="status error";statusEl.textContent="Browser storage is unavailable. Use Download backup to keep a copy.";}
+ if(!cloud){statusEl.className="status error";statusEl.textContent="The shared server is unavailable. Your local recovery copy is retained.";return;}
+ syncing=true;
+ try{
+  const want={...state.cells};
+  const snap=await cloud.collection("cells").get();
+  const existing=snap.docs.map(d=>d.id);
+  for(const [id,v] of Object.entries(want)){if(!validKey(id)||(/^\d+_\d+$/.test(id)&&+id.split("_")[1]>=days.length)||(Number.isFinite(Number(v?.dayIndex))&&Number(v?.dayIndex)>=days.length))continue;await cloud.doc("cells/"+id).set({...cleanCell(v),updatedAt:Date.now()});}
+  for(const id of existing){if(!(id in want))await cloud.doc("cells/"+id).delete();}
+  state.fromCloud=true;try{saveState();}catch(e){}
+  setSync("Shared timetable · saved");statusEl.className="status ok";statusEl.textContent=okMsg||"Saved for everyone.";
+ }catch(e){writeFailed(e);}
+ finally{syncing=false;}
+}
+const LEGACY_MIGRATION_SKIP_KEY="mnh_calendar_legacy_week_migration_skipped_v1";
+const legacyMigrationSkipped=(()=>{
+ try{const value=JSON.parse(localStorage.getItem(LEGACY_MIGRATION_SKIP_KEY)||"[]");return new Set(Array.isArray(value)?value.filter(x=>typeof x==="string"):[]);}
+ catch(error){return new Set();}
+})();
+let weekMigrationRunning=false;
+async function onCells(snap){
+ if(syncing||weekMigrationRunning)return;
+ // Offline collection caches are never authoritative; wait for a live server snapshot.
+ if(snap.metadata&&snap.metadata.fromCache)return;
+ const legacyDocs=snap.docs.filter(d=>{const raw=d.data()||{};if(raw.weekStart||legacyMigrationSkipped.has(d.id))return false;const legacy=/^(\d+)_(\d+)$/.exec(d.id);if(legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=days.length))return false;const day=legacy?Number(legacy[2]):raw.dayIndex;return Number.isInteger(day)&&day>=0&&day<days.length;});
+ if(legacyDocs.length){
+  weekMigrationRunning=true;
+  const migrated=[],blocked=[];
+  try{
+   for(const doc of legacyDocs){
+    const raw=doc.data()||{};
+    const legacy=/^(\d+)_(\d+)$/.exec(doc.id);
+    if((legacy&&(Number(legacy[1])>=times.length||Number(legacy[2])>=days.length))||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=days.length))continue;
+    const suffix=doc.id.replace(/^session-/i,"").replace(/[^A-Za-z0-9-]+/g,"-").replace(/-+/g,"-").slice(0,70)||"legacy";
+    const newId=`session-2026-11-16-import-${suffix}`;
+    const migratedData={...(state.cells[doc.id]||{}),...raw,weekStart:"2026-11-16"};
+    if(!raw.meetingUrl&&state.cells[doc.id]?.meetingUrl)migratedData.meetingUrl=state.cells[doc.id].meetingUrl;
+    if(legacy){const row=Number(legacy[1]),range=parseRange(raw.timeLabel),fallback=defaultRange(row);migratedData.dayIndex=Number(legacy[2]);migratedData.startTime=String(raw.startTime||range?.startTime||fallback.startTime);migratedData.endTime=String(raw.endTime||range?.endTime||fallback.endTime);}
+    try{
+     await cloud.doc("cells/"+newId).set({...migratedData,updatedAt:Date.now()});
+     migrated.push(doc.id);
+    }catch(error){
+     // A legacy record that conflicts with a newer session must not block the
+     // authoritative shared snapshot. Keep the original record for recovery and
+     // leave it in the snapshot (undated records still belong to the initial week).
+     if(error&&(error.status===400||error.status===409)){
+      blocked.push(doc.id);legacyMigrationSkipped.add(doc.id);
+      console.warn("Legacy timetable entry kept in place because its week migration conflicts with another session.",doc.id,error);
+      continue;
+     }
+     throw error;
+    }
+   }
+   for(const oldId of migrated)await cloud.doc("cells/"+oldId).delete();
+   if(blocked.length){
+    try{localStorage.setItem(LEGACY_MIGRATION_SKIP_KEY,JSON.stringify([...legacyMigrationSkipped]));}catch(error){}
+   }
+  }catch(error){
+   console.error("Timetable week migration was deferred; original records were retained.",error);
+  }finally{weekMigrationRunning=false;}
+  if(migrated.length){
+   try{const refreshed=await cloud.collection("cells").get();return await onCells(refreshed);}
+   catch(error){setSync("Shared timetable · refreshing after week migration");}
+  }
+ }
+ const remote={};
+ snap.docs.forEach(d=>{if(!validKey(d.id))return;const raw=d.data()||{};if((/^\d+_\d+$/.test(d.id)&&+d.id.split("_")[1]>=days.length)||(Number.isFinite(Number(raw.dayIndex))&&raw.dayIndex>=days.length))return;const v=cleanCell(raw);if(v.code||v.text||v.title)remote[d.id]=v;});
+ // A successful server snapshot is authoritative, including an empty collection.
+ // This clears obsolete per-browser timetable rows instead of preserving them indefinitely.
+ state.cells=remote;state.fromCloud=true;
+ try{saveState();}catch(e){}
+ build();setSync("Shared timetable · up to date");
+}
+async function downloadFile(filename,text){
+ const blob=new Blob([text],{type:"application/json"});
+ const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+let cloudInitialising=false;
+async function initCloud(){
+ if(cloudInitialising||cloud)return;
+ cloudInitialising=true;
+ setSync("Connecting to the shared timetable…");
+ try{
+  const db=await window.mnhApi.use("db");
+  if(!db){setSync("Shared server unavailable · local recovery copy retained");return;}
+  cloud=db;
+  try{const session=await fetch("/api/session",{cache:"no-store"}).then(r=>r.json());currentRole=session.role||"student";updateRoleNav();if(session.authenticated){setEditing(true);}}
+  catch(e){}
+  try{await window.mnhApi.flushQueue();}catch(e){}
+  try{subscribeExtras(db);}catch(e){}
+  try{db.collection("cells").onSnapshot(onCells,()=>setSync("Shared server unavailable · local recovery copy retained"));}
+  catch(e){setSync("Shared server unavailable · local recovery copy retained");}
+  try{moduleUnsubscribe=db.collection("modules").onSnapshot(onModules,()=>setSync("Module updates temporarily unavailable"));}catch(e){}
+ }catch(e){setSync("Shared server unavailable · local recovery copy retained");}
+ finally{cloudInitialising=false;}
+}
+window.addEventListener("online",()=>{if(!cloud)initCloud();});
+setInterval(()=>{if(!cloud&&navigator.onLine)initCloud();},15000);
+window.addEventListener("offline",()=>setSync("Offline · local calendar remains available"));
+window.addEventListener("mnh:offline-queued",()=>setSync("Offline · changes saved locally and waiting to sync"));
+window.addEventListener("mnh:offline-synced",()=>{
+ setSync("Shared timetable · offline changes synchronised");
+ statusEl.className="status ok";
+ statusEl.textContent="Your offline changes have now been synchronised.";
+});
+// ---- Alarms: ring like an incoming call (per device, only while this page is open) ----
+const alarmKey="phd_mnh_alarm_v1",firedKey="phd_mnh_alarm_fired";
+let WEEK_START=WK.startParts(weekOffset);   // Monday of the academic week currently on screen
+const baseTitle=document.title;
+let alarm={on:false,lead:10,voice:true,voiceOption:0,sound:0},fired=[],snoozed=[],audioCtx=null,ringBus=null,ringTimer=null,ringStopTimer=null,speechTimer=null,titleTimer=null,ringing=null;
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
+function pad2(n){return String(n).padStart(2,"0");}
+function hhmm(d){return WK.timeText(d);}
+function loadAlarm(){
+ try{const a=JSON.parse(localStorage.getItem(alarmKey)||"null");if(a)alarm={on:!!a.on,lead:[0,5,10,15,30].includes(+a.lead)?+a.lead:10,voice:a.voice!==false,voiceOption:Math.max(0,Math.min(4,Number(a.voiceOption)||0)),sound:Math.max(0,Math.min(4,Number(a.sound)||0))};}catch(e){}
+ try{fired=JSON.parse(localStorage.getItem(firedKey)||"[]");if(!Array.isArray(fired))fired=[];}catch(e){fired=[];}
+}
+function saveAlarm(){try{localStorage.setItem(alarmKey,JSON.stringify(alarm));}catch(e){}}
+function ensureAudio(){
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+  if(!audioCtx){audioCtx=new AC();ringBus=audioCtx.createGain();ringBus.connect(audioCtx.destination);}
+  if(audioCtx.state==="suspended")audioCtx.resume();
+  return audioCtx;
+ }catch(e){return null;}
+}
+function alarmEvents(){const ws=WK.startParts(WK.currentOffset());return getSessionEntries(WK.currentOffset()).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+x.dayIndex,h,m);return {...x,start,weekOffset:WK.currentOffset()};});}
+function playCycle(){
+ const ctx=audioCtx;if(!ctx)return;
+ if(ctx.state==="suspended")ctx.resume();
+ const patterns=[
+  {notes:[523,659],wave:"sine",gap:0.48,duration:0.34},
+  {notes:[659,784,659],wave:"sine",gap:0.28,duration:0.24},
+  {notes:[587,740],wave:"triangle",gap:0.52,duration:0.42},
+  {notes:[440,554,659],wave:"sine",gap:0.22,duration:0.2},
+  {notes:[494,622],wave:"triangle",gap:0.62,duration:0.38}
+ ];
+ const p=patterns[alarm.sound]||patterns[0],start=ctx.currentTime+0.025;
+ p.notes.forEach((hz,i)=>{
+  const osc=ctx.createOscillator(),gain=ctx.createGain(),at=start+i*p.gap,end=at+p.duration;
+  osc.type=p.wave;osc.frequency.setValueAtTime(hz,at);
+  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.16,at+0.035);
+  gain.gain.setValueAtTime(0.16,end-0.05);gain.gain.linearRampToValueAtTime(0,end);
+  osc.connect(gain);gain.connect(ringBus);osc.start(at);osc.stop(end+0.02);
+ });
+ try{if(navigator.vibrate)navigator.vibrate([240,180,240]);}catch(e){}
+}
+function availableAlarmVoices(){
+ if(!window.speechSynthesis)return [];
+ const all=window.speechSynthesis.getVoices()||[];
+ const english=all.filter(v=>/^en(-|_)/i.test(v.lang||""));
+ return (english.length?english:all).slice(0,5);
+}
+function refreshAlarmVoiceOptions(){
+ const select=document.getElementById("alarm-voice-option");if(!select)return;
+ const voices=availableAlarmVoices(),labels=["Gentle voice 1","Gentle voice 2","Gentle voice 3","Gentle voice 4","Gentle voice 5"];
+ select.innerHTML=labels.map((label,i)=>'<option value="'+i+'">'+esc(voices[i]?label+" · "+voices[i].name:label)+'</option>').join("");
+ select.value=String(alarm.voiceOption||0);
+}
+function alarmGreeting(){
+ const hour=WK.localNow().hour;
+ const byTime=hour<12?"Good morning":(hour<17?"Good afternoon":"Good evening");
+ return [byTime,"Hello","Hi"][Math.floor(Math.random()*3)];
+}
+function alarmReminderMessage(ev){
+ const greeting=alarmGreeting(),sessionName=[ev.label,ev.sub].filter(Boolean).join(", ");
+ if(ev.test)return greeting+", this is a gentle test of your timetable reminder.";
+ const mins=Math.max(0,Math.round((ev.start.getTime()-Date.now())/60000));
+ const start=mins>0?"in "+mins+" minute"+(mins===1?"":"s"):"now";
+ const templates=[
+  greeting+", "+sessionName+" class is starting "+start+". Please be prepared.",
+  greeting+", the "+sessionName+" class begins "+start+". Please be prepared.",
+  greeting+", please get ready for "+sessionName+" class, starting "+start+". Please be prepared.",
+  greeting+", "+sessionName+" class will start "+start+". Please be prepared.",
+  greeting+", prepare now for "+sessionName+" class, due to start "+start+". Please be prepared.",
+  greeting+", the "+sessionName+" class is starting "+start+". Please be prepared."
+ ];
+ return templates[Math.floor(Math.random()*templates.length)];
+}
+function speakAlarm(ev){
+ if(!alarm.voice||!window.speechSynthesis||!window.SpeechSynthesisUtterance)return;
+ if(ringing!==ev||!alarm.voice)return;
+ const message=alarmReminderMessage(ev);
+ try{
+  window.speechSynthesis.cancel();
+  const voices=availableAlarmVoices(),choice=Math.max(0,Math.min(4,Number(alarm.voiceOption)||0));
+  const utterance=new SpeechSynthesisUtterance(message);
+  if(voices.length)utterance.voice=voices[choice%voices.length];
+  utterance.lang=(utterance.voice&&utterance.voice.lang)||"en-GB";
+  utterance.rate=[0.88,0.9,0.86,0.92,0.89][choice];
+  utterance.pitch=[1.02,0.92,1.08,0.98,1.14][choice];
+  utterance.volume=0.76;
+  window.speechSynthesis.speak(utterance);
+ }catch(e){}
+}
+function startRing(ev){
+ if(ringing)return;
+ ringing=ev;ensureAudio();{const cd=document.getElementById("call-day");if(cd)cd.textContent=WK.localNow().day;}
+ document.getElementById("call-name").textContent=ev.label;
+ const mins=Math.round((ev.start.getTime()-Date.now())/60000);
+ const when=ev.test?"This is a test of the alarm sound":(mins>0?`Starts at ${hhmm(ev.start)} · in ${mins} min`:`Starting now · ${hhmm(ev.start)}`);
+ document.getElementById("call-when").textContent=(ev.sub?ev.sub+" · ":"")+when;
+ document.getElementById("call-snooze").style.display=ev.test?"none":"inline-block";
+ showDialog("call-dialog");
+ void speakAlarm(ev);speechTimer=setInterval(()=>{if(ringing===ev&&alarm.voice)void speakAlarm(ev);},5000);
+ playCycle();ringTimer=setInterval(playCycle,3000);
+ ringStopTimer=setTimeout(stopRing,300000);
+ let flip=false;titleTimer=setInterval(()=>{flip=!flip;document.title=flip?"📞 "+ev.label:baseTitle;},900);
+}
+function stopRing(){
+ clearInterval(ringTimer);clearTimeout(ringStopTimer);clearInterval(speechTimer);clearInterval(titleTimer);ringTimer=ringStopTimer=speechTimer=titleTimer=null;
+ if(audioCtx&&ringBus){try{ringBus.disconnect();}catch(e){}ringBus=audioCtx.createGain();ringBus.connect(audioCtx.destination);}
+ try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
+ try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
+ document.title=baseTitle;hideDialog("call-dialog");ringing=null;
+}
+function alarmTick(){
+ if(!alarm.on||ringing)return;
+ const now=Date.now();
+ for(const s of snoozed){if(!s.done&&now>=s.at){s.done=true;startRing(s.ev);return;}}
+ for(const ev of alarmEvents()){
+  const ring=ev.start.getTime()-alarm.lead*60000,id=ev.id+"|"+alarm.lead;
+  if(now>=ring&&now<ring+90000&&!fired.includes(id)){
+   fired.push(id);try{localStorage.setItem(firedKey,JSON.stringify(fired.slice(-100)));}catch(e){}
+   startRing(ev);return;
+  }
+ }
+}
+function refreshAlarmUI(){
+ const ab=document.getElementById("alarms"),al=alarm.on?`Alarms on (${alarm.lead?alarm.lead+" min before":"at start"})`:"Alarms off";
+ const commAlarmStatus=document.getElementById("communications-alarm-status");if(commAlarmStatus)commAlarmStatus.textContent=alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.";ab.setAttribute("aria-label",al);ab.parentElement.dataset.label=al;ab.classList.toggle("on",alarm.on);
+ document.getElementById("alarm-toggle").textContent=alarm.on?"Turn off":"Turn on";
+ document.getElementById("alarm-lead").value=String(alarm.lead);
+ const voiceToggle=document.getElementById("alarm-voice");if(voiceToggle)voiceToggle.checked=alarm.voice!==false;
+ const voiceChoice=document.getElementById("alarm-voice-option");if(voiceChoice)voiceChoice.value=String(alarm.voiceOption||0);
+ const soundChoice=document.getElementById("alarm-sound-option");if(soundChoice)soundChoice.value=String(alarm.sound||0);
+ const box=document.getElementById("alarm-next");
+ if(!alarm.on){box.textContent="Alarms are off.";return;}
+ const now=Date.now();let next=null;
+ alarmEvents().forEach(ev=>{const ring=ev.start.getTime()-alarm.lead*60000;if(ring+90000>now&&(!next||ring<next.ring))next={ev,ring};});
+ box.innerHTML=next
+  ?`<strong>Next alarm</strong><br>${esc(next.ev.label)}<br>${days[next.ev.c]} ${dates[next.ev.c]} · rings ${hhmm(new Date(next.ring))}, starts ${hhmm(next.ev.start)}`
+  :"No more activities this week.";
+}
+function initAlarms(){
+ loadAlarm();refreshAlarmUI();
+ document.getElementById("alarms").addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
+ document.getElementById("alarm-close").addEventListener("click",()=>hideDialog("alarm-dialog"));
+ document.getElementById("alarm-lead").addEventListener("change",e=>{alarm.lead=+e.target.value;saveAlarm();refreshAlarmUI();});
+ document.getElementById("alarm-voice").addEventListener("change",e=>{alarm.voice=!!e.target.checked;saveAlarm();if(!alarm.voice&&window.speechSynthesis)window.speechSynthesis.cancel();});
+ document.getElementById("alarm-voice-option").addEventListener("change",e=>{alarm.voiceOption=+e.target.value;saveAlarm();});
+ document.getElementById("alarm-sound-option").addEventListener("change",e=>{alarm.sound=+e.target.value;saveAlarm();});
+ refreshAlarmVoiceOptions();if(window.speechSynthesis)window.speechSynthesis.addEventListener("voiceschanged",refreshAlarmVoiceOptions);
+ document.getElementById("alarm-toggle").addEventListener("click",()=>{
+  alarm.on=!alarm.on;
+  if(alarm.on&&!ensureAudio()){statusEl.className="status error";statusEl.textContent="This browser can’t play alarm sounds. You will still see the call screen.";}
+  saveAlarm();refreshAlarmUI();
+ });
+ document.getElementById("alarm-test").addEventListener("click",()=>{hideDialog("alarm-dialog");ensureAudio();startRing({r:-1,c:0,label:"Test alarm",sub:"",start:new Date(),test:true});});
+ document.getElementById("call-decline").addEventListener("click",stopRing);
+ document.getElementById("call-snooze").addEventListener("click",()=>{if(ringing&&!ringing.test)snoozed.push({ev:ringing,at:Date.now()+300000,done:false});stopRing();});
+ document.getElementById("call-answer").addEventListener("click",()=>{const ev=ringing;stopRing();if(ev&&!ev.test)showSessionDetails(ev);});
+ document.addEventListener("pointerdown",()=>{if(alarm.on&&(!audioCtx||audioCtx.state!=="running"))ensureAudio();},{passive:true});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(ringing)stopRing();hideDialog("alarm-dialog");}});
+ setInterval(alarmTick,1000);
+}
+// ---- Header (editable + navigable) and extra views ----
+const HEADER_DEFAULT={title:"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block",subtitle:"Academic Calendar"};
+const headerKey="phd_mnh_header",resKey="phd_mnh_resources",resCloudKey="phd_mnh_res_cloud";
+const VIEWS=["weekly","silver-dashboard","monthly","modules","public-chat","examinations","exams","recurring","communications","analytics","history","export","resources","python-library","python-setup-simulation","stat8100-practical","hypothesis-lab","statistical-glossary"];
+function updateRoleNav(){document.querySelectorAll('.view-tab[data-view="analytics"]').forEach(x=>{x.title="Open access — no password required";});}
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+let headerCfg={...HEADER_DEFAULT},resources=[],currentView="weekly",previousNonResourcesView="weekly",previousNonLibraryView="weekly",previousNonSimulationView="python-library",previousNonPracticalView="resources",previousNonHypothesisView="resources",previousNonGlossaryView="resources";
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function fmtH(m){const h=Math.floor(m/60),mm=m%60;return mm?(h?h+"h "+mm+"m":mm+"m"):h+"h";}
+function todayIndexFor(offset){return WK.currentDayIndex(offset==null?weekOffset:offset);}
+// The bell and the header always describe the real current week, whatever week is being viewed.
+function todayIndex(){return todayIndexFor(WK.currentOffset());}
+function dayEntries(c,offset){
+ const activeOffset=offset==null?weekOffset:offset;
+ const ws=WK.startParts(activeOffset);
+ return getSessionEntries(activeOffset).filter(x=>x.dayIndex===c).map(x=>{const [h,m]=x.startTime.split(":").map(Number);const [eh,em]=x.endTime.split(":").map(Number);const start=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,h,m);const end=WK.makeZonedDate(ws[0],ws[1],ws[2]+c,eh,em);return {...x,start,end,weekOffset:activeOffset};});
+}
+function allEntries(){return days.flatMap((d,c)=>dayEntries(c));}
+// ---- header ----
+function applyHeader(h){
+ if(!h)return false;
+ const t=String(h.title||"").trim().slice(0,80),s=String(h.subtitle||"").trim().slice(0,60);
+ if(!t)return false;
+ headerCfg={title:t,subtitle:s};
+ document.getElementById("hd-title").textContent=t;document.getElementById("hd-sub").textContent=s;
+ document.getElementById("hd-sub").hidden=!s;
+ try{localStorage.setItem(headerKey,JSON.stringify(headerCfg));}catch(e){}
+ return true;
+}
+function initHeaderFromLocal(){try{const h=JSON.parse(localStorage.getItem(headerKey)||"null");if(h)applyHeader(h);}catch(e){}}
+async function saveHeader(h){
+ if(!applyHeader(h))return;
+ const data={title:headerCfg.title,subtitle:headerCfg.subtitle,updatedAt:Date.now()};
+ try{
+  if(cloud)await cloud.doc("settings/header").set(data);
+  else await window.mnhApi.request("PUT","/api/doc/settings/header",data);
+  statusEl.className="status ok";statusEl.textContent="Header saved for everyone.";
+ }catch(e){writeFailed(e);}
+}
+function closeBell(){const p=document.getElementById("bell-panel");p.hidden=true;document.getElementById("hd-bell").setAttribute("aria-expanded","false");}
+function refreshHeader(){
+ const d=WK.localNow();
+ document.getElementById("hd-date").textContent=WD[d.weekday]+", "+d.day+" "+MONTHS[d.month]+" "+d.year;
+ {const hd=document.getElementById("hd-day");if(hd)hd.textContent=d.day;}
+ const c=todayIndex(),now=Date.now();
+ const rem=c<0?[]:dayEntries(c,WK.currentOffset()).filter(x=>x.end.getTime()>now);
+ const badge=document.getElementById("hd-badge");badge.textContent=rem.length;badge.hidden=!rem.length;
+ document.getElementById("hd-bell").setAttribute("aria-label","Today’s activities: "+rem.length+" remaining");
+ const panel=document.getElementById("bell-panel");panel.textContent="";
+ panel.appendChild(el("div","bp-h","Today"));
+ if(!rem.length)panel.appendChild(el("div","bp-empty",c<0?"No activities today.":"Nothing left today."));
+ rem.forEach(x=>{
+  const b=el("button","bp-item");b.type="button";
+  b.append(el("span","bp-t",x.timeLabel),el("span","bp-n",x.label));
+  b.addEventListener("click",()=>{closeBell();showSessionDetails(x);});
+  panel.appendChild(b);
+ });
+}
+// ---- academic week navigation (one control beside Analytics) ----
+function setWeek(offset){
+ weekOffset=Math.min(14,Math.max(-1,Math.trunc(Number(offset)||0)));
+ applyWeekView(false);
+}
+function applyWeekView(keepStatus){
+ WEEK_START=WK.startParts(weekOffset);
+ dates=WK.dateLabels(weekOffset);
+ renderWeekNav();
+ const lead=document.getElementById("schedule-lead");
+ if(lead)lead.textContent="Everything planned for the week of "+WK.range(weekOffset)+" ("+WK.label(weekOffset)+"). Select an item for details.";
+ if(!keepStatus){statusEl.className="status";statusEl.textContent=WK.label(weekOffset)+" · "+WK.range(weekOffset);}
+ renderView(currentView);
+ refreshLiveTimetable();
+}
+function renderCurrentDayBadge(){
+  const target=document.getElementById("current-day-date");
+  if(!target)return;
+  const today=new Date();
+  target.textContent=new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",timeZone:"Africa/Blantyre"}).format(today);
+  const fullDate=new Intl.DateTimeFormat("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"Africa/Blantyre"}).format(today);
+  const tab=document.querySelector(".weekly-date-tab");
+  if(tab){tab.setAttribute("aria-label","Weekly timetable — "+fullDate);tab.title="Weekly timetable · "+fullDate;}
+ }
+ function renderWeekNav(){
+ const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
+ if(!prev||!next||!now)return;
+ const label=WK.label(weekOffset),range=WK.range(weekOffset);
+  const rng=document.getElementById("week-now-range");
+  if(rng)rng.textContent=range;
+  now.title=label+" · "+range+" — return to the current week";
+  now.setAttribute("aria-label",label+", "+range+". Return to the current week");
+ now.dataset.default=String(weekOffset===WK.currentOffset());
+ prev.disabled=weekOffset<=-1;
+ prev.setAttribute("aria-disabled",String(weekOffset<=-1));
+ next.disabled=weekOffset>=14;
+}
+function initWeekNav(){
+ const prev=document.getElementById("week-prev"),next=document.getElementById("week-next"),now=document.getElementById("week-now");
+ if(!prev||!next||!now)return;
+ prev.addEventListener("click",()=>setWeek(weekOffset-1));
+ next.addEventListener("click",()=>setWeek(weekOffset+1));
+ now.addEventListener("click",()=>setWeek(WK.currentOffset()));
+ weekOffset=WK.currentOffset();autoWeekOffset=weekOffset;
+  renderCurrentDayBadge();
+ applyWeekView(false);
+ setInterval(syncCurrentAcademicWeek,15000);
+ const resumeApp=()=>{
+  if(navigator.onLine){
+   if(!cloud)initCloud();
+   else if(typeof cloud.enableNetwork==="function")cloud.enableNetwork().catch(()=>{});
+  }
+  syncCurrentAcademicWeek();
+  if(publicChatState.joined&&!document.hidden){pcEnsureRealtime();pcSchedulePoll();if(currentView==="public-chat")pcLoadMessages(true).catch(()=>{});}
+ };
+ const pauseApp=()=>{pcCloseWS();};
+ document.addEventListener("visibilitychange",()=>{if(document.hidden)pauseApp();else resumeApp();});
+ window.addEventListener("focus",resumeApp);
+ window.addEventListener("pageshow",()=>resumeApp());
+ window.addEventListener("pagehide",pauseApp);
+ window.addEventListener("freeze",pauseApp);
+ window.addEventListener("online",resumeApp);
+}
+function ensureHomeReturnButton(name){
+ const ws=document.getElementById("view-workspace");
+ if(name==="weekly"||name==="public-chat"){if(ws)ws.querySelectorAll(":scope > .view-home-return").forEach(b=>b.remove());return;}
+ let view=null,before=null;
+ if(name==="analytics"){
+  view=document.getElementById("view-analytics");
+  before=document.getElementById("analytics-body");
+ }else if(name==="silver-dashboard"){
+  view=document.getElementById("view-silver-dashboard");
+  before=view?.querySelector(".silver-dashboard-intro");
+ }else if(["modules","monthly","public-chat","examinations","recurring","communications","history","export"].includes(name)){
+  view=document.getElementById("view-workspace");
+  before=document.getElementById("workspace-title");
+ }
+ if(!view||!before)return;
+ let button=view.querySelector(":scope > .view-home-return");
+ if(!button){
+  button=document.createElement("button");
+  button.type="button";
+  button.className="view-home-return";
+  button.setAttribute("aria-label","Back to Home — Weekly Timetable");
+  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7M8 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to Home</span>';
+  button.addEventListener("click",()=>showView("weekly"));
+ }
+ if(button.parentElement!==view||button.nextElementSibling!==before)view.insertBefore(button,before);
+}
+// ---- navigation ----
+function syncCurrentAcademicWeek(){
+  renderCurrentDayBadge();
+ const current=WK.currentOffset();
+ if(current!==autoWeekOffset){autoWeekOffset=current;weekOffset=current;applyWeekView(false);}
+ else refreshLiveTimetable();
+ refreshHeader();
+}
+function showView(name){
+ // A tap-to-see-name tip is fixed above the page. Dismiss it before rendering
+ // a new view so it can never cover the title or text underneath.
+ document.querySelector(".tip")?.classList.remove("show");
+ if(!VIEWS.includes(name))name="weekly";
+ const enteringSimulation=name==="python-setup-simulation"&&currentView!=="python-setup-simulation";
+ const craraRoot=document.getElementById("class-rep-assistant");
+ if(craraRoot){if(name!=="weekly"&&typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=name!=="weekly";}
+ if(name==="resources"&&currentView!=="resources"&&currentView!=="python-library"&&currentView!=="python-setup-simulation"&&currentView!=="stat8100-practical"&&currentView!=="hypothesis-lab"&&currentView!=="statistical-glossary")previousNonResourcesView=currentView;
+ else if(name!=="resources"&&name!=="python-library"&&name!=="python-setup-simulation"&&name!=="stat8100-practical"&&name!=="hypothesis-lab"&&name!=="statistical-glossary")previousNonResourcesView=name;
+ if(name==="python-library"&&currentView!=="python-library"&&currentView!=="python-setup-simulation"&&currentView!=="stat8100-practical"&&currentView!=="statistical-glossary")previousNonLibraryView=currentView;
+ else if(name!=="python-library"&&name!=="python-setup-simulation"&&name!=="stat8100-practical"&&name!=="statistical-glossary")previousNonLibraryView=name;
+ if(name==="python-setup-simulation"&&currentView!=="python-setup-simulation")previousNonSimulationView=currentView;
+ else if(name!=="python-setup-simulation")previousNonSimulationView=name;
+  if(name==="stat8100-practical"&&currentView!=="stat8100-practical")previousNonPracticalView=currentView;
+  else if(name!=="stat8100-practical")previousNonPracticalView=name;
+ if(name==="hypothesis-lab"&&currentView!=="hypothesis-lab")previousNonHypothesisView=currentView;
+ else if(name!=="hypothesis-lab")previousNonHypothesisView=name;
+ if(name==="statistical-glossary"&&currentView!=="statistical-glossary")previousNonGlossaryView=currentView;
+ else if(name!=="statistical-glossary")previousNonGlossaryView=name;
+ currentView=name;
+ document.body.classList.toggle("weekly-view",name==="weekly");
+  const menuPageView=["monthly","modules","public-chat","examinations","exams","analytics","communications","history","resources","recurring","export","silver-dashboard"].includes(name);
+  document.body.classList.toggle("menu-page-view",menuPageView);
+  document.body.classList.toggle("public-chat-view",name==="public-chat");
+  if(typeof window.setCRARALandingVisible==="function")window.setCRARALandingVisible(name==="weekly");
+ const weekly=document.getElementById("view-weekly"),workspace=document.getElementById("view-workspace"),analytics=document.getElementById("view-analytics"),silver=document.getElementById("view-silver-dashboard"),resources=document.getElementById("view-resources"),library=document.getElementById("view-python-library"),simulation=document.getElementById("view-python-setup-simulation"),practical=document.getElementById("view-stat8100-practical"),hypothesis=document.getElementById("view-hypothesis-lab"),glossary=document.getElementById("view-statistical-glossary"),exams=document.getElementById("view-exams");
+ weekly.hidden=name!=="weekly";analytics.hidden=name!=="analytics";silver.hidden=name!=="silver-dashboard";resources.hidden=name!=="resources";library.hidden=name!=="python-library";simulation.hidden=name!=="python-setup-simulation";practical.hidden=name!=="stat8100-practical";hypothesis.hidden=name!=="hypothesis-lab";glossary.hidden=name!=="statistical-glossary";if(exams)exams.hidden=name!=="exams";
+ if(name==="python-setup-simulation"){
+    const simFrame=simulation.querySelector("iframe"),fitSim=()=>{try{simFrame.contentWindow.fit?.()}catch(e){}};
+    if(enteringSimulation){
+      // The iframe starts loading with the page. Reload it so viewing the
+      // simulation always begins at the first "Find" stage, never mid-way.
+      const simUrl=new URL(simFrame.src,location.href);
+      simUrl.searchParams.set("start","find");
+      simUrl.searchParams.set("t",String(Date.now()));
+      simFrame.addEventListener("load",fitSim,{once:true});
+      simFrame.src=simUrl.toString();
+    }
+    requestAnimationFrame(fitSim);setTimeout(fitSim,80);
+  }
+  const resourcesMode=name==="resources",libraryMode=name==="python-library"||name==="python-setup-simulation"||name==="stat8100-practical"||name==="hypothesis-lab"||name==="statistical-glossary";
+ document.body.classList.toggle("resources-view",resourcesMode);
+ document.body.classList.toggle("python-library-view",libraryMode);
+ document.body.classList.toggle("python-setup-simulation-view",name==="python-setup-simulation");
+ document.querySelector(".hd-title").hidden=resourcesMode||libraryMode;
+ document.querySelector(".hd-today").hidden=resourcesMode||libraryMode;
+ document.getElementById("view-tabs").hidden=resourcesMode||libraryMode;
+
+ workspace.hidden=!(["modules","monthly","public-chat","examinations","recurring","communications","history","export"].includes(name));
+ document.querySelectorAll(".menu-nav[data-view]").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
+ document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view]").forEach(t=>{const on=t.dataset.view===name;t.classList.toggle("active",on);if(on)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current");});
+ ensureHomeReturnButton(name);
+ renderView(name);
+}
+function renderView(name){
+ if(name==="weekly"){build();renderAnimatedFutureStrip();}
+ else if(name==="silver-dashboard")renderAnalytics("silver-analytics-body");
+ else if(name==="modules")renderModules();
+ else if(name==="analytics")renderAnalytics();
+ else if(name==="monthly")renderMonthly();
+ else if(name==="public-chat")renderPublicChat();
+ else if(name==="examinations")renderManaged("examinations");
+ else if(name==="exams"){if(window.MNHExams&&typeof window.MNHExams.render==="function")window.MNHExams.render(); else {const b=document.getElementById("exams-body"); if(b)b.textContent="EXAMS module loading...";}}
+ else if(name==="recurring")renderManaged("recurring");
+ else if(name==="communications")renderCommunications();
+ else if(name==="history")renderHistoryPage();
+ else if(name==="export")renderExportPage();
+ else if(name==="resources")renderResources();
+}
+const WORKSPACE_META={
+ monthly:["Monthly Calendar","Browse the current academic month and its scheduled sessions."],
+ modules:["Modules","Manage programme modules and review their scheduled sessions."],
+ "public-chat":["MNH Group Chat","MNH community group chat."],
+ examinations:["Examinations","Examination dates, times, venues and notes."],
+ recurring:["Recurring Activities","Regular academic activities and their schedules."],
+ communications:["WhatsApp & Communications","Shared announcements, communication notes and useful links."],
+ history:["Activity History","New timetable sessions and shared activities added by Rep or Staff."],
+ export:["Export & Sharing","Download the timetable, shared data and printable calendar."],
+};
+function workspace(title,lead){document.getElementById("workspace-title").textContent=title;document.getElementById("workspace-lead").textContent=lead;const root=document.getElementById("workspace-body");root.textContent="";return root;}
+async function apiRequest(method,path,body){return window.mnhApi.request(method,path,body);}
+function fieldInput(placeholder,max=180,type="text"){const i=document.createElement("input");i.placeholder=placeholder;i.type=type;if(type==="text")i.maxLength=max;i.setAttribute("aria-label",placeholder);if(type==="date"){const pad=n=>String(n).padStart(2,"0"),iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,now=new Date();i.min=iso(now);i.max=iso(new Date(now.getFullYear()+3,now.getMonth(),now.getDate()));i.title="Choose today or a future date, up to three years ahead.";}if(type==="time")i.step="900";i.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";return i;}
+async function loadRows(collection){return apiRequest("GET","/api/col/"+encodeURIComponent(collection));}
+async function refreshFacilitatorRecords(){
+ const rows=await loadRows("facilitators");
+ if(!Array.isArray(rows))throw new Error("The facilitator directory returned an unexpected response.");
+ facilitatorRecords=rows.map(row=>({id:String(row.id||""),data:row.data&&typeof row.data==="object"?row.data:{}})).filter(row=>row.id&&String(row.data.name||"").trim());
+ return facilitatorRecords;
+}
+async function saveRow(collection,id,data){await apiRequest("PUT","/api/doc/"+encodeURIComponent(collection)+"/"+encodeURIComponent(id),data);}
+async function deleteRow(collection,id){await apiRequest("DELETE","/api/doc/"+encodeURIComponent(collection)+"/"+encodeURIComponent(id));}
+function makeId(prefix){return prefix+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);}
+function renderMonthly(){
+ const root=workspace(...WORKSPACE_META.monthly),card=el("div","card"),grid=el("div","month-grid");
+ const now=WK.localNow(),year=now.year,month=now.month,daysInMonth=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+ card.appendChild(el("h3",null,MONTHS[month]+" "+year+" · Weekdays"));
+ ["Mon","Tue","Wed","Thu","Fri"].forEach(d=>grid.appendChild(el("div","month-dow",d)));
+ const events=allEntries();
+ for(let day=1;day<=daysInMonth;day++){
+  const date=new Date(Date.UTC(year,month,day)),weekday=date.getUTCDay();if(weekday===0||weekday===6)continue;
+  if(!grid.dataset.padded){grid.dataset.padded="1";for(let i=1;i<weekday;i++)grid.appendChild(el("div","month-empty"));}
+  const cell=el("div","month-day"),num=el("strong",null,String(day));cell.appendChild(num);
+  if(day===now.day)cell.classList.add("today");
+  const ws=WK.startParts(weekOffset),dateOffset=Math.round((Date.UTC(year,month,day)-Date.UTC(ws[0],ws[1],ws[2]))/(24*60*60*1000));
+  const col=dateOffset>=0&&dateOffset<5?dateOffset:-1;
+  if(col>=0){const list=events.filter(x=>x.c===col);list.forEach(x=>cell.appendChild(el("span","month-event",x.label)));}
+  grid.appendChild(cell);
+ }
+ card.appendChild(grid);root.appendChild(card);
+ root.appendChild(el("p","muted","The monthly calendar displays weekdays only; the weekly timetable includes Saturday and Sunday. Its dated week follows the Malawi local calendar and advances each Monday."));
+}
+function localActivityDate(dateText,timeText){
+ const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText||"").trim());
+ if(!match)return null;
+ const clock=/^(\d{1,2}):(\d{2})$/.exec(String(timeText||"").trim());
+ const hour=clock?Number(clock[1]):23,minute=clock?Number(clock[2]):59;
+ if(hour>23||minute>59)return null;
+ return WK.makeZonedDate(Number(match[1]),Number(match[2])-1,Number(match[3]),hour,minute);
+}
+function nextRecurringDate(dayName,timeText,now){
+ const names=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+ const target=names.findIndex(name=>name.toLowerCase()===String(dayName||"").trim().toLowerCase());
+ if(target<0)return null;
+ const clock=/^(\d{1,2}):(\d{2})$/.exec(String(timeText||"").trim());
+ const hour=clock?Number(clock[1]):23,minute=clock?Number(clock[2]):59;
+ if(hour>23||minute>59)return null;
+ let delta=(target-now.weekday+7)%7;
+ let date=WK.makeZonedDate(now.year,now.month,now.day+delta,hour,minute);
+ if(date.getTime()<=Date.now()){delta+=7;date=WK.makeZonedDate(now.year,now.month,now.day+delta,hour,minute);}
+ return date;
+}
+function upcomingItemButton(item){
+ const b=el(item.session?"button":"div","item");if(item.session)b.type="button";
+ b.appendChild(el("span","it",item.when));
+ const n=el("span","in",item.title);
+ if(item.detail)n.appendChild(el("span","is",item.detail));
+ b.appendChild(n);
+ if(item.session)b.addEventListener("click",()=>showSessionDetails(item.session));
+ return b;
+}
+async function getFutureActivities(){
+ const now=Date.now(),local=WK.localNow(),items=[];
+ // Weekly timetable entries are dated against the current Malawi-local academic week.
+ for(let day=0;day<days.length;day++){
+  dayEntries(day,WK.currentOffset()).forEach(session=>{
+   if(session.data?.recurring)return; // Recurring activities are sourced once from the shared recurring collection.
+   if(session.start.getTime()>now)items.push({kind:"session",title:session.label,detail:[session.sub,session.facilitator].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(session.start),start:session.start,session});
+  });
+ }
+ const [exams,storedRecurring]=await Promise.all([
+  loadRows("examinations").catch(()=>[]),
+  loadRows("recurring").catch(()=>[])
+ ]);
+ const recurring=storedRecurring.length?storedRecurring:recurringRecords;
+ exams.forEach(row=>{
+  const data=row.data||{},start=localActivityDate(data.date,data.time);
+  if(!start||start.getTime()<=now)return;
+  items.push({kind:"examination",title:data.title||row.id,detail:[data.venue,data.notes].filter(Boolean).join(" · "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+ });
+ recurring.forEach(row=>{
+  const data=row.data||{};if(data.enabled===false)return;
+  const start=nextRecurringDate(data.day,String(data.time||"").split(/[–-]/)[0]?.trim(),local);
+  if(!start||start.getTime()<=now)return;
+  const rid=String(row.id||""); const detailParts=(rid==="journal-club"||rid==="seminar-mnh")?[data.venue,data.notes].filter(Boolean):[data.presenter,data.venue,data.notes].filter(Boolean); items.push({kind:"recurring",recurringId:row.id,onThisWeek:data.onThisWeek!==false,title:data.title||row.id,detail:detailParts.join(" \u2022 "),when:new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Blantyre",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(start),start});
+ });
+ return items.sort((a,b)=>a.start.getTime()-b.start.getTime());
+}
+async function renderAnimatedFutureStrip(){
+ const host=document.getElementById("dashboard-upcoming");
+ if(!host)return;
+ host.textContent="";
+ host.tabIndex=0;
+ host.setAttribute("aria-label","Upcoming academic sessions. Drag left or right, or use the horizontal mouse wheel, to browse faster.");
+ const track=el("div","activity-marquee-track");
+ host.appendChild(track);
+ try{
+  const items=(await getFutureActivities()).slice(0,12);
+  if(!items.length){track.appendChild(el("span","activity-marquee-empty","No future events have been recorded."));return;}
+  const makeText=(item,index)=>{
+   const line=el("span","activity-marquee-text tone-"+(index%6));
+   const when=el("span","marquee-when",item.when);
+   const title=el("strong","marquee-title",item.title);
+   line.append(when,document.createTextNode("  "),title);
+   if(item.detail)line.append(document.createTextNode(" — "),el("span","marquee-detail",item.detail));
+   line.setAttribute("title",[item.when,item.title,item.detail].filter(Boolean).join(" · "));
+   {
+     const rid=String(item.session?.data?.recurringId||item.recurringId||"");
+     if((item.session?.data?.recurring||item.kind==="recurring") && rid.match(/journal-club|seminar-mnh/)){
+      const onThisWeek=(item.session?.data?.onThisWeek!==undefined?item.session.data.onThisWeek:item.onThisWeek)!==false;
+      const badge=el("span","recurring-ui-badge "+(onThisWeek?"is-on":"is-off"),"");
+      badge.append(el("span","recurring-ui-dot",""), el("span","recurring-ui-text",onThisWeek?"On this week":"Off this week"));
+      line.append(document.createTextNode(" "),badge);
+     }
+    }
+    return line;
+  };
+  items.forEach((item,index)=>{
+   if(index)track.appendChild(el("span","activity-marquee-separator","  •  "));
+   track.appendChild(makeText(item,index));
+  });
+  track.appendChild(el("span","activity-marquee-separator","     •     "));
+  items.forEach((item,index)=>{
+   if(index)track.appendChild(el("span","activity-marquee-separator","  •  "));
+   const copy=makeText(item,index);
+   copy.setAttribute("aria-hidden","true");
+   track.appendChild(copy);
+  });
+  let dragX=0,dragOffset=0,dragging=false;
+  host.addEventListener("pointerdown",event=>{
+   if(event.pointerType==="mouse"&&event.button!==0)return;
+   dragging=true;dragX=event.clientX;dragOffset=Number(track.style.getPropertyValue("--drag-offset").replace("px",""))||0;
+   track.style.animationPlayState="paused";
+   host.classList.add("is-dragging");
+   host.setPointerCapture(event.pointerId);
+  });
+  host.addEventListener("pointermove",event=>{
+   if(!dragging)return;
+   dragOffset+=event.clientX-dragX;dragX=event.clientX;
+   track.style.setProperty("--drag-offset",dragOffset+"px");
+  });
+  const stopDrag=event=>{
+   if(!dragging)return;
+   dragging=false;host.classList.remove("is-dragging");
+   track.style.animationPlayState="";
+   if(event&&host.hasPointerCapture(event.pointerId))host.releasePointerCapture(event.pointerId);
+  };
+  host.addEventListener("pointerup",stopDrag);
+  host.addEventListener("pointercancel",stopDrag);
+  host.addEventListener("wheel",event=>{
+   if(Math.abs(event.deltaY)>Math.abs(event.deltaX)){host.scrollLeft+=event.deltaY;event.preventDefault();}
+  },{passive:false});
+ }catch(error){track.appendChild(el("span","activity-marquee-empty","Events are temporarily unavailable."));}
+}
+
+// ---- Facilitator initials (titles ignored: "Dr D Mzinza" -> "DM") and photographs ----
+const NAME_TITLES=/\b(professor|prof|doctor|dr|mr|mrs|ms|miss|mx)\b\.?/gi;
+function facilitatorInitials(name){
+ const words=String(name||"").replace(NAME_TITLES," ").replace(/\./g," ").split(/\s+/).filter(Boolean);
+ if(!words.length)return "?";
+ if(words.length===1)return words[0].slice(0,2).toUpperCase();
+ return (words[0][0]+words[words.length-1][0]).toUpperCase();
+}
+const PHOTO_TYPES=["image/jpeg","image/png","image/webp","image/gif","image/avif","image/bmp"];
+function facilitatorAvatar(d){
+ const wrap=document.createElement("span");wrap.className="avatar";
+ if(typeof d.photo==="string"&&/^data:image\/(jpeg|png|webp|gif|avif|bmp);base64,/.test(d.photo)){const img=document.createElement("img");img.src=d.photo;img.alt=String(d.name||"Facilitator")+" photograph";wrap.appendChild(img);}
+ else{wrap.textContent=facilitatorInitials(d.name);wrap.setAttribute("aria-label","Initials "+facilitatorInitials(d.name));}
+ return wrap;
+}
+function resizeImage(file,max=320){
+ return new Promise((resolve,reject)=>{
+  if(!PHOTO_TYPES.includes(file.type)){reject(new Error("Choose a JPEG, PNG, WebP, GIF, AVIF or BMP photograph."));return;}
+  if(file.size>12*1024*1024){reject(new Error("That photograph is larger than 12 MB."));return;}
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));
+   const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);resolve(c.toDataURL("image/jpeg",.86));};
+  img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("That image could not be read by this browser."));};
+  img.src=url;
+ });
+}
+function photoPicker(label){
+ const wrap=document.createElement("label");wrap.className="photo-picker";wrap.textContent=label||"Photograph (optional)";
+ const input=document.createElement("input");input.type="file";input.accept=PHOTO_TYPES.join(",");wrap.appendChild(input);return {wrap,input};
+}
+const MANAGED_FIELDS={examinations:["title","date","time","venue","notes"],recurring:["title","day","time","presenter","venue","notes"]};
+const MANAGED_LABELS={examinations:"Examination",recurring:"Recurring activity"};
+async function renderManaged(collection){if(collection!=="examinations"&&collection!=="recurring")return;const [title,lead]=WORKSPACE_META[collection],root=workspace(title,lead);
+ if(collection==="recurring"){
+  root.appendChild(el("p","muted","Only these two activities repeat every academic week. Other entries must be added as dated timetable sessions."));
+  let rows=await loadRows("recurring");
+  if(!rows.length){
+   const defaults=[
+    ["journal-club",{title:"Journal Club",day:"Tuesday",time:"13:00-14:00",presenter:"",enabled:true,onThisWeek:true}],
+    ["seminar-mnh",{title:"MNH Seminar",day:"Thursday",time:"10:00-12:00",presenter:"",enabled:true,onThisWeek:true}]
+   ];
+   for(const [id,data] of defaults)await saveRow("recurring",id,data);
+   rows=await loadRows("recurring");
+  }
+  recurringRecords=rows;
+  const list=el("div","cards");
+  rows.filter(row=>row.data?.enabled!==false).forEach(row=>{
+   const data=row.data||{};
+   const onThisWeek=data.onThisWeek!==false;
+   const card=el("div","card");
+   const head=el("div","recurring-card-head");
+   head.appendChild(el("h3",null,data.title||row.id));
+   const toggle=el("button","recurring-week-toggle "+(onThisWeek?"is-on":"is-off"),"");
+   toggle.type="button";
+   toggle.setAttribute("aria-pressed",onThisWeek?"true":"false");
+   toggle.title=onThisWeek?"On this week - click to turn off":"Off this week - click to turn on";
+   toggle.append(el("span","recurring-week-dot",""), el("span","recurring-week-text",onThisWeek?"On this week":"Off this week"));
+   toggle.addEventListener("click",async()=>{
+    toggle.disabled=true;
+    try{
+     const current=recurringRecords.find(r=>r.id===row.id)?.data||data;
+     const nextOn=!(current.onThisWeek!==false);
+     await saveRow("recurring",row.id,{...current,presenter:presenter.value.trim(),enabled:true,onThisWeek:nextOn});
+     rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();
+    }catch(e){writeFailed(e);toggle.disabled=false;}
+   });
+   head.appendChild(toggle);card.appendChild(head);
+   card.appendChild(el("p","muted",[data.day,data.time].filter(Boolean).join(" \u2022 ")));
+   const presenterLabel=el("label","field-label","Presenter");
+   const presenter=fieldInput("Enter presenter name",120);presenter.value=String(data.presenter||"");
+   presenterLabel.appendChild(presenter);card.appendChild(presenterLabel);
+   const actions=el("div","dialog-actions");
+   const save=el("button","primary","Save presenter");save.type="button";
+   save.addEventListener("click",async()=>{try{const current=recurringRecords.find(r=>r.id===row.id)?.data||data;await saveRow("recurring",row.id,{...current,onThisWeek:(current.onThisWeek!==false),presenter:presenter.value.trim(),enabled:true});statusEl.className="status ok";statusEl.textContent="Presenter updated and shared.";rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   const remove=el("button","res-del","Remove activity");remove.type="button";
+   remove.addEventListener("click",async()=>{if(!confirm("Remove this recurring activity from the timetable?"))return;try{await saveRow("recurring",row.id,{...data,enabled:false});rows=await loadRows("recurring");recurringRecords=rows;build();renderManaged("recurring");renderAnimatedFutureStrip();}catch(e){writeFailed(e);}});
+   actions.append(save,remove);card.appendChild(actions);list.appendChild(card);
+  });
+  if(!list.children.length)list.appendChild(el("p","muted","No recurring activities are active."));
+  root.appendChild(list);return;
+ }
+ {const form=el("div","card res-form");form.appendChild(el("h3",null,"Add "+MANAGED_LABELS[collection].toLowerCase()));const fields={};MANAGED_FIELDS[collection].forEach(k=>{if(collection==="recurring"&&k==="day"){const select=document.createElement("select");select.setAttribute("aria-label","Weekday");["Choose weekday","Monday","Tuesday","Wednesday","Thursday","Friday"].forEach((name,i)=>{const option=document.createElement("option");option.value=i?name:"";option.textContent=name;select.appendChild(option);});select.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";fields[k]=select;}else{const type=k==="date"?"date":k==="time"?"time":"text";fields[k]=fieldInput(k[0].toUpperCase()+k.slice(1),k==="notes"?500:180,type);}form.appendChild(fields[k]);});let photoInput=null;const add=el("button","primary","Save "+MANAGED_LABELS[collection].toLowerCase());add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{const data={};Object.entries(fields).forEach(([k,v])=>data[k]=v.value.trim());if(!data[MANAGED_FIELDS[collection][0]]){statusEl.className="status error";statusEl.textContent="Please enter a title or name.";return;}if(data.date){const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),max=new Date(now.getFullYear()+3,now.getMonth(),now.getDate()),chosen=new Date(data.date+"T00:00:00");if(isNaN(chosen)||chosen<today||chosen>max){statusEl.className="status error";statusEl.textContent="Choose a date between today and three years from today.";return;}}if(photoInput&&photoInput.input.files[0]){try{data.photo=await resizeImage(photoInput.input.files[0]);}catch(e){statusEl.className="status error";statusEl.textContent=e.message;return;}}try{await saveRow(collection,makeId(collection.slice(0,3)),data);statusEl.className="status ok";statusEl.textContent="Saved and shared with all users.";renderManaged(collection);}catch(e){writeFailed(e);}}));form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows(collection);if(collection==="facilitators"){facilitatorRecords=rows.map(row=>({id:String(row.id||""),data:row.data&&typeof row.data==="object"?row.data:{}})).filter(row=>row.id&&String(row.data.name||"").trim());}if(!rows.length)list.appendChild(el("p","muted",collection==="facilitators"?"No facilitators have been added to the shared directory yet.":"No records have been added yet."));rows.forEach(row=>{const d=row.data||{},c=el("div","card");if(collection==="facilitators")c.appendChild(facilitatorAvatar(d));c.appendChild(el("h3",null,d.title||d.name||row.id));const detail=MANAGED_FIELDS[collection].filter(k=>d[k]).map(k=>`${k[0].toUpperCase()+k.slice(1)}: ${d[k]}`).join(" · ");if(detail)c.appendChild(el("p","muted",detail));if(collection==="facilitators"&&editingUnlocked){const pp=photoPicker("Change photograph");pp.input.addEventListener("change",async()=>{const f=pp.input.files[0];if(!f)return;try{const photo=await resizeImage(f);await saveRow(collection,row.id,{...d,photo});statusEl.className="status ok";statusEl.textContent="Photograph updated and shared.";renderManaged(collection);}catch(e){statusEl.className="status error";statusEl.textContent=e.message||"Photograph could not be saved.";}});c.appendChild(pp.wrap);}if(editingUnlocked){const del=el("button","res-del","Remove record");del.type="button";del.addEventListener("click",async()=>{if(!confirm("Remove this shared record?"))return;try{await deleteRow(collection,row.id);renderManaged(collection);}catch(e){writeFailed(e);}});c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted","Could not load shared records: "+e.message));}}
+function renderAlarmManagementCard(root){
+ const card=el("div","card res-form");
+ card.appendChild(el("h3",null,"Timetable alarms"));
+ card.appendChild(el("p","muted","Personal device alarm that rings like an incoming call before scheduled academic activities. It works while this page is open; allow sound after opening the app."));
+ const state=el("p","muted",alarm.on?`Alarms are on · ${alarm.lead===0?"at the start":alarm.lead+" minutes before"}`:"Alarms are off.");
+ state.id="communications-alarm-status";
+ card.appendChild(state);
+ const manage=el("button","primary","Manage alarms and test ring");
+ manage.type="button";
+ manage.addEventListener("click",()=>{refreshAlarmUI();showDialog("alarm-dialog");});
+ card.appendChild(manage);
+ root.appendChild(card);
+}
+async function renderReminderCard(root){
+ const card=el("div","card res-form");
+ card.appendChild(el("h3",null,"WhatsApp reminders"));
+ card.appendChild(el("p","muted","Everyone on the list gets a WhatsApp message before each session, sent as “Maternal & Neonatal Health Smart Time Table”. Choose 10, 20 or 30 minutes."));
+ const statusLine=el("p","muted","Checking WhatsApp delivery…");
+ card.appendChild(statusLine);
+ let info=null;
+ try{info=await apiRequest("GET","/api/reminders");}catch(e){statusLine.textContent="Reminder status is unavailable: "+e.message;}
+ if(info){
+  const wa=info.whatsapp||{},cfg=info.settings||{};
+  statusLine.textContent=wa.configured
+   ?`Delivery ready · sender "${wa.sender}" · WhatsApp bridge (${wa.style||"waha"})`
+   :`Not configured yet — add ${(wa.missing||[]).join(" and ")||"MNH_WA_BRIDGE_URL"} on the server, then send the sample again.`;
+  const leadRow=el("div","reminder-leads");
+  [10,20,30].forEach(minutes=>{
+   const label=el("label","reminder-lead"),box=document.createElement("input");
+   box.type="checkbox";box.value=String(minutes);box.checked=(cfg.leadMinutes||[10,20,30]).includes(minutes);box.disabled=!editingUnlocked;
+   label.append(box,document.createTextNode(" "+minutes+" min before"));leadRow.appendChild(label);
+  });
+  card.appendChild(leadRow);
+  card.appendChild(el("label","field-label","Recipients — WhatsApp numbers or group ids (one per line)"));
+  const numbers=document.createElement("textarea");
+  numbers.rows=3;numbers.maxLength=2000;numbers.placeholder="+265881988156 or 1203630...@g.us";numbers.disabled=!editingUnlocked;
+  numbers.value=(cfg.recipients||[]).join("\n");
+  numbers.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";
+  card.appendChild(numbers);
+  const save=el("button",null,"Save reminder settings");save.type="button";save.disabled=!editingUnlocked;
+  save.addEventListener("click",async()=>{
+   const leadMinutes=[...card.querySelectorAll(".reminder-leads input:checked")].map(b=>Number(b.value)).sort((a,b)=>a-b);
+   const recipients=numbers.value.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean);
+   if(!leadMinutes.length){statusEl.className="status error";statusEl.textContent="Choose at least one reminder time (10, 20 or 30 minutes).";return;}
+   try{await saveRow("settings","reminders",{enabled:true,leadMinutes,recipients,updatedAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Reminder settings saved for everyone.";renderCommunications();}catch(e){writeFailed(e);}
+  });
+  card.appendChild(save);
+  const testRow=el("div","reminder-test");
+  const testNumber=fieldInput("WhatsApp number or group id for the sample","40");
+  testNumber.value="+265881988156";testNumber.disabled=!editingUnlocked;
+  const testBtn=el("button","primary","Send sample reminder");testBtn.type="button";testBtn.disabled=!editingUnlocked;
+  testBtn.addEventListener("click",async()=>{
+   testBtn.disabled=true;statusEl.className="status";statusEl.textContent="Sending the sample WhatsApp reminder…";
+   try{const r=await apiRequest("POST","/api/reminders/test",{to:testNumber.value.trim()});statusEl.className="status ok";statusEl.textContent=`Sample sent to ${r.isGroup?"group ":""}${r.to} as "${wa.sender}".`;}
+   catch(e){statusEl.className="status error";statusEl.textContent=e.message||"The sample could not be sent.";}
+   finally{testBtn.disabled=!editingUnlocked;}
+  });
+  testRow.append(testNumber,testBtn);card.appendChild(testRow);
+  const run=el("button",null,"Check the timetable now");run.type="button";run.disabled=!editingUnlocked;
+  run.addEventListener("click",async()=>{
+   try{const r=await apiRequest("POST","/api/reminders/run",{});statusEl.className="status ok";statusEl.textContent=`Checked ${r.checked||0} due reminder(s); sent ${r.sent||0}.`;}
+   catch(e){statusEl.className="status error";statusEl.textContent=e.message;}
+  });
+  card.appendChild(run);
+  if(info.recent&&info.recent.length){
+   const log=el("div","reminder-log");
+   info.recent.slice(0,6).forEach(r=>log.appendChild(el("div","item",`${r.status} · ${r.code||""} · ${r.lead} min · ${r.sent_at}`)));
+   card.appendChild(log);
+  }
+ }
+ root.appendChild(card);
+}
+// ---- Communications Centre: separated cards over /api/comm/* ----
+const COMM_FIELD="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--text);font:inherit";
+function commCard(root,title,note){const card=el("div","card res-form");card.appendChild(el("h3",null,title));if(note)card.appendChild(el("p","muted",note));root.appendChild(card);return card;}
+function commFail(line,e){if(line){line.className="status error";line.textContent=e.message;}else{statusEl.className="status error";statusEl.textContent=e.message;}}
+function commBusy(line,text){if(line){line.className="status";line.textContent=text;}else{statusEl.className="status";statusEl.textContent=text;}}
+function commOk(line,text){if(line){line.className="status ok";line.textContent=text;}else{statusEl.className="status ok";statusEl.textContent=text;}}
+function commConsent(c,channel){
+ if(!c)return false;
+ const s=c.consent!==undefined?c.consent:c[channel+"Consent"];
+ if(s===true)return true;
+ if(s&&typeof s==="object"){const v=s[channel];return v===true||!!(v&&v.granted);}
+ return c[channel]===true;
+}
+function commList(data,key){if(Array.isArray(data))return data;const x=data&&data[key];return Array.isArray(x)?x:[];}
+async function renderCommStatusCard(root){
+ const card=commCard(root,"System status");
+ const line=el("p","muted","Checking communications status…");card.appendChild(line);
+ let s=null;
+ try{s=await apiRequest("GET","/api/comm/status");}catch(e){commFail(line,e);return;}
+ const stopped=!!(s&&s.emergencyStop);
+ line.className="status "+(stopped?"error":"ok");
+ line.textContent=stopped?"Emergency stop is ON — no messages or calls will be sent.":"Emergency stop is off; normal sending is allowed.";
+ const bridge=(s&&s.aiTrigger&&s.aiTrigger.bridge)||null;
+ [["WhatsApp bridge (Asterisk server)",bridge],
+  ["Automatic WhatsApp send bridge",s&&s.aiTrigger?{configured:!!(s.aiTrigger.autoTrigger&&bridge&&bridge.configured),missing:s.aiTrigger.autoTrigger?[]:["Automatic trigger setting"]}:null],
+  ["Voice calls (Asterisk)",s&&s.asterisk]].forEach(([label,v])=>{
+  const on=!!(v&&v.configured);
+  let text=(on?"✔ ":"✖ ")+label+": "+(on?"configured":"not configured");
+  if(v&&v.missing)text+=" — missing "+(Array.isArray(v.missing)?v.missing.join(", "):v.missing);
+  else if(v&&v.detail)text+=" — "+v.detail;
+  card.appendChild(el("div","muted",text));
+ });
+ const displayName=(bridge&&bridge.profileName)||"Maternal & Neonatal Health Smart Time Table";
+ card.appendChild(el("div","muted","WhatsApp display name: \""+displayName+"\""));
+ if(editingUnlocked&&bridge&&bridge.configured){
+  const setName=el("button",null,"Set WhatsApp display name to the app name");setName.type="button";
+  setName.addEventListener("click",async()=>{
+   commBusy(line,"Setting the WhatsApp display name…");
+   try{const r=await apiRequest("POST","/api/comm/whatsapp/profile",{name:""});commOk(line,"WhatsApp display name set to \""+((r&&r.name)||displayName)+"\".");}
+   catch(e){commFail(line,e);}
+  });
+  card.appendChild(setName);
+ }
+ if(editingUnlocked){
+  const toggle=el("button",stopped?"primary":null,stopped?"Turn emergency stop OFF":"Turn emergency stop ON");toggle.type="button";
+  toggle.addEventListener("click",async()=>{
+   commBusy(line,"Saving emergency stop…");
+   try{await apiRequest("POST","/api/comm/emergency-stop",{enabled:!stopped});statusEl.className="status ok";statusEl.textContent=stopped?"Emergency stop lifted.":"Emergency stop enabled — all sending is paused.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.appendChild(toggle);
+ }
+}
+function commContactForm(values,onSave,line,cancelBtn){
+ const wrap=el("div","res-form");
+ const kind=document.createElement("select");kind.setAttribute("aria-label","Contact type");kind.style.cssText=COMM_FIELD;
+ [["individual","Person (phone number)"],["group","WhatsApp group"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;if((values.kind||"individual")===v)o.selected=true;kind.appendChild(o);});
+ const name=fieldInput("Full name",120),phone=fieldInput("Phone (with country code, e.g. +265…)",30,"tel"),notes=fieldInput("Notes (optional)",300);
+ name.value=values.name||"";phone.value=values.phone||"";notes.value=values.notes||"";
+ const applyKind=()=>{const group=kind.value==="group";phone.type=group?"text":"tel";phone.placeholder=group?"Group id, e.g. 1203630…@g.us":"Phone (with country code, e.g. +265…)";phone.setAttribute("aria-label",group?"WhatsApp group id":"Phone number");};
+ kind.addEventListener("change",applyKind);applyKind();
+ const cat=document.createElement("select");cat.setAttribute("aria-label","Category");cat.style.cssText=COMM_FIELD;
+ [["","Category…"],["staff","Staff"],["student","Student"],["other","Other"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;if(values.category===v)o.selected=true;cat.appendChild(o);});
+ const consents=el("div","reminder-leads");
+ [["whatsapp","WhatsApp consent"],["voice","Voice-call consent"]].forEach(([ch,label])=>{
+  const l=el("label","reminder-lead"),box=document.createElement("input");box.type="checkbox";box.checked=!!commConsent(values,ch);box.dataset.channel=ch;
+  l.append(box,document.createTextNode(" "+label));consents.appendChild(l);
+ });
+ const save=el("button","primary",values.id?"Save changes":"Add contact");save.type="button";
+ save.addEventListener("click",()=>onSave({
+  name:name.value.trim(),kind:kind.value,phone:phone.value.trim(),category:cat.value,notes:notes.value.trim(),
+  whatsapp:consents.children[0].querySelector("input").checked,
+  voice:consents.children[1].querySelector("input").checked
+ }));
+ [kind,name,phone,cat,notes,consents,save].forEach(x=>{x.style.cssText=x.style.cssText||COMM_FIELD;if(x===consents)x.style.cssText="margin:6px 0;";wrap.appendChild(x);});
+ if(cancelBtn){const cancel=el("button",null,"Cancel");cancel.type="button";cancel.addEventListener("click",cancelBtn);wrap.appendChild(cancel);}
+ return wrap;
+}
+async function renderCommContactsCard(root){
+ const card=commCard(root,"Contacts","People who may receive WhatsApp messages or voice calls. Consent is required before anyone is contacted, and consent can be withdrawn at any time.");
+ const line=el("p","muted","Loading contacts…");card.appendChild(line);
+ let data=null;
+ try{data=await apiRequest("GET","/api/comm/contacts");}catch(e){commFail(line,e);return;}
+ const contacts=commList(data,"contacts"),dnc=commList(data&&data.dnc,"dnc");
+ line.className="status ok";line.textContent=contacts.length+" contact(s) · "+dnc.length+" on the do-not-contact list.";
+ if(editingUnlocked){
+  card.appendChild(commContactForm({},async d=>{
+   if(!d.name||!d.phone){commFail(line,new Error(d.kind==="group"?"Enter a name and a WhatsApp group id.":"Enter a name and phone number."));return;}
+   commBusy(line,"Saving contact…");
+   try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(makeId("c")),{name:d.name,kind:d.kind||"individual",phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact added.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  }));
+ }
+ const list=el("div","cards");card.appendChild(list);
+ if(!contacts.length)list.appendChild(el("p","muted","No contacts yet."));
+ contacts.forEach(c=>{
+  const row=el("div","card");
+  const isGroup=(c.kind||"")==="group"||/@g\.us$/i.test(c.phone||"");
+  row.appendChild(el("h3",null,c.name||c.id));
+  row.appendChild(el("div","muted",[isGroup?"Group":"Person",c.phone||"no address",c.category||"other"].join(" · ")));
+  const badges=el("div","reminder-leads");
+  if(isGroup)badges.appendChild(el("span","pill","WhatsApp group"));
+  badges.appendChild(el("span","pill",commConsent(c,"whatsapp")?"WhatsApp ✓":"WhatsApp ✗"));
+  if(!isGroup)badges.appendChild(el("span","pill",commConsent(c,"voice")?"Voice ✓":"Voice ✗"));
+  row.appendChild(badges);
+  if(c.notes)row.appendChild(el("p","muted",c.notes));
+  if(editingUnlocked){
+   const btns=el("div","reminder-test");
+   const channels=[["whatsapp","WhatsApp"]];if(!isGroup)channels.push(["voice","Voice"]);
+   channels.forEach(([ch,label])=>{
+    const granted=commConsent(c,ch),b=el("button",null,(granted?"Revoke ":"Grant ")+label+" consent");b.type="button";
+    b.addEventListener("click",async()=>{
+     commBusy(line,"Updating consent…");
+     try{await apiRequest("POST","/api/comm/contacts/"+encodeURIComponent(c.id)+"/consent",{channel:ch,granted:!granted});statusEl.className="status ok";statusEl.textContent="Consent updated.";renderCommunications();}
+     catch(e){commFail(line,e);}
+    });
+    btns.appendChild(b);
+   });
+   const edit=el("button",null,"Edit");edit.type="button";
+   edit.addEventListener("click",()=>{
+    row.textContent="";
+    row.appendChild(commContactForm(c,async d=>{
+     commBusy(line,"Saving changes…");
+     try{await apiRequest("PUT","/api/comm/contacts/"+encodeURIComponent(c.id),{name:d.name,kind:d.kind||"individual",phone:d.phone,category:d.category||"other",consent:{whatsapp:d.whatsapp,voice:d.voice},notes:d.notes});statusEl.className="status ok";statusEl.textContent="Contact updated.";renderCommunications();}
+     catch(e){commFail(line,e);}
+    },line,()=>renderCommunications()));
+   });
+   btns.appendChild(edit);
+   const del=el("button","res-del","Remove contact");del.type="button";
+   del.addEventListener("click",async()=>{
+    if(!confirm("Remove this contact?"))return;
+    try{await apiRequest("DELETE","/api/comm/contacts/"+encodeURIComponent(c.id));statusEl.className="status ok";statusEl.textContent="Contact removed.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   btns.appendChild(del);
+   row.appendChild(btns);
+  }
+  list.appendChild(row);
+ });
+ // Do-not-contact mini-section
+ card.appendChild(el("h3",null,"Do-not-contact list"));
+ card.appendChild(el("p","muted","Numbers here are never contacted, whatever their consent says."));
+ const dncBox=el("div","cards");card.appendChild(dncBox);
+ if(!dnc.length)dncBox.appendChild(el("p","muted","The do-not-contact list is empty."));
+ dnc.forEach(d=>{
+  const row=el("div","card");
+  row.appendChild(el("div",null,d.phone||d.id));
+  if(d.reason)row.appendChild(el("div","muted",d.reason));
+  if(editingUnlocked){
+   const del=el("button","res-del","Remove from list");del.type="button";
+   del.addEventListener("click",async()=>{
+    try{await apiRequest("DELETE","/api/comm/dnc/"+encodeURIComponent(d.id));statusEl.className="status ok";statusEl.textContent="Removed from the do-not-contact list.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   row.appendChild(del);
+  }
+  dncBox.appendChild(row);
+ });
+ if(editingUnlocked){
+  const dncPhone=fieldInput("Phone to block",30,"tel"),dncReason=fieldInput("Reason (optional)",200);
+  const dncAdd=el("button","primary","Add to do-not-contact list");dncAdd.type="button";
+  dncAdd.addEventListener("click",async()=>{
+   if(!dncPhone.value.trim()){commFail(line,new Error("Enter a phone number to block."));return;}
+   commBusy(line,"Adding to do-not-contact list…");
+   try{await apiRequest("POST","/api/comm/dnc",{phone:dncPhone.value.trim(),reason:dncReason.value.trim()});statusEl.className="status ok";statusEl.textContent="Added to the do-not-contact list.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.append(dncPhone,dncReason,dncAdd);
+ }
+}
+function commDraftRows(container,draft,line){
+ container.textContent="";
+ if(!draft)return;
+ const rows=commList(draft,"recipients").length?commList(draft,"recipients"):commList(draft,"links");
+ if(!rows.length){container.appendChild(el("p","muted","The server returned no per-recipient links."));return;}
+ rows.forEach(r=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,r.name||r.contactName||r.contactId||"Recipient"));
+  row.appendChild(el("div","muted",r.phone||""));
+  const chip=el("span","pill",r.status||"pending");row.appendChild(chip);
+  const link=r.link||r.url||r.whatsappUrl;
+  if(link){const a=el("a","res-link","Open WhatsApp");a.href=link;a.target="_blank";a.rel="noopener noreferrer";row.appendChild(a);}
+  if(editingUnlocked){
+   const mark=(status,label)=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",async()=>{
+    commBusy(line,"Marking…");
+    try{await apiRequest("POST","/api/comm/drafts/"+encodeURIComponent(draft.id||draft.draftId)+"/mark",{contactId:r.contactId||r.id,status});chip.textContent=status;commOk(line,"Marked as "+status+".");}
+    catch(e){commFail(line,e);}
+   });return b;};
+   row.append(mark("opened","Mark opened"),mark("sent-manual","Mark sent"));
+  }
+  container.appendChild(row);
+ });
+}
+async function renderCommComposerCard(root){
+ const card=commCard(root,"Compose WhatsApp messages","");
+ const line=el("p","muted","Loading recipients…");card.appendChild(line);
+ let contacts=[],templates=[];
+ try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
+ try{const t=await apiRequest("GET","/api/comm/templates");templates=commList(t,"templates");}catch(e){templates=[];}
+ if(!contacts.length){line.className="status error";line.textContent="Add contacts first — there is nobody to message.";return;}
+ line.className="status ok";line.textContent=contacts.length+" contact(s) available.";
+ const pick=el("div","cards");
+ contacts.forEach(c=>{
+  const ok=commConsent(c,"whatsapp"),l=el("label","reminder-lead"+(ok?"":" muted")),box=document.createElement("input");
+  box.type="checkbox";box.value=String(c.id);box.disabled=!ok;
+  l.append(box,document.createTextNode(" "+(c.name||c.id)+(c.phone?" · "+c.phone:"")+(ok?"":" · no WhatsApp consent")));
+  pick.appendChild(l);
+ });
+ card.appendChild(pick);
+ const tpl=el("select");tpl.setAttribute("aria-label","Message template");tpl.style.cssText=COMM_FIELD;
+ {const none=document.createElement("option");none.value="";none.textContent="Start from a template…";tpl.appendChild(none);}
+ templates.forEach(t=>{const o=document.createElement("option");o.value=String(t.id);o.textContent=t.title||t.name||String(t.id);tpl.appendChild(o);});
+ card.appendChild(tpl);
+ const body=document.createElement("textarea");body.rows=5;body.maxLength=1000;body.placeholder="Message body…";body.setAttribute("aria-label","Message body");body.style.cssText=COMM_FIELD;
+ card.appendChild(body);
+ tpl.addEventListener("change",()=>{const t=templates.find(x=>String(x.id)===tpl.value);if(t)body.value=t.body||t.text||"";});
+const draftBox=el("div","cards");
+ const prep=el("button","primary","Prepare WhatsApp links");prep.type="button";
+ prep.addEventListener("click",async()=>{
+  const ids=[...pick.querySelectorAll("input:checked")].map(x=>x.value);
+  if(!ids.length){commFail(line,new Error("Select at least one recipient with WhatsApp consent."));return;}
+  if(!body.value.trim()){commFail(line,new Error("Write a message first."));return;}
+  prep.disabled=true;commBusy(line,"Preparing per-recipient WhatsApp links…");
+  try{
+   const r=await apiRequest("POST","/api/comm/drafts",{contactIds:ids,body:body.value.trim(),title:""});
+   commDraftRows(draftBox,(r&&(r.draft||r))||null,line);
+   commOk(line,"Links prepared. Open each one, send it in WhatsApp yourself, then mark it as sent.");
+  }
+  catch(e){commFail(line,e);}
+  finally{prep.disabled=false;}
+ });
+ card.append(prep,draftBox);
+}
+async function renderCommTemplatesCard(root){
+ const card=commCard(root,"Message templates","Reusable message bodies for the composer.");
+ const line=el("p","muted","Loading templates…");card.appendChild(line);
+ let templates=[];
+ try{templates=commList(await apiRequest("GET","/api/comm/templates"),"templates");}catch(e){commFail(line,e);return;}
+ line.className="status ok";line.textContent=templates.length+" template(s).";
+ const list=el("div","cards");card.appendChild(list);
+ if(!templates.length)list.appendChild(el("p","muted","No templates yet."));
+ templates.forEach(t=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,t.title||t.name||t.id));
+  row.appendChild(el("p","muted",t.body||t.text||""));
+  if(editingUnlocked){
+   const del=el("button","res-del","Delete template");del.type="button";
+   del.addEventListener("click",async()=>{
+    if(!confirm("Delete this template?"))return;
+    try{await apiRequest("DELETE","/api/comm/templates/"+encodeURIComponent(t.id));statusEl.className="status ok";statusEl.textContent="Template deleted.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   row.appendChild(del);
+  }
+  list.appendChild(row);
+ });
+ if(editingUnlocked){
+  const title=fieldInput("Template title",120);
+  const body=document.createElement("textarea");body.rows=3;body.maxLength=1000;body.placeholder="Template body…";body.setAttribute("aria-label","Template body");body.style.cssText=COMM_FIELD;
+  const add=el("button","primary","Add template");add.type="button";
+  add.addEventListener("click",async()=>{
+   if(!title.value.trim()||!body.value.trim()){commFail(line,new Error("Enter a template title and body."));return;}
+   commBusy(line,"Saving template…");
+   try{await apiRequest("POST","/api/comm/templates",{title:title.value.trim(),body:body.value.trim()});statusEl.className="status ok";statusEl.textContent="Template saved.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.append(title,body,add);
+ }
+}
+async function renderCommScheduledCard(root){
+ const card=commCard(root,"Scheduled communications","Scheduled jobs create drafts for review — they never send automatically.");
+ const line=el("p","muted","Loading scheduled jobs…");card.appendChild(line);
+ let jobs=[];
+ try{jobs=commList(await apiRequest("GET","/api/comm/jobs"),"jobs");}catch(e){commFail(line,e);return;}
+ line.className="status ok";line.textContent=jobs.length+" scheduled job(s).";
+ const list=el("div","cards");card.appendChild(list);
+ if(!jobs.length)list.appendChild(el("p","muted","Nothing is scheduled."));
+ jobs.forEach(j=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,j.title||j.type||j.id));
+  row.appendChild(el("div","muted",[j.type||"",j.runAt?new Date(j.runAt).toLocaleString():""].filter(Boolean).join(" · ")));
+  row.appendChild(el("span","pill",j.status||"pending"));
+  if(j.attempts!=null)row.appendChild(el("div","muted","Attempts: "+j.attempts));
+  if(j.lastError)row.appendChild(el("p","muted","Last error: "+j.lastError));
+  if(editingUnlocked&&(j.status||"pending")==="pending"){
+   const cancel=el("button","res-del","Cancel job");cancel.type="button";
+   cancel.addEventListener("click",async()=>{
+    try{await apiRequest("POST","/api/comm/jobs/"+encodeURIComponent(j.id)+"/cancel",{});statusEl.className="status ok";statusEl.textContent="Job cancelled.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   row.appendChild(cancel);
+  }
+  list.appendChild(row);
+ });
+ if(editingUnlocked){
+  const type=el("select");type.setAttribute("aria-label","Job type");type.style.cssText=COMM_FIELD;
+  [["lecture-reminder","Lecture reminder"],["exam-reminder","Exam reminder"],["deadline","Deadline"],["meeting","Meeting"],["announcement","Announcement"],["custom","Custom"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;type.appendChild(o);});
+  const runAt=document.createElement("input");runAt.type="datetime-local";runAt.setAttribute("aria-label","Run at");runAt.style.cssText=COMM_FIELD;
+  const title=fieldInput("Title",160);
+  const instructions=document.createElement("textarea");instructions.rows=3;instructions.maxLength=1000;instructions.placeholder="Instructions for the message";instructions.setAttribute("aria-label","Instructions");instructions.style.cssText=COMM_FIELD;
+  const recipients=fieldInput("Recipients (contact IDs or phone numbers, comma separated)",600);
+  const add=el("button","primary","Schedule job");add.type="button";
+  add.addEventListener("click",async()=>{
+   if(!runAt.value){commFail(line,new Error("Choose a date and time to run the job."));return;}
+   commBusy(line,"Scheduling job…");
+   try{await apiRequest("POST","/api/comm/jobs",{type:type.value,runAt:runAt.value,title:title.value.trim(),instructions:instructions.value.trim(),recipients:recipients.value.split(/[,;]+/).map(x=>x.trim()).filter(Boolean)});statusEl.className="status ok";statusEl.textContent="Job scheduled — it will create drafts for review, never send automatically.";renderCommunications();}
+   catch(e){commFail(line,e);}
+  });
+  card.append(type,runAt,title,instructions,recipients,add);
+ }
+}
+async function renderCommVoiceCard(root){
+ const card=commCard(root,"Voice calls","Calls are placed through Asterisk. The server enforces consent and calling hours — a call that breaks either rule is refused.");
+ const line=el("p","muted","Loading voice calls…");card.appendChild(line);
+ let contacts=[],calls=[];
+ try{const d=await apiRequest("GET","/api/comm/contacts");contacts=commList(d,"contacts");}catch(e){commFail(line,e);return;}
+ try{calls=commList(await apiRequest("GET","/api/comm/voice/calls"),"calls");}catch(e){calls=[];}
+ const voiceContacts=contacts.filter(c=>commConsent(c,"voice"));
+ line.className="status ok";line.textContent=voiceContacts.length+" contact(s) with voice consent · "+calls.length+" recent call(s).";
+ if(editingUnlocked){
+  const select=el("select");select.setAttribute("aria-label","Contact to call");select.style.cssText=COMM_FIELD;
+  {const none=document.createElement("option");none.value="";none.textContent="Choose a contact…";select.appendChild(none);}
+  voiceContacts.forEach(c=>{const o=document.createElement("option");o.value=String(c.id);o.textContent=(c.name||c.id)+(c.phone?" · "+c.phone:"");select.appendChild(o);});
+  const purpose=fieldInput("Purpose of the call",200);
+  const place=el("button","primary","Place call");place.type="button";
+  place.addEventListener("click",async()=>{
+   if(!select.value){commFail(line,new Error("Choose a contact to call."));return;}
+   place.disabled=true;commBusy(line,"Placing call…");
+   try{await apiRequest("POST","/api/comm/voice/calls",{contactId:select.value,purpose:purpose.value.trim()});statusEl.className="status ok";statusEl.textContent="Call placed.";renderCommunications();}
+   catch(e){commFail(line,e);}
+   finally{place.disabled=false;}
+  });
+  card.append(select,purpose,place);
+ }
+ const list=el("div","cards");card.appendChild(list);
+ if(!calls.length)list.appendChild(el("p","muted","No calls have been placed."));
+ calls.forEach(v=>{
+  const row=el("div","card");
+  row.appendChild(el("h3",null,v.contactName||v.contactId||v.id));
+  row.appendChild(el("div","muted",[v.purpose||"",v.createdAt?new Date(v.createdAt).toLocaleString():""].filter(Boolean).join(" · ")));
+  row.appendChild(el("span","pill",v.state||v.status||"unknown"));
+  if(editingUnlocked){
+   const btns=el("div","reminder-test");
+   const refresh=el("button",null,"Refresh");refresh.type="button";
+   refresh.addEventListener("click",async()=>{
+    try{await apiRequest("POST","/api/comm/voice/calls/"+encodeURIComponent(v.id)+"/refresh",{});statusEl.className="status ok";statusEl.textContent="Call state refreshed.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   const hangup=el("button","res-del","Hang up");hangup.type="button";
+   hangup.addEventListener("click",async()=>{
+    try{await apiRequest("POST","/api/comm/voice/calls/"+encodeURIComponent(v.id)+"/hangup",{});statusEl.className="status ok";statusEl.textContent="Hang up requested.";renderCommunications();}
+    catch(e){commFail(line,e);}
+   });
+   btns.append(refresh,hangup);row.appendChild(btns);
+  }
+  list.appendChild(row);
+ });
+}
+async function renderCommHistoryCard(root){
+ const card=commCard(root,"Communications history","Every message, draft, consent change and call is recorded here.");
+ const line=el("p","muted","Loading history…");card.appendChild(line);
+ let rows=[];
+ try{rows=commList(await apiRequest("GET","/api/comm/history"),"history");}catch(e){commFail(line,e);return;}
+ line.className="status ok";line.textContent=rows.length+" audit entr"+(rows.length===1?"y":"ies")+".";
+ if(!rows.length){card.appendChild(el("p","muted","Nothing has been sent yet."));return;}
+ const table=document.createElement("table");table.className="comm-table";
+ const thead=document.createElement("thead"),hr=document.createElement("tr");
+ ["When","Who","Action","Detail"].forEach(h=>{const th=document.createElement("th");th.textContent=h;hr.appendChild(th);});
+ thead.appendChild(hr);table.appendChild(thead);
+ const tbody=document.createElement("tbody");
+ rows.forEach(r=>{
+  const tr=document.createElement("tr");
+  let cells;
+  if(r&&typeof r==="object"){
+   const when=r.at||r.when||r.timestamp||r.createdAt;
+   cells=[when?new Date(when).toLocaleString():"",r.who||r.actor||r.by||r.role||"",r.action||r.type||r.event||r.channel||"",r.detail||r.summary||r.description||r.message||r.title||""];
+  }else cells=[String(r==null?"":r),"","",""];
+  cells.forEach(v=>{const td=document.createElement("td");td.textContent=String(v==null?"":v);tr.appendChild(td);});
+  tbody.appendChild(tr);
+ });
+ table.appendChild(tbody);card.appendChild(table);
+}
+async function renderAnnouncementsCard(root){
+ if(editingUnlocked){const form=el("div","card res-form");form.appendChild(el("h3",null,"Publish an announcement or communication"));const title=fieldInput("Announcement title",160),message=fieldInput("Message / communication details",1000),link=fieldInput("Optional WhatsApp or web link",400,"url");form.append(title,message,link);const add=el("button","primary","Publish communication");add.type="button";add.addEventListener("click",async()=>{if(!title.value.trim()||!message.value.trim()){statusEl.className="status error";statusEl.textContent="Enter an announcement title and message.";return;}try{await saveRow("communications",makeId("com"),{title:title.value.trim(),message:message.value.trim(),url:safeUrl(link.value),createdAt:Date.now()});statusEl.className="status ok";statusEl.textContent="Communication published for all users.";renderCommunications();}catch(e){writeFailed(e);}});form.appendChild(add);root.appendChild(form);}const list=el("div","cards");root.appendChild(list);try{const rows=await loadRows("communications");if(!rows.length)list.appendChild(el("p","muted","No communications have been published."));rows.forEach(r=>{const d=r.data||{},c=el("div","card");c.append(el("h3",null,d.title||"Announcement"),el("p",null,d.message||""));if(d.url){const a=el("a","res-link","Open shared link");a.href=d.url;a.target="_blank";a.rel="noopener noreferrer";c.appendChild(a);}const wa=el("a","res-link","Share via WhatsApp");wa.href="https://wa.me/?text="+encodeURIComponent([d.title,d.message,d.url].filter(Boolean).join("\n"));wa.target="_blank";wa.rel="noopener noreferrer";c.appendChild(wa);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.onclick=async()=>{try{await deleteRow("communications",r.id);renderCommunications();}catch(e){writeFailed(e);}};c.appendChild(del);}list.appendChild(c);});}catch(e){list.appendChild(el("p","muted",e.message));}}
+async function renderCommunications(){
+ const root=workspace(...WORKSPACE_META.communications);
+ await renderAlarmManagementCard(root);
+ await renderCommStatusCard(root);
+ await renderAnnouncementsCard(root);
+ if(editingUnlocked){
+  await renderCommContactsCard(root);
+  await renderCommComposerCard(root);
+  await renderCommTemplatesCard(root);
+  await renderCommScheduledCard(root);
+  await renderCommVoiceCard(root);
+ }
+ // workspace() clears its container on every render, which destroys the resource nodes
+ // after the first render moved them in — recreate them so re-renders keep working.
+ if(!document.getElementById("res-list")){const nl=document.createElement("div");nl.id="res-list";const nf=document.createElement("div");nf.id="res-form-wrap";const holder=document.getElementById("view-resources");if(holder)holder.append(nl,nf);}
+ const resourcesCard=el("div","card");resourcesCard.appendChild(el("h3",null,"Shared resources"));root.appendChild(resourcesCard);renderResources();const existing=document.getElementById("res-list");if(existing)resourcesCard.appendChild(existing);const f=document.getElementById("res-form-wrap");if(f)resourcesCard.appendChild(f);
+ await renderReminderCard(root);
+ await renderCommHistoryCard(root);
+}
+let publicChatState={joined:false,participant:null,participants:[],messages:[],searchResults:null,searchQuery:"",searchOpen:false,headerMenu:false,msgMenu:null,deleteConfirm:null,loading:false,error:"",replyTo:null,privateTo:null,editingId:null,ws:null,wsTimer:null,pollTimer:null,unread:0,online:0,recorder:null,recordStartedAt:0,recordChunks:[],recordTimer:null,recording:false,voiceBlob:null,voiceUrl:null,voiceDurationMs:0,voiceMime:"audio/webm",attachmentFile:null,attachmentViewOnce:false,emojiOpen:false,emojiTarget:null,privatePanel:false,prefs:null,pending:{},typingTimer:null,toastTimer:null,composerInput:null,readAt:0,voiceSeq:Number(localStorage.getItem("mnh_chat_voice_seq")||"0")||0};
+const PC_MAX_VOICE_MS=40*60*1000;
+document.addEventListener("click",(e)=>{if(!publicChatState.headerMenu&&!publicChatState.msgMenu)return;if(e.target.closest(".pc-head-menu,.pc-msg-menu,.pc-msg-menu-btn,.pc-icon-btn"))return;publicChatState.headerMenu=false;publicChatState.msgMenu=null;if(currentView==="public-chat")pcRenderMessages();});
+function pcEsc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function pcFmtTime(ms){try{return new Date(ms).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch(_e){return "";}}
+function pcDay(ms){const d=new Date(ms),today=new Date();const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();if(same(d,today))return "Today";const y=new Date(today);y.setDate(today.getDate()-1);if(same(d,y))return "Yesterday";return d.toLocaleDateString([], {month:"short",day:"numeric",year:d.getFullYear()===today.getFullYear()?undefined:"numeric"});}
+function pcShort(text,max=140){const t=String(text||"").replace(/\s+/g," ").trim();return t.length>max?t.slice(0,max-1)+"…":t;}
+function pcInitial(person){return String((person&&(person.display_name||person.public_identity||person.code))||"?").trim().charAt(0).toUpperCase()||"?";}
+function pcAvatar(person,mine){const a=el("div","pc-avatar"+(mine?" mine":""),pcInitial(person));a.title=(person&&(person.public_identity||person.code))||"Participant";return a;}
+function pcToast(text){const t=document.getElementById("pc-toast");if(!t){console.warn(text);return;}t.textContent=String(text||"");t.hidden=false;clearTimeout(publicChatState.toastTimer);publicChatState.toastTimer=setTimeout(()=>{t.hidden=true;},4200);}
+function pcSetUnread(n){publicChatState.unread=Math.max(0,n|0);const btn=document.querySelector('.menu-nav[data-view="public-chat"]');if(btn){let badge=btn.querySelector('.pc-nav-badge');if(!publicChatState.unread){if(badge)badge.remove();}else{if(!badge){badge=el("span","pc-nav-badge");btn.appendChild(badge);}badge.textContent=String(publicChatState.unread>99?"99+":publicChatState.unread);}}
+ let jump=document.getElementById("pc-unread-jump");if(currentView==="public-chat"||!publicChatState.unread){if(jump)jump.remove();return;}if(!jump){jump=el("button","pc-unread-jump");jump.id="pc-unread-jump";jump.type="button";jump.onclick=()=>{showView("public-chat");pcSetUnread(0);};document.body.appendChild(jump);}jump.textContent="New messages · "+publicChatState.unread;}
+function pcMarkRead(){if(!publicChatState.joined)return;const now=Date.now();if(now-publicChatState.readAt<2000)return;publicChatState.readAt=now;pcApi("/api/public-chat/read",{method:"POST",body:{at:now}}).then(()=>{pcSetUnread(0);pcLoadUnread(true).catch(()=>{});}).catch(()=>{});}
+function pcVisibleMessages(){const p=publicChatState.participant,me=p?p.code:"";const source=publicChatState.searchResults||publicChatState.messages||[];return source.filter(m=>{if(m.kind!=="private")return true;return m.mine||m.private_recipient_code===me;});}
+async function pcApi(path,opts={}){const method=(opts.method||"GET").toUpperCase();const res=await fetch(path,{method,credentials:"same-origin",headers:opts.body!==undefined?{"Content-Type":"application/json"}:undefined,body:opts.body!==undefined?JSON.stringify(opts.body):undefined,cache:"no-store"});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.detail||body.error||`HTTP ${res.status}`);return body;}
+async function pcFormApi(path,form,timeoutMs=180000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const res=await fetch(path,{method:"POST",body:form,credentials:"same-origin",cache:"no-store",signal:ctrl.signal});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.detail||body.error||`HTTP ${res.status}`);return body;}catch(e){if(e&&e.name==="AbortError")throw new Error("Upload timed out. Please try again on a stable connection.");throw e;}finally{clearTimeout(timer);}}
+function pcCloseWS(){try{if(publicChatState.ws){publicChatState.ws.onclose=null;publicChatState.ws.onerror=null;publicChatState.ws.close();}}catch(_e){}publicChatState.ws=null;if(publicChatState.wsTimer){clearTimeout(publicChatState.wsTimer);publicChatState.wsTimer=null;}}
+function pcSendTyping(typing){try{if(publicChatState.ws&&publicChatState.ws.readyState===1)publicChatState.ws.send(JSON.stringify({type:"typing",to_code:publicChatState.privateTo?publicChatState.privateTo.code:"",typing:!!typing}));}catch(_e){}}
+function pcEnsureRealtime(){if(!publicChatState.joined||document.hidden)return;if(publicChatState.ws&&(publicChatState.ws.readyState===0||publicChatState.ws.readyState===1))return;const proto=location.protocol==="https:"?"wss":"ws";let ws;try{ws=new WebSocket(proto+"://"+location.host+"/api/public-chat/ws");}catch(_e){pcSchedulePoll();return;}publicChatState.ws=ws;ws.onmessage=(ev)=>{try{const msg=JSON.parse(ev.data||"{}");
+ if(msg.type==="hello"){publicChatState.joined=!!msg.joined;publicChatState.participant=msg.participant||publicChatState.participant;publicChatState.online=Number(msg.online||publicChatState.online);const n=document.getElementById("pc-online");if(n)n.textContent=publicChatState.online+" online";}
+ else if(msg.type==="presence"){publicChatState.online=Number(msg.online||0);const n=document.getElementById("pc-online");if(n)n.textContent=publicChatState.online+" online";}
+ else if(msg.type==="typing"){const t=document.getElementById("pc-typing");if(t){t.textContent=msg.typing?(msg.identity||"Someone")+" is typing…":"";t.hidden=!msg.typing;}}
+ else if(msg.type==="message.created"||msg.type==="message.updated"||msg.type==="message.deleted"){if(msg.message&&!msg.message.mine&&currentView!=="public-chat")pcSetUnread(publicChatState.unread+1);if(msg.message)pcUpsertMessage(msg.message);if(currentView==="public-chat")pcRenderMessages();}
+ else if(msg.type==="message.reaction"){const target=(publicChatState.messages||[]).find(m=>m.id===msg.message_id);if(target)target.reactions=msg.reactions||{};if(currentView==="public-chat")pcRenderMessages();}
+ else if(msg.type==="notification"){pcToast((msg.label||"Chat update")+": "+(msg.preview||"")); }
+ else if(msg.type==="participant.joined"||msg.type==="moderation.membership"||msg.type==="moderation.action"){pcLoadStatus(true).catch(()=>{});}
+ }catch(_e){}};
+ ws.onclose=()=>{if(publicChatState.ws===ws)publicChatState.ws=null;if(!publicChatState.joined||document.hidden)return;publicChatState.wsTimer=setTimeout(pcEnsureRealtime,2500);pcSchedulePoll();};
+ ws.onerror=()=>{try{ws.close();}catch(_e){}};}
+function pcSchedulePoll(){if(publicChatState.pollTimer||!publicChatState.joined)return;publicChatState.pollTimer=setInterval(()=>{if(!publicChatState.joined)return;pcLoadMessages(true).catch(()=>{});pcLoadUnread(true).catch(()=>{});},15000);}
+function pcStopRealtime(){pcCloseWS();if(publicChatState.pollTimer){clearInterval(publicChatState.pollTimer);publicChatState.pollTimer=null;}}
+function pcUpsertMessage(msg){if(!msg||!msg.id)return;const arr=publicChatState.messages||[];const i=arr.findIndex(m=>m.id===msg.id);if(i>=0)arr[i]=msg;else arr.push(msg);arr.sort((a,b)=>(a.created_at||0)-(b.created_at||0));publicChatState.messages=arr.slice(-400);}
+function pcForgetMessage(id){publicChatState.messages=(publicChatState.messages||[]).filter(m=>m.id!==id);}
+async function pcLoadStatus(silent){try{const s=await pcApi("/api/public-chat/status");publicChatState.joined=!!s.joined;publicChatState.participant=s.participant||null;publicChatState.participants=s.participants||[];if(publicChatState.joined){pcEnsureRealtime();pcSchedulePoll();pcLoadUnread(true).catch(()=>{});pcLoadPreferences(true).catch(()=>{});}if(!silent&&currentView==="public-chat")renderPublicChat();}catch(e){if(!silent)throw e;}}
+async function pcLoadMessages(silent){if(!publicChatState.joined)return;try{const res=await pcApi("/api/public-chat/messages?limit=200");publicChatState.messages=Array.isArray(res.messages)?res.messages:[];if(!silent)publicChatState.searchResults=null;if(currentView==="public-chat")pcRenderMessages();}catch(e){if(!silent)throw e;}}
+async function pcLoadUnread(silent){if(!publicChatState.joined)return;try{const res=await pcApi("/api/public-chat/unread");if(currentView!=="public-chat")pcSetUnread(Number(res.unread||0));}catch(e){if(!silent)throw e;}}
+async function pcLoadPreferences(silent){if(!publicChatState.joined)return;try{const res=await pcApi("/api/public-chat/preferences");publicChatState.prefs=res.values||null;}catch(e){if(!silent)throw e;}}
+function pcStopVoiceViz(){if(publicChatState.recordRaf){try{cancelAnimationFrame(publicChatState.recordRaf);}catch(_e){}}publicChatState.recordRaf=null;if(publicChatState.recordAudioCtx){try{publicChatState.recordAudioCtx.close();}catch(_e){}}publicChatState.recordAudioCtx=null;publicChatState.recordAnalyser=null;publicChatState.recordSource=null;const viz=document.getElementById("pc-record-viz");if(viz)viz.remove();}
+function pcStartVoiceViz(stream){pcStopVoiceViz();try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=new Ctx();const src=ctx.createMediaStreamSource(stream);const analyser=ctx.createAnalyser();analyser.fftSize=128;analyser.smoothingTimeConstant=.7;src.connect(analyser);publicChatState.recordAudioCtx=ctx;publicChatState.recordAnalyser=analyser;publicChatState.recordSource=src;const wrap=document.querySelector(".pc-compose-main");if(!wrap)return;let viz=document.getElementById("pc-record-viz");if(!viz){viz=el("div","pc-record-viz pc-doppler");viz.id="pc-record-viz";for(let i=0;i<28;i++){const b=el("span","pc-record-bar");b.style.height="6px";viz.appendChild(b);}wrap.appendChild(viz);}const bars=[...viz.children];const data=new Uint8Array(analyser.frequencyBinCount);let t=0;const draw=()=>{if(!publicChatState.recording||!publicChatState.recordAnalyser){pcStopVoiceViz();return;}analyser.getByteFrequencyData(data);let avg=0;for(let i=0;i<data.length;i++)avg+=data[i];avg=avg/data.length/255;t+=0.08+avg*0.12;bars.forEach((b,i)=>{const idx=Math.floor((i/bars.length)*data.length);const v=(data[idx]||0)/255;const wave=Math.sin(t+i*0.45)*0.5+0.5;const h=4+Math.round((v*0.65+avg*0.2+wave*0.15)*30);const hue=265+v*35+Math.sin(t+i*0.3)*12;const light=32+v*32;const sat=70+v*25;b.style.height=h+"px";b.style.background=`hsl(${hue.toFixed(1)} ${sat.toFixed(0)}% ${light.toFixed(0)}%)`;b.style.opacity=String(.35+v*.55+avg*.1);b.style.transform=`scaleY(${(0.85+v*0.35).toFixed(3)})`;});publicChatState.recordRaf=requestAnimationFrame(draw);};draw();}catch(_e){}}
+function pcClearVoice(){pcStopVoiceViz();if(publicChatState.voiceUrl){try{URL.revokeObjectURL(publicChatState.voiceUrl);}catch(_e){}}publicChatState.voiceBlob=null;publicChatState.voiceUrl=null;publicChatState.voiceDurationMs=0;publicChatState.recordChunks=[];publicChatState.recording=false;}
+function pcClearAttachment(){publicChatState.attachmentFile=null;publicChatState.attachmentViewOnce=false;}
+function pcMentionCodes(text){const out=[];const re=/@(MNH-\d{4})/g;let m;while((m=re.exec(String(text||"")))!==null){if(out.indexOf(m[1])<0)out.push(m[1]);}return out.slice(0,20);}
+function pcReplySnapshot(m){return m?{id:m.id,sender_identity:m.sender_identity||m.sender_code,sender_code:m.sender_code,text:m.text||"",deleted:!!m.deleted,has_audio:!!(m.audio&&m.audio.url)}:null;}
+function pcMicBlockedMessage(){return "Microphone access is blocked. Allow microphone permission for this site, then try recording again.";}
+function pcPickRecorderMime(){const types=["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"];for(const t of types){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t))return t;}catch(_e){}}return "";}
+function pcNextVoiceName(ext){
+ const n=(publicChatState.voiceSeq||0)+1;
+ publicChatState.voiceSeq=n;
+ try{localStorage.setItem("mnh_chat_voice_seq",String(n));}catch(_e){}
+ return "record"+String(n).padStart(3,"0")+"."+ext;
+}
+function pcAudioExt(mime){const m=String(mime||"").toLowerCase();if(m.includes("mp4")||m.includes("m4a"))return "m4a";if(m.includes("ogg"))return "ogg";if(m.includes("wav"))return "wav";return "webm";}
+async function pcToggleRecording(btn){if(publicChatState.recorder){try{publicChatState.recorder.stop();}catch(_e){}return;}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){pcToast("Voice recording is not supported in this browser.");return;}
+ if(!window.MediaRecorder){pcToast("This browser does not support audio recording.");return;}
+ btn.disabled=true;btn.textContent="…";
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  const mime=pcPickRecorderMime();
+  const rec=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+  publicChatState.recorder=rec;publicChatState.recordChunks=[];publicChatState.recordStartedAt=Date.now();publicChatState.voiceMime=rec.mimeType||mime||"audio/webm";
+  btn.disabled=false;btn.classList.add("recording");btn.innerHTML='<span aria-hidden="true">■</span>';btn.title="Stop recording";
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)publicChatState.recordChunks.push(e.data);};
+  rec.onerror=()=>{pcToast("Recording failed. Please try again.");};
+  rec.onstop=()=>{if(publicChatState.recordTimer){clearInterval(publicChatState.recordTimer);publicChatState.recordTimer=null;}const shouldSend=!!publicChatState.sendAfterStop;publicChatState.sendAfterStop=false;publicChatState.recording=false;pcStopVoiceViz();stream.getTracks().forEach(t=>{try{t.stop();}catch(_e){}});const duration=Math.min(PC_MAX_VOICE_MS,Math.max(0,Date.now()-(publicChatState.recordStartedAt||Date.now())));const type=publicChatState.voiceMime||rec.mimeType||"audio/webm";const blob=new Blob(publicChatState.recordChunks,{type});publicChatState.recorder=null;publicChatState.recordChunks=[];btn.classList.remove("recording");btn.disabled=false;if(blob.size>0){const pendingText=((publicChatState.composerInput&&publicChatState.composerInput.value)||"").trim();pcClearVoice();publicChatState.voiceBlob=blob;publicChatState.voiceDurationMs=duration;publicChatState.voiceMime=type;publicChatState.voiceUrl=URL.createObjectURL(blob);if(shouldSend)publicChatState.voiceNoteText=pendingText;}if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();if(currentView==="public-chat"){pcRefreshComposer();if(shouldSend&&publicChatState.voiceBlob){const sendNow=window.pcDoSendVoiceNote;if(typeof sendNow==="function"){Promise.resolve().then(()=>sendNow()).catch(e=>{pcToast(e.message||String(e));if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();});}}}};
+  publicChatState.recording=true;
+  rec.start(250);
+  pcStartVoiceViz(stream);
+  publicChatState.recordTimer=setInterval(()=>{if(!publicChatState.recorder)return;const elapsed=Date.now()-(publicChatState.recordStartedAt||Date.now());if(elapsed>=PC_MAX_VOICE_MS){try{publicChatState.recorder.stop();}catch(_e){}pcToast("Maximum voice note length reached (40 minutes).");}},1000);
+  if(currentView==="public-chat")pcRefreshComposer();
+ }catch(e){
+  const name=String((e&&e.name)||"");
+  if(name==="NotAllowedError"||name==="SecurityError"||name==="PermissionDeniedError")pcToast(pcMicBlockedMessage());
+  else if(name==="NotFoundError"||name==="DevicesNotFoundError")pcToast("No microphone was found on this device.");
+  else if(name==="NotReadableError"||name==="TrackStartError")pcToast("Microphone is busy or unavailable. Close other apps using it and try again.");
+  else pcToast("Could not start recording: "+((e&&e.message)||String(e)));
+  btn.disabled=false;btn.classList.remove("recording");btn.innerHTML='<span aria-hidden="true">🎤</span>';btn.title="Record voice note";
+ }
+}
+const PC_EMOJI_GROUPS=[
+ {id:"smileys",icon:"😀",label:"Smileys & People",items:["😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","😟","🙁","☹️","😮","😯","😲","😳","🥺","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖","😺","😸","😹","😻","😼","😽","🙀","😿","😾","🙈","🙉","🙊","💋","💌","💘","💝","💖","💗","💓","💞","💕","💟","❣️","💔","❤️","🧡","💛","💚","💙","💜","🤎","🖤","🤍","💯","💢","💥","💫","💦","💨","🕳️","💣","💬","🗨️","🗯️","💭","💤","👋","🤚","🖐️","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🧠","🫀","🫁","🦷","🦴","👀","👁️","👅","👄"]},
+ {id:"nature",icon:"🐶",label:"Animals & Nature",items:["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐽","🐸","🐵","🙈","🙉","🙊","🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🦟","🦗","🕷️","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐕‍🦺","🐈","🐈‍⬛","🐓","🦃","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔","🐾","🐉","🐲","🌵","🎄","🌲","🌳","🌴","🪵","🌱","🌿","☘️","🍀","🎍","🪴","🎋","🍃","🍂","🍁","🍄","🐚","🪨","🌾","💐","🌷","🌹","🥀","🌺","🌸","🌼","🌻","🌞","🌝","🌛","🌜","🌚","🌕","🌖","🌗","🌘","🌑","🌒","🌓","🌔","🌙","🌎","🌍","🌏","🪐","💫","⭐","🌟","✨","⚡","☄️","💥","🔥","🌪️","🌈","☀️","🌤️","⛅","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️","⛄","🌬️","💨","💧","💦","☔","☂️","🌊","🌫️"]},
+ {id:"food",icon:"🍔",label:"Food & Drink",items:["🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒","🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨","🧀","🥚","🍳","🧈","🥞","🧇","🥓","🥩","🍗","🍖","🦴","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🫔","🥗","🥘","🫕","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚","🍘","🍥","🥠","🥮","🍢","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🍩","🍪","🌰","🥜","🍯","🥛","🍼","🫖","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽️","🥣","🥡","🥢","🧂"]},
+ {id:"activity",icon:"⚽",label:"Activity",items:["⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🏑","🥍","🏏","🪃","🥅","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🎽","🛹","🛼","🛷","⛸️","🥌","🎿","⛷️","🏂","🪂","🏋️","🤼","🤸","⛹️","🤺","🤾","🏌️","🏇","🧘","🏄","🏊","🤽","🚣","🧗","🚵","🚴","🏆","🥇","🥈","🥉","🏅","🎖️","🏵️","🎗️","🎫","🎟️","🎪","🤹","🎭","🩰","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🪘","🎷","🎺","🪗","🎸","🪕","🎻","🎲","♟️","🎯","🎳","🎮","🎰","🧩"]},
+ {id:"travel",icon:"🚗",label:"Travel & Places",items:["🚗","🚕","🚙","🚌","🚎","🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🦯","🦽","🦼","🛴","🚲","🛵","🏍️","🛺","🚨","🚔","🚍","🚘","🚖","🚡","🚠","🚟","🚃","🚋","🚞","🚝","🚄","🚅","🚈","🚂","🚆","🚇","🚊","🚉","✈️","🛫","🛬","🛩️","💺","🛰️","🚀","🛸","🚁","🛶","⛵","🚤","🛥️","🛳️","⛴️","🚢","⚓","🪝","⛽","🚧","🚦","🚥","🚏","🗺️","🗿","🗽","🗼","🏰","🏯","🏟️","🎡","🎢","🎠","⛲","⛱️","🏖️","🏝️","🏜️","🌋","⛰️","🏔️","🗻","🏕️","⛺","🏠","🏡","🏘️","🏚️","🏗️","🏭","🏢","🏬","🏣","🏤","🏥","🏦","🏨","🏪","🏫","🏩","💒","🏛️","⛪","🕌","🕍","🛕","🕋","⛩️","🛤️","🛣️","🗾","🎑","🏞️","🌅","🌄","🌠","🎇","🎆","🌇","🌆","🏙️","🌃","🌌","🌉","🌁"]},
+ {id:"objects",icon:"💡",label:"Objects",items:["⌚","📱","📲","💻","⌨️","🖥️","🖨️","🖱️","🖲️","🕹️","🗜️","💽","💾","💿","📀","📼","📷","📸","📹","🎥","📽️","🎞️","📞","☎️","📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡","🔋","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💸","💵","💴","💶","💷","🪙","💰","💳","💎","⚖️","🪜","🧰","🪛","🔧","🔨","⚒️","🛠️","⛏️","🔩","⚙️","🪤","🧱","⛓️","🧲","🔫","💣","🧨","🪓","🔪","🗡️","⚔️","🛡️","🚬","⚰️","🪦","⚱️","🏺","🔮","📿","🧿","💈","⚗️","🔭","🔬","🕳️","🩹","🩺","💊","💉","🩸","🧬","🦠","🧫","🧪","🌡️","🧹","🪠","🧺","🧻","🚽","🚰","🚿","🛁","🛀","🧼","🪥","🪒","🧽","🪣","🧴","🛎️","🔑","🗝️","🚪","🪑","🛋️","🛏️","🛌","🧸","🪆","🖼️","🪞","🪟","🛍️","🛒","🎁","🎈","🎏","🎀","🪄","🪅","🎊","🎉","🎎","🏮","🎐","🧧","✉️","📩","📨","📧","💌","📥","📤","📦","🏷️","📪","📫","📬","📭","📮","📯","📜","📃","📄","📑","🧾","📊","📈","📉","🗒️","🗓️","📆","📅","🗑️","📇","🗃️","🗳️","🗄️","📋","📁","📂","🗂️","🗞️","📰","📓","📔","📒","📕","📗","📘","📙","📚","📖","🔖","🧷","🔗","📎","🖇️","📐","📏","🧮","📌","📍","✂️","🖊️","🖋️","✒️","🖌️","🖍️","📝","✏️","🔍","🔎","🔏","🔐","🔒","🔓"]},
+ {id:"symbols",icon:"🔣",label:"Symbols",items:["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","☮️","✝️","☪️","🕉️","☸️","✡️","🔯","🕎","☯️","☦️","🛐","⛎","♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓","🆔","⚛️","🉑","☢️","☣️","📴","📳","🈶","🈚","🈸","🈺","🈷️","✴️","🆚","💮","🉐","㊙️","㊗️","🈴","🈵","🈹","🈲","🅰️","🅱️","🆎","🆑","🅾️","🆘","❌","⭕","🛑","⛔","📛","🚫","💯","💢","♨️","🚷","🚯","🚳","🚱","🔞","📵","🚭","❗","❕","❓","❔","‼️","⁉️","🔅","🔆","〽️","⚠️","🚸","🔱","⚜️","🔰","♻️","✅","🈯","💹","❇️","✳️","❎","🌐","💠","Ⓜ️","🌀","💤","🏧","🚾","♿","🅿️","🛗","🈳","🈂️","🛂","🛃","🛄","🛅","🚹","🚺","🚼","⚧️","🚻","🚮","🎦","📶","🈁","🔣","ℹ️","🔤","🔡","🔠","🆖","🆗","🆙","🆒","🆕","🆓","0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","🔢","#️⃣","*️⃣","⏏️","▶️","⏸️","⏯️","⏹️","⏺️","⏭️","⏮️","⏩","⏪","⏫","⏬","◀️","🔼","🔽","➡️","⬅️","⬆️","⬇️","↗️","↘️","↙️","↖️","↕️","↔️","↪️","↩️","⤴️","⤵️","🔀","🔁","🔂","🔄","🔃","🎵","🎶","➕","➖","➗","✖️","🟰","♾️","💲","💱","™️","©️","®️","〰️","➰","➿","🔚","🔙","🔛","🔝","🔜","✔️","☑️","🔘","🔴","🟠","🟡","🟢","🔵","🟣","⚫","⚪","🟤","🔺","🔻","🔸","🔹","🔶","🔷","🔳","🔲","▪️","▫️","◾","◽","◼️","◻️","🟥","🟧","🟨","🟩","🟦","🟪","⬛","⬜","🟫"]},
+ {id:"flags",icon:"🏁",label:"Flags",items:["🏁","🚩","🎌","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️","🏴‍☠️","🇺🇳","🇦🇫","🇦🇱","🇩🇿","🇦🇸","🇦🇩","🇦🇴","🇦🇬","🇦🇷","🇦🇲","🇦🇺","🇦🇹","🇦🇿","🇧🇸","🇧🇭","🇧🇩","🇧🇧","🇧🇾","🇧🇪","🇧🇿","🇧🇯","🇧🇹","🇧🇴","🇧🇦","🇧🇼","🇧🇷","🇧🇳","🇧🇬","🇧🇫","🇧🇮","🇰🇭","🇨🇲","🇨🇦","🇨🇻","🇨🇫","🇹🇩","🇨🇱","🇨🇳","🇨🇴","🇰🇲","🇨🇬","🇨🇩","🇨🇷","🇨🇮","🇭🇷","🇨🇺","🇨🇾","🇨🇿","🇩🇰","🇩🇯","🇩🇲","🇩🇴","🇪🇨","🇪🇬","🇸🇻","🇬🇶","🇪🇷","🇪🇪","🇪🇹","🇫🇯","🇫🇮","🇫🇷","🇬🇦","🇬🇲","🇬🇪","🇩🇪","🇬🇭","🇬🇷","🇬🇩","🇬🇹","🇬🇳","🇬🇼","🇬🇾","🇭🇹","🇭🇳","🇭🇺","🇮🇸","🇮🇳","🇮🇩","🇮🇷","🇮🇶","🇮🇪","🇮🇱","🇮🇹","🇯🇲","🇯🇵","🇯🇴","🇰🇿","🇰🇪","🇰🇮","🇰🇼","🇰🇬","🇱🇦","🇱🇻","🇱🇧","🇱🇸","🇱🇷","🇱🇾","🇱🇮","🇱🇹","🇱🇺","🇲🇬","🇲🇼","🇲🇾","🇲🇻","🇲🇱","🇲🇹","🇲🇷","🇲🇺","🇲🇽","🇲🇩","🇲🇨","🇲🇳","🇲🇪","🇲🇦","🇲🇿","🇲🇲","🇳🇦","🇳🇵","🇳🇱","🇳🇿","🇳🇮","🇳🇪","🇳🇬","🇰🇵","🇲🇰","🇳🇴","🇴🇲","🇵🇰","🇵🇦","🇵🇬","🇵🇾","🇵🇪","🇵🇭","🇵🇱","🇵🇹","🇶🇦","🇷🇴","🇷🇺","🇷🇼","🇸🇦","🇸🇳","🇷🇸","🇸🇨","🇸🇱","🇸🇬","🇸🇰","🇸🇮","🇸🇴","🇿🇦","🇰🇷","🇸🇸","🇪🇸","🇱🇰","🇸🇩","🇸🇪","🇨🇭","🇸🇾","🇹🇼","🇹🇿","🇹🇭","🇹🇬","🇹🇹","🇹🇳","🇹🇷","🇺🇬","🇺🇦","🇦🇪","🇬🇧","🇺🇸","🇺🇾","🇺🇿","🇻🇦","🇻🇪","🇻🇳","🇾🇪","🇿🇲","🇿🇼"]}
+];
+function pcEmojiPicker(targetId){
+ const wrap=el("div","pc-emoji-picker");
+ const groups=PC_EMOJI_GROUPS;
+ const activeId=(publicChatState.emojiGroup&&groups.some(g=>g.id===publicChatState.emojiGroup))?publicChatState.emojiGroup:groups[0].id;
+ publicChatState.emojiGroup=activeId;
+ const tabs=el("div","pc-emoji-tabs");
+ const grid=el("div","pc-emoji-grid");
+ const renderGrid=(gid)=>{
+  grid.innerHTML="";
+  const g=groups.find(x=>x.id===gid)||groups[0];
+  g.items.forEach(emoji=>{
+   const b=el("button","pc-emoji",emoji);b.type="button";b.setAttribute("aria-label",emoji);
+   b.onclick=async()=>{
+    if(targetId){
+     try{const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(targetId)}/reactions`,{method:"POST",body:{emoji}});const target=(publicChatState.messages||[]).find(m=>m.id===targetId);if(target)target.reactions=res.reactions||{};pcRenderMessages();}catch(e){pcToast(e.message||String(e));}
+     publicChatState.emojiOpen=false;publicChatState.emojiTarget=null;pcRefreshComposer();
+    } else {
+     const ta=publicChatState.composerInput;
+     if(ta){const start=ta.selectionStart??ta.value.length;const end=ta.selectionEnd??ta.value.length;ta.value=ta.value.slice(0,start)+emoji+ta.value.slice(end);const pos=start+emoji.length;ta.focus();ta.setSelectionRange(pos,pos);ta.dispatchEvent(new Event("input",{bubbles:true}));}
+    }
+   };
+   grid.appendChild(b);
+  });
+ };
+ groups.forEach(g=>{
+  const t=el("button","pc-emoji-tab"+(g.id===activeId?" active":""),g.icon);t.type="button";t.title=g.label;t.setAttribute("aria-label",g.label);
+  t.onclick=()=>{publicChatState.emojiGroup=g.id;tabs.querySelectorAll(".pc-emoji-tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");renderGrid(g.id);};
+  tabs.appendChild(t);
+ });
+ wrap.append(tabs,grid);
+ renderGrid(activeId);
+ return wrap;
+}
+async function pcSendMessage(payload,tempId){try{const res=await pcApi("/api/public-chat/messages",{method:"POST",body:payload});delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}pcToast(e.message||String(e));return false;}finally{if(currentView==="public-chat")pcRenderMessages();}}
+async function pcUploadVoice(tempId){const blob=publicChatState.voiceBlob;if(!blob)return false;const mime=blob.type||publicChatState.voiceMime||"audio/webm";const ext=pcAudioExt(mime);const form=new FormData();const voiceName=pcNextVoiceName(ext);form.append("file",blob,voiceName);const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft&&draft.audio)draft.audio.file_name=voiceName;if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);const mentionText=(publicChatState.voiceNoteText||publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(mentionText).join(","));form.append("duration_ms",String(Math.max(0,Math.round(publicChatState.voiceDurationMs||0))));if(draft&&draft.audio){draft.audio.duration_ms=publicChatState.voiceDurationMs||draft.audio.duration_ms||0;draft.audio.size_bytes=blob.size||draft.audio.size_bytes||0;}try{const res=await pcFormApi("/api/public-chat/voice-notes",form,240000);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearVoice();publicChatState.voiceNoteText="";return true;}catch(e){const d=(publicChatState.messages||[]).find(m=>m.id===tempId);if(d){d.status="failed";d.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
+async function pcUploadAttachment(tempId){const file=publicChatState.attachmentFile;if(!file)return false;const form=new FormData();form.append("file",file,file.name);if(publicChatState.replyTo)form.append("reply_to_id",publicChatState.replyTo.id);if(publicChatState.privateTo)form.append("private_recipient_code",publicChatState.privateTo.code);form.append("text",publicChatState.attachmentText||"");form.append("mention_codes",pcMentionCodes(publicChatState.attachmentText||"").join(","));form.append("view_once",publicChatState.attachmentViewOnce?"1":"0");try{const res=await pcFormApi("/api/public-chat/attachments",form);delete publicChatState.pending[tempId];pcForgetMessage(tempId);pcUpsertMessage(res.message);pcClearAttachment();publicChatState.attachmentText="";return true;}catch(e){const draft=(publicChatState.messages||[]).find(m=>m.id===tempId);if(draft){draft.status="failed";draft.error=e.message||String(e);}pcToast(e.message||String(e));return false;}}
+function pcRefreshComposer(){if(currentView!=="public-chat")return;const old=document.querySelector(".pc-composer");const next=pcComposerNode();if(old){old.replaceWith(next);}else{const card=document.querySelector(".pc-chat-card");if(card)card.appendChild(next);}if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();}
+
+function pcApplyChatTheme(){
+ const t=publicChatState.chatTheme||"default";
+ const b=publicChatState.chatBg||"default";
+ document.body.dataset.chatTheme=t;
+ document.body.dataset.chatBg=b;
+ try{localStorage.setItem("mnh_chat_theme",t);localStorage.setItem("mnh_chat_bg",b);}catch(_e){}
+}
+function pcLoadChatTheme(){
+ try{publicChatState.chatTheme=localStorage.getItem("mnh_chat_theme")||"default";publicChatState.chatBg=localStorage.getItem("mnh_chat_bg")||"default";}catch(_e){publicChatState.chatTheme="default";publicChatState.chatBg="default";}
+ pcApplyChatTheme();
+}
+function pcRefreshHeadMenu(){if(currentView!=="public-chat")return;const card=document.querySelector(".pc-chat-card");if(!card){renderPublicChat();return;}const old=card.querySelector(".pc-head-menu");const scrollTop=old?old.scrollTop:0;if(old)old.remove();if(!publicChatState.headerMenu)return;
+ const menu=el("div","pc-head-menu pc-inpage-menu");
+ const head=el("div","pc-menu-head");
+ head.appendChild(el("div","pc-menu-title","Chat Menu"));
+ const close=el("button","pc-icon-btn","×");close.type="button";close.setAttribute("aria-label","Close menu");close.onclick=()=>{publicChatState.headerMenu=false;pcRefreshHeadMenu();};head.appendChild(close);menu.appendChild(head);
+
+ const userSec=el("div","pc-menu-section");userSec.appendChild(el("div","pc-menu-label","User"));
+ const me=publicChatState.participant||{};
+ userSec.appendChild(el("div","pc-menu-row","ID: "+(me.code||"Not joined")));
+ userSec.appendChild(el("div","pc-menu-row","Name: "+(me.display_name||"Not set")));
+ userSec.appendChild(el("div","pc-menu-row","Status: "+(publicChatState.joined?"Joined":"Not joined")));
+ menu.appendChild(userSec);
+
+ const prefSec=el("div","pc-menu-section");prefSec.appendChild(el("div","pc-menu-label","Settings"));
+ const notif=el("button","pc-head-menu-item",(publicChatState.prefs&&Object.keys(publicChatState.prefs).every(k=>!publicChatState.prefs[k])?"Enable notifications":"Mute notifications"));notif.type="button";notif.disabled=!publicChatState.joined;notif.onclick=async()=>{try{const prefsNow=publicChatState.prefs||{replies:true,mentions:true,private:true,access:true,moderation:true};const off=Object.keys(prefsNow).every(k=>!prefsNow[k]);const values={};Object.keys(prefsNow).forEach(k=>{values[k]=off;});const res=await pcApi("/api/public-chat/preferences",{method:"PUT",body:{values}});publicChatState.prefs=res.values;pcRefreshHeadMenu();pcToast(off?"Notifications enabled":"Notifications muted");}catch(e){pcToast(e.message||String(e));}};prefSec.appendChild(notif);
+ if(publicChatState.searchResults){const clear=el("button","pc-head-menu-item","Clear search results");clear.type="button";clear.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.searchOpen=false;publicChatState.headerMenu=false;renderPublicChat();};prefSec.appendChild(clear);}
+ menu.appendChild(prefSec);
+
+ const themeSec=el("div","pc-menu-section");themeSec.appendChild(el("div","pc-menu-label","Themes"));
+ const themes=[["default","Default"],["midnight","Midnight"],["emerald","Emerald"],["violet","Violet"],["sunset","Sunset"]];
+ const themeGrid=el("div","pc-theme-grid");
+ themes.forEach(([id,label])=>{const b=el("button","pc-theme-swatch"+((publicChatState.chatTheme||"default")===id?" active":""),label);b.type="button";b.dataset.theme=id;b.onclick=()=>{publicChatState.chatTheme=id;pcApplyChatTheme();pcRefreshHeadMenu();};themeGrid.appendChild(b);});
+ themeSec.appendChild(themeGrid);menu.appendChild(themeSec);
+
+ const bgSec=el("div","pc-menu-section");bgSec.appendChild(el("div","pc-menu-label","Backgrounds"));
+ const bgs=[["default","Default"],["sunny-clouds","Sunny Clouds"],["soft-sky","Soft Sky"],["mountain-mist","Mountain Mist"],["warm-dawn","Warm Dawn"],["calm-ocean","Calm Ocean"]];
+ const bgGrid=el("div","pc-bg-grid");
+ bgs.forEach(([id,label])=>{const b=el("button","pc-bg-swatch"+((publicChatState.chatBg||"default")===id?" active":""),label);b.type="button";b.dataset.bg=id;b.onclick=()=>{publicChatState.chatBg=id;pcApplyChatTheme();pcRefreshHeadMenu();};bgGrid.appendChild(b);});
+ bgSec.appendChild(bgGrid);menu.appendChild(bgSec);
+
+ const exit=el("button","pc-head-menu-item pc-menu-exit","Exit chat");exit.type="button";exit.onclick=()=>{publicChatState.headerMenu=false;pcCloseWS();showView("weekly");};menu.appendChild(exit);
+ const headbar=card.querySelector('.pc-chat-headbar');if(headbar)headbar.insertAdjacentElement('afterend',menu);
+ menu.scrollTop=scrollTop;
+}
+function pcRenderMemberResults(){const box=document.getElementById('pc-member-results');if(!box)return;box.innerHTML='';const q=String(publicChatState.memberQuery||'').trim().toLowerCase();const me=(publicChatState.participant&&publicChatState.participant.code)||'';const people=(publicChatState.participants||[]).filter(p=>p.code&&p.code!==me).filter(p=>!q||String(p.public_identity||p.code||'').toLowerCase().includes(q)||String(p.display_name||'').toLowerCase().includes(q)).slice(0,20);
+ if(!people.length){box.appendChild(el('div','pc-member-empty','No members found'));return;}
+ people.forEach(p=>{const row=el('div','pc-member-row');const left=el('div','pc-member-left');left.appendChild(pcAvatar(p,false));const meta=el('div','pc-member-meta');meta.appendChild(el('div','pc-member-name',p.public_identity||p.code));if(p.display_name)meta.appendChild(el('div','pc-member-sub',p.display_name));left.appendChild(meta);row.appendChild(left);const actions=el('div','pc-member-actions');const mention=el('button','pc-action','Mention');mention.type='button';mention.onclick=()=>{const ta=publicChatState.composerInput;if(ta){ta.value+=(ta.value&& !ta.value.endsWith(' ')?' ':'')+'@'+p.code+' ';ta.focus();if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();}};const priv=el('button','pc-action','Private');priv.type='button';priv.onclick=()=>{publicChatState.privateTo=p;publicChatState.replyTo=null;publicChatState.searchOpen=false;publicChatState.headerMenu=false;renderPublicChat();};actions.append(mention,priv);row.appendChild(actions);box.appendChild(row);});
+}
+function pcRefreshSearchBar(){if(currentView!=="public-chat")return;const card=document.querySelector('.pc-chat-card');if(!card){renderPublicChat();return;}const old=card.querySelector('.pc-search-bar');if(old)old.remove();if(!publicChatState.searchOpen||!publicChatState.joined){pcRenderMessages();return;}
+ const searchRow=el("div","pc-search-bar");const mode=publicChatState.searchMode||"messages";const modeWrap=el("div","pc-search-modes");["messages","members"].forEach(m=>{const b=el("button","pc-search-mode"+(mode===m?" active":""),m==="messages"?"Messages":"Members");b.type="button";b.onclick=()=>{publicChatState.searchMode=m;pcRefreshSearchBar();};modeWrap.appendChild(b);});searchRow.appendChild(modeWrap);
+ const search=document.createElement("input");search.className="pc-search-input";search.id="pc-search-input";search.type="search";search.placeholder=mode==="members"?"Search members":"Search messages";search.maxLength=200;search.value=mode==="members"?(publicChatState.memberQuery||""):(publicChatState.searchQuery||"");
+ const run=el("button","pc-action","Search");run.type="button";run.onclick=async()=>{const q=search.value.trim();if(mode==="members"){publicChatState.memberQuery=q;pcRenderMemberResults();return;}if(!q){publicChatState.searchResults=null;publicChatState.searchQuery="";pcRenderMessages();return;}try{const res=await pcApi("/api/public-chat/search?q="+encodeURIComponent(q));publicChatState.searchQuery=q;publicChatState.searchResults=Array.isArray(res.messages)?res.messages:[];pcRenderMessages();}catch(e){pcToast(e.message||String(e));}};
+ const clear=el("button","pc-action","Close");clear.type="button";clear.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.memberQuery="";publicChatState.searchOpen=false;publicChatState.searchMode="messages";const bar=document.querySelector('.pc-search-bar');if(bar)bar.remove();pcRenderMessages();};
+ search.onkeydown=(e)=>{if(e.key==="Enter"){e.preventDefault();run.click();}if(e.key==="Escape"){clear.click();}};search.oninput=()=>{if(mode==="members"){publicChatState.memberQuery=search.value.trim();pcRenderMemberResults();}};
+ searchRow.append(search,run,clear);if(mode==="members"){const results=el("div","pc-member-results");results.id="pc-member-results";searchRow.appendChild(results);} 
+ const head=card.querySelector('.pc-chat-headbar');if(head)head.insertAdjacentElement('afterend',searchRow);if(mode==="members")pcRenderMemberResults();setTimeout(()=>search.focus(),0);
+}
+function pcComposerNode(){const wrap=el("div","pc-composer");const replying=publicChatState.replyTo,priv=publicChatState.privateTo,editing=publicChatState.editingId;
+ if(replying||priv||editing){const meta=el("div","pc-compose-meta");if(editing)meta.appendChild(el("span","pc-chip","Editing"));if(replying)meta.appendChild(el("span","pc-chip","Replying to "+(replying.sender_identity||replying.sender_code||"message")));if(priv)meta.appendChild(el("span","pc-chip pc-chip-private","Private to "+(priv.public_identity||priv.code)));const clear=el("button","pc-action","Cancel");clear.type="button";clear.onclick=()=>{publicChatState.replyTo=null;publicChatState.privateTo=null;publicChatState.editingId=null;pcRefreshComposer();};meta.appendChild(clear);wrap.appendChild(meta);}
+ if(publicChatState.attachmentFile){const preview=el("div","pc-attachment-preview");const card=el("div","pc-preview-card");card.appendChild(el("span",null,publicChatState.attachmentFile.name));const rm=el("button","pc-action danger","Remove");rm.type="button";rm.onclick=()=>{pcClearAttachment();pcRefreshComposer();};card.appendChild(rm);preview.appendChild(card);wrap.appendChild(preview);}
+ const row=el("div","pc-compose-row");const main=el("div","pc-compose-main");
+ const fileInput=document.createElement("input");fileInput.type="file";fileInput.className="pc-file-input";fileInput.accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,audio/*";fileInput.onchange=()=>{if(fileInput.files&&fileInput.files[0]){publicChatState.attachmentFile=fileInput.files[0];pcRefreshComposer();}};
+ const emojiBtn=el("button","pc-tool-btn");emojiBtn.type="button";emojiBtn.setAttribute("aria-label","Emoji");emojiBtn.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg>';emojiBtn.disabled=!publicChatState.joined;emojiBtn.onclick=()=>{publicChatState.emojiTarget=null;publicChatState.emojiOpen=!publicChatState.emojiOpen;const oldP=document.querySelector(".pc-emoji-picker");if(oldP)oldP.remove();if(publicChatState.emojiOpen){const wrap=document.querySelector(".pc-composer");if(wrap)wrap.appendChild(pcEmojiPicker(publicChatState.emojiTarget));}};
+ const attach=el("button","pc-tool-btn");attach.type="button";attach.setAttribute("aria-label","Attach file");attach.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l9.9-9.9a3.5 3.5 0 0 1 5 5L10.3 19a2 2 0 1 1-2.8-2.8l8.5-8.5"/></svg>';attach.disabled=!publicChatState.joined;attach.onclick=()=>fileInput.click();
+ const ta=document.createElement("textarea");ta.className="pc-input";ta.rows=1;ta.maxLength=4000;ta.placeholder=publicChatState.joined?"Type a message":"Request a chat code to join";ta.disabled=!publicChatState.joined;publicChatState.composerInput=ta;if(editing){const m=publicChatState.messages.find(x=>x.id===editing);if(m)ta.value=m.text||"";}
+ ta.oninput=()=>{ta.style.height="auto";ta.style.height=Math.min(140,ta.scrollHeight)+"px";if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();pcSendTyping(true);clearTimeout(publicChatState.typingTimer);publicChatState.typingTimer=setTimeout(()=>pcSendTyping(false),1500);};
+ main.append(emojiBtn,attach,ta);row.appendChild(main);
+ const sendBtn=el("button","pc-send-btn pc-record-send");sendBtn.type="button";sendBtn.id="pc-record-send-btn";sendBtn.title="Send voice note";sendBtn.setAttribute("aria-label","Send voice note");sendBtn.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5l18-8.5L3 3.5v6.6l12 1.9-12 1.9z"/></svg>';sendBtn.hidden=!publicChatState.recording;
+ const actionBtn=el("button","pc-send-btn pc-mic-btn");actionBtn.type="button";actionBtn.disabled=!publicChatState.joined;actionBtn.id="pc-composer-action";
+ const updateAction=()=>{const hasContent=!!(publicChatState.composerInput&&publicChatState.composerInput.value||'').trim()||!!publicChatState.voiceBlob||!!publicChatState.attachmentFile||!!publicChatState.editingId;const recording=!!publicChatState.recording;sendBtn.hidden=!recording;sendBtn.disabled=!recording;actionBtn.className="pc-send-btn"+(hasContent&&!recording?"":" pc-mic-btn")+(recording?" recording":"");actionBtn.setAttribute("aria-label",recording?"Stop recording":(hasContent?"Send":"Record voice note"));if(recording){actionBtn.innerHTML='<span aria-hidden="true">■</span>';actionBtn.title="Stop recording";}else{actionBtn.innerHTML=hasContent?'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5l18-8.5L3 3.5v6.6l12 1.9-12 1.9z"/></svg>':'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V7a3.5 3.5 0 1 0-7 0v5a3.5 3.5 0 0 0 3.5 3.5z"/><path d="M19 12a7 7 0 0 1-14 0"/><path d="M12 19v2.5"/></svg>';actionBtn.title=hasContent?"Send":"Record voice note";}};
+ window.pcUpdateComposerAction=updateAction;updateAction();
+ const doSend=async()=>{const taNow=document.getElementById("pc-msg-input")||publicChatState.composerInput||ta;const text=((taNow&&taNow.value)||publicChatState.voiceNoteText||publicChatState.attachmentText||"").trim();const hasContent=!!text||!!publicChatState.voiceBlob||!!publicChatState.attachmentFile||!!publicChatState.editingId;if(!hasContent)return;actionBtn.disabled=true;sendBtn.disabled=true;
+  const tempId="pending-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);const me=publicChatState.participant||{};
+  const draft={id:tempId,kind:priv?"private":"public",created_at:Date.now(),updated_at:Date.now(),text:text,mine:true,sender_code:me.code||"",sender_name:me.display_name||"",sender_identity:me.public_identity||"",reply_to:pcReplySnapshot(replying),mentions:pcMentionCodes(text),reactions:{},read_count:0,attachments:publicChatState.attachmentFile?[{file_id:"local",file_name:publicChatState.attachmentFile.name,mime_type:publicChatState.attachmentFile.type||"application/octet-stream",kind:publicChatState.attachmentFile.type.startsWith("image/")?"image":"document",url:""}]:[],audio:publicChatState.voiceBlob?{file_id:"local",url:publicChatState.voiceUrl,duration_ms:publicChatState.voiceDurationMs,mime_type:publicChatState.voiceBlob.type||"audio/webm",size_bytes:publicChatState.voiceBlob.size||0,file_name:pcNextVoiceName(pcAudioExt(publicChatState.voiceBlob.type||publicChatState.voiceMime))}:null,deleted:false,edited:false,status:"sending",private_recipient_code:priv?priv.code:"",_retryBlob:publicChatState.voiceBlob||null,_retryFile:publicChatState.attachmentFile||null};
+  publicChatState.pending[tempId]=true;pcUpsertMessage(draft);pcSendTyping(false);if(currentView==="public-chat")pcRenderMessages();
+  try{if(publicChatState.editingId){const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(publicChatState.editingId)}`,{method:"PUT",body:{text}});pcUpsertMessage(res.message);pcForgetMessage(tempId);delete publicChatState.pending[tempId];}
+   else if(publicChatState.voiceBlob){publicChatState.voiceNoteText=text;await pcUploadVoice(tempId);}
+   else if(publicChatState.attachmentFile){publicChatState.attachmentText=text;await pcUploadAttachment(tempId);}
+   else{await pcSendMessage({text:text,reply_to_id:replying?replying.id:null,private_recipient_code:priv?priv.code:null,mention_codes:pcMentionCodes(text)},tempId);}
+   publicChatState.replyTo=null;publicChatState.privateTo=null;publicChatState.editingId=null;publicChatState.emojiOpen=false;ta.value="";ta.style.height="auto";
+  }catch(e){pcToast(e.message||String(e));}finally{actionBtn.disabled=false;sendBtn.disabled=false;updateAction();pcRenderMessages();}};
+ window.pcDoSendVoiceNote=doSend;
+ sendBtn.onclick=async()=>{if(!publicChatState.recording)return;sendBtn.disabled=true;actionBtn.disabled=true;publicChatState.sendAfterStop=true;try{if(publicChatState.recorder&&publicChatState.recorder.state!=="inactive")publicChatState.recorder.stop();else{publicChatState.sendAfterStop=false;sendBtn.disabled=false;actionBtn.disabled=!publicChatState.joined;if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();pcToast("Recording is not active.");}}catch(_e){publicChatState.sendAfterStop=false;sendBtn.disabled=false;actionBtn.disabled=!publicChatState.joined;if(window.pcUpdateComposerAction)window.pcUpdateComposerAction();pcToast("Could not stop recording.");}};
+ actionBtn.onclick=async()=>{if(publicChatState.recording){pcToggleRecording(actionBtn);return;}const text=(ta.value||"").trim();const hasContent=!!text||!!publicChatState.voiceBlob||!!publicChatState.attachmentFile||!!publicChatState.editingId;if(!hasContent){pcToggleRecording(actionBtn);return;}await doSend();};
+ row.appendChild(sendBtn);row.appendChild(actionBtn);wrap.appendChild(row);wrap.appendChild(fileInput);
+ if(publicChatState.emojiOpen)wrap.appendChild(pcEmojiPicker(publicChatState.emojiTarget));
+ return wrap;}
+function pcMessageMenu(m, mine){
+ const menu=el("div","pc-msg-menu"+(mine?" mine":""));
+ const add=(label,fn,cls)=>{const b=el("button","pc-msg-menu-item"+(cls?" "+cls:""),label);b.type="button";b.onclick=(e)=>{e.stopPropagation();publicChatState.msgMenu=null;fn();};menu.appendChild(b);};
+ if(m.status==="failed"){
+  add("Retry",()=>{if(m._retryBlob){publicChatState.voiceBlob=m._retryBlob;publicChatState.voiceDurationMs=m.audio?.duration_ms||publicChatState.voiceDurationMs||0;publicChatState.voiceMime=m._retryBlob.type||publicChatState.voiceMime;publicChatState.voiceUrl=URL.createObjectURL(m._retryBlob);m.status="sending";m.error="";pcRenderMessages();pcUploadVoice(m.id);return;}if(m.audio)pcToast("Voice note could not be retried. Please record it again.");else if((m.attachments||[]).length)pcUploadAttachment(m.id);else pcSendMessage({text:m.text||"",reply_to_id:m.reply_to?m.reply_to.id:null,private_recipient_code:m.private_recipient_code||null,mention_codes:m.mentions||[]},m.id);});
+  add("Dismiss",()=>{pcForgetMessage(m.id);pcRenderMessages();},"danger");
+  return menu;
+ }
+ add("Reply",()=>{publicChatState.replyTo=m;const targetCode=m.kind==="private"?(m.mine?m.private_recipient_code:m.sender_code):"";publicChatState.privateTo=targetCode?(publicChatState.participants||[]).find(p=>p.code===targetCode)||null:null;publicChatState.editingId=null;renderPublicChat();});
+ add("React",()=>{publicChatState.emojiTarget=m.id;publicChatState.emojiOpen=!publicChatState.emojiOpen;renderPublicChat();});
+ if(!m.deleted&&m.text)add("Copy",async()=>{try{await navigator.clipboard.writeText(m.text||"");pcToast("Message copied");}catch(_e){}});
+ if(!m.deleted&&m.audio&&m.audio.url){
+  const url=new URL(m.audio.url,location.origin).href;
+  const ext=(String(m.audio.mime_type||"").includes("mp4")?"m4a":String(m.audio.mime_type||"").includes("ogg")?"ogg":"webm");
+  const fileName=m.audio.file_name||`record${String(Math.max(1,((publicChatState.messages||[]).indexOf(m)+1))).padStart(3,"0")}.${ext}`;
+  add("Download",()=>{const a=document.createElement("a");a.href=m.audio.url;a.download=fileName;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();});
+  add("Share",async()=>{try{if(navigator.share){try{const resp=await fetch(m.audio.url,{credentials:"same-origin"});const blob=await resp.blob();const ext2=(blob.type||"").includes("mp4")?"m4a":(blob.type||"").includes("ogg")?"ogg":"webm";const file=new File([blob],fileName||`record001.${ext2}`,{type:blob.type||"audio/webm"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:fileName||"MNH voice note",text:"MNH Group Chat voice note",files:[file]});return;}}catch(_e){}await navigator.share({title:fileName||"MNH voice note",text:"MNH Group Chat voice note",url});return;}}catch(_e){}try{await navigator.clipboard.writeText(url);pcToast("Voice note link copied");}catch(_e){window.prompt("Copy voice note link",url);}});
+  add("WhatsApp",()=>{window.open("https://wa.me/?text="+encodeURIComponent("MNH Group Chat voice note: "+url),"_blank","noopener");});
+  add("Email",()=>{location.href="mailto:?subject="+encodeURIComponent("MNH Group Chat voice note")+"&body="+encodeURIComponent("Listen/download this voice note: "+url);});
+ }
+ if(!mine&&!m.deleted){add("Private reply",()=>{const target=(publicChatState.participants||[]).find(p=>p.code===m.sender_code);if(target){publicChatState.privateTo=target;publicChatState.replyTo=m;renderPublicChat();}});add("Report",async()=>{const category=prompt("Report category (spam, harassment, abuse, inappropriate, misinformation, other):","spam");if(!category)return;const reason=prompt("Reason (optional):","")||"";try{await pcApi("/api/public-chat/reports",{method:"POST",body:{message_id:m.id,category,reason}});pcToast("Report sent to moderators");}catch(e){pcToast(e.message||String(e));}},"danger");}
+ if(mine&&!m.deleted){add("Edit",()=>{publicChatState.editingId=m.id;publicChatState.replyTo=null;publicChatState.privateTo=null;renderPublicChat();});add("Delete",()=>{publicChatState.deleteConfirm=m.id;publicChatState.msgMenu=null;pcRenderMessages();},"danger");}
+ return menu;
+}
+
+function pcAudioDurationLabel(a){
+ const d=Number((a&&a.duration_ms)||0);
+ if(d>0)return Math.max(1,Math.round(d/1000))+"s";
+ return "";
+}
+function pcBindAudioMeta(a, audio){
+ if(!audio||!a)return;
+ const apply=()=>{
+  const d=Number(audio.duration);
+  if(isFinite(d)&&d>0&&!Number(a.duration_ms)){
+   a.duration_ms=Math.round(d*1000);
+   const wrap=audio.closest(".pc-audio-wrap");
+   const label=wrap?wrap.querySelector(".pc-audio-label"):null;
+   if(label){
+    const secs=Math.max(1,Math.round(d))+"s";
+    if(!/\b\d+s\b/.test(label.textContent||"")) label.textContent=(label.textContent||"Voice note")+" · "+secs;
+   }
+  }
+ };
+ audio.addEventListener("loadedmetadata",apply,{once:true});
+ audio.addEventListener("durationchange",apply);
+ if(audio.readyState>=1)apply();
+}
+function pcRenderMessages(){const list=document.getElementById("pc-messages");if(!list)return;const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<140;list.innerHTML="";const msgs=pcVisibleMessages();
+ if(!msgs.length){const empty=el("div","pc-empty");empty.appendChild(el("div","pc-empty-icon","💬"));empty.appendChild(el("h4",null,publicChatState.searchResults?"No results found":"Welcome to MNH Group Chat"));empty.appendChild(el("p",null,publicChatState.searchResults?"Try a different search term.":"Send a message, share a file, or record a voice note."));list.appendChild(empty);return;}
+ let lastDay="";const me=publicChatState.participant?publicChatState.participant.code:"";
+ msgs.forEach((m,idx)=>{const prev=msgs[idx-1],next=msgs[idx+1];const day=pcDay(m.created_at);if(day!==lastDay){list.appendChild(el("div","pc-day-chip",day));lastDay=day;}
+  const mine=!!m.mine;const samePrev=prev&&prev.mine===m.mine&&prev.sender_code===m.sender_code&&pcDay(prev.created_at)===day&&(m.created_at-prev.created_at)<5*60*1000&&!prev.deleted&&!m.deleted;
+  const sameNext=next&&next.mine===m.mine&&next.sender_code===m.sender_code&&pcDay(next.created_at)===day&&(next.created_at-m.created_at)<5*60*1000&&!next.deleted&&!m.deleted;
+  const row=el("div","pc-msg-row "+(mine?"mine":"theirs")+(samePrev?" grouped":""));
+  if(!mine){if(!sameNext)row.appendChild(pcAvatar({display_name:m.sender_name,code:m.sender_code,public_identity:m.sender_identity},false));else row.appendChild(el("div","pc-avatar-spacer")); }
+  const bubble=el("div","pc-bubble "+(mine?"mine":"theirs")+(m.kind==="private"?" private":"")+(m.deleted?" deleted":"")+(m.status==="failed"?" failed":"")+(samePrev?" cont-prev":"")+(sameNext?" cont-next":""));
+  if(!mine&&!samePrev){bubble.appendChild(el("div","pc-msg-sender",m.sender_identity||m.sender_code||"Participant")); }
+  if(m.kind==="private")bubble.appendChild(el("span","pc-chip pc-chip-private","Private"+(m.private_recipient_code&&m.private_recipient_code!==me?" to "+m.private_recipient_code:"")));
+  if(m.reply_to){const r=el("div","pc-reply-ref "+(m.reply_to.kind==="private"?"private":""));r.textContent=(m.reply_to.sender_identity||m.reply_to.sender_code||"Message")+": "+pcShort(m.reply_to.deleted?"Message deleted":(m.reply_to.text||(m.reply_to.has_audio?"Voice note":"Attachment")),120);bubble.appendChild(r);}
+  if(m.deleted){bubble.appendChild(el("div","pc-msg-text pc-deleted","This message was deleted"));}else{
+   if(m.text)bubble.appendChild(el("div","pc-msg-text",m.text));
+   (m.attachments||[]).forEach(a=>{const url=a.url||(a.file_id&&a.file_id!=="local"?`/api/public-chat/media/${a.file_id}`:"");const isImage=(a.kind==="image")||String(a.mime_type||"").startsWith("image/");if(isImage&&url){const link=document.createElement("a");link.className="pc-img-attachment";link.href=url;link.target="_blank";link.rel="noopener";const img=document.createElement("img");img.src=url;img.alt=a.file_name||"Image attachment";img.loading="lazy";link.appendChild(img);bubble.appendChild(link);}else if(url){const link=el("a","pc-attachment");link.href=url;link.target="_blank";link.rel="noopener";link.appendChild(el("div","pc-attachment-icon",isImage?"🖼":"📎"));const info=el("div");info.appendChild(el("div","pc-attachment-name",a.file_name||"File"));info.appendChild(el("div","pc-attachment-meta",a.mime_type||"Attachment"));link.appendChild(info);bubble.appendChild(link);}else{bubble.appendChild(el("div","pc-attachment-meta","Attachment: "+(a.file_name||"file")));}});
+   if(m.audio&&(m.audio.url||m.status==="sending")){
+    const wrapA=el("div","pc-audio-wrap");
+    const dur=pcAudioDurationLabel(m.audio);
+    const size=m.audio.size_bytes?" · "+(m.audio.size_bytes/1024/1024).toFixed(2)+" MB":"";
+    wrapA.appendChild(el("div","pc-audio-label",(m.status==="sending"?"Sending voice note":"Voice note")+(dur?" · "+dur:"")+size));
+    const a=document.createElement("audio");a.controls=true;a.preload="metadata";if(m.audio.url)a.src=m.audio.url;a.className="pc-audio";wrapA.appendChild(a);
+    if(m.audio.url){pcBindAudioMeta(m.audio,a);}
+    if(m.audio.url){
+      const actionsA=el("div","pc-audio-actions");
+      const url=new URL(m.audio.url,location.origin).href;
+      const ext=(String(m.audio.mime_type||"").includes("mp4")?"m4a":String(m.audio.mime_type||"").includes("ogg")?"ogg":"webm");
+      const fileName=m.audio.file_name||`record${String(Math.max(1,((publicChatState.messages||[]).indexOf(m)+1))).padStart(3,"0")}.${ext}`;
+      wrapA.appendChild(actionsA);
+    } else if(m.status==="sending"){ wrapA.appendChild(el("div","pc-audio-status","Uploading voice note…")); }
+    bubble.appendChild(wrapA);
+  }
+  }
+  const meta=el("div","pc-msg-meta");if(m.edited&&!m.deleted)meta.appendChild(el("span","pc-msg-time","edited"));meta.appendChild(el("span","pc-msg-time",pcFmtTime(m.created_at)));
+  if(m.status==="sending")meta.appendChild(el("span","pc-msg-status","sending…"));
+  else if(m.status==="failed")meta.appendChild(el("span","pc-msg-status",m.error||"failed"));
+  else if(mine)meta.appendChild(el("span","pc-ticks "+((m.read_count||0)>0?"read":""),(m.read_count||0)>0?"✓✓":"✓"));
+  bubble.appendChild(meta);
+  if(!m.deleted&&!m.status&&Object.keys(m.reactions||{}).length){const reactions=el("div","pc-reactions");Object.keys(m.reactions||{}).forEach(emoji=>{const entry=m.reactions[emoji]||{};const b=el("button","pc-reaction"+(entry.mine?" mine":""),emoji+" "+(entry.count||0));b.type="button";b.onclick=async()=>{try{const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(m.id)}/reactions`,{method:"POST",body:{emoji}});m.reactions=res.reactions||{};pcRenderMessages();}catch(e){pcToast(e.message||String(e));}};reactions.appendChild(b);});bubble.appendChild(reactions);}
+  if(!m.deleted||m.status==="failed"){
+    const menuWrap=el("div","pc-msg-menu-wrap"+(mine?" mine":""));
+    const btn=el("button","pc-msg-menu-btn","⋮");btn.type="button";btn.title="Message actions";btn.onclick=(e)=>{e.stopPropagation();publicChatState.msgMenu=publicChatState.msgMenu===m.id?null:m.id;pcRenderMessages();};
+    menuWrap.appendChild(btn);
+    if(publicChatState.msgMenu===m.id)menuWrap.appendChild(pcMessageMenu(m,mine));
+    bubble.appendChild(menuWrap);
+  }
+  if(publicChatState.deleteConfirm && publicChatState.deleteConfirm.id===m.id){
+     const mode=publicChatState.deleteConfirm.mode||"me";
+     const confirmWrap=el("div","pc-delete-confirm");
+     confirmWrap.appendChild(el("span","pc-delete-confirm-text",mode==="all"?"Delete this message for everyone?":"Delete this message for you?"));
+     const actions=el("div","pc-delete-confirm-actions");
+     const cancel=el("button","pc-delete-cancel","Cancel");cancel.type="button";cancel.onclick=(e)=>{e.stopPropagation();publicChatState.deleteConfirm=null;pcRenderMessages();};
+     const del=el("button","pc-delete-ok",mode==="all"?"Delete for everyone":"Delete for me");del.type="button";del.onclick=async(e)=>{e.stopPropagation();del.disabled=true;try{const res=await pcApi(`/api/public-chat/messages/${encodeURIComponent(m.id)}?mode=${encodeURIComponent(mode)}`,{method:"DELETE"});publicChatState.deleteConfirm=null;if(res&&res.action==="deleted_for_me"){pcForgetMessage(m.id);}else if(res&&res.message){pcUpsertMessage(res.message);}pcRenderMessages();}catch(err){del.disabled=false;pcToast(err.message||String(err));}};
+     actions.append(cancel,del);confirmWrap.appendChild(actions);bubble.appendChild(confirmWrap);
+   }
+  row.appendChild(bubble);
+  if(mine) row.appendChild(el("div","pc-avatar-spacer"));
+  list.appendChild(row);});
+ if(nearBottom)list.scrollTop=list.scrollHeight;if(currentView==="public-chat")pcMarkRead();}
+async function renderPublicChat(){
+ const token=(publicChatState._renderToken=(publicChatState._renderToken||0)+1);
+ publicChatState._rendering=true;
+ pcLoadChatTheme();
+ try{
+ const wsRoot=document.getElementById("workspace-body");
+ let root=wsRoot;
+ const existingCard = wsRoot && wsRoot.querySelector('.pc-chat-card');
+ const hasShell = wsRoot && wsRoot.classList.contains('pc-shell') && existingCard;
+ if(hasShell){
+  root=wsRoot;
+  root.querySelectorAll('.pc-toast').forEach(n=>n.remove());
+  // Soft refresh: update status/menu/messages without rebuilding the shell to avoid nav flush.
+  pcRefreshHeadMenu();
+  pcRefreshSearchBar();
+  pcRefreshComposer();
+  pcRenderMessages();
+  const subNow=document.getElementById("pc-online");
+  if(subNow)subNow.textContent=publicChatState.joined?((publicChatState.online||0)+" online • "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting";
+  return;
+ }
+ root=workspace(...WORKSPACE_META["public-chat"]);root.classList.add("pc-shell");
+ root.querySelectorAll('.pc-chat-card,.pc-toast').forEach(n=>n.remove());
+ const card=el("div","pc-chat-card");
+ const head=el("div","pc-chat-headbar");
+ const ident=el("div","pc-chat-identity");ident.appendChild(el("div","pc-room-avatar","M"));
+ const meta=el("div");meta.appendChild(el("div","pc-chat-title","MNH Group Chat"));
+ const sub=el("div","pc-chat-meta",publicChatState.joined?((publicChatState.online||0)+" online • "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting");sub.id="pc-online";meta.appendChild(sub);
+ const typing=el("div","pc-typing","");typing.id="pc-typing";typing.hidden=true;meta.appendChild(typing);ident.appendChild(meta);head.appendChild(ident);
+ const headActions=el("div","pc-head-actions");
+ const searchBtn=el("button","pc-icon-btn"+(publicChatState.searchResults?" active":""));searchBtn.type="button";searchBtn.title="Search messages";searchBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';searchBtn.disabled=!publicChatState.joined;searchBtn.onclick=()=>{publicChatState.searchOpen=!publicChatState.searchOpen;publicChatState.headerMenu=false;if(publicChatState.searchOpen){pcRefreshSearchBar();setTimeout(()=>{const i=document.getElementById("pc-search-input");if(i)i.focus();},0);}else{const card=document.querySelector('.pc-chat-card');const bar=card&&card.querySelector('.pc-search-bar');if(bar)bar.remove();publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.memberQuery="";pcRenderMessages();}};
+ const menuBtn=el("button","pc-icon-btn");menuBtn.type="button";menuBtn.setAttribute("aria-label","Chat menu");menuBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';menuBtn.onclick=(e)=>{e.stopPropagation();publicChatState.headerMenu=!publicChatState.headerMenu;pcRefreshHeadMenu();};
+ headActions.append(searchBtn,menuBtn);head.appendChild(headActions);card.appendChild(head);
+
+ if(publicChatState.headerMenu){pcRefreshHeadMenu();}
+
+ if(publicChatState.searchOpen&&publicChatState.joined){
+  const searchRow=el("div","pc-search-bar");
+  const mode=publicChatState.searchMode||"messages";
+  const modeWrap=el("div","pc-search-modes");
+  ["messages","members"].forEach(m=>{const b=el("button","pc-search-mode"+(mode===m?" active":""),m==="messages"?"Messages":"Members");b.type="button";b.onclick=()=>{publicChatState.searchMode=m;pcRefreshSearchBar();};modeWrap.appendChild(b);});
+  searchRow.appendChild(modeWrap);
+  const search=document.createElement("input");search.className="pc-search-input";search.id="pc-search-input";search.type="search";search.placeholder=mode==="members"?"Search members":"Search messages";search.maxLength=200;search.value=mode==="members"?(publicChatState.memberQuery||""):(publicChatState.searchQuery||"");
+  const run=el("button","pc-action","Search");run.type="button";run.onclick=async()=>{const q=search.value.trim();if(mode==="members"){publicChatState.memberQuery=q;pcRefreshSearchBar();return;}if(!q){publicChatState.searchResults=null;publicChatState.searchQuery="";pcRenderMessages();pcRefreshSearchBar();return;}try{const res=await pcApi("/api/public-chat/search?q="+encodeURIComponent(q));publicChatState.searchQuery=q;publicChatState.searchResults=Array.isArray(res.messages)?res.messages:[];pcRenderMessages();pcRefreshSearchBar();}catch(e){pcToast(e.message||String(e));}};
+  const clear=el("button","pc-action","Close");clear.type="button";clear.onclick=()=>{publicChatState.searchResults=null;publicChatState.searchQuery="";publicChatState.memberQuery="";publicChatState.searchOpen=false;publicChatState.searchMode="messages";const bar=document.querySelector('.pc-search-bar');if(bar)bar.remove();pcRenderMessages();};
+  search.onkeydown=(e)=>{if(e.key==="Enter"){e.preventDefault();run.click();}if(e.key==="Escape"){clear.click();}};
+  search.oninput=()=>{if(mode==="members"){publicChatState.memberQuery=search.value.trim();pcRenderMemberResults();}};
+  searchRow.append(search,run,clear);
+  if(mode==="members"){const results=el("div","pc-member-results");results.id="pc-member-results";searchRow.appendChild(results);}
+  card.appendChild(searchRow);
+ }
+
+ if(!publicChatState.joined){
+  if(!publicChatState._autoJoinAttempted){
+   publicChatState._autoJoinAttempted=true;
+   (async()=>{try{const res=await pcApi("/api/public-chat/join",{method:"POST",body:{display_name:"",request_new:true}});publicChatState.joined=!!res.joined;publicChatState.participant=res.participant;publicChatState.participants=res.participants||[];if(publicChatState.joined)pcEnsureRealtime();await pcLoadMessages(true);await pcLoadPreferences(true);}catch(e){publicChatState.error=e.message||String(e);}finally{if(currentView==="public-chat")renderPublicChat();}})();
+  } else if(publicChatState.error){
+   const join=el("div","pc-join");join.appendChild(el("p","muted",publicChatState.error||"Unable to connect to chat right now."));const retry=el("button","soft","Retry");retry.type="button";retry.onclick=()=>{publicChatState._autoJoinAttempted=false;publicChatState.error="";renderPublicChat();};join.appendChild(retry);card.appendChild(join);
+  }
+ }
+
+
+ if(publicChatState.searchResults)card.appendChild(el("div","pc-search-note","Showing search results for \u201c"+publicChatState.searchQuery+"\u201d"));
+
+ const body=el("div","pc-chat-body");
+ const list=el("div","pc-messages");list.id="pc-messages";body.appendChild(list);
+
+ card.appendChild(body);
+ card.appendChild(pcComposerNode());root.appendChild(card);
+ const toast=el("div","pc-toast","");toast.id="pc-toast";toast.hidden=true;root.appendChild(toast);
+ pcRenderMessages();
+ if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+ (async()=>{
+  try{await pcLoadStatus(true);}catch(_e){}
+  if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+  if(publicChatState.joined){try{await pcLoadMessages(true);}catch(_e){}}
+  if(token!==publicChatState._renderToken||currentView!=="public-chat")return;
+  const subNow=document.getElementById("pc-online");
+  if(subNow)subNow.textContent=publicChatState.joined?((publicChatState.online||0)+" online • "+((publicChatState.participants||[]).length||0)+" participants"):"Join to start chatting";
+  const searchNow=document.querySelector('.pc-chat-card .pc-icon-btn[title="Search messages"]');
+  if(searchNow)searchNow.disabled=!publicChatState.joined;
+  pcRenderMessages();
+ })();
+ } finally {
+  if(token===publicChatState._renderToken) publicChatState._rendering=false;
+ }
+}
+
+async function renderHistoryPage(){const root=workspace(...WORKSPACE_META.history);const card=el("div","card");root.appendChild(card);try{const rows=await apiRequest("GET","/api/history");if(!rows.length)card.appendChild(el("p","muted","No new sessions or activities have been recorded."));rows.forEach(r=>{const when=new Date(r.at).toLocaleString();card.appendChild(el("div","item",`${r.role} · ${r.summary} · ${when}`));});}catch(e){card.appendChild(el("p","muted",e.message));}}
+function renderExportPage(){const root=workspace(...WORKSPACE_META.export);const card=el("div","card res-form");card.appendChild(el("h3",null,"Download and share calendar data"));
+ // ---- module selection: choose the modules to include, then download ----
+ const selCard=el("div","card");selCard.appendChild(el("h3",null,"Modules to include"));
+ const selStatus=el("p","muted","Loading the module list…");selCard.appendChild(selStatus);
+ const boxWrap=el("div","res-form");selCard.appendChild(boxWrap);
+ const chosen=new Set(["ARMN – 8100","MIPN 8100","PNIM-8100"]);
+ const addRow=(code,title,lecturer)=>{const label=el("label",null);label.style.cssText="display:flex;align-items:center;gap:8px;margin:6px 0";const box=document.createElement("input");box.type="checkbox";box.value=code;box.checked=chosen.has(code);box.addEventListener("change",()=>{box.checked?chosen.add(code):chosen.delete(code);});label.appendChild(box);label.appendChild(el("span",null,(title?`${code} — ${title}`:code)+` · Presenter: ${lecturer||"Not assigned"}`));boxWrap.appendChild(label);};
+ (async()=>{try{const data=await apiRequest("GET","/api/export/modules");boxWrap.textContent="";(data.modules||[]).forEach(m=>addRow(m.code,m.title,m.facilitator));selStatus.textContent="";;}catch(e){boxWrap.textContent="";["ARMN – 8100","MIPN 8100","PNIM-8100"].forEach(code=>addRow(code,""));selStatus.textContent="";;}})();
+ root.appendChild(selCard);
+ const selectedParam=()=>encodeURIComponent([...chosen].join(","));
+ const selectedWeekParam=()=>"&week_start="+encodeURIComponent(WK.isoMonday(weekOffset));
+ const fontSizeWrap=el("div","module-field");
+ fontSizeWrap.style.cssText="margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px";
+ const fontSizeLabel=el("label",null,"PDF font size");
+ const fontSizeControl=document.createElement("input");fontSizeControl.type="range";fontSizeControl.min="85";fontSizeControl.max="115";fontSizeControl.step="5";fontSizeControl.value="100";fontSizeControl.setAttribute("aria-label","PDF font size");
+ fontSizeControl.style.cssText="display:block;width:100%;margin:8px 0;accent-color:var(--gold)";
+ const fontSizeValue=el("strong",null,"100%");
+ fontSizeControl.addEventListener("input",()=>{fontSizeValue.textContent=fontSizeControl.value+"%";});
+ fontSizeWrap.append(fontSizeLabel,fontSizeControl,fontSizeValue);card.appendChild(fontSizeWrap);
+ window.downloadTimetableExcel=async()=>{say("Preparing the editable Excel timetable…");try{const response=await fetch("/api/export/timetable.xlsx?modules="+selectedParam()+selectedWeekParam(),{cache:"no-store"});if(!response.ok){const hint=response.status===404?" The server answering on this address does not have the Excel export — an older copy of the application may still be running on this port.":response.status===503?" Install the backend requirements (openpyxl) and restart.":"";throw new Error("Excel export failed (HTTP "+response.status+")."+hint);}const blob=await response.blob();const head=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(head[0]!==0x50||head[1]!==0x4B)throw new Error("The server did not return a valid .xlsx workbook.");const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Editable-Timetable.xlsx";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("Editable Excel timetable downloaded — includes your selected modules.","ok");}catch(error){say(error&&error.message?error.message:"Excel export could not be created.","error");}};
+ window.downloadTimetablePDF=async()=>{say("Preparing the PDF timetable…");try{const response=await fetch("/api/export/timetable.pdf?modules="+selectedParam()+selectedWeekParam()+"&theme="+encodeURIComponent(state.theme||"dark")+"&font_scale="+encodeURIComponent((Number(fontSizeControl.value)/100).toFixed(2)),{cache:"no-store"});if(!response.ok){let detail="";try{const problem=await response.json();detail=problem.detail?" "+problem.detail:"";}catch(_error){}const hint=response.status===503?" Install the backend requirements (reportlab) and restart.":"";throw new Error("PDF export failed (HTTP "+response.status+")."+detail+hint);}const blob=await response.blob();const signature=new Uint8Array(await blob.slice(0,5).arrayBuffer());if(String.fromCharCode(...signature)!=="%PDF-"){const detail=(await blob.text()).slice(0,240);throw new Error("The server did not return a valid PDF document."+ (detail?" Server response: "+detail:""));}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Timetable.pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);say("PDF timetable downloaded successfully.","ok");}catch(error){say(error&&error.message?error.message:"PDF export could not be created.","error");}};
+ [["Download editable Excel timetable (.xlsx)",()=>window.downloadTimetableExcel()],["Download PDF timetable (.pdf)",()=>window.downloadTimetablePDF()],["Print the timetable (browser print)",()=>document.getElementById("print").click()],["Export timetable CSV",()=>window.exportTimetableCSV()],["Download high-resolution timetable photo — PNG",()=>downloadTimetableImage("image/png")],["Download high-resolution timetable photo — JPEG",()=>downloadTimetableImage("image/jpeg")],["Download high-resolution timetable photo — WebP",()=>downloadTimetableImage("image/webp")]].forEach(([label,action])=>{const b=el("button",null,label);b.type="button";b.addEventListener("click",action);card.appendChild(b);});root.appendChild(card);}
+async function downloadTimetableImage(mime){
+ const status=document.getElementById("status"),weekly=document.getElementById("view-weekly"),wasHidden=weekly.hidden;
+ if(typeof window.html2canvas!=="function"){status.className="status error";status.textContent="The image export library did not load. Check your internet connection and try again.";return;}
+ try{
+  status.className="status";status.textContent="Rendering high-resolution timetable image…";
+  build();weekly.hidden=false;
+  await new Promise(resolve=>{let done=false;const finish=()=>{if(!done){done=true;resolve();}};requestAnimationFrame(()=>requestAnimationFrame(finish));setTimeout(finish,250);});
+  const target=weekly.querySelector(".wrap");if(!target)throw new Error("The weekly timetable is not available.");
+  const cs=getComputedStyle(document.body),variable=name=>cs.getPropertyValue(name).trim();
+  const headerTitle=(document.getElementById("hd-title")?.textContent||"PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block").trim();
+  const headerSubtitle=(document.getElementById("hd-sub")?.textContent||"Academic Calendar").trim();
+  const weekLine=[WK.label(weekOffset),`Monday–Sunday, ${WK.range(weekOffset)}`].filter(Boolean).join(" · ");
+  const pageBg=cs.backgroundColor||"#0b1017",ink=variable("--text")||cs.color||"#ffffff";
+  const muted=variable("--muted")||ink,accent=variable("--gold")||"#c0c8d4",panel=variable("--panel")||pageBg;
+  const field=variable("--field")||panel,line=variable("--line")||muted,headBg=variable("--head-shade")||variable("--head")||panel,cellBg=variable("--cell-bg")||pageBg,onAccent=variable("--on-accent")||"#fff";
+  const weekendBg=variable("--weekend-bg")||cellBg,weekendHeadBg=variable("--weekend-head-bg")||headBg,weekendInk=variable("--weekend-ink")||ink;
+  const exportWidth=1200,exportPadding=24,tableWidth=exportWidth-(exportPadding*2);
+  const captureHeight=Math.max(1800,Math.ceil(target.scrollHeight*3)+600);
+  const canvas=await window.html2canvas(target,{scale:4,useCORS:true,backgroundColor:pageBg,logging:false,windowWidth:exportWidth,windowHeight:captureHeight,onclone:doc=>{
+    const cloned=doc.querySelector("#view-weekly");if(cloned)cloned.hidden=false;
+    const wrap=doc.querySelector("#view-weekly .wrap");if(!wrap)return;
+    const force=(node,prop,value)=>node.style.setProperty(prop,value,"important");
+    force(doc.documentElement,"width",exportWidth+"px");force(doc.body,"width",exportWidth+"px");
+    force(doc.body,"margin","0");force(doc.body,"overflow","visible");
+    force(wrap,"box-sizing","border-box");force(wrap,"width",exportWidth+"px");force(wrap,"min-width",exportWidth+"px");force(wrap,"max-width","none");
+    force(wrap,"height","auto");force(wrap,"min-height","0");force(wrap,"margin","0");force(wrap,"padding",exportPadding+"px");
+    force(wrap,"overflow","visible");force(wrap,"overflow-x","visible");force(wrap,"overflow-y","visible");
+    force(wrap,"position","static");force(wrap,"display","block");force(wrap,"isolation","auto");force(wrap,"transform","none");force(wrap,"scrollbar-gutter","auto");
+    wrap.style.setProperty("--text-scale","1.85","important");wrap.scrollLeft=0;wrap.scrollTop=0;
+    wrap.querySelectorAll("*").forEach(node=>force(node,"box-sizing","border-box"));
+    const banner=doc.createElement("div");
+    banner.style.cssText=`box-sizing:border-box;width:100%;margin:0 0 16px;padding:18px 22px;background:${panel};border:2px solid ${accent};border-radius:10px;`;
+    const brand=doc.createElement("div");brand.textContent="MNH SMART TIMETABLE";brand.style.cssText=`color:${accent};font:800 17px/1.2 Arial,Helvetica,sans-serif;letter-spacing:1.4px;`;
+    const heading=doc.createElement("div");heading.textContent=headerTitle;heading.style.cssText=`color:${ink};font:800 30px/1.15 Arial,Helvetica,sans-serif;margin-top:6px;`;
+    const meta=doc.createElement("div");meta.textContent=[headerSubtitle,weekLine].filter(Boolean).join(" · ");meta.style.cssText=`color:${muted};font:600 19px/1.35 Arial,Helvetica,sans-serif;margin-top:8px;`;
+    banner.appendChild(brand);banner.appendChild(heading);banner.appendChild(meta);wrap.insertBefore(banner,wrap.firstChild);
+    const table=wrap.querySelector("table");
+    if(table){
+      force(table,"box-sizing","border-box");force(table,"width",tableWidth+"px");force(table,"min-width",tableWidth+"px");force(table,"max-width","none");
+      force(table,"margin","0 auto");force(table,"table-layout","fixed");force(table,"border-collapse","collapse");force(table,"border-spacing","0");
+      force(table,"position","static");force(table,"isolation","auto");force(table,"transform","none");
+      force(table,"font-family","Arial,Helvetica,sans-serif");force(table,"color",ink);force(table,"background-color",panel);
+      const timeWidth=130,dayWidth=Math.floor((tableWidth-timeWidth)/7);
+      const corner=table.querySelector("thead th.corner");
+      if(corner){force(corner,"width",timeWidth+"px");force(corner,"min-width",timeWidth+"px");force(corner,"max-width",timeWidth+"px");}
+      table.querySelectorAll("thead th.daycell").forEach(cell=>{force(cell,"width",dayWidth+"px");force(cell,"min-width",dayWidth+"px");force(cell,"max-width",dayWidth+"px");});
+      table.querySelectorAll("thead th, tbody th, td").forEach(cell=>{
+        force(cell,"height","auto");force(cell,"min-height","0");force(cell,"padding","8px 6px");force(cell,"white-space","normal");force(cell,"overflow","visible");
+        force(cell,"position","static");force(cell,"vertical-align","middle");force(cell,"color",ink);force(cell,"border","1px solid "+line);
+      });
+      table.querySelectorAll("thead th, tbody th.time").forEach(cell=>{force(cell,"background-color",headBg);});
+      table.querySelectorAll("tbody td").forEach(cell=>{force(cell,"background-color",cellBg);});
+      table.querySelectorAll("tbody th.time.highlight, tbody th.time.current-time-label, tbody tr.current-time-row th.time").forEach(cell=>{force(cell,"background-color",accent);force(cell,"color",onAccent);});
+      table.querySelectorAll("thead th.daycell.weekend-day").forEach(cell=>{force(cell,"background-color",weekendHeadBg);force(cell,"color",weekendInk);});
+      table.querySelectorAll("tbody td.weekend-day").forEach(cell=>{force(cell,"background-color",weekendBg);force(cell,"color",weekendInk);});
+      table.querySelectorAll("thead th.daycell .day, tbody th.daycell .day, thead th.daycell .date, tbody th.daycell .date").forEach(node=>force(node,"color",accent));
+      table.querySelectorAll(".weekend-day .day, .weekend-day .date").forEach(node=>force(node,"color",weekendInk));
+      table.querySelectorAll("thead th, tbody th.time").forEach(cell=>{
+        force(cell,"position","static");force(cell,"top","auto");force(cell,"left","auto");force(cell,"right","auto");force(cell,"bottom","auto");
+        force(cell,"z-index","auto");force(cell,"transform","none");force(cell,"box-shadow","none");force(cell,"white-space","nowrap");
+        cell.style.setProperty("font-size","20px","important");
+      });
+    }
+    wrap.querySelectorAll(".cell").forEach(node=>{force(node,"display","flex");force(node,"flex-direction","column");force(node,"width","100%");force(node,"height","auto");force(node,"min-height","74px");force(node,"gap","3px");});
+    wrap.querySelectorAll(".activity").forEach(button=>{
+      const onWeekend=!!button.closest("td.weekend-day");
+      if(!button.style.backgroundColor)force(button,"background-color",onWeekend?weekendBg:field);
+      if(!button.style.color)force(button,"color",onWeekend?weekendInk:ink);
+      force(button,"border-color",onWeekend?weekendInk:line);
+      force(button,"display","flex");force(button,"height","auto");force(button,"min-height","74px");force(button,"max-height","none");force(button,"padding","10px");force(button,"font-size","26px");force(button,"line-height","1.2");force(button,"overflow","visible");force(button,"white-space","normal");
+    });
+    wrap.querySelectorAll(".activity-name").forEach(node=>{force(node,"display","block");node.style.setProperty("font-size","28px","important");});
+    wrap.querySelectorAll(".activity-lecturer").forEach(node=>{force(node,"display","block");force(node,"font-size","20px");});
+    wrap.querySelectorAll("td.weekend-day .activity-name, td.weekend-day .activity-lecturer").forEach(node=>force(node,"color",weekendInk));
+    wrap.querySelectorAll("thead th.daycell .day, tbody th.daycell .day").forEach(node=>{force(node,"display","block");force(node,"font-size","24px");});
+    wrap.querySelectorAll("thead th.daycell .date, tbody th.daycell .date").forEach(node=>{force(node,"display","block");force(node,"font-size","18px");});
+    wrap.querySelectorAll(".lunch-label").forEach(node=>{force(node,"font-size","20px");force(node,"letter-spacing","2px");force(node,"color",accent);});
+  }});
+  const actualMime=mime==="image/webp"&&!canvas.toDataURL("image/webp").startsWith("data:image/webp")?"image/png":mime;
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("The browser could not encode this image.")),actualMime,actualMime==="image/png"?undefined:.98));
+  const ext=actualMime.split("/")[1],url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MNH-Smart-Calendar-Weekly-Timetable.${ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  status.className="status ok";status.textContent=`High-resolution ${ext.toUpperCase()} timetable image downloaded.`;
+ }catch(error){console.error(error);status.className="status error";status.textContent="The timetable image could not be created: "+error.message;}finally{weekly.hidden=wasHidden;}
+}
+window.downloadTimetableImage=downloadTimetableImage;
+function itemButton(x){
+ const b=el("button","item");b.type="button";
+ b.appendChild(el("span","it",x.timeLabel));
+ const n=el("span","in",x.label);if(x.sub)n.appendChild(el("span","is",x.sub));b.appendChild(n);
+ b.addEventListener("click",()=>showSessionDetails(x));
+ return b;
+}
+function renderSchedule(){
+ const root=document.getElementById("schedule-body");root.textContent="";
+ const ti=todayIndexFor(weekOffset);
+ days.forEach((dn,c)=>{
+  const card=el("div","card"+(c===ti?" today":""));
+  const h=el("h3",null,dn+" "+dates[c]);if(c===ti)h.appendChild(el("span","pill","Today"));
+  card.appendChild(h);
+  const list=dayEntries(c);
+  if(!list.length)card.appendChild(el("div","muted","Nothing scheduled."));
+  list.forEach(x=>card.appendChild(itemButton(x)));
+  root.appendChild(card);
+ });
+}
+function renderModules(){
+  // Render from the current in-memory directory immediately. Live facilitator
+  // subscriptions refresh this view when shared data arrives.
+  const root=workspace(...WORKSPACE_META.modules);const body=el("div","cards");root.appendChild(body);
+ {
+  const form=el("div","card");form.style.marginBottom="12px";form.appendChild(el("h3",null,"Add a module"));
+  const code=document.createElement("input");code.placeholder="Module code";code.maxLength=40;code.setAttribute("aria-label","Module code");
+  const title=document.createElement("input");title.placeholder="Full module title";title.maxLength=160;title.setAttribute("aria-label","Full module title");
+  const targetSessions=document.createElement("input");targetSessions.type="number";targetSessions.min="0";targetSessions.step="1";targetSessions.placeholder="Semester target: sessions (optional)";targetSessions.setAttribute("aria-label","Semester target sessions");
+  const targetHours=document.createElement("input");targetHours.type="number";targetHours.min="0";targetHours.step="0.5";targetHours.placeholder="Semester target: teaching hours (optional)";targetHours.setAttribute("aria-label","Semester target hours");
+  const fac=document.createElement("input");fac.type="text";fac.maxLength=120;fac.placeholder="Facilitator name (optional — type a name)";fac.setAttribute("aria-label","Facilitator name");
+  const facList=document.createElement("datalist");facList.id="module-facilitator-suggestions";facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.data.name);facList.appendChild(option);});form.appendChild(facList);fac.setAttribute("list",facList.id);
+  [code,title,targetSessions,targetHours,fac].forEach(x=>{x.style.cssText="display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text);";form.appendChild(x);});
+  const add=el("button","primary","Add module");add.type="button";add.addEventListener("click",()=>requestEditing(async()=>{await addSharedModule(code.value,title.value,fac.value,{semesterTargetSessions:targetSessions.value===""?null:Number(targetSessions.value),semesterTargetHours:targetHours.value===""?null:Number(targetHours.value)});}));form.appendChild(add);root.insertBefore(form,body);
+ }
+ const all=allEntries();
+ const sessionsFor=code=>all.filter(x=>x.label===code);
+ const addCard=(code,title,fac)=>{
+  const module=modules[code]||{},card=el("div","card");card.appendChild(el("h3",null,code));
+  const titleText=el("div",null,title&&title!==code?title:"");if(titleText.textContent)card.appendChild(titleText);
+  if(fac)card.appendChild(el("div","muted","Facilitator: "+fac));
+  if(editingUnlocked){
+   const titleInput=document.createElement("input");titleInput.type="text";titleInput.maxLength=160;titleInput.placeholder="Full module title";titleInput.value=module.title||title||"";titleInput.setAttribute("aria-label","Edit module title");
+   const facilitatorInput=document.createElement("input");facilitatorInput.type="text";facilitatorInput.maxLength=120;facilitatorInput.placeholder="Type facilitator name (optional)";facilitatorInput.value=(module.facilitator&&module.facilitator!=="Not specified")?String(module.facilitator):facilitatorFor(code);facilitatorInput.setAttribute("aria-label","Facilitator name");
+   const facilitatorList=document.createElement("datalist");facilitatorList.id="facilitator-suggestions-"+code.replace(/[^A-Za-z0-9_-]/g,"-");facilitatorRecords.forEach(item=>{const option=document.createElement("option");option.value=String(item.data.name);facilitatorList.appendChild(option);});card.appendChild(facilitatorList);facilitatorInput.setAttribute("list",facilitatorList.id);
+   const targetS=document.createElement("input"),targetH=document.createElement("input");
+   targetS.type="number";targetS.min="0";targetS.step="1";targetS.placeholder="Semester target sessions";targetS.value=module.semesterTargetSessions??"";
+   targetH.type="number";targetH.min="0";targetH.step="0.5";targetH.placeholder="Semester target hours";targetH.value=module.semesterTargetHours??"";
+   [titleInput,facilitatorInput,targetS,targetH].forEach(input=>{input.style.cssText="display:block;width:100%;margin:6px 0;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--text)";card.appendChild(input);});
+   const save=el("button","primary","Save module changes");save.type="button";save.onclick=async()=>{
+    const nextTitle=titleInput.value.trim();if(!nextTitle){statusEl.className="status error";statusEl.textContent="Enter a module title before saving.";return;}
+    const enteredFacilitator=facilitatorInput.value.trim().slice(0,120);
+    const assigned=facilitatorRecords.find(item=>String(item.id)===enteredFacilitator||String(item.data.name||"").trim().toLowerCase()===enteredFacilitator.toLowerCase());
+    const data={...module,title:nextTitle,facilitator:enteredFacilitator||"Not specified",facilitatorId:assigned?String(assigned.id):"",semesterTargetSessions:targetS.value===""?null:Number(targetS.value),semesterTargetHours:targetH.value===""?null:Number(targetH.value),updatedAt:Date.now()};
+    try{if(cloud)await cloud.doc("modules/"+code).set(data);else await apiRequest("PUT","/api/doc/modules/"+encodeURIComponent(code),data);modules[code]=data;refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module details, typed facilitator name and semester targets saved permanently to the shared database.";renderModules();}
+    catch(error){writeFailed(error);}
+   };card.appendChild(save);
+   const remove=el("button","danger",modules[code]?"Remove module":"Remove activity");remove.type="button";remove.onclick=async()=>{
+    const entries=sessionsFor(code);
+    const recurring=entries.find(item=>item.data?.recurring&&item.data?.recurringId);
+    if(modules[code]){
+     if(!window.confirm("Remove "+code+" from the Modules directory? Its scheduled timetable sessions will be kept as standalone activities."))return;
+     try{if(cloud)await cloud.doc("modules/"+code).delete();else await deleteRow("modules",code);delete modules[code];refreshModuleSelect();build();statusEl.className="status ok";statusEl.textContent="Module removed from the shared directory. Existing timetable sessions were preserved.";renderModules();}
+     catch(error){writeFailed(error);}
+     return;
+    }
+    if(recurring){
+     if(!window.confirm("Permanently delete the recurring activity “"+code+"” from the shared timetable? This will remove it for everyone."))return;
+     try{if(cloud)await cloud.doc("recurring/"+recurring.data.recurringId).delete();else await deleteRow("recurring",recurring.data.recurringId);recurringRecords=recurringRecords.filter(item=>String(item.id)!==String(recurring.data.recurringId));build();statusEl.className="status ok";statusEl.textContent=code+" permanently deleted from recurring activities and the timetable.";renderModules();}
+     catch(error){writeFailed(error);}
+     return;
+    }
+    if(!entries.length)return;
+    if(!window.confirm("Delete “"+code+"” and all its scheduled timetable entries? This cannot be undone."))return;
+    try{for(const entry of entries){if(state.cells[entry.id]){delete state.cells[entry.id];await pushCell(entry.id);}}build();statusEl.className="status ok";statusEl.textContent=code+" and its scheduled entries were deleted.";renderModules();}
+    catch(error){writeFailed(error);}
+   };card.appendChild(remove);
+  }
+  const sessions=sessionsFor(code),mins=sessions.reduce((sum,x)=>sum+x.mins,0);
+  card.appendChild(el("div","muted","This week: "+sessions.length+" session"+(sessions.length===1?"":"s")+(sessions.length?" · "+fmtH(mins):"")));
+  sessions.forEach(session=>{const button=el("button","item");button.type="button";button.append(el("span","it",days[session.c]),el("span","in",session.timeLabel));button.addEventListener("click",()=>showSessionDetails(session));card.appendChild(button);});
+  body.appendChild(card);
+ };
+ Object.keys(modules).forEach(code=>addCard(code,modules[code].title,facilitatorFor(code)));
+ const others=[];all.forEach(session=>{if(!modules[session.label]&&!others.includes(session.label))others.push(session.label);});
+ others.forEach(label=>addCard(label,"",""));
+}
+// ---- Analytics – Management Access -----------------------------------------
+const ANA_ICONS={
+ analytics:'<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
+ calendar:'<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+ user:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c.9-3.9 3.9-5.9 7.5-5.9s6.6 2 7.5 5.9"/>',
+ book:'<path d="M12 6.5C10.3 5.2 8 4.7 3.5 4.7v13.6c4.5 0 6.8.5 8.5 1.8 1.7-1.3 4-1.8 8.5-1.8V4.7C16 4.7 13.7 5.2 12 6.5zM12 6.5v13.6"/>',
+ checkCircle:'<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.3 9"/>',
+ alertCircle:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.2M12 16.6v.1"/>',
+ users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.8 19.5c.7-3.5 3.2-5.4 6.2-5.4s5.5 1.9 6.2 5.4"/><path d="M16 5.4a3.2 3.2 0 0 1 0 5.9M18.2 14.4c1.7.6 2.8 2.3 3.2 5.1"/>',
+ pie:'<path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/>',
+ trend:'<path d="M3 17l6-6 4 4 8-9"/><path d="M16 6h5v5"/>',
+ warning:'<path d="M12 3l9.5 17H2.5L12 3z"/><path d="M12 9v5M12 17.2v.1"/>',
+ bulb:'<path d="M9 18h6M10 21h4"/><path d="M8.2 14.4a6 6 0 1 1 7.6 0c-.9.7-1.4 1.6-1.4 2.6h-4.8c0-1-.5-1.9-1.4-2.6z"/>',
+ star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+ check:'<path d="M4 12.5l5 5L20 6.5"/>',
+ arrow:'<path d="M5 12h14M14 7l5 5-5 5"/>',
+ report:'<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/>'
+};
+let analyticsYear="";
+function anaIcon(name,cls){
+ const wrap=document.createElement("span");wrap.className="ana-ico"+(cls?" "+cls:"");
+ wrap.setAttribute("aria-hidden","true");
+ wrap.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ANA_ICONS[name]||"")+'</svg>';
+ return wrap;
+}
+function anaPanel(title,icon,cls){
+ const panel=el("section","ana-panel"+(cls?" "+cls:""));
+ const head=el("div","ana-panel-head");
+ head.append(anaIcon(icon),el("h3",null,title));
+ panel.appendChild(head);
+ return panel;
+}
+function anaLegend(rows){
+ const wrap=el("div","ana-legend");
+ rows.forEach(row=>{
+  const item=el("span","ana-legend-item");
+  const swatch=el("span","ana-legend-dot "+(row.tone||"blue"));
+  if(row.dashed)swatch.classList.add("dashed");
+  item.append(swatch,el("span",null,row.label),el("b",null,row.value||""));
+  wrap.appendChild(item);
+ });
+ return wrap;
+}
+function anaEmpty(text){
+ return el("div","ana-empty",text);
+}
+function buildAnalyticsHeader(d){
+ const bar=el("div","ana-titlebar");
+ const left=el("div","ana-title-wrap");
+ left.append(anaIcon("analytics","ana-title-icon"),el("h2","ana-title","Programme Analytics"));
+ bar.appendChild(left);
+ const tools=el("div","ana-tools");
+ const year=el("label","ana-year");
+ year.append(anaIcon("calendar"));
+ const select=document.createElement("select");
+ select.setAttribute("aria-label","Academic year");
+ (d.academicYears||[]).forEach(value=>{
+  const option=document.createElement("option");
+  option.value=String(value);option.textContent="Academic Year "+value;
+  select.appendChild(option);
+ });
+ select.value=String(d.selectedYear||"");
+ select.addEventListener("change",()=>{analyticsYear=select.value;renderAnalytics();});
+ year.appendChild(select);
+ tools.appendChild(year);
+ bar.appendChild(tools);
+ return bar;
+}
+function buildAnalyticsKpis(d){
+ const row=el("div","ana-kpis"),k=d.kpis||{};
+ const add=(icon,tone,value,label,sub)=>{
+  const card=el("div","ana-kpi");
+  card.append(anaIcon(icon,"ana-kpi-icon "+tone));
+  const copy=el("div","ana-kpi-copy");
+  copy.append(el("div","ana-kpi-value",String(value)),el("div","ana-kpi-label",label));
+  if(sub)copy.appendChild(el("div","ana-kpi-sub",sub));
+  card.appendChild(copy);row.appendChild(card);
+ };
+ add("book","blue",k.modulesOffered||0,"Modules Offered");
+ add("checkCircle","green",k.onTrack||0,"On Track","No missed markers");
+ add("alertCircle","red",k.atRisk||0,"At Risk / Missed","Marked missed");
+ const attendance=(d.attendance||{}).available?(d.attendance.overall+"%"):"—";
+ add("users","purple",attendance,"Overall Attendance",(d.attendance||{}).available?null:"Not yet tracked");
+ return row;
+}
+function buildAnalyticsMode(d){
+ const panel=anaPanel("Session Mode Distribution","pie");
+ const mode=d.mode||{},available=!!mode.available;
+ const body=el("div","ana-mode");
+ const chart=el("div","ana-donut");
+ const face=available?(mode.faceToFacePercent||0):0;
+ const online=available?(mode.onlinePercent||0):0;
+ const circumference=2*Math.PI*54;
+ const faceLength=circumference*face/100;
+ chart.innerHTML='<svg viewBox="0 0 140 140" role="img" aria-label="Session mode distribution">'
+  +'<circle cx="70" cy="70" r="54" fill="none" stroke="#263449" stroke-width="20"/>'
+  +(available&&face>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#00CFA6" stroke-width="20" stroke-dasharray="'+faceLength+' '+circumference+'" transform="rotate(-90 70 70)"/>':'')
+  +(available&&online>0?'<circle cx="70" cy="70" r="54" fill="none" stroke="#FF9F1C" stroke-width="20" stroke-dasharray="'+(circumference-faceLength)+' '+circumference+'" stroke-dashoffset="'+(-faceLength)+'" transform="rotate(-90 70 70)"/>':'')
+  +'</svg>';
+ const center=el("div","ana-donut-center");
+ if(available){
+  const dominant=face>=online?{value:face,label:"Face-to-Face"}:{value:online,label:"Online"};
+  center.append(el("b",null,dominant.value+"%"),el("span",null,dominant.label));
+  body.append(chart);
+  body.append(anaLegend([
+   {tone:"teal",label:"Face-to-Face",value:face+"%"},
+   {tone:"amber",label:"Online",value:online+"%"}
+  ]));
+ }else{
+  center.append(el("b",null,"—"),el("span",null,"Not recorded"));
+  body.append(chart);
+  body.append(anaLegend([
+   {tone:"grey",label:"Unspecified",value:(mode.unspecified||0)+" of "+(mode.total||0)}
+  ]));
+ }
+ chart.appendChild(center);
+ panel.appendChild(body);
+ if(!available)panel.appendChild(anaEmpty((mode.total||0)+" timetable entries have no recorded delivery mode. Set a mode on each session to unlock this chart."));
+ else panel.appendChild(el("div","ana-note","Based on "+(mode.known||0)+" of "+(mode.total||0)+" entries with a recorded delivery mode."));
+ return panel;
+}
+function buildAnalyticsTrend(d){
+ const panel=anaPanel("Weekly Attendance Trend","trend","ana-trend");
+ const weeks=Array.isArray((d.attendance||{}).weeks)?d.attendance.weeks:[];
+ const target=(d.attendance||{}).target||70;
+ panel.appendChild(anaLegend([
+  {tone:"blue",label:"Attendance",value:weeks.length?"":"Not yet tracked"},
+  {tone:"white",label:"Target (≥"+target+"%)",dashed:true}
+ ]));
+ const W=430,H=210,L=38,R=12,T=14,B=30,plotW=W-L-R,plotH=H-T-B;
+ const y=v=>T+plotH-(Number(v)||0)/100*plotH;
+ let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Weekly attendance trend">';
+ for(let v=100;v>=0;v-=25){
+  svg+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#2a3f65" stroke-width="1"/>'
+   +'<text x="'+(L-7)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="#b9c4d4">'+v+'%</text>';
+ }
+ svg+='<line x1="'+L+'" y1="'+y(target)+'" x2="'+(W-R)+'" y2="'+y(target)+'" stroke="#f3f4f6" stroke-dasharray="6 5" stroke-width="1.3"/>';
+ const count=weeks.length||6,xs=[];
+ for(let i=0;i<count;i++){
+  const x=L+(count===1?plotW/2:plotW*i/(count-1));xs.push(x);
+  const academicWeekOffset=i-1; // Orientation begins 31 Aug 2026; teaching Week 1 begins 7 Sep.
+  const tickLabel=WK.dateLabels(academicWeekOffset)[0]||"";
+  const tickRange=WK.range(academicWeekOffset);
+  svg+='<text x="'+x+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#b9c4d4"><title>'+esc(tickRange)+'</title>'+esc(tickLabel)+'</text>';
+ }
+ if(weeks.length){
+  const values=weeks.map(item=>{
+   const raw=item&&typeof item==="object"?(item.value!=null?item.value:item.percent!=null?item.percent:item.attendance):item;
+   return raw==null?null:Number(raw);
+  });
+  const points=values.map((value,i)=>[xs[i],y(value)]);
+  svg+='<polyline fill="none" stroke="#00CFA6" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="'+points.map(p=>p[0]+','+p[1]).join(' ')+'"/>';
+  points.forEach((point,i)=>{
+   svg+='<circle cx="'+point[0]+'" cy="'+point[1]+'" r="4" fill="#0e77fd" stroke="#07142b" stroke-width="1.5"/>'
+    +'<text x="'+point[0]+'" y="'+(point[1]-10)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#f3f4f6">'+values[i]+'%</text>';
+  });
+ }
+ svg+='</svg>';
+ const chart=el("div","ana-chart");chart.innerHTML=svg;panel.appendChild(chart);
+ if(!weeks.length)panel.appendChild(anaEmpty("No dated attendance records yet. The trend will appear once attendance is recorded."));
+ return panel;
+}
+function buildAnalyticsStatus(d){
+ const panel=anaPanel("Module Status","warning");
+ const list=el("div","ana-status-list");
+ const modules=Array.isArray(d.moduleStatus)?d.moduleStatus:[];
+ if(!modules.length)list.appendChild(anaEmpty("No modules are recorded yet."));
+ modules.forEach(item=>{
+  const row=el("button","ana-status-row");row.type="button";
+  row.title="Open "+item.code+" in Modules";
+  const copy=el("span","ana-status-copy");
+  copy.append(el("b",null,item.code),el("span",null,item.title||""));
+  const pill=el("span","ana-pill "+item.status,item.statusLabel);
+  row.append(copy,pill);
+  row.addEventListener("click",()=>showView("modules"));
+  list.appendChild(row);
+ });
+ panel.appendChild(list);
+ return panel;
+}
+function buildAnalyticsPerformance(d){
+ const panel=anaPanel("Module Performance","analytics","ana-performance-panel");
+ const rows=[
+  {label:"ARMN",value:20},
+  {label:"STAT-8100",value:50},
+  {label:"PNIM",value:70},
+  {label:"Library",value:65},
+  {label:"MIPN",value:45}
+ ];
+ const chart=el("div","ana-module-bars");
+ chart.setAttribute("role","img");
+ chart.setAttribute("aria-label","Module performance: ARMN 20 percent, STAT-8100 50 percent, PNIM 70 percent, Library 65 percent, MIPN 45 percent");
+ rows.forEach(item=>{
+  const row=el("div","ana-module-bar-row");
+  const label=el("span","ana-module-bar-label",item.label);
+  const track=el("div","ana-module-bar-track");
+  const fill=el("span","ana-module-bar-fill");
+  fill.style.width=item.value+"%";
+  track.appendChild(fill);
+  const value=el("strong","ana-module-bar-value",item.value+"%");
+  row.append(label,track,value);
+  chart.appendChild(row);
+ });
+ panel.appendChild(chart);
+ return panel;
+}
+function buildAnalyticsActions(d,getReport){
+ const panel=anaPanel("Upcoming Actions","bulb");
+ const list=el("div","ana-actions");
+ const actions=Array.isArray(d.actions)?d.actions:[];
+ if(!actions.length)list.appendChild(anaEmpty("No management actions are outstanding."));
+ actions.forEach(action=>{
+  const item=el("div","ana-action");
+  const copy=el("div","ana-action-copy");
+  copy.append(el("b",null,action.title||""),el("div","ana-note",action.detail||""));
+  item.append(el("span","ana-bullet "+(action.tone||"info")),copy);
+  list.appendChild(item);
+ });
+ panel.appendChild(list);
+ const button=el("button","ana-report-btn");button.type="button";
+ button.setAttribute("aria-expanded","false");
+ button.append(anaIcon("report"),el("span",null,"View Detailed Report"),anaIcon("arrow"));
+ button.addEventListener("click",()=>{
+  const report=getReport();if(!report)return;
+  report.hidden=!report.hidden;
+  button.setAttribute("aria-expanded",String(!report.hidden));
+  if(!report.hidden)report.scrollIntoView({behavior:"smooth",block:"start"});
+ });
+ panel.appendChild(button);
+ return panel;
+}
+function buildAnalyticsInsights(d){
+ const panel=anaPanel("Insights & Recommendations","star");
+ const list=el("div","ana-insights");
+ const insights=Array.isArray(d.insights)?d.insights:[];
+ if(!insights.length)list.appendChild(anaEmpty("No recommendations are available until programme data is recorded."));
+ insights.forEach(text=>{
+  const row=el("div","ana-insight");
+  row.append(anaIcon("check"),el("span",null,text));
+  list.appendChild(row);
+ });
+ panel.appendChild(list);
+ return panel;
+}
+function buildAnalyticsReport(data,d){
+ const report=el("section","ana-report");report.hidden=true;
+ report.appendChild(el("h3",null,"Detailed Analytics Report"));
+ report.appendChild(el("p","ana-note","Reporting period: "+d.reportingPeriod+". Timetable figures describe the saved Monday–Sunday template unless a dated record is stated."));
+ renderAnalyticsReport(data,report);
+ return report;
+}
+function renderAnalyticsReport(data,root){
+ const summary=data.summary||{},modulesData=data.modules||[];
+ const stats=el("div","cards");
+ [[summary.sessions||0,"Timetable entries"],[fmtH(summary.hours||0),"Scheduled teaching hours"],[summary.missed||0,"Marked missed (timetable)"],[`${summary.missedPercent||0}%`,"Marked-missed share"],[summary.online||0,"Scheduled online"],[summary.faceToFace||0,"Scheduled face-to-face"]].forEach(([v,l])=>{const c=el("div","card");c.append(el("div","stat",String(v)),el("div","statlabel",l));stats.appendChild(c);});root.appendChild(stats);
+ const chart=(title,rows,suffix="")=>{const card=el("div","card");card.style.marginTop="12px";card.appendChild(el("h3",null,title));const max=Math.max(1,...rows.map(r=>Number(r.value)||0));rows.forEach(r=>{const row=el("div","barrow"),bar=el("div","bar"),fill=document.createElement("i");fill.style.width=Math.max(0,Math.min(100,(Number(r.value)||0)/max*100))+"%";bar.appendChild(fill);row.append(el("span",null,r.label),bar,el("span","muted",`${r.value}${suffix}`));card.appendChild(row);});root.appendChild(card);};
+ chart("Delivery mode · timetable entries",[{label:"Online",value:summary.online||0},{label:"Face-to-face",value:summary.faceToFace||0},{label:"Unspecified",value:summary.unspecified||0}]);
+ chart("Weekly teaching hours by module",modulesData.map(m=>({label:m.code,value:m.weeklyHours||0}))," h");
+ const grid=el("div","cards");modulesData.forEach(m=>{const c=el("div","card");c.append(el("h3",null,m.code),el("p","muted",m.title||"Module title not recorded"));c.append(el("div",null,`This week: ${m.weeklySessions} sessions · ${m.weeklyHours} hours`),el("div",null,`Semester to date: ${m.semesterTracked?`${m.semesterSessions} sessions · ${m.semesterHours} hours`:"Not yet tracked — dated attendance records are required"}`),el("div",null,`Semester target: ${m.targetSessions??"Not set"} sessions · ${m.targetHours??"Not set"} hours`),el("div",null,`Marked missed: ${m.missedSessions} · Scheduled online: ${m.onlineSessions} · Scheduled face-to-face: ${m.faceToFaceSessions}`));
+  if(m.semesterTracked&&m.targetSessions!=null&&m.targetSessions>0){const pct=Math.min(100,m.semesterSessions/m.targetSessions*100);const bar=el("div","bar"),fill=document.createElement("i");fill.style.width=pct+"%";bar.appendChild(fill);c.append(el("div","muted",`Session target progress: ${pct.toFixed(1)}%`),bar);}
+  if(m.semesterTracked&&m.targetHours!=null&&m.targetHours>0){const pct=Math.min(100,m.semesterHours/m.targetHours*100);const bar=el("div","bar"),fill=document.createElement("i");fill.style.width=pct+"%";bar.appendChild(fill);c.append(el("div","muted",`Hours target progress: ${pct.toFixed(1)}%`),bar);}
+  grid.appendChild(c);});root.appendChild(grid);
+ root.appendChild(el("p","muted",data.note||"Only sessions with an explicitly recorded status are counted as completed or missed. Semester totals include all dated session records currently stored."));
+}
+async function renderAnalytics(targetId="analytics-body"){
+ const root=document.getElementById(targetId);root.textContent="";
+ root.appendChild(el("div","ana-panel ana-state","Loading analytics…"));
+ let data;
+ try{
+  const query=analyticsYear?"?year="+encodeURIComponent(analyticsYear):"";
+  data=await apiRequest("GET","/api/analytics"+query);
+ }catch(e){
+  root.textContent="";
+  const box=el("div","ana-panel ana-state ana-error");
+  box.append(el("h2",null,"Analytics – Management Access"),el("p",null,e.status===403?"Analytics are restricted to HOD, coordinator and executive dean accounts.":"Analytics could not be loaded: "+e.message));
+  root.appendChild(box);return;
+ }
+ const d=data.dashboard;
+ if(!d){
+  root.textContent="";
+  const box=el("div","ana-panel ana-state ana-error");
+  box.append(el("h2",null,"Analytics – Management Access"),el("p",null,"The management dashboard data could not be calculated from the stored records."));
+  root.appendChild(box);return;
+ }
+ analyticsYear=String(d.selectedYear||analyticsYear||"");
+ root.textContent="";
+ root.appendChild(buildAnalyticsHeader(d));
+ root.appendChild(buildAnalyticsKpis(d));
+ const charts=el("div","ana-charts");
+ charts.append(buildAnalyticsMode(d),buildAnalyticsTrend(d),buildAnalyticsStatus(d));
+ root.appendChild(charts);
+ const lower=el("div","ana-lower");
+ let report=null;
+ lower.append(buildAnalyticsPerformance(d),buildAnalyticsActions(d,()=>report),buildAnalyticsInsights(d));
+ root.appendChild(lower);
+ report=buildAnalyticsReport(data,d);
+ root.appendChild(report);
+}
+// ---- resources (shared) ----
+function safeUrl(u){
+ u=String(u||"").trim();if(!u)return "";if(!/^https?:\/\//i.test(u))u="https://"+u;
+ try{const x=new URL(u);return(x.protocol==="http:"||x.protocol==="https:")?x.href:"";}catch(e){return "";}
+}
+function meetingProvider(url){
+ const host=(()=>{try{return new URL(safeUrl(url)).hostname.toLowerCase().replace(/^www[.]/,"");}catch(e){return "";}})();
+ if(host==="zoom.us"||host.endsWith(".zoom.us")||host==="zoom.com"||host.endsWith(".zoom.com"))return "zoom";
+ if(host==="meet.google.com"||host.endsWith(".meet.google.com"))return "meet";
+ if(host==="teams.microsoft.com"||host.endsWith(".teams.microsoft.com")||host==="teams.live.com"||host.endsWith(".teams.live.com")||host==="teams.office.com")return "teams";
+ return url?"other":"";
+}
+function meetingProviderMark(url,large=false){
+ const kind=meetingProvider(url);if(!kind)return null;
+ const mark=el("span","meeting-provider-mark "+(large?"meeting-provider-large ":"")+"meeting-provider-"+kind);
+ const label=kind==="zoom"?"Zoom meeting":kind==="meet"?"Google Meet":kind==="teams"?"Microsoft Teams":"Online meeting link";
+ mark.setAttribute("role","img");mark.setAttribute("aria-label",label);mark.title=label;
+ const ns="http://www.w3.org/2000/svg";
+ const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 48 48");svg.setAttribute("aria-hidden","true");svg.setAttribute("focusable","false");
+ const add=(tag,attrs)=>{const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));svg.appendChild(n);};
+ if(kind==="zoom"){
+  add("circle",{cx:"24",cy:"24",r:"23",fill:"#2D8CFF"});
+  add("rect",{x:"8",y:"14",width:"23",height:"20",rx:"5",fill:"#fff"});
+  add("path",{d:"M31 20 L41 14 Q43 13 43 16 V32 Q43 35 41 34 L31 28 Z",fill:"#fff"});
+ }else if(kind==="meet"){
+  add("path",{d:"M8 14 Q8 10 12 10 H25 V38 H12 Q8 38 8 34 Z",fill:"#00897B"});
+  add("path",{d:"M25 17 L37 9 Q40 7 40 11 V37 Q40 41 37 39 L25 31 Z",fill:"#F4B400"});
+  add("path",{d:"M8 14 Q8 10 12 10 H25 V24 H8 Z",fill:"#4285F4"});
+  add("path",{d:"M8 24 H25 V38 H12 Q8 38 8 34 Z",fill:"#34A853"});
+  add("path",{d:"M25 17 L37 9 Q40 7 40 11 V24 H25 Z",fill:"#EA4335"});
+ }else if(kind==="teams"){
+  add("rect",{x:"4",y:"12",width:"28",height:"27",rx:"5",fill:"#505AC9"});
+  add("circle",{cx:"36",cy:"13",r:"7",fill:"#7B83EB"});
+  add("rect",{x:"29",y:"20",width:"15",height:"19",rx:"4",fill:"#7B83EB"});
+  add("path",{d:"M10 19 H27 V23 H21 V34 H16 V23 H10 Z",fill:"#fff"});
+ }else{
+  add("circle",{cx:"24",cy:"24",r:"22",fill:"#64748b"});
+  add("path",{d:"M17 31 L31 17 M19 17 H31 V29",fill:"none",stroke:"#fff","stroke-width":"3","stroke-linecap":"round","stroke-linejoin":"round"});
+ }
+ mark.appendChild(svg);return mark;
+}
+function cleanRes(v){return{title:String(v&&v.title||"").trim().slice(0,120),url:safeUrl(v&&v.url),note:String(v&&v.note||"").trim().slice(0,200),category:["Lecture Notes","Books","Others"].includes(v&&v.category)?v.category:"Others",createdAt:+(v&&v.createdAt)||0,fileId:String(v&&v.fileId||"").slice(0,64),fileName:String(v&&v.fileName||"").slice(0,255),fileSize:+(v&&v.fileSize)||0};}
+function cacheResources(){try{localStorage.setItem(resKey,JSON.stringify(resources));}catch(e){}}
+function loadResources(){try{const r=JSON.parse(localStorage.getItem(resKey)||"[]");if(Array.isArray(r))resources=r.map(x=>({id:String(x.id||""),...cleanRes(x)})).filter(x=>x.id&&x.title&&x.url);}catch(e){}}
+async function uploadResourceFile(file){
+ const body=new FormData();body.append("file",file,file.name);
+ const response=await fetch("/api/resources/upload",{method:"POST",body,credentials:"same-origin"});
+ let result={};try{result=await response.json();}catch(e){}
+ if(!response.ok)throw new Error(result.detail||result.error||"The file could not be uploaded.");
+ return result;
+}
+async function addResource(t,u,n,file=null,category="Others",opts={}){
+ const silent=Boolean(opts&&opts.silent);
+ const title=String(t||"").trim();
+ if(!title){if(!silent){statusEl.className="status error";statusEl.textContent="Enter a resource name.";}return false;}
+ let uploaded=null,rec;
+ if(file){
+  if(file.size>25*1024*1024){if(!silent){statusEl.className="status error";statusEl.textContent="The selected file is larger than 25 MB.";}return false;}
+  if(!silent){statusEl.className="status";statusEl.textContent="Uploading file…";}
+  try{uploaded=await uploadResourceFile(file);rec=cleanRes({title,url:window.location.origin+uploaded.url,note:n,category,createdAt:Date.now(),fileId:uploaded.id,fileName:file.name,fileSize:uploaded.size});}
+  catch(e){if(!silent){statusEl.className="status error";statusEl.textContent=e.message||"File upload failed.";}return false;}
+ }else{
+  rec=cleanRes({title,url:u,note:n,category,createdAt:Date.now()});
+  if(!rec.url){if(!silent){statusEl.className="status error";statusEl.textContent="Enter a valid web address or choose a file.";}return false;}
+ }
+ const r={id:"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),...rec};
+ try{
+  const data={title:r.title,url:r.url,note:r.note,category:r.category,createdAt:r.createdAt,fileId:r.fileId,fileName:r.fileName,fileSize:r.fileSize};
+  if(cloud)await cloud.doc("resources/"+r.id).set(data);
+  else await window.mnhApi.request("PUT","/api/doc/resources/"+encodeURIComponent(r.id),data);
+  resources.push(r);cacheResources();renderResources();
+  const indexingNote=uploaded&&uploaded.crara_indexing&&uploaded.crara_indexing!=="indexed"?" CRARA could not read this file for summaries.":"";
+  if(!silent){statusEl.className="status ok";statusEl.textContent="Saved for everyone."+indexingNote;}
+ }catch(e){
+  if(uploaded&&uploaded.id){try{await fetch("/api/resources/files/"+encodeURIComponent(uploaded.id),{method:"DELETE",credentials:"same-origin"});}catch(cleanupError){}}
+  if(!silent)writeFailed(e);return false;
+ }
+ return true;
+}
+async function removeResource(id){
+ const existing=resources.find(x=>x.id===id);
+ try{
+  if(cloud)await cloud.doc("resources/"+id).delete();
+  else await window.mnhApi.request("DELETE","/api/doc/resources/"+encodeURIComponent(id));
+  if(cloud){
+   const synced=await fetch("/api/resources/sync/"+encodeURIComponent(id),{method:"DELETE",credentials:"same-origin"});
+   if(!synced.ok)throw new Error("The resource was removed from the cloud library but CRARA's shared index could not be synchronised.");
+  }
+  if(existing&&existing.fileId){
+   const response=await fetch("/api/resources/files/"+encodeURIComponent(existing.fileId),{method:"DELETE",credentials:"same-origin"});
+   if(!response.ok)throw new Error("The resource entry was removed, but its stored file could not be deleted.");
+  }
+  resources=resources.filter(x=>x.id!==id);cacheResources();renderResources();
+  statusEl.className="status ok";statusEl.textContent="Removed for everyone.";
+ }catch(e){writeFailed(e);}
+}
+function resourceUrl(r){return r.fileId?r.url+"?name="+encodeURIComponent(r.fileName||r.title):r.url;}
+function resourceExt(r){return String(r.fileName||r.url||"").split(/[?#]/)[0].split(".").pop().toLowerCase();}
+function resourceModal(){
+ let m=document.getElementById("resource-reader");if(m)return m;
+ m=el("div","resource-reader");m.id="resource-reader";m.hidden=true;m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
+ const p=el("section","resource-reader-panel"),h=el("header","resource-reader-head"),t=el("h3",null,"Resource preview");t.id="resource-reader-title";
+ const actions=el("div","resource-reader-actions"),d=el("a","resource-reader-download","Download"),c=el("button","resource-reader-close","Close");c.type="button";c.addEventListener("click",()=>{m.hidden=true;document.body.classList.remove("resource-reader-open");const b=document.getElementById("resource-reader-body");if(b)b.textContent="";});
+ actions.append(d,c);h.append(t,actions);const b=el("div","resource-reader-body");b.id="resource-reader-body";p.append(h,b);m.appendChild(p);
+ m.addEventListener("click",e=>{if(e.target===m){m.hidden=true;document.body.classList.remove("resource-reader-open");b.textContent="";}});document.body.appendChild(m);return m;
+}
+async function resourceScript(src,ready){if(ready())return;await new Promise((ok,bad)=>{const x=document.createElement("script");x.src=src;x.onload=ok;x.onerror=()=>bad(new Error("Preview library could not load. Reload the app and try again."));document.head.appendChild(x);});}
+function csvTable(text,root){const rows=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean).slice(0,1500);const table=el("table","resource-preview-table"),tb=document.createElement("tbody");rows.forEach((line,i)=>{const tr=document.createElement("tr");let vals=line.split(",");vals.forEach(v=>{const cell=document.createElement(i===0?"th":"td");cell.textContent=v.replace(/^"|"$/g,"").replace(/""/g,'"');tr.appendChild(cell);});tb.appendChild(tr);});table.appendChild(tb);root.appendChild(table);}
+async function previewResource(r){
+ if(!r.fileId){window.open(r.url,"_blank","noopener,noreferrer");return;}
+ const m=resourceModal(),body=document.getElementById("resource-reader-body"),ext=resourceExt(r);m.hidden=false;document.body.classList.add("resource-reader-open");
+ document.getElementById("resource-reader-title").textContent=r.title;m.querySelector(".resource-reader-download").href=resourceUrl(r);m.querySelector(".resource-reader-download").download=r.fileName||r.title;body.textContent="Loading preview…";
+ try{const response=await fetch(resourceUrl(r),{credentials:"same-origin"});if(!response.ok)throw new Error("File request failed: "+response.status);const blob=await response.blob();body.textContent="";
+ if(ext==="pdf"){const frame=document.createElement("iframe");frame.className="resource-pdf-frame";frame.src=URL.createObjectURL(blob);frame.title=r.title;body.appendChild(frame);}
+ else if(["jpg","jpeg","png","webp"].includes(ext)){const img=document.createElement("img");img.className="resource-image-preview";img.src=URL.createObjectURL(blob);img.alt=r.title;body.appendChild(img);}
+ else if(ext==="csv"){csvTable(await blob.text(),body);}
+ else if(ext==="docx"){await resourceScript("./vendor/mammoth.browser.min.js",()=>!!window.mammoth);const result=await window.mammoth.convertToHtml({arrayBuffer:await blob.arrayBuffer()});const article=el("article","resource-docx-preview");article.innerHTML=result.value;body.appendChild(article);}
+ else if(ext==="xlsx"||ext==="xls"){await resourceScript("./vendor/xlsx.full.min.js",()=>!!window.XLSX);const wb=window.XLSX.read(await blob.arrayBuffer(),{type:"array"});const tabs=el("div","resource-sheet-tabs"),sheet=el("div","resource-sheet-content");wb.SheetNames.forEach((name,i)=>{const btn=el("button",i===0?"active":"",name);btn.type="button";btn.addEventListener("click",()=>{tabs.querySelectorAll("button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");sheet.innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[name]);});tabs.appendChild(btn);});body.append(tabs,sheet);if(wb.SheetNames.length)sheet.innerHTML=window.XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]]);}
+ else if(ext==="doc"){body.appendChild(el("p","muted","Legacy DOC files cannot be previewed reliably in a browser. Download and open in Word or LibreOffice, or convert to DOCX for an in-app preview."));}
+ else{body.appendChild(el("p","muted","Preview is not available for this file type. Download the original file to read it."));}
+ }catch(e){body.textContent=e.message||"Unable to read this resource.";body.appendChild(el("p","muted","Use Download to open the original file."));}
+}
+function renderResources(){
+ const list=document.getElementById("res-list"),form=document.getElementById("res-form-wrap");let back=document.getElementById("resources-back");
+ if(!back){back=el("button","resources-back","← Back");back.id="resources-back";back.type="button";back.addEventListener("click",()=>showView(previousNonResourcesView||"weekly"));const heading=document.querySelector("#view-resources h2");if(heading)heading.before(back);}
+ list.textContent="";["Lecture Notes","Books","Others"].forEach(category=>{
+ const items=resources.filter(r=>(r.category||"Others")===category),folder=el("section","resource-folder"),toggle=el("button","resource-folder-toggle",category+" ("+items.length+")"),content=el("div","resource-folder-content");toggle.type="button";toggle.setAttribute("aria-expanded","true");
+ toggle.addEventListener("click",()=>{const open=toggle.getAttribute("aria-expanded")==="true";toggle.setAttribute("aria-expanded",String(!open));content.hidden=open;});folder.append(toggle,content);
+ if(!items.length)content.appendChild(el("p","muted","No resources in this folder yet."));
+ items.forEach(r=>{const card=el("article","card res");card.appendChild(el("strong","resource-title",r.title));if(r.note)card.appendChild(el("p","muted",r.note));const actions=el("div","resource-card-actions"),read=el("button","primary","Read / Preview");read.type="button";read.addEventListener("click",()=>previewResource(r));actions.appendChild(read);const dl=el("a","res-link","Download");dl.href=resourceUrl(r);dl.download=r.fileName||r.title;actions.appendChild(dl);if(editingUnlocked){const del=el("button","res-del","Remove");del.type="button";del.addEventListener("click",()=>removeResource(r.id));actions.appendChild(del);}card.appendChild(actions);content.appendChild(card);});list.appendChild(folder);
+ });
+ form.textContent="";if(editingUnlocked){const f=el("div","res-form");f.appendChild(el("h3",null,"Add a resource"));const mk=(p,max)=>{const i=document.createElement("input");i.type="text";i.placeholder=p;i.maxLength=max;i.setAttribute("aria-label",p);return i;};
+ const t=mk("Title",120),u=mk("Web address (optional when attaching a file)",300),n=mk("Short note (optional)",200),label=el("label","muted","Save in folder"),category=document.createElement("select");category.setAttribute("aria-label","Resource folder");["Lecture Notes","Books","Others"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;category.appendChild(o);});
+ const fileLabel=el("label","muted","Attach PDF, Word, CSV, Excel, photo or audio files"),file=document.createElement("input");file.type="file";file.multiple=true;file.accept=".pdf,.doc,.docx,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.webm,audio/*";file.style.cssText="display:block;width:100%;margin:7px 0 4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit";
+ file.addEventListener("change",()=>{const chosen=Array.from(file.files||[]);if(chosen.length===1&&!t.value.trim())t.value=chosen[0].name.replace(/\.[^.]+$/,"").slice(0,120);if(chosen.length>1)t.placeholder="Title optional for multiple files";});const b=el("button","primary","Add resource");b.type="button";
+ b.addEventListener("click",async()=>{
+    b.disabled=true;
+    try{
+      const files=Array.from(file.files||[]);
+      if(files.length>1){
+        let okCount=0;const failures=[];
+        for(let i=0;i<files.length;i++){
+          const fItem=files[i];
+          const title=fItem.name.replace(/\.[^.]+$/,"").slice(0,120)||("Resource "+(i+1));
+          statusEl.className="status";statusEl.textContent="Uploading "+(i+1)+" of "+files.length+": "+fItem.name;
+          if(await addResource(title,u.value,n.value,fItem,category.value,{silent:true}))okCount++; else failures.push(fItem.name);
+        }
+        if(okCount){t.value=u.value=n.value="";file.value="";category.value="Others";t.placeholder="Title";}
+        if(failures.length){statusEl.className="status error";statusEl.textContent="Saved "+okCount+" of "+files.length+". Failed: "+failures.slice(0,3).join(", ")+(failures.length>3?"…":"");}
+        else{statusEl.className="status ok";statusEl.textContent="Saved "+okCount+" resource"+(okCount===1?"":"s")+" for everyone.";}
+      }else{
+        const single=files[0]||null;
+        const title=t.value||(single?single.name.replace(/\.[^.]+$/,"").slice(0,120):"");
+        if(await addResource(title,u.value,n.value,single,category.value)){t.value=u.value=n.value="";file.value="";category.value="Others";t.placeholder="Title";}
+      }
+    }finally{b.disabled=false;}
+  });f.append(t,u,n,label,category,fileLabel,file,b);form.appendChild(f);}
+}
+function subscribeExtras(db){
+ db.collection("settings").onSnapshot(snap=>{snap.docs.forEach(d=>{if(d.id==="header"){const v=d.data();applyHeader({title:v.title,subtitle:v.subtitle});}});},()=>{});
+ db.collection("facilitators").onSnapshot(snap=>{
+  facilitatorRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}})).filter(x=>x.data.name);
+  build();if(currentView==="modules")renderModules();
+ },()=>{});
+ db.collection("recurring").onSnapshot(snap=>{
+  recurringRecords=snap.docs.map(d=>({id:d.id,data:d.data()||{}}));
+  build();if(currentView==="recurring")renderManaged("recurring");
+  if(currentView==="weekly")renderAnimatedFutureStrip();
+ },()=>{});
+ db.collection("resources").onSnapshot(snap=>{
+  if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
+  const remote=snap.docs.map(d=>({id:d.id,...cleanRes(d.data())})).filter(x=>x.title&&x.url).sort((a,b)=>a.createdAt-b.createdAt);
+  let seen=false;try{seen=localStorage.getItem(resCloudKey)==="1";}catch(e){}
+  if(!remote.length&&!seen&&resources.length)return;   // first run: keep the local copy until saved
+  if(remote.length){try{localStorage.setItem(resCloudKey,"1");}catch(e){}}
+  resources=remote;cacheResources();renderResources();
+  // Firestore is the UI source of truth; mirror its complete snapshot to the
+  // backend read model so CRARA can discover the same shared resources.
+  fetch("/api/resources/sync",{method:"POST",headers:{"Content-Type":"application/json"},
+    credentials:"same-origin",body:JSON.stringify({resources:remote.map(x=>({id:x.id,data:{
+      title:x.title,url:x.url,note:x.note,category:x.category,createdAt:x.createdAt,
+      fileId:x.fileId,fileName:x.fileName,fileSize:x.fileSize
+    }}))})}).catch(error=>console.warn("Resource sync for CRARA could not complete",error));
+ },()=>{});
+}
+function initHeader(){
+ initHeaderFromLocal();loadResources();
+ const bell=document.getElementById("hd-bell"),panel=document.getElementById("bell-panel");
+ bell.addEventListener("click",e=>{e.stopPropagation();const open=panel.hidden;if(open){closeMenu();refreshHeader();}panel.hidden=!open;bell.setAttribute("aria-expanded",String(open));});
+ panel.addEventListener("click",e=>e.stopPropagation());
+ document.addEventListener("click",()=>{if(!panel.hidden)closeBell();});
+ document.getElementById("menu-btn").addEventListener("click",closeBell);
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!panel.hidden){closeBell();bell.focus();}hideDialog("header-dialog");}});
+ document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();showView(t.dataset.view);}));
+ document.getElementById("open-statistical-glossary")?.addEventListener("click",()=>showView("statistical-glossary"));
+ document.getElementById("statistical-glossary-back")?.addEventListener("click",()=>showView(previousNonGlossaryView||"resources"));
+ document.getElementById("open-python-library")?.addEventListener("click",()=>showView("python-library"));
+ document.getElementById("python-library-back")?.addEventListener("click",()=>showView(previousNonLibraryView));
+ document.getElementById("python-setup-simulation-back")?.addEventListener("click",()=>showView(previousNonSimulationView||"python-library"));
+  document.getElementById("open-stat8100-practical")?.addEventListener("click",()=>showView("stat8100-practical"));
+  document.getElementById("stat8100-practical-back")?.addEventListener("click",()=>showView(previousNonPracticalView||"resources"));
+  document.getElementById("open-hypothesis-lab")?.addEventListener("click",()=>showView("hypothesis-lab"));
+  document.getElementById("hypothesis-lab-back")?.addEventListener("click",()=>showView(previousNonHypothesisView||"resources"));
+ window.addEventListener("message",event=>{if(event.origin!==location.origin||!event.data)return;if(event.source!==document.querySelector("#view-python-library iframe")?.contentWindow)return;if(event.data.type==="MNH_OPEN_SETUP_SIM")showView("python-setup-simulation");else if(event.data.type==="MNH_OPEN_STATISTICAL_GLOSSARY")showView("statistical-glossary");});
+ // Section navigation is intentionally kept out of the URL so refresh always returns Home.
+ // header editing
+ document.getElementById("edit-header").addEventListener("click",()=>{
+  document.getElementById("header-title-input").value=headerCfg.title;document.getElementById("header-sub-input").value=headerCfg.subtitle;showDialog("header-dialog");
+ });
+ document.getElementById("header-cancel").addEventListener("click",()=>hideDialog("header-dialog"));
+ document.getElementById("header-reset").addEventListener("click",()=>{document.getElementById("header-title-input").value=HEADER_DEFAULT.title;document.getElementById("header-sub-input").value=HEADER_DEFAULT.subtitle;});
+ document.getElementById("header-save").addEventListener("click",()=>{
+  const t=document.getElementById("header-title-input").value;
+  if(!t.trim()){statusEl.className="status error";statusEl.textContent="The header title can’t be empty.";return;}
+  hideDialog("header-dialog");saveHeader({title:t,subtitle:document.getElementById("header-sub-input").value});
+ });
+ // keep views and header fresh when the timetable or editing state changes
+ const _build=build;build=function(){_build();refreshHeader();if(currentView==="modules")renderModules();};
+ const _se=setEditing;setEditing=function(v){_se(v);if(currentView==="communications")renderCommunications();if(currentView==="modules")renderModules();if(currentView==="public-chat"||currentView==="examinations"||currentView==="exams"||currentView==="recurring")renderView(currentView);};
+ setInterval(refreshHeader,30000);
+ refreshHeader();if(location.hash){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}
+  const requestedView=new URLSearchParams(location.search).get("view");
+  if(requestedView&&document.getElementById("view-"+requestedView))showView(requestedView);else showView("weekly");
+ initWeekNav();
+}
+// ---- Hamburger menu ----
+const menuBtn=document.getElementById("menu-btn"),menuPanel=document.getElementById("menu-panel");
+function setMenuExpanded(on){if(menuBtn){menuBtn.setAttribute("aria-expanded",on?"true":"false");menuBtn.setAttribute("aria-label",on?"Close menu":"Open menu");}}
+function openMenu(){menuPanel.hidden=false;document.body.classList.add("menu-open");setMenuExpanded(true);const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot){if(typeof window.closeCRARAForNavigation==="function")window.closeCRARAForNavigation();craraRoot.hidden=true;}}
+function closeMenu(){menuPanel.hidden=true;document.body.classList.remove("menu-open");setMenuExpanded(false);document.querySelector(".tip")?.classList.remove("show");const craraRoot=document.getElementById("class-rep-assistant");if(craraRoot)craraRoot.hidden=currentView!=="weekly";}
+if(menuBtn)menuBtn.addEventListener("click",e=>{e.stopPropagation();menuPanel.hidden?openMenu():closeMenu();});
+menuPanel.addEventListener("click",e=>{e.stopPropagation();if(e.target.closest("button:not([data-keep])"))closeMenu();});
+document.addEventListener("click",e=>{if(!menuPanel.hidden&&!menuPanel.contains(e.target)&&!(menuBtn&&(e.target===menuBtn||menuBtn.contains(e.target))))closeMenu();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menuPanel.hidden){closeMenu();menuBtn?.focus();}});
+// Status messages are temporary: they clear themselves so the dashboard stays clean.
+let statusTimer;
+new MutationObserver(()=>{
+ clearTimeout(statusTimer);
+ if(statusEl.textContent&&!statusEl.classList.contains("error"))statusTimer=setTimeout(()=>{statusEl.textContent="";statusEl.className="status";},5000);
+}).observe(statusEl,{childList:true,characterData:true,subtree:true});
+// ---- Tap-to-see-name labels for icon buttons ----
+const tipEl=document.createElement("div");tipEl.className="tip";tipEl.setAttribute("role","status");document.body.appendChild(tipEl);let tipT;
+function showTip(target,text){
+ const r=target.getBoundingClientRect();tipEl.textContent=text;tipEl.classList.add("show");
+ const w=tipEl.offsetWidth;tipEl.style.left=Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8)+"px";tipEl.style.top=(r.bottom+8+tipEl.offsetHeight>innerHeight?r.top-tipEl.offsetHeight-8:r.bottom+8)+"px";
+ clearTimeout(tipT);tipT=setTimeout(()=>tipEl.classList.remove("show"),1800);
+}
+document.addEventListener("click",e=>{const m=e.target.closest("[data-label]");if(m)showTip(m,m.dataset.label);},true);
+document.getElementById("theme-btn").addEventListener("click",e=>{
+ const sel=document.getElementById("theme"),i=(sel.selectedIndex+1)%sel.options.length;
+ sel.selectedIndex=i;sel.dispatchEvent(new Event("change"));showTip(e.currentTarget,"Theme: "+sel.options[i].textContent);
+});
+{const cd=document.getElementById("call-day");if(cd)cd.textContent=WK.localNow().day;}
+load();initCloud();initAlarms();initHeader();
+
+// ---- Calendar quality layer: clash checks, CSV export and shared backup ----
+(function(){
+ const $=id=>document.getElementById(id);
+ const say=(msg,kind)=>{if(typeof statusEl!=="undefined"&&statusEl){statusEl.textContent=msg;statusEl.className="status "+(kind||"");}};
+ function exportCSV(){
+  const rows=[["Date","Weekday","Start time","End time","Activity","Module title","Lecturer","Delivery mode"]];
+  allEntries().forEach(x=>{const date=new Date(WEEK_START[0],WEEK_START[1],WEEK_START[2]+x.dayIndex),isoDate=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;rows.push([isoDate,days[x.dayIndex],x.startTime,x.endTime,x.label,x.sub,x.facilitator,x.data?.mode||"unspecified"]);});
+  const csv=rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="MNH-Calendar-timetable.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  say("CSV export prepared. It opens in Excel and other spreadsheet applications.","ok");
+ }
+ window.exportTimetableCSV=exportCSV;
+ window.downloadTimetableExcel=async()=>{
+  say("Preparing the editable Excel timetable…");
+  try{
+   const response=await fetch("/api/export/timetable.xlsx",{cache:"no-store"});
+   if(!response.ok){
+    const hint=response.status===404?" The server answering on this address does not have the Excel export — an older copy of the application may still be running on this port.":response.status===503?" Install the backend requirements (openpyxl) and restart.":"";
+    throw new Error("Excel export failed (HTTP "+response.status+")."+hint);
+   }
+   const blob=await response.blob();
+   const head=new Uint8Array(await blob.slice(0,2).arrayBuffer());
+   if(head[0]!==0x50||head[1]!==0x4B)throw new Error("The server did not return a valid .xlsx workbook.");
+   const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Smart-Calendar-Editable-Timetable.xlsx";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+   say("Editable Excel timetable downloaded (Monday–Sunday, independent copy).","ok");
+  }catch(error){say(error&&error.message?error.message:"Excel export could not be created.","error");}
+ };
+ document.getElementById("weekly-export-xlsx")?.addEventListener("click",()=>window.downloadTimetableExcel());
+ window.downloadSharedBackup=async()=>{
+  say("Creating a consistent database backup…");
+  try{const r=await fetch("/api/backup",{cache:"no-store"});if(!r.ok)throw Error("Backup export failed");
+   const data=await r.json(),blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+   const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="MNH-Calendar-server-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+   say("A complete shared-data backup has been downloaded. Automatic daily server snapshots are also enabled.","ok");
+  }catch(e){say("Backup could not be created. Check the server connection and try again.","error");}
+ };
+ // Validate and flag actual session intervals, including legacy and custom records.
+ function checkClashes(){
+  document.querySelectorAll("td.time-clash").forEach(el=>el.classList.remove("time-clash"));
+  const byDay=Array.from({length:days.length},()=>[]);
+  getSessionEntries().forEach(entry=>byDay[entry.dayIndex].push(entry));
+  let conflicts=0;
+  byDay.forEach(entries=>{
+   entries.forEach((a,i)=>entries.slice(i+1).forEach(b=>{
+    if(a.startMinutes<b.endMinutes&&b.startMinutes<a.endMinutes){
+     conflicts++;
+     [a,b].forEach(entry=>{
+      const cell=Array.from(document.querySelectorAll("td[data-cell-key]")).find(td=>td.dataset.cellKey===`${entry.startTime}_${entry.dayIndex}`);
+      if(cell)cell.classList.add("time-clash");
+     });
+    }
+   }));
+  });
+  if(conflicts){say(`${conflicts} overlapping session pair(s) detected. Review the highlighted timetable entries.`,"error");}
+  return conflicts;
+ }
+ const clashStyle=document.createElement("style");
+ clashStyle.textContent='.time-clash{outline:2px solid #df6969!important;outline-offset:-2px;position:relative}.time-clash:after{content:"Time overlap";display:block;color:#ff9999;font-size:10px;font-weight:700}';
+ document.head.appendChild(clashStyle);
+ const body=$("calendar-body");
+ if(body){new MutationObserver(()=>{checkClashes();}).observe(body,{childList:true,subtree:true});}
+ checkClashes();
+})();
+
+
+// ---- One header download icon: PDF / JPEG-PNG / Excel ----
+(function(){
+ "use strict";
+ const btn=document.getElementById("dl-btn"),menu=document.getElementById("dl-menu");
+ if(!btn||!menu)return;
+ const DEFAULTS=["ARMN – 8100","MIPN 8100","PNIM-8100"];
+ const selected=new Set(DEFAULTS);
+ let moduleSheet=null,formatSheet=null,complete=null;
+ const status=(message,kind="")=>{const node=document.getElementById("status");if(node){node.textContent=message;node.className="status "+kind;}};
+ const closeMenu=()=>{menu.hidden=true;btn.setAttribute("aria-expanded","false");};
+ const toggleMenu=()=>{menu.hidden=!menu.hidden;btn.setAttribute("aria-expanded",String(!menu.hidden));};
+ btn.addEventListener("click",event=>{event.stopPropagation();toggleMenu();});
+ menu.addEventListener("click",event=>event.stopPropagation());
+ document.addEventListener("click",closeMenu);
+ document.getElementById("menu-btn")?.addEventListener("click",closeMenu);
+ document.addEventListener("keydown",event=>{if(event.key==="Escape"){closeMenu();if(moduleSheet)moduleSheet.hidden=true;if(formatSheet)formatSheet.hidden=true;}});
+ function sheet(title,description,buttons){
+  const overlay=document.createElement("div");overlay.className="dl-sheet";overlay.hidden=true;
+  const card=document.createElement("section");card.className="dl-card";card.setAttribute("role","dialog");card.setAttribute("aria-modal","true");
+  const heading=document.createElement("h3");heading.textContent=title;
+  const note=document.createElement("p");note.textContent=description;
+  const body=document.createElement("div");body.className="dl-list";
+  const actions=document.createElement("div");actions.className="dl-actions";
+  card.append(heading,note,body,actions);overlay.appendChild(card);document.body.appendChild(overlay);
+  overlay.addEventListener("click",event=>{if(event.target===overlay)overlay.hidden=true;});
+  return {overlay,body,actions};
+ }
+ function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+ async function loadModules(){
+  try{const response=await fetch("/api/export/modules",{cache:"no-store"});if(!response.ok)throw Error("Module list unavailable");const data=await response.json();return (data.modules||[]).map(item=>[item.code,item.title||"",item.facilitator||""]);}
+  catch(error){return DEFAULTS.map(code=>[code,"",""]);}
+ }
+ async function chooseModules(kind,action){
+  if(!moduleSheet)moduleSheet=sheet("Modules to include","Select the modules to include in this export. You can tick or untick any module.",[]);
+  const {overlay,body,actions}=moduleSheet;body.textContent="Loading modules…";actions.textContent="";
+  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";cancel.onclick=()=>overlay.hidden=true;
+  const go=document.createElement("button");go.type="button";go.className="primary";go.textContent="Download";
+  actions.append(cancel,go);overlay.hidden=false;
+  const rows=await loadModules();body.textContent="";
+  rows.forEach(([code,title,lecturer])=>{const label=document.createElement("label"),box=document.createElement("input"),copy=document.createElement("span");box.type="checkbox";box.checked=selected.has(code);box.addEventListener("change",()=>box.checked?selected.add(code):selected.delete(code));copy.textContent=(title?code+" — "+title:code)+" · Presenter: "+(lecturer||"Not assigned");label.append(box,copy);body.append(label);});
+  go.disabled=!selected.size;body.onchange=()=>{go.disabled=!selected.size;};
+  go.onclick=async()=>{if(!selected.size)return;overlay.hidden=true;try{await action([...selected]);}catch(error){status(error.message||"The download could not be created.","error");}};
+ }
+ async function saveServerExport(path,extension,modules=[]){
+  status("Preparing "+extension.toUpperCase()+" timetable…");
+  const weekStart=WK.isoMonday(weekOffset);
+  const params=new URLSearchParams({week_start:weekStart});
+  if(modules.length)params.set("modules",modules.join(","));
+  if(extension==="pdf")params.set("theme",state.theme||"dark");
+  const response=await fetch(path+"?"+params.toString(),{cache:"no-store"});
+  if(!response.ok){let detail="";try{const problem=await response.json();detail=problem.detail?" "+problem.detail:"";}catch(_error){}throw new Error(extension.toUpperCase()+" export failed (HTTP "+response.status+")."+detail);}
+  const blob=await response.blob();
+  if(extension==="xlsx"){const signature=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(signature[0]!==0x50||signature[1]!==0x4B)throw new Error("The server did not return a valid Excel workbook.");}else if(extension==="pdf"){const signature=new Uint8Array(await blob.slice(0,5).arrayBuffer());if(String.fromCharCode(...signature)!=="%PDF-"){const detail=(await blob.text()).slice(0,240);throw new Error("The PDF export did not return a valid PDF document."+ (detail?" Server response: "+detail:""));}}
+  download(blob,extension==="pdf"?"MNH-Smart-Calendar-Timetable.pdf":"MNH-Smart-Calendar-Editable-Timetable.xlsx");
+  status(extension==="pdf"?"PDF timetable downloaded successfully.":"Editable Excel timetable downloaded.","ok");
+ }
+ function chooseImageFormat(){
+  if(!formatSheet)formatSheet=sheet("Image format","Choose the image file type for your high-resolution timetable.",[]);
+  const {overlay,body,actions}=formatSheet;body.textContent="";actions.textContent="";
+  [["PNG","image/png"],["JPEG","image/jpeg"]].forEach(([label,mime])=>{const b=document.createElement("button");b.type="button";b.textContent="Download "+label;b.onclick=()=>{overlay.hidden=true;window.downloadTimetableImage(mime);};actions.appendChild(b);});
+  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";cancel.onclick=()=>overlay.hidden=true;actions.appendChild(cancel);overlay.hidden=false;
+ }
+ menu.addEventListener("click",event=>{
+  const item=event.target.closest("button[data-fmt]");if(!item)return;
+  closeMenu();
+  if(item.dataset.fmt==="pdf")saveServerExport("/api/export/timetable.pdf","pdf").catch(error=>status(error.message||"PDF export could not be created.","error"));
+  else if(item.dataset.fmt==="xlsx")chooseModules("xlsx",modules=>saveServerExport("/api/export/timetable.xlsx","xlsx",modules));
+  else if(item.dataset.fmt==="image")chooseImageFormat();
+ });
+})();
+
+
+// v14.92: manual refresh checks for a new service worker before reloading the app shell.
+(function(){
+ "use strict";
+ const button=document.getElementById("mnh-refresh-btn");
+ if(!button)return;
+ let refreshing=false;
+ button.addEventListener("click",async function(){
+  if(refreshing)return;
+  refreshing=true;
+  button.disabled=true;
+  button.classList.add("is-refreshing");
+  button.setAttribute("aria-label","Refreshing calendar");
+  try{
+   if("serviceWorker" in navigator){
+    const registration=await navigator.serviceWorker.getRegistration();
+    if(registration){
+     await registration.update().catch(()=>{});
+     const worker=registration.installing;
+     if(worker){
+      await Promise.race([
+       new Promise(resolve=>{
+        if(worker.state==="activated"||worker.state==="redundant")return resolve();
+        const changed=()=>{if(worker.state==="activated"||worker.state==="redundant"){worker.removeEventListener("statechange",changed);resolve();}};
+        worker.addEventListener("statechange",changed);
+       }),
+       new Promise(resolve=>setTimeout(resolve,3500))
+      ]);
+     }
+     if(registration.waiting)registration.waiting.postMessage("SKIP_WAITING");
+    }
+   }
+  }catch(error){console.warn("MNH Calendar refresh check failed; reloading the current app shell.",error);}
+  window.location.reload();
+ });
+})();

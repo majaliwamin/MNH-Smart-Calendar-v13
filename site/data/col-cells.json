@@ -1,0 +1,90 @@
+[
+  {
+    "id": "session-1794376330655-5bkoh",
+    "data": {
+      "code": "PNIM-8100",
+      "title": "Pregnancy and Neonatal Immunology",
+      "facilitator": "D Mzinza",
+      "colour": "#3C7A5A",
+      "mode": "unspecified",
+      "moduleCode": "PNIM-8100",
+      "startTime": "08:00",
+      "endTime": "10:00",
+      "status": "scheduled",
+      "dayIndex": 3,
+      "updatedAt": 1794376330672
+    }
+  },
+  {
+    "id": "session-1794378249485-27mfp",
+    "data": {
+      "code": "ARMN – 8100",
+      "title": "Antimicrobial Resistance in Maternal & Neonatal Health",
+      "facilitator": "G Bandawe",
+      "facilitatorOverride": "",
+      "mode": "unspecified",
+      "moduleCode": "ARMN – 8100",
+      "startTime": "15:30",
+      "endTime": "17:30",
+      "status": "missed",
+      "meetingUrl": "",
+      "weekStart": "2026-11-16",
+      "dayIndex": 1,
+      "updatedAt": 1795361065886
+    }
+  },
+  {
+    "id": "session-2026-11-16-1795379679413-lls5v",
+    "data": {
+      "code": "ARMN – 8100",
+      "title": "Antimicrobial Resistance in Maternal & Neonatal Health",
+      "facilitator": "G Bandawe",
+      "facilitatorOverride": "",
+      "mode": "unspecified",
+      "moduleCode": "ARMN – 8100",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "status": "scheduled",
+      "meetingUrl": "",
+      "weekStart": "2026-11-16",
+      "dayIndex": 5,
+      "updatedAt": 1795379679416
+    }
+  },
+  {
+    "id": "session-2026-11-23-1795701695194-y457h",
+    "data": {
+      "code": "MIPN 8100",
+      "title": "Medical Imaging in Pregnancy and Neonates",
+      "facilitator": "Dr. R. Mwenda",
+      "facilitatorOverride": "Dr. R. Mwenda",
+      "mode": "unspecified",
+      "moduleCode": "MIPN 8100",
+      "startTime": "08:00",
+      "endTime": "10:00",
+      "status": "scheduled",
+      "meetingUrl": "",
+      "weekStart": "2026-11-23",
+      "dayIndex": 0,
+      "updatedAt": 1795701721147
+    }
+  },
+  {
+    "id": "session-2026-11-23-1795725565424-3d13n",
+    "data": {
+      "code": "MIPN 8100",
+      "title": "Medical Imaging in Pregnancy and Neonates",
+      "facilitator": "Not specified",
+      "facilitatorOverride": "",
+      "mode": "unspecified",
+      "moduleCode": "MIPN 8100",
+      "startTime": "08:00",
+      "endTime": "10:00",
+      "status": "scheduled",
+      "meetingUrl": "",
+      "weekStart": "2026-11-23",
+      "dayIndex": 1,
+      "updatedAt": 1795725565427
+    }
+  }
+]

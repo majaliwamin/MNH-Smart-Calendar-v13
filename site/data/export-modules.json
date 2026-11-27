@@ -1,0 +1,24 @@
+{
+  "modules": [
+    {
+      "code": "ARMN – 8100",
+      "title": "Antimicrobial Resistance in Maternal & Neonatal Health",
+      "facilitator": "G Bandawe"
+    },
+    {
+      "code": "MIPN 8100",
+      "title": "Medical Imaging in Pregnancy and Neonates",
+      "facilitator": ""
+    },
+    {
+      "code": "PNIM-8100",
+      "title": "Pregnancy and Neonatal Immunology",
+      "facilitator": "D Mzinza"
+    },
+    {
+      "code": "STAT-8100",
+      "title": "Biostatics and Epidemiology",
+      "facilitator": "Dr. M. Madanitsa"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+﻿.exams-view { padding: 16px; }
+.exams-shell { max-width: 1100px; margin: 0 auto; }
+.exams-header h2 { margin: 0 0 4px; letter-spacing: .04em; }
+.exams-header .lead { margin: 0 0 16px; opacity: .85; }
+.exams-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.exams-card { background: var(--panel, #fff); border: 1px solid var(--line, #d9dde3); border-radius: 12px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.exams-card h3 { margin: 0 0 10px; font-size: 1rem; }
+.exams-card p { margin: 0 0 8px; }
+.exams-list { margin: 0; padding-left: 18px; }
+.exams-list li { margin: 4px 0; }
+.exams-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.exams-table th,.exams-table td { border-bottom: 1px solid var(--line, #e3e7ee); padding: 6px 4px; text-align: left; vertical-align: top; }
+.exams-note { font-size: .88rem; opacity: .85; }
+.exams-loading { padding: 16px; opacity: .8; }
+.exams-error { color: #b42318; font-weight: 600; }
+.exams-form { display:grid; gap:8px; }
+.exams-form label { display:grid; gap:4px; font-size:.92rem; }
+.exams-form input,.exams-form textarea,.exams-form select { width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--line,#d9dde3); border-radius:8px; background:var(--field,#fff); color:var(--text,#111); font:inherit; }
+.exams-form-actions { display:flex; gap:8px; align-items:center; }
+.exams-btn { padding:6px 10px; border:1px solid var(--line,#cfd5df); border-radius:8px; background:var(--panel,#fff); color:var(--text,#111); cursor:pointer; font:inherit; }
+.exams-btn.primary { background:var(--accent,#1f5eff); color:#fff; border-color:transparent; }
+.exams-btn.danger { color:#b42318; }
+.exams-btn:disabled { opacity:.6; cursor:default; }
+@media (max-width: 700px) { .exams-view { padding: 12px; } }
+
+
+/* EXAMS UI completion */
+.exams-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999}
+.exams-modal{background:var(--panel,#fff);color:var(--text,#111);border:1px solid var(--line,#d9dde3);border-radius:12px;max-width:520px;width:100%;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.exams-modal-msg{margin:0 0 14px;white-space:pre-wrap}
+.exams-opt{display:flex;gap:8px;align-items:flex-start;margin:4px 0}
+.exams-question{padding:10px 0;border-bottom:1px solid var(--line,#e3e7ee)}
+.exams-qhead{margin-bottom:8px}
+.exams-answer{width:100%;box-sizing:border-box}
+.exams-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.78rem;border:1px solid var(--line,#d9dde3)}
+.exams-badge.ok{color:#166534;border-color:#86efac;background:#f0fdf4}
+.exams-badge.warn{color:#92400e;border-color:#fcd34d;background:#fffbeb}
+.exams-badge.err{color:#991b1b;border-color:#fca5a5;background:#fef2f2}
+.exams-section-title{margin:.8rem 0 .4rem;font-size:.95rem}
+.exams-muted{opacity:.8}
+
+.exams-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.exams-kpi{border:1px solid var(--line,#d9dde3);border-radius:10px;padding:10px;background:rgba(127,127,127,.04)}
+.exams-kpi span{display:block;font-size:.8rem;opacity:.8}
+.exams-kpi strong{font-size:1.2rem}
+
+/* Accessible EXAMS forms, dialogs and review screens. */
+.exams-form-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:end}
+.exams-form .exams-check{display:flex;align-items:center;gap:8px}
+.exams-form .exams-check input{width:auto}
+.exams-table-wrap{width:100%;overflow-x:auto}
+.exams-dialog-title{margin:0 0 8px;font-size:1.05rem}
+.exams-dialog-body{display:grid;gap:8px;max-height:60vh;overflow:auto}
+.exams-dialog-actions{justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.exams-dialog-msg:empty{display:none}
+.exams-modal-wide{max-width:820px}
+.exams-detail{max-height:50vh;overflow:auto;white-space:pre-wrap;word-break:break-word;background:rgba(127,127,127,.08);padding:10px;border-radius:8px;font-size:.86rem}
+.exams-grade-list{display:grid;gap:10px;max-height:50vh;overflow:auto}
+.exams-grade-row{border:1px solid var(--line,#d9dde3);border-radius:8px;padding:10px;display:grid;gap:6px}
+.exams-grade-points{max-width:160px}
+.exams-grade-feedback{width:100%;box-sizing:border-box}
+.exams-btn:focus-visible,.exams-modal button:focus-visible,.exams-modal input:focus-visible,.exams-modal select:focus-visible,.exams-modal textarea:focus-visible{outline:2px solid var(--accent,#1f5eff);outline-offset:2px}
+@media (max-width:700px){.exams-modal{max-height:calc(100vh - 32px);overflow:auto}.exams-dialog-body{max-height:none}.exams-dialog-actions{justify-content:stretch}.exams-dialog-actions .exams-btn{flex:1}}

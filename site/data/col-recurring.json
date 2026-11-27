@@ -1,0 +1,28 @@
+[
+  {
+    "id": "journal-club",
+    "data": {
+      "title": "Journal Club",
+      "frequency": "Weekly",
+      "day": "Tuesday",
+      "time": "13:00–14:00",
+      "notes": "",
+      "presenter": "Amin",
+      "enabled": true,
+      "onThisWeek": true
+    }
+  },
+  {
+    "id": "seminar-mnh",
+    "data": {
+      "title": "Seminar in MNH",
+      "frequency": "Weekly",
+      "day": "Thursday",
+      "time": "10:00–12:00",
+      "notes": "",
+      "presenter": "",
+      "enabled": true,
+      "onThisWeek": false
+    }
+  }
+]

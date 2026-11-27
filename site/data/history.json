@@ -1,0 +1,138 @@
+[
+  {
+    "at": 1795725565464,
+    "role": "Public user",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-2026-11-23-1795725565424-3d13n",
+    "summary": "Added session: Medical Imaging in Pregnancy and Neonates"
+  },
+  {
+    "at": 1795719653270,
+    "role": "Public user",
+    "action": "deleted",
+    "collection": "cells",
+    "id": "session-2026-11-23-1795719640857-dpift",
+    "summary": "Deleted record: Medical Imaging in Pregnancy and Neonates"
+  },
+  {
+    "at": 1795719640970,
+    "role": "Public user",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-2026-11-23-1795719640857-dpift",
+    "summary": "Added session: Medical Imaging in Pregnancy and Neonates"
+  },
+  {
+    "at": 1795701721222,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "cells",
+    "id": "session-2026-11-23-1795701695194-y457h",
+    "summary": "Updated session: Medical Imaging in Pregnancy and Neonates"
+  },
+  {
+    "at": 1795701695459,
+    "role": "Public user",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-2026-11-23-1795701695194-y457h",
+    "summary": "Added session: Medical Imaging in Pregnancy and Neonates"
+  },
+  {
+    "at": 1795694789865,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "recurring",
+    "id": "seminar-mnh",
+    "summary": "Updated record: Seminar in MNH"
+  },
+  {
+    "at": 1795694783833,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "recurring",
+    "id": "journal-club",
+    "summary": "Updated record: Journal Club"
+  },
+  {
+    "at": 1795694782962,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "recurring",
+    "id": "journal-club",
+    "summary": "Updated record: Journal Club"
+  },
+  {
+    "at": 1795694781289,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "recurring",
+    "id": "journal-club",
+    "summary": "Updated record: Journal Club"
+  },
+  {
+    "at": 1795694775282,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "recurring",
+    "id": "journal-club",
+    "summary": "Updated record: Journal Club"
+  },
+  {
+    "at": 1795694753655,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "recurring",
+    "id": "journal-club",
+    "summary": "Updated record: Journal Club"
+  },
+  {
+    "at": 1795533851787,
+    "role": "Public user",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-2026-11-16-1795379679413-lls5v",
+    "summary": "Added session: Antimicrobial Resistance in Maternal & Neonatal Health"
+  },
+  {
+    "at": 1795533851339,
+    "role": "Public user",
+    "action": "added",
+    "collection": "modules",
+    "id": "STAT-8100",
+    "summary": "Added record: Biostatics and Epidemiology"
+  },
+  {
+    "at": 1795533849538,
+    "role": "Public user",
+    "action": "updated",
+    "collection": "cells",
+    "id": "session-1794378249485-27mfp",
+    "summary": "Updated session: Antimicrobial Resistance in Maternal & Neonatal Health"
+  },
+  {
+    "at": 1794379445198,
+    "role": "Rep",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-1794379444540-o42dc",
+    "summary": "Added session: Verification probe"
+  },
+  {
+    "at": 1794378249528,
+    "role": "Rep",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-1794378249485-27mfp",
+    "summary": "Added session: ARMN â€“ 8100"
+  },
+  {
+    "at": 1794376330728,
+    "role": "Rep",
+    "action": "added",
+    "collection": "cells",
+    "id": "session-1794376330655-5bkoh",
+    "summary": "Added session: Pregnancy and Neonatal Immunology"
+  }
+]

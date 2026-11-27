@@ -1,0 +1,34 @@
+[
+  {
+    "id": "ARMN – 8100",
+    "data": {
+      "title": "Antimicrobial Resistance in Maternal & Neonatal Health",
+      "facilitator": "G Bandawe"
+    }
+  },
+  {
+    "id": "MIPN 8100",
+    "data": {
+      "title": "Medical Imaging in Pregnancy and Neonates",
+      "facilitator": "Not specified"
+    }
+  },
+  {
+    "id": "PNIM-8100",
+    "data": {
+      "title": "Pregnancy and Neonatal Immunology",
+      "facilitator": "D Mzinza"
+    }
+  },
+  {
+    "id": "STAT-8100",
+    "data": {
+      "title": "Biostatics and Epidemiology",
+      "facilitator": "Dr. M. Madanitsa",
+      "facilitatorId": "",
+      "semesterTargetSessions": 12,
+      "semesterTargetHours": 24,
+      "updatedAt": 1795361210771
+    }
+  }
+]
