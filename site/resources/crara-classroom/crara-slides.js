@@ -5,7 +5,7 @@
   "use strict";
 
   const RENDER_URL = "/api/class-rep/slides/render";
-  const RESOURCES_URL = "/resources/crara-classroom/crara-resources.json";
+  const RESOURCES_URL = "./crara-resources.json";
   const ACTIVE_CLASS = "cr-slides-active";
   const COLLAPSED_CLASS = "cr-slides-collapsed";
   const FULL_CLASS = "crara-slide-fullview";

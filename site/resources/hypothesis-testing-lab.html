@@ -605,7 +605,7 @@ plt.show()</code></pre></div>
     });
   }
 
-  fetch("/resources/data/statistical-tables.json", { cache: "no-store" })
+  fetch("./data/statistical-tables.json", { cache: "no-store" })
     .then(function (response) { if (!response.ok) throw new Error("tables unavailable"); return response.json(); })
     .then(function (data) { tables = data; })
     .catch(function () { tables = FALLBACK; $("table-explain").textContent = "Live table file unavailable; showing a reduced verified fallback set."; })

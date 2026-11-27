@@ -9,8 +9,8 @@
       "title": "Antimicrobial Resistance in Maternal and Neonatal Health in Malawi",
       "summary": "ARMN-8100 PhD lecture: burden, evidence, transmission and research priorities in Malawi.",
       "slides": 28,
-      "url": "/resources/crara-classroom/files/amr-maternal-neonatal-malawi/slides.json",
-      "downloadUrl": "/resources/crara-classroom/files/amr-maternal-neonatal-malawi.pptx",
+      "url": "./files/amr-maternal-neonatal-malawi/slides.json",
+      "downloadUrl": "./files/amr-maternal-neonatal-malawi.pptx",
       "downloadName": "Antimicrobial Resistance in Maternal and Neonatal Health in Malawi.pptx"
     },
     {
@@ -136,7 +136,7 @@
       "category": "Reference",
       "title": "Python Library",
       "summary": "Bundled Python commands and worked examples for biomedical and health sciences.",
-      "url": "/resources/python-command-library.html?runner=off&full=1"
+      "url": "../python-command-library.html?runner=off&full=1"
     },
     {
       "id": "stat8100-practical",
@@ -144,7 +144,7 @@
       "category": "Reference",
       "title": "STAT 8100 Practical Companion",
       "summary": "Executed practical companion with verified code cells and simulated teaching data.",
-      "url": "/resources/stat8100_practical_companion.html"
+      "url": "../stat8100_practical_companion.html"
     },
     {
       "id": "hypothesis-testing-lab",
@@ -152,7 +152,7 @@
       "category": "Reference",
       "title": "Hypothesis Testing Lab",
       "summary": "Manual-first hypothesis testing workflow with validated statistical tables.",
-      "url": "/resources/hypothesis-testing-lab.html"
+      "url": "../hypothesis-testing-lab.html"
     },
     {
       "id": "statistical-tests-glossary",
@@ -160,7 +160,7 @@
       "category": "Reference",
       "title": "Statistical Tests Glossary",
       "summary": "Bilingual glossary of statistical tests and modelling terms.",
-      "url": "/resources/python-statistical-tests-glossary.html"
+      "url": "../python-statistical-tests-glossary.html"
     }
   ]
 }
