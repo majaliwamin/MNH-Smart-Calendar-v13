@@ -32,6 +32,17 @@
     "exams": "Read-only snapshot — the exam workspace needs the backend. Questions, attempts and submissions are unavailable.",
   };
 
+  // Deep links into a resource subview must still have somewhere sensible to
+  // go back to. Walk through the parent view first so app.js records the same
+  // "previous" view it would have recorded after a normal Resources tap.
+  const RESOURCE_PARENTS = {
+    "python-library": "resources",
+    "statistical-glossary": "resources",
+    "stat8100-practical": "resources",
+    "hypothesis-lab": "resources",
+    "python-setup-simulation": "python-library",
+  };
+
   function updateViewNotice(name) {
     const text = VIEW_NOTICES[name] || "";
     [
@@ -300,6 +311,8 @@
     // attempt falls back to the weekly page. Re-apply the deep link now that
     // every script has loaded and the showView wrapper is installed.
     if (requestedView && requestedView !== "weekly" && typeof window.showView === "function") {
+      const parent = RESOURCE_PARENTS[requestedView];
+      if (parent) window.showView(parent);
       window.showView(requestedView);
     }
     annotateAssistant();
