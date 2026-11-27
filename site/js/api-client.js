@@ -39,7 +39,7 @@
       ok: false,
       whatsapp: { provider: "unavailable", configured: false, sender: "", recipients: [] },
       editor: false,
-      settings: { enabled: false, leadMinutes: 10, recipientCount: 0, recipients: [] },
+      settings: { enabled: false, leadMinutes: [10], recipientCount: 0, recipients: [] },
       recent: [],
     },
     "/api/comm/status": { ok: true, configured: false, emergencyStop: false, counts: {} },

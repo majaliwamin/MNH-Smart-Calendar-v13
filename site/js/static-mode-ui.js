@@ -16,13 +16,50 @@
     document.body.insertBefore(bar, document.body.firstChild);
   }
 
-  // Views that cannot show anything without the backend.
+  // The install gate belongs to the hosted app, not to the read-only snapshot.
+  // Every other view stays reachable; write controls are disabled below and
+  // backend-only views carry an explicit read-only notice.
   function hideBackendViews() {
-    document.querySelectorAll(
-      '.menu-nav[data-view="public-chat"], .menu-nav[data-view="exams"], ' +
-      '.menu-nav[data-view="communications"], .hd-tab[data-view="public-chat"], ' +
-      '#class-rep-assistant, #mnh-first-open-gate'
-    ).forEach((node) => { node.hidden = true; node.style.display = "none"; });
+    document.querySelectorAll("#mnh-first-open-gate").forEach((node) => {
+      node.hidden = true;
+      node.style.display = "none";
+    });
+  }
+
+  const VIEW_NOTICES = {
+    "public-chat": "Read-only snapshot — the group chat needs the backend. Message history and sending are unavailable.",
+    "communications": "Read-only snapshot — saved announcements are shown below. WhatsApp, contacts and messaging tools are unavailable.",
+    "exams": "Read-only snapshot — the exam workspace needs the backend. Questions, attempts and submissions are unavailable.",
+  };
+
+  function updateViewNotice(name) {
+    const text = VIEW_NOTICES[name] || "";
+    [
+      ["view-workspace", "mnh-static-workspace-notice"],
+      ["view-exams", "mnh-static-exams-notice"],
+    ].forEach(([hostId, noticeId]) => {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      let node = document.getElementById(noticeId);
+      if (!node) {
+        node = document.createElement("div");
+        node.id = noticeId;
+        node.className = "mnh-view-notice";
+        host.insertBefore(node, host.firstChild);
+      }
+      node.textContent = text;
+      node.hidden = !text;
+    });
+  }
+
+  function annotateAssistant() {
+    const root = document.getElementById("class-rep-assistant");
+    if (!root || document.getElementById("mnh-static-assistant-notice")) return;
+    const note = document.createElement("div");
+    note.id = "mnh-static-assistant-notice";
+    note.className = "mnh-view-notice";
+    note.textContent = "Read-only snapshot — Class Rep chat and LiveKit classroom need the backend. Offline classroom slides are linked under Resources.";
+    root.insertBefore(note, root.firstChild);
   }
 
   const WRITE_LABEL = /^(add|edit|delete|remove|save|create|upload|import|backup|restore|sign in|log in|register|join|send|record voice|start exam|submit|grade|mark as|hang up|post|react|approve|reject|sync now)/i;
@@ -243,20 +280,39 @@
     hideBackendViews();
     disableWrites(document);
     wireDownloads();
+
+    // Keep the read-only notices in step with the app's own view changes.
+    const originalShowView = window.showView;
+    if (typeof originalShowView === "function") {
+      window.showView = function (name) {
+        const result = originalShowView.apply(this, arguments);
+        updateViewNotice(name);
+        return result;
+      };
+    }
+
+    const requestedView = new URLSearchParams(location.search).get("view");
+    updateViewNotice(requestedView || "weekly");
+
+    // app.js looks for a "view-<name>" element before honouring ?view=. The
+    // workspace-backed views (chat, communications, exams, modules, …) live in
+    // the shared view-workspace, and exams.js loads after app.js, so the first
+    // attempt falls back to the weekly page. Re-apply the deep link now that
+    // every script has loaded and the showView wrapper is installed.
+    if (requestedView && requestedView !== "weekly" && typeof window.showView === "function") {
+      window.showView(requestedView);
+    }
+    annotateAssistant();
+
     // Dynamically rendered buttons (dialogs, chat, exam workspace) are covered too.
     const observer = new MutationObserver((records) => {
-      let changed = false;
       records.forEach((record) => {
         record.addedNodes.forEach((node) => {
-          if (node.nodeType !== 1) return;
-          disableWrites(node);
-          if (node.matches && node.matches("#class-rep-assistant, .pc-composer, .cr-chat-compose")) {
-            node.hidden = true;
-          }
-          changed = true;
+          if (node.nodeType === 1) disableWrites(node);
         });
       });
-      if (changed) hideBackendViews();
+      hideBackendViews();
+      annotateAssistant();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }

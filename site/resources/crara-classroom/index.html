@@ -1,3 +1,21 @@
-﻿<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="grammarly" content="false"><meta name="grammarly:disable" content="true"><script src="../../js/extension-guard.js?v=2026.11.26-exams-deeplink-v3"></script><meta name="viewport" content="width=device-width,initial-scale=1.0"/><meta name="theme-color" content="#171717"/><title>CRARA — 1:1 Classroom</title><script type="module" crossorigin src="crara-classroom.js?v=crara-classroom-v12"></script><script type="module" crossorigin src="crara-whiteboard.js?v=crara-classroom-v12"></script><script defer src="crara-slides.js?v=crara-classroom-v12"></script><link rel="stylesheet" crossorigin href="crara-classroom.css?v=crara-classroom-v12"><link rel="stylesheet" crossorigin href="crara-whiteboard.css?v=crara-classroom-v12"></head><body data-crara-classroom-build="crara-classroom-v12"><div id="root"></div></body></html>
+﻿<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="grammarly" content="false"><meta name="grammarly:disable" content="true"><script src="../../js/extension-guard.js?v=2026.11.26-exams-deeplink-v3"></script><meta name="viewport" content="width=device-width,initial-scale=1.0"/><meta name="theme-color" content="#171717"/><link rel="icon" type="image/svg+xml" href="../../favicon.svg?v=2026.11.26-exams-deeplink-v3"/><title>CRARA — 1:1 Classroom</title><script>
+(function(){
+ "use strict";
+ var nativeFetch=window.fetch.bind(window);
+ var MESSAGE="Read-only version — online classroom features need the backend. Offline slides still work.";
+ function reply(payload,status){
+  return Promise.resolve(new Response(JSON.stringify(payload),{status:status||200,headers:{"Content-Type":"application/json; charset=utf-8"}}));
+ }
+ window.fetch=function(input,init){
+  var url=typeof input==="string"?input:input&&input.url?input.url:String(input);
+  if(url.indexOf("/api/")===-1)return nativeFetch(input,init);
+  var path=url.split("?")[0];
+  if(path.indexOf("/api/class-rep/livekit/handoff")!==-1)return reply({detail:MESSAGE});
+  var method=String((init&&init.method)||(input&&input.method)||"GET").toUpperCase();
+  if(method!=="GET"&&method!=="HEAD")return reply({ok:true,readOnly:true,message:MESSAGE});
+  return reply({ok:true,configured:false,items:[],values:{},static:true});
+ };
+})();
+</script><script type="module" crossorigin src="crara-classroom.js?v=crara-classroom-v12"></script><script type="module" crossorigin src="crara-whiteboard.js?v=crara-classroom-v12"></script><script defer src="crara-slides.js?v=crara-classroom-v12"></script><link rel="stylesheet" crossorigin href="crara-classroom.css?v=crara-classroom-v12"><link rel="stylesheet" crossorigin href="crara-whiteboard.css?v=crara-classroom-v12"></head><body data-crara-classroom-build="crara-classroom-v12"><div id="root"></div></body></html>
 
 

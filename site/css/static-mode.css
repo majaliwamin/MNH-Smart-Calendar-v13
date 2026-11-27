@@ -32,4 +32,15 @@
 }
 .mnh-readonly-notice.is-visible { opacity: 1; transform: translateY(0); }
 button[disabled].mnh-readonly-disabled { opacity: 0.42; cursor: not-allowed; }
+.mnh-view-notice {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #3d5b8a;
+  border-radius: 8px;
+  background: #102238;
+  color: #eaf2ff;
+  font: 500 12px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.mnh-view-notice[hidden] { display: none; }
+.resource-tab--classroom { --tab-bg: #0b5a6e; --tab-border: #073f4d; --tab-shadow: #052c36; }
 #mnh-first-open-gate { display: none !important; }
