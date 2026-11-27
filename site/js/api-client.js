@@ -214,7 +214,19 @@
       return { authenticated: false, role: "public", static: true };
     }
     const file = snapshotFile(pathname);
-    if (file) return applyQuery(await loadSnapshot(file), query);
+    if (file) {
+      const payload = applyQuery(await loadSnapshot(file), query);
+      // The original app migrates undated timetable records into a dated week.
+      // In a read-only snapshot that migration can never finish, so give those
+      // records the same date the app already uses for display and stop looping.
+      if (pathname === "/api/col/cells" && Array.isArray(payload)) {
+        return payload.map((row) => {
+          if (!row || !row.data || row.data.weekStart) return row;
+          return { ...row, data: { ...row.data, weekStart: "2026-11-16" } };
+        });
+      }
+      return payload;
+    }
     const stub = stubFor(pathname);
     if (stub !== null) return applyQuery(stub, query);
     // An unknown static path still resolves to empty JSON: no failed requests.
