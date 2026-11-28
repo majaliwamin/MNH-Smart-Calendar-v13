@@ -1133,7 +1133,7 @@ CODE["q10f"] = dedent(r'''
 
     print(ph_tests.to_string(index=False, float_format=lambda v: f"{v:.5g}"))
     print("This is a Schoenfeld-residual screening test using statsmodels 0.15; "
-          "it is not an exact R cox.zph replacement.")
+          "it is an approximate Python diagnostic, not a definitive proportional-hazards test.")
     record("Q10f", ph_tests.to_dict(orient="records"))
 ''').strip() + "\n"
 

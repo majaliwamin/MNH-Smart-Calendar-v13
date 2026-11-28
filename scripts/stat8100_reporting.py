@@ -618,7 +618,7 @@ def work_report(qid: str, results: dict[str, Any] | None) -> dict[str, str]:
             qid,
             "The Schoenfeld-residual screen gave " + "; ".join(parts) + ". " + verdict,
             "Q10f output · postpartum_survival.csv",
-            "This is a statsmodels screening approximation, not an exact R cox.zph reproduction. A violation suggests time-varying effects or stratification.",
+            "This is an approximate statsmodels screening test in Python, not a definitive proportional-hazards test. A violation suggests time-varying effects or stratification.",
         )
 
     guide = GUIDES.get(qid, {})

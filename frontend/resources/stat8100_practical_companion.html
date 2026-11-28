@@ -3533,7 +3533,7 @@ record(&quot;Q10e&quot;, cox_terms.to_dict(orient=&quot;records&quot;))
         </section>
         <section class="card-section">
           <h4>Learning guide — the ten questions answered</h4>
-          <ol class="learning"><li>What is being asked? Check whether the Cox proportional hazards assumption is plausible.</li><li>Statistical concept: Proportional hazards means covariate hazard ratios are constant over follow-up; Schoenfeld residuals should show no time trend.</li><li>Do you need to write code? Yes — one diagnostic cell.</li><li>What to do in Jupyter: Run Q10(e), then Q10(f), and look for trends in each residual plot.</li><li>Code to use: Use the verified Q10(f) code cell.</li><li>Output to inspect: Schoenfeld residual plots, correlations with log(time), p-values and Holm-adjusted p-values.</li><li>Important values or observations: Any significant time trend after multiplicity adjustment.</li><li>How to interpret it: This statsmodels-based screen is an approximation, not an exact R cox.zph replacement.</li><li>What to report: Report the diagnostic method, p-values and what a violation would imply.</li><li>Common mistakes to avoid: Declaring PH validated solely because one plot looks flat, or ignoring a clear time trend.</li></ol>
+          <ol class="learning"><li>What is being asked? Check whether the Cox proportional hazards assumption is plausible.</li><li>Statistical concept: Proportional hazards means covariate hazard ratios are constant over follow-up; Schoenfeld residuals should show no time trend.</li><li>Do you need to write code? Yes — one diagnostic cell.</li><li>What to do in Jupyter: Run Q10(e), then Q10(f), and look for trends in each residual plot.</li><li>Code to use: Use the verified Q10(f) code cell.</li><li>Output to inspect: Schoenfeld residual plots, correlations with log(time), p-values and Holm-adjusted p-values.</li><li>Important values or observations: Any significant time trend after multiplicity adjustment.</li><li>How to interpret it: This statsmodels-based screen is an approximate Python diagnostic, not a definitive proportional-hazards test.</li><li>What to report: Report the diagnostic method, p-values and what a violation would imply.</li><li>Common mistakes to avoid: Declaring PH validated solely because one plot looks flat, or ignoring a clear time trend.</li></ol>
         </section>
         <section class="card-section">
           <h4>Code</h4>
@@ -3590,7 +3590,7 @@ plt.close(&quot;all&quot;)
 
 print(ph_tests.to_string(index=False, float_format=lambda v: f&quot;{v:.5g}&quot;))
 print(&quot;This is a Schoenfeld-residual screening test using statsmodels 0.15; &quot;
-      &quot;it is not an exact R cox.zph replacement.&quot;)
+      &quot;it is an approximate Python diagnostic, not a definitive proportional-hazards test.&quot;)
 record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))
 </code></pre></div>
         </section>
@@ -3634,12 +3634,12 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))
           <h4>Worked report — verified from the executed notebook</h4>
           <p>The Schoenfeld-residual screen gave anaemia: Spearman rho=0.424, raw p&lt;0.0001, Holm p&lt;0.0001 (concern); caesarean: Spearman rho=0.501, raw p&lt;0.0001, Holm p&lt;0.0001 (concern); age: Spearman rho=-0.023, raw p=0.7358, Holm p=0.7358 (no flagged concern). A time trend remains for anaemia, caesarean after adjustment, so constant hazard ratios are questionable for those terms.</p>
           <p class="muted"><strong>Verified source:</strong> Q10f output · postpartum_survival.csv</p>
-          <p class="muted"><strong>Teaching note:</strong> This is a statsmodels screening approximation, not an exact R cox.zph reproduction. A violation suggests time-varying effects or stratification.</p>
+          <p class="muted"><strong>Teaching note:</strong> This is an approximate statsmodels screening test in Python, not a definitive proportional-hazards test. A violation suggests time-varying effects or stratification.</p>
           <p><a href="#reporting-templates">Compare with the reporting templates</a></p>
         </section>
         <section class="card-section">
           <h4>Common mistakes</h4>
-          <p class="warning">Claiming the assumption is proven, or using cox.zph wording as if R were used.</p>
+          <p class="warning">Claiming the assumption is proven, or describing this Python screen as a definitive test.</p>
         </section>
         <div class="card-actions">
           <a class="jump" href="#section-Q10">Notebook section Q10</a>
@@ -3659,7 +3659,7 @@ record(&quot;Q10f&quot;, ph_tests.to_dict(orient=&quot;records&quot;))
       <ul>
         <li>Fixed-seed simulated teaching data; no real patient records.</li>
         <li>The recorded <code>preterm</code> flag differs from literal decimal <code>gest_age &lt; 37</code> for nine records and is used as the primary outcome.</li>
-        <li>Survival analysis uses statsmodels plus a transparent log-rank implementation; <code>lifelines</code> is unavailable. The PH check is a Schoenfeld-residual screen, not an exact <code>cox.zph</code> reproduction.</li>
+        <li>Survival analysis uses statsmodels plus a transparent log-rank implementation; <code>lifelines</code> is unavailable. The PH check is an approximate Python Schoenfeld-residual screen, not a definitive proportional-hazards test.</li>
         <li>Observational associations are not causal effects.</li>
       </ul>
     </section>

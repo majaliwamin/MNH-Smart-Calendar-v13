@@ -698,14 +698,14 @@ add(
         "Use the verified Q10(f) code cell.",
         "Schoenfeld residual plots, correlations with log(time), p-values and Holm-adjusted p-values.",
         "Any significant time trend after multiplicity adjustment.",
-        "This statsmodels-based screen is an approximation, not an exact R cox.zph replacement.",
+        "This statsmodels-based screen is an approximate Python diagnostic, not a definitive proportional-hazards test.",
         "Report the diagnostic method, p-values and what a violation would imply.",
         "Declaring PH validated solely because one plot looks flat, or ignoring a clear time trend.",
     ),
     "Residual plots and screening-test table.",
     "A time trend suggests the hazard ratio may change over follow-up.",
     "Report the screen, its limitation and possible remedies such as time-varying effects or stratification.",
-    "Claiming the assumption is proven, or using cox.zph wording as if R were used.",
+    "Claiming the assumption is proven, or describing this Python screen as a definitive test.",
 )
 
 REPORTING_TEMPLATES = [

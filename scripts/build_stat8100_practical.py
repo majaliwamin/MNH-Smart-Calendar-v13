@@ -297,7 +297,7 @@ def build_notebook():
         "",
         "- The datasets are fixed-seed simulated teaching data, not real patient records.",
         "- The supplied `preterm` flag disagrees with a literal decimal `gest_age < 37` rule for nine records; the recorded flag is used as primary.",
-        "- `lifelines` is not installed, so survival analysis uses statsmodels and a transparent log-rank implementation. The proportional-hazards check is a Schoenfeld-residual screen, not an exact R `cox.zph` reproduction.",
+        "- `lifelines` is not installed, so survival analysis uses statsmodels and a transparent log-rank implementation. The proportional-hazards check is an approximate Python Schoenfeld-residual screen, not a definitive proportional-hazards test.",
         "- Statistical associations from these observational data are not causal effects.",
         "- No biomedical threshold, guideline or population claim is inferred from these simulated data.",
         "",
@@ -760,7 +760,7 @@ footer{{max-width:1500px;margin:0 auto;padding:20px 22px 40px;color:var(--muted)
       <ul>
         <li>Fixed-seed simulated teaching data; no real patient records.</li>
         <li>The recorded <code>preterm</code> flag differs from literal decimal <code>gest_age &lt; 37</code> for nine records and is used as the primary outcome.</li>
-        <li>Survival analysis uses statsmodels plus a transparent log-rank implementation; <code>lifelines</code> is unavailable. The PH check is a Schoenfeld-residual screen, not an exact <code>cox.zph</code> reproduction.</li>
+        <li>Survival analysis uses statsmodels plus a transparent log-rank implementation; <code>lifelines</code> is unavailable. The PH check is an approximate Python Schoenfeld-residual screen, not a definitive proportional-hazards test.</li>
         <li>Observational associations are not causal effects.</li>
       </ul>
     </section>
