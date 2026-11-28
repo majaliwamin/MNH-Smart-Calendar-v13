@@ -18,8 +18,18 @@
 
   // The install gate belongs to the hosted app, not to the read-only snapshot.
   // Every other view stays reachable; write controls are disabled below and
-  // backend-only views carry an explicit read-only notice.
+  // backend-only views carry an explicit read-only notice.  The gate also locks
+  // page scrolling, so clear its class even if the install script re-adds it.
+  function clearInstallGate() {
+    const root = document.documentElement;
+    if (root.classList.contains("mnh-gate-open")) {
+      root.classList.remove("mnh-gate-open");
+      root.classList.add("mnh-install-exempt");
+    }
+  }
+
   function hideBackendViews() {
+    clearInstallGate();
     document.querySelectorAll("#mnh-first-open-gate").forEach((node) => {
       node.hidden = true;
       node.style.display = "none";
@@ -327,7 +337,12 @@
       hideBackendViews();
       annotateAssistant();
     });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

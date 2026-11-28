@@ -1,4 +1,4 @@
-/* Read-only GitHub Pages copy: small notices only, no theme/layout changes. */
+/* Read-only GitHub Pages copy: notices plus mobile readability fixes. */
 .mnh-static-banner {
   position: sticky;
   top: 0;
@@ -44,3 +44,60 @@ button[disabled].mnh-readonly-disabled { opacity: 0.42; cursor: not-allowed; }
 .mnh-view-notice[hidden] { display: none; }
 .resource-tab--classroom { --tab-bg: #0b5a6e; --tab-border: #073f4d; --tab-shadow: #052c36; }
 #mnh-first-open-gate { display: none !important; }
+
+/* The hosted app's first-open gate must never lock this read-only snapshot. */
+html.mnh-gate-open,
+html.mnh-gate-open body {
+  overflow: auto !important;
+  overscroll-behavior: auto !important;
+}
+
+/* Mobile: keep the timetable readable and let the page use the full screen. */
+@media (max-width: 700px) {
+  body.weekly-view {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-y: auto !important;
+    padding-bottom: 0;
+  }
+  #view-weekly:not([hidden]) {
+    min-height: calc(100dvh - 200px);
+    padding-bottom: 24px;
+  }
+  #view-weekly:not([hidden]) .wrap {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow-y: visible !important;
+  }
+  #view-weekly .wrap {
+    --mnh-time-column-width: 64px !important;
+    --mnh-day-column-min-width: 128px !important;
+  }
+  #view-weekly thead th,
+  #view-weekly tbody td,
+  #view-weekly tbody th.time {
+    height: clamp(72px, 11vh, 110px) !important;
+    min-height: clamp(72px, 11vh, 110px) !important;
+  }
+  #view-weekly .wrap tbody td .activity {
+    min-height: calc(clamp(72px, 11vh, 110px) - 8px) !important;
+    height: auto !important;
+    padding: 8px 6px !important;
+  }
+  #view-weekly .wrap tbody td .activity-name {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+  #view-weekly .wrap tbody td .activity-lecturer {
+    font-size: 13px !important;
+  }
+  #view-weekly tbody th.time {
+    font-size: 15px !important;
+  }
+  #view-weekly thead th.daycell .day {
+    font-size: 17px !important;
+  }
+  #view-weekly thead th.daycell .date {
+    font-size: 14px !important;
+  }
+}
