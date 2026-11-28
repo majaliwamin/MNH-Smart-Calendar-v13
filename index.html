@@ -2,19 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1930">
   <title>MNH Smart Calendar</title>
-  <meta http-equiv="refresh" content="0; url=site/">
   <style>
-    body { font: 16px system-ui, sans-serif; margin: 3rem; line-height: 1.5; }
-    a { color: #14532d; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: #0b1930; }
+    #mnh-app { display: block; width: 100%; height: 100%; border: 0; }
+    #mnh-fallback { position: fixed; inset: auto 0 0 0; padding: 8px; text-align: center; font: 13px system-ui, sans-serif; color: #f6d88e; background: #091a31; }
+    #mnh-fallback a { color: #f6d88e; }
+    #mnh-fallback[hidden] { display: none; }
   </style>
 </head>
 <body>
-  <p>Opening the read-only MNH Smart Calendar…</p>
-  <p>If you are not redirected, <a href="site/">open the static calendar</a>.</p>
+  <iframe id="mnh-app" title="MNH Smart Calendar" src="site/"></iframe>
+  <p id="mnh-fallback" hidden>If the calendar does not load, <a href="site/">open it here</a>.</p>
   <script>
-    location.replace("site/" + location.search + location.hash);
+    (function () {
+      "use strict";
+      var frame = document.getElementById("mnh-app");
+      var target = "site/" + location.search + location.hash;
+      frame.addEventListener("error", function () {
+        document.getElementById("mnh-fallback").hidden = false;
+      });
+      frame.src = target;
+    }());
   </script>
 </body>
 </html>

@@ -2952,14 +2952,14 @@ function initHeader(){
  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!panel.hidden){closeBell();bell.focus();}hideDialog("header-dialog");}});
  document.querySelectorAll(".view-tab[data-view],.hd-tab[data-view],.menu-nav[data-view]").forEach(t=>t.addEventListener("click",e=>{e.preventDefault();closeMenu();closeBell();showView(t.dataset.view);}));
  document.getElementById("open-statistical-glossary")?.addEventListener("click",()=>showView("statistical-glossary"));
- document.getElementById("statistical-glossary-back")?.addEventListener("click",()=>showView(previousNonGlossaryView||"resources"));
+ document.getElementById("statistical-glossary-back")?.addEventListener("click",()=>showView("resources"));
  document.getElementById("open-python-library")?.addEventListener("click",()=>showView("python-library"));
- document.getElementById("python-library-back")?.addEventListener("click",()=>showView(previousNonLibraryView));
+ document.getElementById("python-library-back")?.addEventListener("click",()=>showView("resources"));
  document.getElementById("python-setup-simulation-back")?.addEventListener("click",()=>showView(previousNonSimulationView||"python-library"));
   document.getElementById("open-stat8100-practical")?.addEventListener("click",()=>showView("stat8100-practical"));
-  document.getElementById("stat8100-practical-back")?.addEventListener("click",()=>showView(previousNonPracticalView||"resources"));
+  document.getElementById("stat8100-practical-back")?.addEventListener("click",()=>showView("resources"));
   document.getElementById("open-hypothesis-lab")?.addEventListener("click",()=>showView("hypothesis-lab"));
-  document.getElementById("hypothesis-lab-back")?.addEventListener("click",()=>showView(previousNonHypothesisView||"resources"));
+  document.getElementById("hypothesis-lab-back")?.addEventListener("click",()=>showView("resources"));
  window.addEventListener("message",event=>{if(event.origin!==location.origin||!event.data)return;if(event.source!==document.querySelector("#view-python-library iframe")?.contentWindow)return;if(event.data.type==="MNH_OPEN_SETUP_SIM")showView("python-setup-simulation");else if(event.data.type==="MNH_OPEN_STATISTICAL_GLOSSARY")showView("statistical-glossary");});
  // Section navigation is intentionally kept out of the URL so refresh always returns Home.
  // header editing
