@@ -628,7 +628,7 @@
       // Always open the Zoom-like Live Classroom UI with all controls.
       // When LiveKit is configured, it connects to LiveKit; otherwise it opens
       // in local no-credentials mode (patched client handles builtin token).
-      const url = new URL("./resources/crara-classroom/index.html", window.location.href);
+      const url = new URL("./resources/crara-classroom/index.html", document.baseURI || window.location.href);
       url.searchParams.set("v", "2026.11.27-restored-views");
       url.searchParams.set("embed", "1");
       url.searchParams.set("room", result.room);

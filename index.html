@@ -1,31 +1,532 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b1930">
-  <title>MNH Smart Calendar</title>
-  <style>
-    html, body { height: 100%; margin: 0; overflow: hidden; background: #0b1930; }
-    #mnh-app { display: block; width: 100%; height: 100%; border: 0; }
-    #mnh-fallback { position: fixed; inset: auto 0 0 0; padding: 8px; text-align: center; font: 13px system-ui, sans-serif; color: #f6d88e; background: #091a31; }
-    #mnh-fallback a { color: #f6d88e; }
-    #mnh-fallback[hidden] { display: none; }
-  </style>
+<base href="site/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
+<meta name="grammarly" content="false">
+<meta name="grammarly:disable" content="true">
+<script src="./js/extension-guard.js?v=2026.11.26-exams-deeplink-v3"></script>
+<title>PhD Maternal and Neonatal Health — Weekly Schedule</title>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg?v=2026.11.26-exams-deeplink-v3">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="manifest" href="./manifest.json?v=2026.11.26-exams-deeplink-v3">
+<meta name="theme-color" content="#0b1930">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MNH Calendar">
+
+
+
+
+<script src="./vendor/html2canvas.min.js?v=2026.11.26-exams-deeplink-v3&amp;local=1" defer></script>
+<script src="./vendor/jspdf.umd.min.js?v=2026.11.26-exams-deeplink-v3&amp;local=1" defer></script>
+<script>
+(function () {
+  "use strict";
+  // Capture the real browser install event before any other page script can
+  // reload or replace the navigation. Chrome/Chromium on Android uses this
+  // event to offer its own install sheet; iOS Safari exposes no such API.
+  window.__mnhDeferredInstallPrompt = null;
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    window.__mnhDeferredInstallPrompt = event;
+  }, true);
+})();
+</script>
+<script>window.MNH_BUILD="2026.11.28-root-base";</script>
+<script>
+(function () {
+  "use strict";
+  var standalone = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  var installed = false;
+  try { installed = localStorage.getItem("mnh_calendar_install_completed") === "1"; } catch (_) {}
+  var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent || "");
+  var forceGate = new URLSearchParams(window.location.search).has("mnh_force_gate");
+  if (standalone || installed) document.documentElement.classList.add("mnh-install-exempt");
+  else if (mobile || forceGate) document.documentElement.classList.add("mnh-gate-open");
+  else document.documentElement.classList.add("mnh-install-exempt");
+})();
+</script>
+<!-- Static copy: no live backend build check. -->
+<script src="./js/week-model.js?v=2026.11.26-exams-deeplink-v3"></script>
+<script src="./js/api-client.js?v=2026.11.27-restored-views"></script>
+
+  <link rel="stylesheet" href="./css/app.css?v=2026.11.26-exams-deeplink-v3&amp;local-fonts=1&amp;resource-tabs=1&amp;book-resource=1">
+<link rel="stylesheet" href="./css/class-rep.css?v=2026.11.26-exams-deeplink-v3&amp;crara-header=1">
+<link rel="stylesheet" href="./css/exams.css?v=2026.11.26-exams-deeplink-v3">
+<link rel="stylesheet" href="./css/static-mode.css?v=2026.11.27-restored-views">
+
+<link rel="stylesheet" href="./vendor/katex/katex.min.css?v=2026.11.26-exams-deeplink-v3">
+<script src="./vendor/marked.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="./vendor/purify.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="./vendor/katex/katex.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="./vendor/katex/auto-render.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="./vendor/chart.umd.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
 </head>
-<body>
-  <iframe id="mnh-app" title="MNH Smart Calendar" src="site/"></iframe>
-  <p id="mnh-fallback" hidden>If the calendar does not load, <a href="site/">open it here</a>.</p>
-  <script>
-    (function () {
-      "use strict";
-      var frame = document.getElementById("mnh-app");
-      var target = "site/" + location.search + location.hash;
-      frame.addEventListener("error", function () {
-        document.getElementById("mnh-fallback").hidden = false;
-      });
-      frame.src = target;
-    }());
-  </script>
-</body>
-</html>
+<body data-theme="dark">
+<script>
+(function () {
+  try {
+    var savedTheme = localStorage.getItem("phd_mnh_theme");
+    if (!savedTheme) {
+      var savedState = JSON.parse(localStorage.getItem("phd_mnh_weekly_calendar_v3") || "null");
+      savedTheme = savedState && savedState.theme;
+    }
+    if (["dark", "white", "violet", "green", "silver"].indexOf(savedTheme) !== -1) {
+      document.body.dataset.theme = savedTheme;
+    }
+  } catch (error) { /* use the default theme if browser storage is unavailable */ }
+})();
+</script>
+
+<div id="mnh-first-open-gate" class="mnh-install-choice" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy">
+ <section class="mnh-install-card">
+  <div class="mnh-install-mark" aria-hidden="true">MNH</div>
+  <p id="mnh-install-copy">Install MNH Calendar for quicker access from your device.</p>
+  <div class="mnh-install-actions">
+   <button type="button" class="mnh-install-accept" id="mnh-install-accept">Install</button>
+   <button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button>
+  </div>
+ </section>
+</div>
+
+<div class="activity-marquee-shell" aria-label="Future academic events"><div id="dashboard-upcoming" class="activity-marquee" aria-live="polite"><div class="activity-marquee-track"><span class="activity-marquee-empty">Loading shared events…</span></div></div></div>
+<header class="site-header" id="site-header">
+ <div class="hd-band">
+  <div class="hd-left">
+  <div class="hd-title">
+   <div class="hd-main" id="hd-title">PhD in Maternal and Neonatal Health : 3rd Cohort, 3rd Block</div>
+   <div class="hd-sub" id="hd-sub">Academic Calendar</div>
+  </div>
+  </div>
+  <div class="hd-right">
+   <div class="hd-today">
+    <svg class="ic ic-gold" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="var(--gold)"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><text id="hd-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="var(--on-accent)"></text></svg>
+    <div class="hd-today-text"><span class="t1">Today</span><span class="t2" id="hd-date"></span></div>
+   </div>
+   <div class="hd-theme" id="hd-theme">
+    <button type="button" class="hd-theme-btn" id="theme-picker-btn" aria-label="Choose colour theme" title="Choose colour theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-picker">
+     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.8 8.8 0 0 1 8.6 3.8 9.2 9.2 0 1 0 20.2 15.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="theme-picker" id="theme-picker" hidden>
+     <label>Choose appearance</label>
+     <div class="theme-choice-grid" role="group" aria-label="Available colour themes">
+      <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false"><span class="theme-swatch" style="background:#0b1017;border-color:#c0c8d4"></span>Dark</button>
+      <button type="button" class="theme-choice" data-theme-choice="white" aria-pressed="false"><span class="theme-swatch" style="background:#fff;border-color:#17427a"></span>White</button>
+      <button type="button" class="theme-choice" data-theme-choice="violet" aria-pressed="false"><span class="theme-swatch" style="background:#2a1a5c;border-color:#c7b3ff"></span>Violet blue</button>
+      <button type="button" class="theme-choice" data-theme-choice="green" aria-pressed="false"><span class="theme-swatch" style="background:#06612c;border-color:#a9dcc0"></span>Green</button>
+      <button type="button" class="theme-choice" data-theme-choice="silver" aria-pressed="false"><span class="theme-swatch" style="background:#102238;border-color:#9dbce0"></span>Midnight Silver</button>
+      <button type="button" class="theme-choice" data-theme-choice="red" aria-pressed="false"><span class="theme-swatch" style="background:#741b25;border-color:#f0b7bd"></span>Red</button>
+     </div>
+     <select id="theme" aria-label="Current dashboard theme" tabindex="-1" aria-hidden="true">
+      <option value="dark">Dark</option><option value="white">White</option><option value="violet">Violet blue</option><option value="green">Green</option><option value="silver">Midnight Silver</option><option value="red">Red</option>
+     </select>
+    </div>
+   </div>
+   <button type="button" class="hd-bell" id="hd-bell" aria-label="Today’s activities" aria-haspopup="true" aria-expanded="false" aria-controls="bell-panel">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--gold)" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+    <span class="hd-badge" id="hd-badge" hidden>0</span>
+   </button>
+   <div class="hd-dl" id="hd-dl">
+    <button type="button" class="hd-dlbtn" id="dl-btn" aria-label="Download" title="Download" aria-haspopup="menu" aria-expanded="false" aria-controls="dl-menu">
+     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10.5l5 5 5-5"/><path d="M4 20h16"/></svg>
+    </button>
+    <div class="dl-menu" id="dl-menu" role="menu" aria-label="Download format" hidden>
+     <button type="button" role="menuitem" data-fmt="pdf">PDF</button>
+     <button type="button" role="menuitem" data-fmt="image">JPEG / PNG</button>
+     <button type="button" role="menuitem" data-fmt="xlsx">Excel</button>
+    </div>
+   </div>
+   <button type="button" class="hd-user" id="menu-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-panel" data-label="Menu"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span></button>
+  </div>
+ </div>
+
+<div class="menu-panel" id="menu-panel" role="navigation" aria-label="Calendar navigation" hidden>
+ <div class="menu-heading"><strong>MNH Calendar</strong><span>Navigation</span></div>
+ <div class="menu-links">
+  <button type="button" class="menu-nav" data-view="resources"><span>&#9633;</span>Resources</button>
+  <button type="button" class="menu-nav" data-view="monthly"><span>&#9638;</span>Monthly Calendar</button>
+  <button type="button" class="menu-nav" data-view="modules"><span>&#9636;</span>Modules</button>
+  <button type="button" class="menu-nav" data-view="public-chat"><span>&#128172;</span>MNH Group Chat</button>
+  <button type="button" class="menu-nav" data-view="examinations"><span>&#9635;</span>Examinations</button>
+  <button type="button" class="menu-nav" data-view="exams"><span>&#9997;</span>EXAMS</button>
+  <button type="button" class="menu-nav" data-view="analytics"><span>&#9636;</span>Analytics</button>
+  <button type="button" class="menu-nav" data-view="communications"><span>&#9993;</span>WhatsApp &amp; Communications</button>
+  <button type="button" class="menu-nav" data-view="history"><span>&#9684;</span>Activity History</button>
+ </div>
+ <div id="legacy-actions" hidden>
+  <button type="button" id="edit-header" disabled></button><button type="button" id="save" disabled></button>
+  <button type="button" id="backup" disabled></button><button type="button" id="import" disabled></button>
+  <button type="button" id="print"></button><button type="button" id="theme-btn"></button><button type="button" id="alarms"></button>
+ </div>
+ <input type="file" id="import-file" accept="application/json,.json" hidden>
+</div>
+ <div class="bell-panel" id="bell-panel" hidden></div>
+</header>
+
+
+
+<nav class="view-tabs" id="view-tabs" aria-label="Primary calendar views">
+ <button type="button" class="view-tab active weekly-date-tab" data-view="weekly" aria-current="page" aria-label="Home — Weekly timetable" title="Home — Weekly timetable"><svg class="weekly-date-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8M5.5 9.2V21h13V9.2M9.5 21v-7h5v7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="current-day-date">--</span></button>
+ <div class="week-nav-row">
+  <div class="week-nav" role="group" aria-label="Academic week navigation">
+   <button type="button" class="view-tab week-step" id="week-prev" aria-label="Previous academic week" title="Previous academic week">&#8249;</button>
+   <button type="button" class="view-tab week-now" id="week-now" title="Selected week" aria-live="polite">
+    <span class="week-range" id="week-now-range">Nov 9&#8211;15, 2026</span>
+   </button>
+   <button type="button" class="view-tab week-step" id="week-next" aria-label="Next academic week" title="Next academic week">&#8250;</button>
+  </div>
+  <button type="button" class="mnh-refresh-btn" id="mnh-refresh-btn" aria-label="Refresh calendar" title="Refresh calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+ </div>
+ </nav>
+
+<div class="status" id="status" role="status" aria-live="polite"></div>
+<main>
+<section class="view" id="view-weekly" hidden>
+<h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Weekly Schedule</h1>
+
+ 
+<div class="wrap">
+<table aria-label="Editable Monday to Sunday calendar">
+<thead id="calendar-head"></thead><tbody id="calendar-body"></tbody></table>
+</div>
+<div id="class-rep-assistant" class="cara-widget" aria-label="Class Rep &amp; Academic Relations Assistant"></div>
+</section>
+<section class="view vw" id="view-my-schedule" hidden>
+ <h2>My Schedule</h2><p class="lead" id="schedule-lead">Everything planned for the week of 9–15 Nov 2026. Select an item for details.</p>
+ <div class="cards" id="schedule-body"></div>
+</section>
+<section class="view vw" id="view-modules" hidden>
+ <h2>Modules</h2><p class="lead">Your modules and other activities, with this week’s sessions.</p>
+ <div class="cards" id="modules-body"></div>
+</section>
+<section class="view vw" id="view-resources" hidden>
+ <h2>Resources</h2>
+ <section class="python-library-section" aria-label="Python Command Library for biomedical and health sciences">
+   <button type="button" class="resources-back resource-tab resource-tab--python" id="open-python-library" aria-label="Python Library">Python Library</button>
+   <button type="button" class="resources-back resource-tab resource-tab--stat8100" id="open-stat8100-practical" aria-label="STAT 8100 Practical Companion">STAT 8100 Practical Companion</button>
+   <button type="button" class="resources-back resource-tab resource-tab--lab" id="open-hypothesis-lab" aria-label="Hypothesis Testing Lab">Hypothesis Testing Lab</button>
+    <a class="resources-back resource-tab resource-tab--classroom" href="./resources/crara-classroom/index.html?v=2026.11.27-restored-views" target="_blank" rel="noopener noreferrer" aria-label="CRARA 1:1 Classroom">CRARA Classroom</a>
+     <a class="resources-back resource-tab resource-tab--book" href="https://link.springer.com/book/10.1007/978-1-4614-1353-0" target="_blank" rel="noopener noreferrer" aria-label="Regression Methods in Biostatistics">Regression Methods in Biostatistics</a>
+ </section>
+ <div id="res-list"></div><div id="res-form-wrap"></div>
+</section>
+<section class="view vw" id="view-python-library" hidden>
+ <button type="button" class="python-library-back" id="python-library-back" aria-label="Back to Resources">&#8592; Back</button>
+ <iframe
+  class="python-library-frame"
+  src="./resources/python-command-library.html?runner=off&full=1&v=2026.11.26-exams-deeplink-v3"
+  title="Python Command Library for biomedical and health sciences"
+  allow="unload" loading="eager">
+ </iframe>
+</section>
+<section class="view vw" id="view-statistical-glossary" hidden>
+ <button type="button" class="python-library-back" id="statistical-glossary-back" aria-label="Back to Resources">&#8592; Back to Resources</button>
+ <iframe
+  class="python-library-frame"
+  src="./resources/python-statistical-tests-glossary.html?v=2026.11.26-exams-deeplink-v3&amp;glossary-labels=1&amp;resource-tabs=1"
+  title="Statistical Tests and Modelling Glossary"
+  allow="unload" loading="eager">
+ </iframe>
+</section>
+<section class="view vw" id="view-stat8100-practical" hidden>
+  <button type="button" class="python-library-back" id="stat8100-practical-back" aria-label="Back to Resources">&#8592; Back to Resources</button>
+  <iframe
+   class="python-library-frame"
+   src="./resources/stat8100_practical_companion.html?v=2026.11.22-stat8100-practical-v2"
+   title="STAT 8100 Biostatistics and Epidemiology Practical Companion"
+   allow="unload" loading="eager">
+  </iframe>
+ </section>
+<section class="view vw" id="view-hypothesis-lab" hidden>
+   <button type="button" class="python-library-back" id="hypothesis-lab-back" aria-label="Back to Resources">&#8592; Back to Resources</button>
+   <iframe
+    class="python-library-frame"
+    src="./resources/hypothesis-testing-lab.html?v=visual-hypothesis-lab-v1"
+    title="CRARA Hypothesis Testing Lab"
+    allow="unload" loading="eager">
+   </iframe>
+  </section>
+<section class="view vw" id="view-python-setup-simulation" hidden>
+  <button type="button" class="python-library-back" id="python-setup-simulation-back" aria-label="Back to Python Library">&#8592; Back to library</button>
+  <iframe
+   class="python-library-frame"
+   src="./resources/python-jupyter-windows-setup-simulation.html?full=1&v=2026.11.26-exams-deeplink-v3"
+   title="Simulated Windows Python and JupyterLab setup walkthrough"
+   allow="unload" loading="eager">
+  </iframe>
+</section>
+<section class="view vw" id="view-analytics" hidden>
+ <div id="analytics-body"></div>
+</section>
+<section class="view vw silver-dashboard-view" id="view-silver-dashboard" hidden>
+ <div class="silver-dashboard-intro"><p class="silver-eyebrow">PROGRAMME OVERVIEW</p><h1>PhD in Maternal &amp; Neonatal Health</h1><p>Midnight Silver Â· Academic performance and delivery overview</p></div>
+ <div id="silver-analytics-body"></div>
+</section>
+<section class="view vw exams-view" id="view-exams" hidden>
+  <div class="exams-shell" id="exams-root">
+    <div class="exams-header">
+      <h2>EXAMS</h2>
+      <p class="lead">Secure, isolated examination workspace for question banks, exam delivery, submissions, and basic grading. Legacy Examinations calendar remains separate.</p>
+    </div>
+    <div id="exams-body" class="exams-body"></div>
+  </div>
+</section>
+<section class="view vw" id="view-workspace" hidden>
+ <h2 id="workspace-title">Workspace</h2><p class="lead" id="workspace-lead"></p>
+ <div id="workspace-body"></div>
+</section>
+</main>
+
+<nav class="bottom-nav" id="bottom-nav" aria-label="Main navigation"><a class="hd-tab active" href="#weekly" data-view="weekly" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Home</span></a><a class="hd-tab" href="#my-schedule" data-view="my-schedule"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="17" rx="3.5" fill="currentColor"/><rect x="7" y="2" width="2.4" height="5" rx="1.2" fill="currentColor" stroke="#0a2140" stroke-width="1"/><rect x="14.6" y="2" width="2.4" height="5" rx="1.2" fill="currentColor" stroke="#0a2140" stroke-width="1"/><g fill="#0a2140"><circle cx="8" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="16" cy="12" r="1.3"/><circle cx="8" cy="16.5" r="1.3"/><circle cx="12" cy="16.5" r="1.3"/><circle cx="16" cy="16.5" r="1.3"/></g></svg><span>Schedule</span></a><a class="hd-tab" href="#modules" data-view="modules"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10.3 5.2 8 4.7 3.5 4.7v13.6c4.5 0 6.8.5 8.5 1.8 1.7-1.3 4-1.8 8.5-1.8V4.7C16 4.7 13.7 5.2 12 6.5zM12 6.5v13.6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/></svg><span>Modules</span></a><a class="hd-tab" href="#resources" data-view="resources"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><path d="M12 9v6M9.3 12.9 12 15.6l2.7-2.7" fill="none" stroke="#0a2140" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Resources</span></a></nav>
+
+
+<div class="colour-dialog" id="module-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="module-dialog-title">
+ <div class="dialog-card module-card">
+  <h2 id="module-dialog-title">Schedule session</h2>
+  <div class="module-field"><label for="session-day">Weekday</label><select id="session-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></div>
+  <div class="module-field time-pair"><div><label for="session-start">Start time</label><input id="session-start" type="time" step="60" value="08:00"></div><div><label for="session-end">End time</label><input id="session-end" type="time" step="60" value="10:00"></div></div>
+  <div class="module-field">
+   <label for="module-select">Select module</label>
+   <select id="module-select">
+    <option value="">Choose a module…</option>
+    <option value="MIPN 8100">MIPN 8100 — Medical Imaging in Pregnancy and Neonates</option>
+    <option value="ARMN – 8100">ARMN – 8100 — Antimicrobial Resistance in Maternal &amp; Neonatal Health</option>
+    <option value="PNIM-8100">PNIM-8100 — Pregnancy and Neonatal Immunology</option>
+   </select>
+  </div>
+  <div class="module-field">
+   <label for="module-label">Activity label (module code)</label>
+   <input id="module-label" type="text" maxlength="80" placeholder="Select a module" readonly>
+  </div>
+  <div class="module-field">
+   <label for="session-lecturer">Presenter</label>
+   <input id="session-lecturer" type="text" maxlength="120" autocomplete="name" placeholder="Not assigned — enter a name if needed">
+   <div id="lecturer-assignment-status" class="lecturer-assignment-status" aria-live="polite" hidden></div>
+  </div>
+  <div class="module-details" id="module-details" aria-live="polite"></div>
+  <div class="module-field">
+   <label for="session-status">Session outcome</label>
+   <select id="session-status"><option value="scheduled">Scheduled / not yet held</option><option value="completed">Completed</option><option value="missed">Missed</option><option value="cancelled">Cancelled</option><option value="rescheduled">Rescheduled</option></select>
+   <small class="session-outcome-hint">Rescheduled sessions stay on this date and time unless you change the weekday or time above.</small>
+  </div>
+  <div class="module-field">
+   <label for="module-mode">Delivery mode</label>
+   <select id="module-mode"><option value="unspecified">Not specified</option><option value="online">Online</option><option value="face_to_face">Face-to-face</option></select>
+  </div>
+  <div class="module-field" id="session-link-field" hidden>
+   <label for="session-link">Online meeting link (optional)</label>
+   <input id="session-link" type="url" maxlength="500" inputmode="url" placeholder="https://meet.google.com/...">
+  </div>
+  <div class="dialog-actions">
+   <button id="delete-module">Remove entry</button>
+   <button id="cancel-module">Cancel</button>
+   <button class="primary" id="apply-module">Save changes</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="details-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="details-title">
+ <div class="dialog-card">
+  <h2 id="details-title">Module details</h2>
+  <div class="module-details" id="details-content"></div>
+  <div class="dialog-actions">
+   <button id="close-details">Close</button>
+   <button class="primary" id="edit-details" style="display:none">Change module / colour</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="header-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="header-dlg-title">
+ <div class="dialog-card">
+  <h2 id="header-dlg-title">Edit header</h2>
+  <div class="module-field"><label for="header-title-input">Title</label><input type="text" id="header-title-input" maxlength="80"></div>
+  <div class="module-field"><label for="header-sub-input">Subtitle</label><input type="text" id="header-sub-input" maxlength="60"></div>
+  <div class="dialog-actions">
+   <button id="header-reset">Restore default</button>
+   <button id="header-cancel">Cancel</button>
+   <button class="primary" id="header-save">Save header</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="alarm-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="alarm-title">
+ <div class="dialog-card">
+  <h2 id="alarm-title">ðŸ”” Alarms</h2>
+  <p>Rings like an incoming call before each activity. Alarms are personal to this device and only ring while this page is open. Tap the page once after opening it so your browser allows sound.</p>
+  <div class="module-field">
+   <label for="alarm-lead">Ring</label>
+   <select id="alarm-lead">
+    <option value="0">At the start time</option>
+    <option value="5">5 minutes before</option>
+    <option value="10">10 minutes before</option>
+    <option value="15">15 minutes before</option>
+    <option value="30">30 minutes before</option>
+   </select>
+  </div>
+  <div class="module-field"><label for="alarm-voice"><input id="alarm-voice" type="checkbox" checked> Speak the registered user’s name and session details</label></div>
+  <div class="module-field"><label for="alarm-voice-option">Spoken voice</label><select id="alarm-voice-option"><option value="0">Gentle voice 1</option><option value="1">Gentle voice 2</option><option value="2">Gentle voice 3</option><option value="3">Gentle voice 4</option><option value="4">Gentle voice 5</option></select><small>Uses the voices available in this browser or device.</small></div>
+  <div class="module-field"><label for="alarm-sound-option">Ringing sound</label><select id="alarm-sound-option"><option value="0">Soft Bell</option><option value="1">Double Chime</option><option value="2">Warm Marimba</option><option value="3">Gentle Pulse</option><option value="4">Classic Chime</option></select></div>
+  <p class="module-details">The spoken reminder repeats every 5 seconds. The alarm rings for up to 5 minutes, or until you answer or decline it.</p>
+  <div class="module-details" id="alarm-next" aria-live="polite"></div>
+  <div class="dialog-actions">
+   <button id="alarm-test">Test ring</button>
+   <button id="alarm-close">Close</button>
+   <button class="primary" id="alarm-toggle">Turn on</button>
+  </div>
+ </div>
+</div>
+
+<div class="colour-dialog" id="call-dialog" aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="call-name">
+ <div class="call-card">
+  <div class="call-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="58" height="58" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="17" rx="3.5" fill="var(--gold)"/><rect x="6.5" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><rect x="14.9" y="1.8" width="2.6" height="5.2" rx="1.3" fill="var(--gold)" stroke="#031124" stroke-width="1"/><text id="call-day" x="12" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="var(--on-accent)"></text></svg></div>
+  <div class="call-sub">Incoming reminder</div>
+  <div class="call-name" id="call-name"></div>
+  <div class="call-when" id="call-when"></div>
+  <div class="call-actions">
+   <div><button class="call-btn decline" id="call-decline" aria-label="Decline and stop the alarm">âœ•</button><span class="call-label">Decline</span></div>
+   <div><button class="call-btn answer" id="call-answer" aria-label="Answer: stop the alarm and open the activity">ðŸ“ž</button><span class="call-label">Answer</span></div>
+  </div>
+  <button class="call-snooze" id="call-snooze">Snooze 5 min</button>
+ </div>
+</div>
+
+
+
+
+
+
+
+
+<script src="./js/app.js?v=2026.11.28-root-base&amp;local-resources=1" defer></script>
+<script src="./js/class-rep-renderer.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="./js/class-rep.js?v=2026.11.28-root-base&amp;crara-header=1&amp;chat-speech=1" defer></script>
+<script src="./js/exams.js?v=2026.11.26-exams-deeplink-v3" defer></script>
+<script src="./js/static-mode-ui.js?v=2026.11.28-root-base" defer></script>
+<!-- Static copy: service worker registration disabled. -->
+
+
+<script>
+(function(){
+ "use strict";
+ let deferredPrompt=window.__mnhDeferredInstallPrompt||null;
+ let busy=false;
+ let userClosed=false;
+ let dialog=null;
+
+ const standaloneQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
+ const isStandalone=()=>!!(standaloneQuery&&standaloneQuery.matches)||window.navigator.standalone===true;
+ const INSTALL_DONE_KEY="mnh_calendar_install_completed";
+ const hasInstalled=()=>{try{return localStorage.getItem(INSTALL_DONE_KEY)==="1";}catch(e){return false;}};
+ const markInstalled=()=>{try{localStorage.setItem(INSTALL_DONE_KEY,"1");}catch(e){}};
+ const hasWebInstall=()=>typeof navigator.install==="function";
+ const canInstall=()=>hasWebInstall()||!!deferredPrompt;
+ const isLikelyAndroid=()=>/Android|SamsungBrowser/i.test(navigator.userAgent)||
+  (!!(window.matchMedia&&window.matchMedia("(pointer: coarse)").matches)&&!/iPhone|iPad|iPod/i.test(navigator.userAgent));
+ const closeInstallGate=()=>{
+  if(dialog)dialog.hidden=true;
+  document.documentElement.classList.remove("mnh-gate-open");
+ };
+ const ensureDialog=()=>{
+  if(dialog)return dialog;
+  const gate=document.getElementById("mnh-first-open-gate");
+  if(gate){
+   dialog=gate;
+  }else{
+   dialog=document.createElement("div");
+   dialog.id="mnh-install-choice";
+   dialog.className="mnh-install-choice";
+   dialog.hidden=true;
+   dialog.innerHTML='<section class="mnh-install-card" role="dialog" aria-modal="true" aria-label="Install MNH Calendar" aria-describedby="mnh-install-copy"><div class="mnh-install-mark" aria-hidden="true">MNH</div><p id="mnh-install-copy">Install MNH Calendar for quicker access from your device.</p><div class="mnh-install-actions"><button type="button" class="mnh-install-accept" id="mnh-install-accept" hidden>Install</button><button type="button" class="mnh-install-decline" id="mnh-install-decline">Close</button></div></section>';
+   document.body.appendChild(dialog);
+  }
+  const accept=dialog.querySelector("#mnh-install-accept"),decline=dialog.querySelector("#mnh-install-decline");
+  decline.addEventListener("click",()=>{userClosed=true;closeInstallGate();});
+  accept.addEventListener("click",installFromChoice);
+  dialog.addEventListener("click",event=>{if(event.target===dialog){userClosed=true;closeInstallGate();}});
+  return dialog;
+ };
+ ensureDialog();
+ const openInstallChoice=()=>{
+  if(isStandalone()||hasInstalled()||userClosed)return;
+  const box=ensureDialog();
+  const accept=box.querySelector("#mnh-install-accept");
+  accept.hidden=false;
+  accept.disabled=false;
+  accept.setAttribute("aria-disabled","false");
+  accept.textContent="Install";
+  box.hidden=false;
+  document.documentElement.classList.remove("mnh-install-exempt");
+  document.documentElement.classList.add("mnh-gate-open");
+  accept.focus();
+ };
+ async function installFromChoice(){
+  if(busy)return;
+  const accept=dialog&&dialog.querySelector("#mnh-install-accept");
+  busy=true;
+  if(accept){accept.disabled=true;accept.setAttribute("aria-disabled","true");}
+  try{
+   if(hasWebInstall()){
+    await navigator.install();
+    markInstalled();
+    closeInstallGate();
+    return;
+   }
+   if(deferredPrompt){
+    const promptEvent=deferredPrompt;
+    deferredPrompt=null;
+    window.__mnhDeferredInstallPrompt=null;
+    if(accept)accept.hidden=true;
+    await promptEvent.prompt();
+    const choice=await promptEvent.userChoice;
+    if(choice&&choice.outcome==="accepted"){
+     markInstalled();
+     closeInstallGate();
+    }
+    return;
+   }
+   if(accept)accept.hidden=true;
+  }catch(error){
+   console.warn("MNH Calendar install could not start:",error);
+   if(accept&&!canInstall())accept.hidden=true;
+  }finally{
+   busy=false;
+   if(accept){accept.disabled=false;accept.removeAttribute("aria-disabled");}
+  }
+ }
+ document.addEventListener("keydown",event=>{if(event.key==="Escape"&&dialog&&!dialog.hidden){userClosed=true;closeInstallGate();}});
+
+ if(isStandalone()){
+  markInstalled();
+  return;
+ }
+ if(hasInstalled())return;
+ if(isLikelyAndroid())openInstallChoice();
+
+ window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  deferredPrompt=event;
+  window.__mnhDeferredInstallPrompt=event;
+  const accept=dialog&&dialog.querySelector("#mnh-install-accept");
+  if(accept)accept.hidden=false;
+  openInstallChoice();
+ });
+ if(deferredPrompt)openInstallChoice();
+
+ window.addEventListener("appinstalled",()=>{
+  deferredPrompt=null;
+  window.__mnhDeferredInstallPrompt=null;
+  busy=false;
+  userClosed=false;
+  markInstalled();
+  const accept=dialog&&dialog.querySelector("#mnh-install-accept");
+  if(accept)accept.hidden=true;
+  closeInstallGate();
+ });
+})();
+</script>
+
+</body></html>
+
+
