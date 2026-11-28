@@ -73,20 +73,6 @@
     });
   }
 
-  function annotateAssistant() {
-    if (document.getElementById("mnh-static-assistant-notice")) return;
-    const weekly = document.getElementById("view-weekly");
-    if (!weekly) return;
-    const note = document.createElement("div");
-    note.id = "mnh-static-assistant-notice";
-    note.className = "mnh-view-notice";
-    note.textContent = "Read-only snapshot — Class Rep chat and LiveKit classroom need the backend. Offline classroom slides are linked under Resources.";
-    // The CRARA widget is intentionally zero-sized while closed, so a notice
-    // inside it renders as a clipped sliver. Put it above the timetable where
-    // it can use the full page width and wrap normally.
-    weekly.insertBefore(note, weekly.querySelector(".wrap") || null);
-  }
-
   const WRITE_LABEL = /^(add|edit|delete|remove|save|create|upload|import|backup|restore|sign in|log in|register|join|send|record voice|start exam|submit|grade|mark as|hang up|post|react|approve|reject|sync now)/i;
   function disableWrites(root) {
     const scan = (node) => {
@@ -336,7 +322,6 @@
       if (parent) window.showView(parent);
       window.showView(requestedView);
     }
-    annotateAssistant();
 
     // Dynamically rendered buttons (dialogs, chat, exam workspace) are covered too.
     const observer = new MutationObserver((records) => {
@@ -346,7 +331,6 @@
         });
       });
       hideBackendViews();
-      annotateAssistant();
     });
     observer.observe(document.documentElement, {
       childList: true,
