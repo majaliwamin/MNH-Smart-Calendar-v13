@@ -34,32 +34,56 @@
   }, true);
 })();
 </script>
-<script>window.MNH_BUILD="2026.11.28-no-assistant-notice-autorefresh";</script>
+<script>window.MNH_BUILD="2026.11.28-autorefresh-manifest";</script>
 <script>
 (function () {
   "use strict";
-  // A new static build must replace an already-open cached copy once. The
-  // stored marker and history state stop this from becoming a reload loop.
-  var build = String(window.MNH_BUILD || "");
-  if (!build) return;
-  var key = "mnh_static_build_seen";
-  var seen = "";
-  try { seen = localStorage.getItem(key) || ""; } catch (_) {}
-  if (!seen) { try { seen = sessionStorage.getItem(key) || ""; } catch (_) {} }
-  if (seen === build || (window.history.state && window.history.state.mnhRefreshed === build)) return;
-  try { localStorage.setItem(key, build); } catch (_) {
-    try { sessionStorage.setItem(key, build); } catch (_) {}
-  }
+  var current = String(window.MNH_BUILD || "");
+  var refreshParam = "mnh_refresh";
+
+  // A new build is fetched with a cache-busting query. Remove it after load so
+  // the address the user sees stays the original, unchanged root link.
   try {
-    var state = window.history.state || {};
-    state.mnhRefreshed = build;
-    window.history.replaceState(state, "");
+    var here = new URL(window.location.href);
+    if (here.searchParams.has(refreshParam)) {
+      here.searchParams.delete(refreshParam);
+      window.history.replaceState(window.history.state || "", "", here.toString());
+    }
   } catch (_) {}
-  window.location.reload();
+
+  if (!current) return;
+
+  function refresh(remote) {
+    var seen = "";
+    try { seen = sessionStorage.getItem("mnh_remote_build_seen") || ""; } catch (_) {}
+    if (seen === remote) return;
+    try { sessionStorage.setItem("mnh_remote_build_seen", remote); } catch (_) {}
+    var target = new URL(window.location.href);
+    target.searchParams.set(refreshParam, remote);
+    window.location.replace(target.toString());
+  }
+
+  function checkBuild() {
+    fetch("./build.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("build manifest unavailable");
+        return response.json();
+      })
+      .then(function (data) {
+        var remote = String((data && data.build) || "");
+        if (remote && remote !== current) refresh(remote);
+      })
+      .catch(function () {});
+  }
+
+  checkBuild();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") checkBuild();
+  });
+  window.setInterval(function () {
+    if (document.visibilityState === "visible") checkBuild();
+  }, 120000);
 })();
-window.addEventListener("pageshow", function (event) {
-  if (event.persisted) window.location.reload();
-});
 </script>
 <script>
 (function () {
@@ -81,7 +105,7 @@ window.addEventListener("pageshow", function (event) {
   <link rel="stylesheet" href="./css/app.css?v=2026.11.26-exams-deeplink-v3&amp;local-fonts=1&amp;resource-tabs=1&amp;book-resource=1">
 <link rel="stylesheet" href="./css/class-rep.css?v=2026.11.26-exams-deeplink-v3&amp;crara-header=1">
 <link rel="stylesheet" href="./css/exams.css?v=2026.11.26-exams-deeplink-v3">
-<link rel="stylesheet" href="./css/static-mode.css?v=2026.11.28-no-assistant-notice-autorefresh">
+<link rel="stylesheet" href="./css/static-mode.css?v=2026.11.28-autorefresh-manifest">
 
 <link rel="stylesheet" href="./vendor/katex/katex.min.css?v=2026.11.26-exams-deeplink-v3">
 <script src="./vendor/marked.min.js?v=2026.11.26-exams-deeplink-v3" defer></script>
@@ -260,7 +284,7 @@ window.addEventListener("pageshow", function (event) {
   <button type="button" class="python-library-back" id="stat8100-practical-back" aria-label="Back to Resources">&#8592; Back to Resources</button>
   <iframe
    class="python-library-frame"
-   src="./resources/stat8100_practical_companion.html?v=2026.11.28-no-assistant-notice-autorefresh"
+   src="./resources/stat8100_practical_companion.html?v=2026.11.28-autorefresh-manifest"
    title="STAT 8100 Biostatistics and Epidemiology Practical Companion"
    allow="unload" loading="eager">
   </iframe>
@@ -425,11 +449,11 @@ window.addEventListener("pageshow", function (event) {
 
 
 
-<script src="./js/app.js?v=2026.11.28-no-assistant-notice-autorefresh&amp;local-resources=1" defer></script>
+<script src="./js/app.js?v=2026.11.28-autorefresh-manifest&amp;local-resources=1" defer></script>
 <script src="./js/class-rep-renderer.js?v=2026.11.26-exams-deeplink-v3" defer></script>
-<script src="./js/class-rep.js?v=2026.11.28-no-assistant-notice-autorefresh&amp;crara-header=1&amp;chat-speech=1" defer></script>
+<script src="./js/class-rep.js?v=2026.11.28-autorefresh-manifest&amp;crara-header=1&amp;chat-speech=1" defer></script>
 <script src="./js/exams.js?v=2026.11.26-exams-deeplink-v3" defer></script>
-<script src="./js/static-mode-ui.js?v=2026.11.28-no-assistant-notice-autorefresh" defer></script>
+<script src="./js/static-mode-ui.js?v=2026.11.28-autorefresh-manifest" defer></script>
 <!-- Static copy: service worker registration disabled. -->
 
 
