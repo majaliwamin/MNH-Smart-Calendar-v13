@@ -74,13 +74,17 @@
   }
 
   function annotateAssistant() {
-    const root = document.getElementById("class-rep-assistant");
-    if (!root || document.getElementById("mnh-static-assistant-notice")) return;
+    if (document.getElementById("mnh-static-assistant-notice")) return;
+    const weekly = document.getElementById("view-weekly");
+    if (!weekly) return;
     const note = document.createElement("div");
     note.id = "mnh-static-assistant-notice";
     note.className = "mnh-view-notice";
     note.textContent = "Read-only snapshot — Class Rep chat and LiveKit classroom need the backend. Offline classroom slides are linked under Resources.";
-    root.insertBefore(note, root.firstChild);
+    // The CRARA widget is intentionally zero-sized while closed, so a notice
+    // inside it renders as a clipped sliver. Put it above the timetable where
+    // it can use the full page width and wrap normally.
+    weekly.insertBefore(note, weekly.querySelector(".wrap") || null);
   }
 
   const WRITE_LABEL = /^(add|edit|delete|remove|save|create|upload|import|backup|restore|sign in|log in|register|join|send|record voice|start exam|submit|grade|mark as|hang up|post|react|approve|reject|sync now)/i;
@@ -93,7 +97,14 @@
           control.hidden = true;
           return;
         }
-        const label = (control.textContent || control.getAttribute("aria-label") || control.title || "").trim();
+        const text = (control.textContent || "").trim();
+        const label = (text && text !== "+" ? text : control.getAttribute("aria-label") || control.title || text).trim();
+        if (control.classList.contains("empty-activity")) {
+          // Empty timetable cells are read-only here; their "+" add affordance
+          // would otherwise look like an editable slot on every blank row.
+          control.textContent = "";
+          control.setAttribute("aria-label", label.replace(/^Add session on /, "No session scheduled on "));
+        }
         if (!WRITE_LABEL.test(label)) return;
         if (control.disabled) return;
         control.disabled = true;
